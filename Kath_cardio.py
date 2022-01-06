@@ -6,11 +6,11 @@ import mne
 import matplotlib
 
 #sample_data_folder = mne.datasets.sample.data_path()
-kath_raw_file2 = "/Users/jenya/Documents/Oldenburg and university/Job Uni Rieger lab/Katharinas_Data/sub_HT05ND16/210811/mikado-1.fif"
-#kath_raw_file = os.path.join('sub_HT05ND16', '210811', 'mikado-1.fif')
+#kath_raw_file2 = "/Users/jenya/Documents/Oldenburg and university/Job Uni Rieger lab/Katharinas_Data/sub_HT05ND16/210811/mikado-1.fif"
+kath_raw_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')
 ##print(kath_raw_file)
-print(kath_raw_file2)                                   
-raw = mne.io.read_raw_fif(kath_raw_file2)
+print(kath_raw_file)                                   
+raw = mne.io.read_raw_fif(kath_raw_file)
 #raw.crop(0, 60).load_data()  # just use a fraction of data for speed here
 
 
@@ -21,7 +21,7 @@ print(raw.info)
 #raw.plot(block=True, duration=5, n_channels=30)
 
 #%%
-#original_raw = raw.copy()
+original_raw = raw.copy()
 #raw.apply_hilbert()
 #print(f'original data type was {original_raw.get_data().dtype}, after '
 #      f'apply_hilbert the data type changed to {raw.get_data().dtype}.')
@@ -29,8 +29,8 @@ print(raw.info)
 #print(f'Original data had {original_raw.info["nchan"]} channels.')
 
 #%% Look what channels (projectors) we got:
-#ssp_projectors = original_raw.info['projs']
-#original_raw.del_proj()
+ssp_projectors = original_raw.info['projs']
+original_raw.del_proj()
 
 
 # %%
