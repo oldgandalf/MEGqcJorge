@@ -67,6 +67,10 @@ print('Magnetometers: ', mags)
 grads = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T_M)')]
 print('Gradiometers: ', grads)
 
+#%% Found one more way using mne itself (check if shows the same as mine!)
+picks_grad = mne.pick_types(raw.info, meg='grad', eeg=False, eog=True, stim=False)
+picks_mag = mne.pick_types(raw.info, meg='mag', eeg=False, eog=True, stim=False)
+
 
 # %% Pick all meg channels type to calculater RMSE or STD of them.
 # Commented as this might be usefull later, but not at the moment.
@@ -176,18 +180,59 @@ bad_chan = raw.info['bads'].pop(-1)  # remove the last entry in the list
 raw.info['bads'] = original_bads     # change the whole list at once
 
 
-#%% CELL DOESNT WORK BECAUSE EPOCHING DOESNT WORK. HOW TO FIX?
+#%% Extracting events and then epoching the data:
 # 
-# Now detect events to then epoch data - from here:
+# "STIM channels record voltages (usually short, rectangular DC pulses of fixed magnitudes sent from 
+# the experiment-controlling computer) that are time-locked to experimental events, such as the 
+# onset of a stimulus or a button-press response by the subject (those pulses are sometimes called 
+# TTL pulses, event pulses, trigger signals, or just “triggers”). In other cases, these pulses may 
+# not be strictly time-locked to an experimental event, but instead may occur in between trials 
+# to indicate the type of stimulus (or experimental condition) that is about to occur on the 
+# upcoming trial."
+
+#Look at the stimulus channel (can limit to only 3-6 sec here for example, or not):
+#raw.copy().pick_types(meg=False, stim=True).plot(start=3, duration=6)
+raw.copy().pick_types(meg=False, stim=True).plot()
+
+# Now what does this mean? I see only 1 event.
+
+#%% HERE PROBLEMS WITH EVENTS START:
+events = mne.find_events(raw, stim_channel='STI101')
+
+#STI101 is stim data in this file. might be different name in another! 
+# (it can be STI 014 in older systems for example). 
+# There can as well be several sti channels, and we need the main one which summs all the others.
+# HERE WRITE THE CODE THAT WILL AUTOMATICALLY DETECT THE MAIN STI CHANNEL OR allow mne to find it itself
+# (see long comment below)
+# ...
+
+#now look at events:
+print(events[:5])  # show the first 5
+#doesnt work. says smth is wrong with event duration. tried to fix, but no so far:
+events = mne.find_events(raw, stim_channel='STI101', min_duration=1/raw.info['sfreq']) 
+
+#try to not use STI101 channel and let mne find events itself - also not:
+events = mne.find_events(raw)
+
+#"If you don’t provide the name of a STIM channel, find_events will first look for MNE-Python 
+# config variables for variables MNE_STIM_CHANNEL, MNE_STIM_CHANNEL_1, etc. If those are not 
+# found, channels STI 014 and STI101 are tried, followed by the first channel with type “STIM” 
+# present in raw.ch_names. If you regularly work with data from several different MEG systems 
+# with different STIM channel names, setting the MNE_STIM_CHANNEL config variable may not be 
+# very useful, but for researchers whose data is all from a single system it can be a time-saver 
+# to configure that variable once and then forget about it."
+
+# findevents description:
+# https://mne.tools/stable/generated/mne.find_events.html#mne.find_events
+# https://mne.tools/stable/auto_tutorials/intro/20_events_from_raw.html
+
+#%% EPOCHING DOESNT WORK BECAUSE EVENTS EXTRACTION DOESNT WORK. HOW TO FIX?
+
+# Continue working with events - extra features:
+
+# How to detect events to then epoch data:
 #https://mne.tools/stable/auto_tutorials/intro/10_overview.html#sphx-glr-auto-tutorials-intro-10-overview-py
 
-events = mne.find_events(raw, stim_channel='STI101')
-events = mne.find_events(raw, stim_channel='STI101', min_duration=1/raw.info['sfreq']) 
-#STI101 is stim data in this file. might be different name in another!
-
-#HM.. doesnt work. says smth is wrong with event duration. tried to fix, but no so far..
-
-print(events[:5])  # show the first 5 events
 
 #create even dictionary if needed:
 event_dict = {'auditory/left': 1, 'auditory/right': 2, 'visual/left': 3,
@@ -205,6 +250,14 @@ reject_criteria = dict(mag=4000e-15,     # 4000 fT
 
 epochs = mne.Epochs(raw, events, event_id=event_dict, tmin=-0.2, tmax=0.5,
                     reject=reject_criteria, preload=True)
+
+#or like this:
+# Construct Epochs
+event_id, tmin, tmax = 1, -1., 3.
+baseline = (None, 0)
+epochs = mne.Epochs(raw, events, event_id, tmin, tmax, picks=picks,
+                    baseline=baseline, reject=dict(grad=4000e-13, eog=350e-6),
+                    preload=True)
 
 #once these work - look for further steps in link above.                   
 
