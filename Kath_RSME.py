@@ -82,8 +82,7 @@ picks_mag = mne.pick_types(raw.info, meg='mag', eeg=False, eog=True, stim=False)
 #data now contains all meg channels (magnetometers_gradiometers mixed), it s 2d.
 #times is just time vector, same for any tiype of channel.
 
-#%% Make a vector of indices of all magnetormeters and all gradiomerters 
-# - their indexes in original data.
+#%% Separate data for mags and grads in 2 arrays.
 selected_mags = [item[1] for item in mags]
 selected_grads = [item[1] for item in grads]
 data_mags, times = raw[selected_mags, :]  
@@ -144,6 +143,15 @@ for i in range(len(y_predicted_grads)):
     y_predicted_vec_grads=np.ones(len(y_actual_grads[0]))*y_predicted_grads[i]
     error_vec_grads[i] = mean_squared_error(y_actual_grads[i, :], y_predicted_vec_grads, squared=False)
 
+
+print('Mean of magnetometers data: ', np.mean(error_vec_mags)) #average RMSE
+print('Max of magnetometers data: ',max(error_vec_mags)) #highest RMSE
+print('Min of magnetometers data: ',min(error_vec_mags)) #lowest RMSE
+print('Mean of gradiometers data: ', np.mean(error_vec_grads)) #average RMSE
+print('Max of gradiometers data: ',max(error_vec_grads)) #highest RMSE
+print('Min of gradiometers data: ',min(error_vec_grads)) #lowest RMSE
+
+
 t1_rmse = time.time()
 total_time_rmse = t1_rmse-t0_rmse
 
@@ -194,7 +202,6 @@ raw.info['bads'] = original_bads     # change the whole list at once
 #raw.copy().pick_types(meg=False, stim=True).plot(start=3, duration=6)
 raw.copy().pick_types(meg=False, stim=True).plot()
 
-# Now what does this mean? I see only 1 event.
 
 #%% HERE PROBLEMS WITH EVENTS START:
 events = mne.find_events(raw, stim_channel='STI101')

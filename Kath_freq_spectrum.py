@@ -44,6 +44,8 @@ for ax in fig.axes[1:]:
         ax.arrow(x=freqs[idx], y=psds[idx] + 18, dx=0, dy=-12, color='red',
                  width=0.1, head_width=3, length_includes_head=True)
 
+# in this set doent find any frequencies corresponding to power line of eu or us, 
+# so no arrows
 
 # https://mne.tools/stable/auto_tutorials/time-freq/20_sensors_time_frequency.html#sphx-glr-auto-tutorials-time-freq-20-sensors-time-frequency-py
 
@@ -60,11 +62,15 @@ picks_grad = mne.pick_types(raw.info, meg='grad', eeg=False, eog=True, stim=Fals
 picks_magn = mne.pick_types(raw.info, meg='mag', eeg=False, eog=True, stim=False)
 picks_=[picks_grad, picks_magn]
 
+#%%
 for n_pick, p in enumerate(picks_):
 
        f, ax = plt.subplots()
        #psds, freqs = psd_multitaper(epochs, fmin=2, fmax=40, n_jobs=1)
-       psds, freqs = psd_multitaper(original_raw, fmin=0, fmax=400, n_jobs=1, picks=picks_[n_pick]) #picks=picks_grad)
+       psds, freqs = psd_multitaper(original_raw, fmin=0, fmax=400, n_jobs=1, picks=picks_[n_pick]) #, bandwidth=20)
+       #bandwidth=..(float) The bandwidth of the multi taper windowing function in Hz. 
+       # The default value is a window half-bandwidth of 4.
+       
        psds = 10 * np.log10(psds)  # convert to dB
        psds_mean = psds.mean(0)
        psds_std = psds.std(0)
@@ -91,6 +97,41 @@ total_time_mult = t1-t0
 
 print('Time to calculate and plot with multitapers: ', total_time_mult)
 
+# https://mne.tools/stable/generated/mne.time_frequency.psd_multitaper.html#mne.time_frequency.psd_multitaper
+
+# %% Notes from last meeting:
+# Change width of freq. Bands.  Then freq with strong power are very visible. 
+# Look at wide and narrow bands.
+
+for n_pick, p in enumerate(picks_):
+
+       f, ax = plt.subplots()
+       #psds, freqs = psd_multitaper(epochs, fmin=2, fmax=40, n_jobs=1)
+       psds, freqs = psd_multitaper(original_raw, fmin=0, fmax=400, n_jobs=1, picks=picks_[n_pick], bandwidth=4)
+       #bandwidth=..(float) The bandwidth of the multi taper windowing function in Hz. 
+       # The default value is a window half-bandwidth of 4.
+       
+       psds = 10 * np.log10(psds)  # convert to dB
+       psds_mean = psds.mean(0)
+       psds_std = psds.std(0)
+
+       #if we got epochs instead of whole data set:
+       #psds_mean = psds.mean(0).mean(0)
+       #psds_std = psds.mean(0).std(0)
+
+       ax.plot(freqs, psds_mean, color='k')
+       ax.fill_between(freqs, psds_mean - psds_std, psds_mean + psds_std,
+                color='k', alpha=.5)
+
+       if n_pick==0:
+              tit='Multitaper PSD (gradiometers)'
+       elif n_pick==1:
+              tit='Multitaper PSD (magnetometers)'
+
+       ax.set(title=tit, xlabel='Frequency (Hz)',
+              ylabel='Power Spectral Density (dB)')
+       plt.show()
+
+
+
 # %%
-
-
