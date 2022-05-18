@@ -25,5 +25,5 @@ def initial_stuff():
     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=filtered_d, 
         stim_channel='STI101', event_dur=1.2, epoch_tmin=-0.2, epoch_tmax=1)
 
-    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped
+    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw
 
