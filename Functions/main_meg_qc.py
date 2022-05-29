@@ -8,6 +8,7 @@ def initial_stuff():
 
     #Load data
     raw_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
+    #raw_file = data
     raw, mags, grads=load_meg_data(raw_file=raw_file)
 
     #Create folders:
