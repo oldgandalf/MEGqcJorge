@@ -3,7 +3,7 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
-def initial_stuff():
+def initial_stuff(duration):
     from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
 
     #Load data
@@ -16,7 +16,7 @@ def initial_stuff():
 
     #crop the data to calculate faster
     raw_cropped = raw.copy()
-    raw_cropped.crop(0, 300) #(first 5 min)
+    raw_cropped.crop(0, duration*60) 
 
     #apply filtering and downsampling:
     filtered_d, filtered_d_resamp=filter_and_resample_data(data=raw_cropped,l_freq=0.5, h_freq=100, method='iir')
