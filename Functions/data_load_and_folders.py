@@ -30,7 +30,8 @@ def make_folders_meg(sid='1'):
     f'../derivatives/sub-{sid}',
     f'../derivatives/sub-{sid}/megqc',
     f'../derivatives/sub-{sid}/megqc/csv files',
-    f'../derivatives/sub-{sid}/megqc/figures']
+    f'../derivatives/sub-{sid}/megqc/figures',
+    f'../derivatives/sub-{sid}/megqc/reports']
 
     print(path_list)
 
