@@ -1,7 +1,7 @@
 import os
 import mne
 
-def load_meg_data(raw_file=None):
+def load_meg_data(raw_file):
     #Load data AND SEPARATE MAGS AND GRADS. How do we want to input the path file here?
 
     #raw_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')                               
