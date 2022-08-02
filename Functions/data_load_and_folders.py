@@ -2,19 +2,19 @@ import os
 import mne
 import pandas as pd
 
-def load_meg_data(fif_file) -> list(mne.io.Raw, list, list):
+def load_meg_data(data_file) -> list([mne.io.Raw, list, list]):
     '''Load data and separate magnetometers and gradiometers.
     
     Args:
-    fif_file: data file .fif (or other format)
+    data_file: data file .fif (or other format)
     
     Returns:
     raw(mne.io.Raw): data in raw format, 
     mags: list of tuples: magnetometer channel name + its index
     grads: list of tuples: gradiometer channel name + its index'''
 
-    #fif_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')                               
-    raw = mne.io.read_raw_fif(fif_file)
+    #data_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')                               
+    raw = mne.io.read_raw_fif(data_file)
 
     #Separate mags and grads:
     mags = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T)')]
@@ -46,7 +46,7 @@ def make_folders_meg(sid: str):
             os.mkdir(path)
 
 
-def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, method: str) -> list(mne.io.Raw, mne.io.Raw):
+def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, method: str) -> list([mne.io.Raw, mne.io.Raw]):
 
     '''Filtering and resampling the data. 
     
@@ -88,7 +88,7 @@ def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, met
     #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
 
 
-def Epoch_meg(data: mne.io.Raw, stim_channel: str, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list(int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs):
+def Epoch_meg(data: mne.io.Raw, stim_channel: str, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list([int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs]):
 
     '''Gives epoched data in 2 separated data frames: mags and grads + as epoch objects.
     

@@ -3,7 +3,7 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
-def initial_stuff(duration: int or None) -> list:
+def initial_stuff(duration: int or None):
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -21,8 +21,8 @@ def initial_stuff(duration: int or None) -> list:
     df_epochs_grads (pd. Dataframe): data frame containing data for all epochs for grads 
     epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
     epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers 
-    mags: list of tuples: magnetometer channel name + its index
-    grads: list of tuples: gradiometer channel name + its index
+    mags (list of tuples): magnetometer channel name + its index
+    grads (list of tuples): gradiometer channel name + its index
     raw_bandpass(mne.raw): data only filtered, cropped (*)
     raw_bandpass_resamp(mne.raw): data filtered and resampled, cropped (*)
     raw_cropped(mne.io.Raw): data in raw format, cropped, not filtered, not resampled (*)
@@ -31,14 +31,13 @@ def initial_stuff(duration: int or None) -> list:
     will return what is stated, but in origibal duration.
 
     Yes, these are a lot  of data output option, we can reduce them later when we know what will not be used.
-
     '''
 
     from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
 
     #Load data
-    raw_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
-    raw, mags, grads=load_meg_data(raw_file=raw_file)
+    data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
+    raw, mags, grads=load_meg_data(data_file)
 
     #Create folders:
     make_folders_meg(sid='1')
