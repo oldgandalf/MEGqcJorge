@@ -6,7 +6,12 @@ def load_meg_data(fif_file) -> list(mne.io.Raw, list, list):
     '''Load data and separate magnetometers and gradiometers.
     
     Args:
-    fif_file: data file .fif (or other format)'''
+    fif_file: data file .fif (or other format)
+    
+    Returns:
+    raw(mne.io.Raw): data in raw format, 
+    mags: list of tuples: magnetometer channel name + its index
+    grads: list of tuples: gradiometer channel name + its index'''
 
     #fif_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')                               
     raw = mne.io.read_raw_fif(fif_file)
@@ -65,8 +70,8 @@ def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, met
     method(str): filtering method, example: 'iir'
 
     Returns:
-    raw_bandpass(mne.raw): data only resampled
-    raw_bandpass_resamp(mne.raw): data resampled and filtered
+    raw_bandpass(mne.raw): data only filtered
+    raw_bandpass_resamp(mne.raw): data filtered and resampled
     '''
 
     #Data has to be loaded into mememory before filetering:
