@@ -74,6 +74,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
             'x':0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
+        fig_name='PP_amplitude_epochs_per_channel_'+tit+'.html'
 
     elif what_data=='stds':
         fig.update_layout(
@@ -84,15 +85,11 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
             'x':0.5,
             'xanchor': 'center',
             'yanchor': 'top'})
-        
-    fig.show()
-
-    if what_data=='peaks':
-        fig_name='PP_amplitude_epochs_per_channel_'+tit+'.html'
-    elif what_data=='stds':
         fig_name='Stds_epochs_per_channel_'+tit+'.html'
 
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+
+    #fig.show()
     fig.write_html(fig_path)
 
     return(fig, fig_path)
