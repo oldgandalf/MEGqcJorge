@@ -2,7 +2,7 @@
 import plotly.graph_objects as go
 import pandas as pd
 
-def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: str, what_data: str):
+def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str):
 
     '''
     Creates representation of calculated data as multiple boxplots: 
@@ -13,7 +13,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
     Args:
     df_mg(pd.DataFrame): data frame containing data (stds, peak-to-peak amplitudes, etc) for each epoch, each channel, 
         mags OR grads, not together
-    tit (str): title, like "Magnetometers", or "Gradiometers", 
+    ch_type (str): title, like "Magnetometers", or "Gradiometers", 
     sid (str): subject id number, like '1'
     what_data (str): 'peaks' for peak-to-peak amplitudes or 'stds'
 
@@ -22,13 +22,22 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
     fig_path (str): path where the figure is saved as html file
     '''
 
-    unit='?'
-    if tit=='Magnetometers':
-        unit='T'
-    elif tit=='Gradiometers':
-        unit='T/m'
+    if ch_type=='Magnetometers':
+        unit='Tesla'
+    elif ch_type=='Gradiometers':
+        unit='Tesla/meter'
     else:
+        unit='?unknown unit?'
         print('Please check tit input. Has to be "Magnetoneters" or "Gradiometers"')
+
+    if what_data=='peaks':
+        hover_tit='Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_amplitude_epochs_per_channel_'+ch_type+'.html'
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='Stds_epochs_per_channel_'+ch_type+'.html'
 
     #transpose the data to plot the boxplots on x axes
     df_mg_transposed = df_mg.T 
@@ -47,13 +56,9 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
         marker_size=3,
         line_width=1,
         text=df_mg_transposed[col].index))
+        fig.update_traces(hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .0f}')
 
-        if what_data=='peaks':
-            fig.update_traces(hovertemplate='Epoch: %{text}'+'<br>Amplitude: %{y: .0f}')
-        elif what_data=='stds':
-            fig.update_traces(hovertemplate='Epoch: %{text}'+'<br>STD: %{y: .0f}')
-        
-
+    
     fig.update_layout(
         xaxis = dict(
             tickmode = 'array',
@@ -63,29 +68,15 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, tit: str, sid: st
         ),
         yaxis = dict(
             showexponent = 'all',
-            exponentformat = 'e'))
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' over epochs for '+ch_type,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
         
-    if what_data=='peaks':
-        fig.update_layout(
-        yaxis_title="Peak-to-peak amplitude in "+unit,
-        title={
-            'text': "Peak-to-peak amplitude over epochs for "+tit,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'})
-        fig_name='PP_amplitude_epochs_per_channel_'+tit+'.html'
-
-    elif what_data=='stds':
-        fig.update_layout(
-        yaxis_title="standard deviation in "+unit,
-        title={
-            'text': "STDs over epochs for "+tit,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'})
-        fig_name='Stds_epochs_per_channel_'+tit+'.html'
 
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
 
