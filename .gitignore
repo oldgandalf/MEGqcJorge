@@ -12,3 +12,4 @@
 *.pickle
 derivatives/sub-1/megqc/figures/PSD_over_all_data_gradiometers.png
 derivatives/sub-1/megqc/figures/PSD_over_all_data_interactivemagnetomoters.fig.pickle
+data/ck06an19_vp13/190521/bad_channels.json
