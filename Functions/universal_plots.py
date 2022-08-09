@@ -55,8 +55,9 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
         pointpos=0,
         marker_size=3,
         line_width=1,
-        text=df_mg_transposed[col].index))
-        fig.update_traces(hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .0f}')
+        text=df_mg_transposed[col].index,
+        ))
+        fig.update_traces(hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}')
 
     
     fig.update_layout(
