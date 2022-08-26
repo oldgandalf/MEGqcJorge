@@ -65,8 +65,8 @@ def initial_stuff():
     #apply filtering and downsampling:
 
     filtering_section = config['Filter_and_resample']
-    l_freq = filtering_section.getint('l_freq') 
-    h_freq = filtering_section.getint('l_freq') 
+    l_freq = filtering_section.getfloat('l_freq') 
+    h_freq = filtering_section.getfloat('h_freq') 
     method = filtering_section['method']
     raw_bandpass, raw_bandpass_resamp=filter_and_resample_data(data=raw_cropped,l_freq=l_freq, h_freq=h_freq, method=method)
 
@@ -75,9 +75,9 @@ def initial_stuff():
 
     epoching_section = config['Epoching']
     stim_channel = default_section['stim_channel'] #DO WE ALWAYS HAVE A STIM CHANNEL?
-    event_dur = epoching_section.getint('event_dur') 
-    epoch_tmin = epoching_section.getint('epoch_tmin') 
-    epoch_tmax = epoching_section.getint('epoch_tmax') 
+    event_dur = epoching_section.getfloat('event_dur') 
+    epoch_tmin = epoching_section.getfloat('epoch_tmin') 
+    epoch_tmax = epoching_section.getfloat('epoch_tmax') 
 
     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
         stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
@@ -115,11 +115,10 @@ def MEG_QC_measures():
 
     from universal_plots import boxplot_channel_epoch_hovering_plotly
     fig_std_epoch_m, fig_path_m_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_mags, ch_type='Magnetometers', sid=sid, what_data='stds')
-    fig_std_epoch_g, fig_path_g_std_epoch =boxplot_channel_epoch_hovering_plotly(df_mg=df_std_grads, ch_type='Gradiometers', sid=sid, what_data='stds')
+    fig_std_epoch_g, fig_path_g_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_grads, ch_type='Gradiometers', sid=sid, what_data='stds')
 
     from universal_html_report import make_RMSE_html_report
     list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
     # Frequency spectrum
-    
