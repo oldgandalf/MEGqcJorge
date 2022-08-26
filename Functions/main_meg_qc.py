@@ -3,7 +3,9 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
-def initial_stuff(duration: int or None):
+#def initial_stuff(duration: int or None, config: dict):
+def initial_stuff():
+
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -33,10 +35,22 @@ def initial_stuff(duration: int or None):
     Yes, these are a lot  of data output option, we can reduce them later when we know what will not be used.
     '''
 
+    import configparser
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+    #config.sections()
+    #config['DEFAULT']['data_file']
+    #type(config)
+    default_section = config['DEFAULT']
+    data_file = default_section['data_file']
+    duration = default_section.getint('duration') #int(config['DEFAULT']['duration'])
+
     from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
 
     #Load data
-    data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
+    #data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
+    #data_file = config['DEFAULT']['data_file']
+
     raw, mags, grads=load_meg_data(data_file)
 
     #Create folders:
