@@ -121,9 +121,31 @@ def MEG_QC_measures():
     list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
+
     # Frequency spectrum
+    # import PSD_meg_qc as psd #or smth like this - when it's extracted to .py
+    psd_section = config['PSD']
+    freq_min = psd_section.getint('freq_min') 
+    freq_max = psd_section.getint('freq_max') 
+    mean_power_per_band_needed = psd_section['mean_power_per_band_needed']
+    n_fft = psd_section.getint('n_fft')
+    n_per_seg = psd_section.getint('n_per_seg')
+
+    # !! Rewrite these functions to calc mags or grads only
+    freqs_mags, freqs_grads, psds_mags, psds_grads, fig_path_m_psd, fig_path_g_psd = Freq_Spectrum_meg(data=filtered_d_resamp, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+     n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, m_names=mags, g_names=grads)
+
+    _,_, fig_path_m_pie, fig_path_g_pie = Power_of_freq_meg(mags=mags, grads=grads, freqs_mags=freqs_mags, freqs_grads=freqs_grads, psds_mags=psds_mags, psds_grads=psds_grads, mean_power_per_band_needed=mean_power_per_band_needed, plotflag=True, sid=sid)
+
+    from universal_html_report import make_PSD_report
+    list_of_figure_paths=[fig_path_m_psd, fig_path_g_psd, fig_path_m_pie, fig_path_g_pie]
+    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
+
 
     # Peaks manual (mine):
+
+
+
 
     # Peaks auto (from mne):
     # import peaks_mne #or smth like this - when it's extracted to .py
