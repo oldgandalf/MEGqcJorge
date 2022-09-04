@@ -121,4 +121,15 @@ def MEG_QC_measures():
     list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
+    # Peaks manual (mine):
+
+    # Peaks auto (from mne):
+    # import peaks_mne #or smth like this - when it's extracted to .py
+
+    ptp_mne_section = config['PTP_mne']
+
+    # if both - get both values...
+    peak = ptp_mne_section.getint('peak_m') 
+
+
     # Frequency spectrum
