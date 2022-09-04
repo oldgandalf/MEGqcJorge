@@ -121,6 +121,8 @@ def MEG_QC_measures():
     list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
+    # Frequency spectrum
+
     # Peaks manual (mine):
 
     # Peaks auto (from mne):
@@ -128,8 +130,21 @@ def MEG_QC_measures():
 
     ptp_mne_section = config['PTP_mne']
 
-    # if both - get both values...
-    peak = ptp_mne_section.getint('peak_m') 
+    if default_section['mags_or_grads'] == 'mags':
+        peak = ptp_mne_section.getint('peak_m') 
+        flat = ptp_mne_section.getint('flat_m') 
+        df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
+    elif default_section['mags_or_grads'] == 'grads':
+        peak = ptp_mne_section.getint('peak_g') 
+        flat = ptp_mne_section.getint('flat_g') 
+        df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
+    elif default_section['mags_or_grads'] == 'both':
+        peak = ptp_mne_section.getint('peak_m') 
+        flat = ptp_mne_section.getint('flat_m') 
+        df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
+        peak = ptp_mne_section.getint('peak_g') 
+        flat = ptp_mne_section.getint('flat_g') 
+        df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
+    # shorten this if thing?
 
 
-    # Frequency spectrum
