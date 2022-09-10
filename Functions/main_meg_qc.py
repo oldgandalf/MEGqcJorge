@@ -143,7 +143,22 @@ def MEG_QC_measures():
 
 
     # Peaks manual (mine):
+    # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
+    ptp_manual_section = config['PTP_manual']
+    pair_dist_sec = ptp_manual_section.getint('pair_dist_sec') 
+    thresh_lvl = ptp_manual_section.getint('thresh_lvl')
 
+    sfreq = filtered_d_resamp.info['sfreq']
+    df_pp_ampl_mags=peak_amplitude_per_epoch(mg_names=mags, df_epoch_mg=df_epochs_mags, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
+    df_pp_ampl_grads=peak_amplitude_per_epoch(mg_names=grads, df_epoch_mg=df_epochs_grads, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
+
+    from universal_plots import boxplot_channel_epoch_hovering_plotly
+    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_type='Magnetometers', sid='1', what_data='peaks')
+    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_type='Gradiometers', sid='1', what_data='peaks')
+
+    from universal_html_report import make_peak_html_report
+    list_of_figure_paths=[fig_path_m_pp_ampl_epoch, fig_path_g_pp_ampl_epoch]
+    make_peak_html_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths)
 
 
 
@@ -168,5 +183,7 @@ def MEG_QC_measures():
         flat = ptp_mne_section.getint('flat_g') 
         df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
     # shorten this if thing?
+
+    
 
 
