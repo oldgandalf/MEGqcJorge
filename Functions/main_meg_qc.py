@@ -3,8 +3,16 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
+import configparser
+
+config = configparser.ConfigParser()
+config.read('settings.ini')
+sids = config['DEFAULT']['sid']
+sid_list = list(sids.split(","))
+
+
 #def initial_stuff(duration: int or None, config: dict):
-def initial_stuff():
+def initial_stuff(sid):
 
 
     '''Here all the initial actions need to work with MEG data are done: 
@@ -35,16 +43,16 @@ def initial_stuff():
     Yes, these are a lot  of data output option, we can reduce them later when we know what will not be used.
     '''
 
-    import configparser
     config = configparser.ConfigParser()
     config.read('settings.ini')
+
     #config.sections()
     #config['DEFAULT']['data_file']
-    #type(config)
+
     default_section = config['DEFAULT']
     data_file = default_section['data_file']
     duration = default_section.getint('duration') #int(config['DEFAULT']['duration'])
-    sid = default_section['sid']
+    #sid = default_section['sid']
 
     from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
 
@@ -85,18 +93,17 @@ def initial_stuff():
     return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
-def MEG_QC_measures():
+def MEG_QC_measures(sid):
 
     """This function will call all the QC functions.
     Here goes several sections which will in the future be called over main, but are not yet, since they are in the notebooks"""
 
-    n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff()
+    n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid)
 
-    import configparser
     config = configparser.ConfigParser()
     config.read('settings.ini')
-    default_section = config['DEFAULT']
-    sid = default_section['sid']
+    # default_section = config['DEFAULT']
+    # sid = default_section['sid']
 
     # RMSE:
 
@@ -109,24 +116,31 @@ def MEG_QC_measures():
         # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
         std_lvl = rmse_section.getint('std_lvl') 
 
-    #if rmse_do_for == 'mags':
+        if rmse_do_for == 'mags':
+            m_big_std_with_value, m_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
+            channels=mags, std_lvl=1)
+        elif rmse_do_for == 'grads':
+            g_big_std_with_value, g_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
+            channels=grads, std_lvl=1)
+        elif rmse_do_for == 'both':
+            m_big_std_with_value, m_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
+            channels=mags, std_lvl=1)
+            g_big_std_with_value, g_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
+            channels=grads, std_lvl=1)
 
-    m_big_std_with_value, g_big_std_with_value, m_small_std_with_value, g_small_std_with_value, rmse_mags, rmse_grads = RMSE_meg_all(data = filtered_d_resamp, 
-    mags=mags, grads=grads, std_lvl=std_lvl)
 
+            fig_m, fig_path_m=boxplot_std_hovering_plotly(std_data=rmse_mags, tit='Magnetometers', channel_names=mags, sid=sid)
+            fig_g, fig_path_g=boxplot_std_hovering_plotly(std_data=rmse_grads, tit='Gradiometers', channel_names=grads, sid=sid)
 
-    fig_m, fig_path_m=boxplot_std_hovering_plotly(std_data=rmse_mags, tit='Magnetometers', channel_names=mags, sid=sid)
-    fig_g, fig_path_g=boxplot_std_hovering_plotly(std_data=rmse_grads, tit='Gradiometers', channel_names=grads, sid=sid)
+            df_std_mags, df_std_grads=RMSE_meg_epoch(mags=mags, grads=grads, std_lvl=std_lvl, n_events=n_events, df_epochs_mags=df_epochs_mags, df_epochs_grads=df_epochs_grads, sid=sid) 
 
-    df_std_mags, df_std_grads=RMSE_meg_epoch(mags=mags, grads=grads, std_lvl=std_lvl, n_events=n_events, df_epochs_mags=df_epochs_mags, df_epochs_grads=df_epochs_grads, sid=sid) 
+            from universal_plots import boxplot_channel_epoch_hovering_plotly
+            fig_std_epoch_m, fig_path_m_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_mags, ch_type='Magnetometers', sid=sid, what_data='stds')
+            fig_std_epoch_g, fig_path_g_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_grads, ch_type='Gradiometers', sid=sid, what_data='stds')
 
-    from universal_plots import boxplot_channel_epoch_hovering_plotly
-    fig_std_epoch_m, fig_path_m_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_mags, ch_type='Magnetometers', sid=sid, what_data='stds')
-    fig_std_epoch_g, fig_path_g_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_grads, ch_type='Gradiometers', sid=sid, what_data='stds')
-
-    from universal_html_report import make_RMSE_html_report
-    list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
-    make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
+            from universal_html_report import make_RMSE_html_report
+            list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
+            make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
 
     # Frequency spectrum
@@ -192,5 +206,9 @@ def MEG_QC_measures():
     # shorten this if thing?
 
 
-
+#Run the pipleine over subjects
+#  UNCOMMENT THIS PART ONLY WHEN ALL MEASUREMENTS ARE SAVED INTO PY FILES. OTHERWISE IT WILL TRY TO RUN IT AND FAIL EVERY TIME THIS FILE IS CALLED IN ANY WAY
+# for sid in sid_list:
+#     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(sid)
+#     MEG_QC_measures(sid)
 
