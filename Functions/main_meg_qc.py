@@ -100,9 +100,16 @@ def MEG_QC_measures():
 
     # RMSE:
 
-    # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
     rmse_section = config['RMSE']
-    std_lvl = rmse_section.getint('std_lvl') 
+    rmse_do_for = rmse_section['do_for']
+
+    if rmse_do_for == 'none':
+        pass
+    else:
+        # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
+        std_lvl = rmse_section.getint('std_lvl') 
+
+    #if rmse_do_for == 'mags':
 
     m_big_std_with_value, g_big_std_with_value, m_small_std_with_value, g_small_std_with_value, rmse_mags, rmse_grads = RMSE_meg_all(data = filtered_d_resamp, 
     mags=mags, grads=grads, std_lvl=std_lvl)
@@ -184,6 +191,6 @@ def MEG_QC_measures():
         df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
     # shorten this if thing?
 
-    
+
 
 
