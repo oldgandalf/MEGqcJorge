@@ -93,12 +93,89 @@ def initial_stuff(sid):
     return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
+def selected_channel_types(section: configparser.SectionProxy):
+    """get do_for selection for given config"""
+
+    do_for = section['do_for']
+
+    if do_for == 'none':
+        return
+    elif do_for == 'mags':
+        return ['mags']
+    elif do_for == 'grads':
+        return ['grads']
+    elif do_for == 'both':
+        return ['mags', 'grads']
+
+def MEG_QC_rmse(sid, channels, df_epochs, channel_names, filtered_d_resamp, n_events):
+
+    from universal_plots import boxplot_channel_epoch_hovering_plotly
+    from universal_html_report import make_RMSE_html_report
+
+    rmse_section = config['RMSE']
+
+    # parse from config the channel types that RMSE has to be done for (mags, grads, both or none - as given in do_for in RMSE section)
+    channel_types = selected_channel_types(rmse_section)
+
+    if channel_types is None:
+        return
+
+    # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
+    std_lvl = rmse_section.getint('std_lvl')
+
+    list_of_figure_paths = []
+    list_of_figure_paths_std_epoch = []
+    big_std_with_value = {}
+    small_std_with_value = {}
+    fig = {}
+    fig_path = {}
+    df_std = {}
+    fig_std_epoch = {}
+    fig_path_std_epoch = {}
+    rmse = {}
+
+    # will run for both if mags and grads both chosen,otherwise just for one of them:
+    for channel_type in channel_types:
+        big_std_with_value[channel_type], small_std_with_value[channel_type], rmse[channel_type] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[channel_type], std_lvl=1)
+
+        fig[channel_type], fig_path[channel_type] = boxplot_std_hovering_plotly(std_data=rmse[channel_type], tit=channel_names[channel_type], channel_names=channels[channel_type], sid=sid)
+        
+        df_std[channel_type] = RMSE_meg_epoch(ch_type=channel_type, channels=channels[channel_type], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[channel_type], sid=sid) 
+
+        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_type=channel_names[channel_type], sid=sid, what_data='stds')
+        
+        list_of_figure_paths.append(fig_path[channel_type])
+        list_of_figure_paths_std_epoch.append(fig_path_std_epoch[channel_type])
+    
+    list_of_figure_paths += list_of_figure_paths_std_epoch
+
+    make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
+
+
+
 def MEG_QC_measures(sid):
 
     """This function will call all the QC functions.
     Here goes several sections which will in the future be called over main, but are not yet, since they are in the notebooks"""
 
-    n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid)
+    n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
+
+    channels = {
+        'grads': grads,
+        'mags': mags,
+    }
+    channel_names = {
+        'grads': 'Gradiometers',
+        'mags': 'Magnetometers'
+    }
+    df_epochs = {
+        'grads': df_epochs_grads,
+        'mags': df_epochs_mags
+    }
+    epochs_channels = {
+        'grads': epochs_channels_grads,
+        'mags': epochs_channels_mags
+    }
 
     config = configparser.ConfigParser()
     config.read('settings.ini')
@@ -107,43 +184,11 @@ def MEG_QC_measures(sid):
 
     # RMSE:
 
-    rmse_section = config['RMSE']
-    rmse_do_for = rmse_section['do_for']
-
-    if rmse_do_for == 'none':
-        pass
-    else:
-        # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
-        std_lvl = rmse_section.getint('std_lvl') 
-
-        if rmse_do_for == 'mags':
-            m_big_std_with_value, m_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
-            channels=mags, std_lvl=1)
-        elif rmse_do_for == 'grads':
-            g_big_std_with_value, g_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
-            channels=grads, std_lvl=1)
-        elif rmse_do_for == 'both':
-            m_big_std_with_value, m_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
-            channels=mags, std_lvl=1)
-            g_big_std_with_value, g_small_std_with_value, rmse_mags=RMSE_meg_all(data=filtered_d_resamp, 
-            channels=grads, std_lvl=1)
+    MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
 
 
-            fig_m, fig_path_m=boxplot_std_hovering_plotly(std_data=rmse_mags, tit='Magnetometers', channel_names=mags, sid=sid)
-            fig_g, fig_path_g=boxplot_std_hovering_plotly(std_data=rmse_grads, tit='Gradiometers', channel_names=grads, sid=sid)
 
-            df_std_mags, df_std_grads=RMSE_meg_epoch(mags=mags, grads=grads, std_lvl=std_lvl, n_events=n_events, df_epochs_mags=df_epochs_mags, df_epochs_grads=df_epochs_grads, sid=sid) 
-
-            from universal_plots import boxplot_channel_epoch_hovering_plotly
-            fig_std_epoch_m, fig_path_m_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_mags, ch_type='Magnetometers', sid=sid, what_data='stds')
-            fig_std_epoch_g, fig_path_g_std_epoch = boxplot_channel_epoch_hovering_plotly(df_mg=df_std_grads, ch_type='Gradiometers', sid=sid, what_data='stds')
-
-            from universal_html_report import make_RMSE_html_report
-            list_of_figure_paths=[fig_path_m, fig_path_g, fig_path_m_std_epoch, fig_path_g_std_epoch]
-            make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
-
-
-    # Frequency spectrum
+    # _______________Frequency spectrum
     # import PSD_meg_qc as psd #or smth like this - when it's extracted to .py
     psd_section = config['PSD']
     freq_min = psd_section.getint('freq_min') 
