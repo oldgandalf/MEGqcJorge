@@ -3,6 +3,7 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
+import mne
 import configparser
 
 config = configparser.ConfigParser()
@@ -94,7 +95,7 @@ def initial_stuff(sid):
 
 
 def selected_channel_types(section: configparser.SectionProxy):
-    """get do_for selection for given config"""
+    """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads, both or none."""
 
     do_for = section['do_for']
 
@@ -107,7 +108,7 @@ def selected_channel_types(section: configparser.SectionProxy):
     elif do_for == 'both':
         return ['mags', 'grads']
 
-def MEG_QC_rmse(sid, channels, df_epochs, channel_names, filtered_d_resamp, n_events):
+def MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events):
 
     from universal_plots import boxplot_channel_epoch_hovering_plotly
     from universal_html_report import make_RMSE_html_report
@@ -152,6 +153,45 @@ def MEG_QC_rmse(sid, channels, df_epochs, channel_names, filtered_d_resamp, n_ev
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
 
+def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+
+    # parse from config the channel types that psd has to be done for (mags, grads, both or none - as given in do_for in psd section)
+    psd_section = config['PSD']
+    channel_types = selected_channel_types(psd_section)
+
+    if channel_types is None:
+        return
+
+    from universal_html_report import make_PSD_report
+
+    freq_min = psd_section.getint('freq_min') 
+    freq_max = psd_section.getint('freq_max') 
+    mean_power_per_band_needed = psd_section['mean_power_per_band_needed']
+    n_fft = psd_section.getint('n_fft')
+    n_per_seg = psd_section.getint('n_per_seg')
+
+    # import PSD as psd #or smth like this - when it's extracted to .py
+
+    freqs = {}
+    psds = {}
+    fig_path_psd = {}
+    fig_path_pie ={}
+    list_of_figure_paths = []
+    list_of_figure_paths_pie = []
+
+    for channel_type in channel_types:
+        freqs[channel_type], psds[channel_type], fig_path_psd[channel_type] = Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = channel_type, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[channel_type])
+
+        _,fig_path_pie[channel_type] = Power_of_freq_meg(ch_names=channels[channel_type], mags_or_grads = channel_type, freqs = freqs[channel_type], psds = psds[channel_type], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+
+        list_of_figure_paths.append(fig_path_psd[channel_type])
+        list_of_figure_paths_pie.append(fig_path_pie[channel_type])
+
+    list_of_figure_paths += list_of_figure_paths_pie
+
+    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
+
 
 def MEG_QC_measures(sid):
 
@@ -182,30 +222,12 @@ def MEG_QC_measures(sid):
     # default_section = config['DEFAULT']
     # sid = default_section['sid']
 
-    # RMSE:
-
+    # call RMSE:
     MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
 
 
-
     # _______________Frequency spectrum
-    # import PSD_meg_qc as psd #or smth like this - when it's extracted to .py
-    psd_section = config['PSD']
-    freq_min = psd_section.getint('freq_min') 
-    freq_max = psd_section.getint('freq_max') 
-    mean_power_per_band_needed = psd_section['mean_power_per_band_needed']
-    n_fft = psd_section.getint('n_fft')
-    n_per_seg = psd_section.getint('n_per_seg')
-
-    # !! Rewrite these functions to calc mags or grads only
-    freqs_mags, freqs_grads, psds_mags, psds_grads, fig_path_m_psd, fig_path_g_psd = Freq_Spectrum_meg(data=filtered_d_resamp, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
-     n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, m_names=mags, g_names=grads)
-
-    _,_, fig_path_m_pie, fig_path_g_pie = Power_of_freq_meg(mags=mags, grads=grads, freqs_mags=freqs_mags, freqs_grads=freqs_grads, psds_mags=psds_mags, psds_grads=psds_grads, mean_power_per_band_needed=mean_power_per_band_needed, plotflag=True, sid=sid)
-
-    from universal_html_report import make_PSD_report
-    list_of_figure_paths=[fig_path_m_psd, fig_path_g_psd, fig_path_m_pie, fig_path_g_pie]
-    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
+    PSD_QC(sid, config, channels, filtered_d_resamp)
 
 
     # Peaks manual (mine):
