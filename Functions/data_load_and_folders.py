@@ -88,14 +88,14 @@ def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, met
     #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
 
 
-def Epoch_meg(data: mne.io.Raw, stim_channel: str, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list([int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs]):
+def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list([int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs]):
 
     '''Gives epoched data in 2 separated data frames: mags and grads + as epoch objects.
     
     Args:
     data (mne.io.Raw): data in raw format
     stim_channel (str): stimulus channel name, eg. 'STI101'
-    event_dur (float): duration of an event, eg. 1.2
+    event_dur (float): min duration of an event, eg. 1.2 s
     epoch_tmin (float): how long before the event the epoch starts, in sec, eg. -0.2
     epoch_tmax (float): how late after the event the epoch ends, in sec, eg. 1
     
@@ -111,6 +111,10 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str, event_dur: float, epoch_tmin:
 
     events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
     n_events=len(events)
+
+    if n_events == 0:
+        print('No events with set minimum duration were found using all stimulus channels. No epoching can be done.')
+        return(None, None, None, None, None)
 
     epochs_mags = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
     epochs_grads = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)

@@ -83,11 +83,17 @@ def initial_stuff(sid):
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
     epoching_section = config['Epoching']
-    stim_channel = default_section['stim_channel'] #DO WE ALWAYS HAVE A STIM CHANNEL?
     event_dur = epoching_section.getfloat('event_dur') 
     epoch_tmin = epoching_section.getfloat('epoch_tmin') 
     epoch_tmax = epoching_section.getfloat('epoch_tmax') 
+    stim_channel = default_section['stim_channel'] 
 
+    if len(stim_channel) == 0:
+        picks_stim = mne.pick_types(raw.info, stim=True)
+        stim_channel = []
+        for ch in picks_stim:
+            stim_channel.append(raw.info['chs'][ch]['ch_name'])
+    
     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
         stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
 
