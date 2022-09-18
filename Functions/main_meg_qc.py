@@ -52,14 +52,11 @@ def initial_stuff(sid):
 
     default_section = config['DEFAULT']
     data_file = default_section['data_file']
-    duration = default_section.getint('duration') #int(config['DEFAULT']['duration'])
-    #sid = default_section['sid']
+    #duration = default_section.getint('duration') #int(config['DEFAULT']['duration'])
+    tmin = default_section.getint('data_crop_tmin')
+    tmax = default_section.getint('data_crop_tmax')
 
     from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
-
-    #Load data
-    #data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
-    #data_file = config['DEFAULT']['data_file']
 
     raw, mags, grads=load_meg_data(data_file)
 
@@ -68,11 +65,9 @@ def initial_stuff(sid):
 
     #crop the data to calculate faster
     raw_cropped = raw.copy()
-    if duration is not None:
-        raw_cropped.crop(0, duration) 
+    raw_cropped.crop(tmin, tmax)
 
     #apply filtering and downsampling:
-
     filtering_section = config['Filter_and_resample']
     l_freq = filtering_section.getfloat('l_freq') 
     h_freq = filtering_section.getfloat('h_freq') 
