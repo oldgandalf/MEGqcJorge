@@ -15,7 +15,6 @@ sid_list = list(sids.split(","))
 #def initial_stuff(duration: int or None, config: dict):
 def initial_stuff(sid):
 
-
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
     - create folders in BIDS compliant format,
@@ -194,6 +193,38 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
 
 
+def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+    #UNFINISHED
+
+    # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
+    ptp_manual_section = config['PTP_manual']
+    pair_dist_sec = ptp_manual_section.getint('pair_dist_sec') 
+    thresh_lvl = ptp_manual_section.getint('thresh_lvl')
+
+    sfreq = filtered_d_resamp.info['sfreq']
+    df_pp_ampl_mags=peak_amplitude_per_epoch(mg_names=mags, df_epoch_mg=df_epochs_mags, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
+    df_pp_ampl_grads=peak_amplitude_per_epoch(mg_names=grads, df_epoch_mg=df_epochs_grads, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
+
+    from universal_plots import boxplot_channel_epoch_hovering_plotly
+    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_type='Magnetometers', sid='1', what_data='peaks')
+    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_type='Gradiometers', sid='1', what_data='peaks')
+
+    from universal_html_report import make_peak_html_report
+    list_of_figure_paths=[fig_path_m_pp_ampl_epoch, fig_path_g_pp_ampl_epoch]
+    make_peak_html_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths)
+
+
+def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+    #UNFINISHED
+
+    # import peaks_mne #or smth like this - when it's extracted to .py
+
+    ptp_mne_section = config['PTP_mne']
+    peak = ptp_mne_section.getint('peak_m') 
+    flat = ptp_mne_section.getint('flat_m') 
+    df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
+
+
 def MEG_QC_measures(sid):
 
     """This function will call all the QC functions.
@@ -220,58 +251,23 @@ def MEG_QC_measures(sid):
 
     config = configparser.ConfigParser()
     config.read('settings.ini')
-    # default_section = config['DEFAULT']
-    # sid = default_section['sid']
 
-    # call RMSE:
     MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
 
-
-    # _______________Frequency spectrum
     PSD_QC(sid, config, channels, filtered_d_resamp)
 
+    MEG_peaks_manual()
 
-    # Peaks manual (mine):
-    # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
-    ptp_manual_section = config['PTP_manual']
-    pair_dist_sec = ptp_manual_section.getint('pair_dist_sec') 
-    thresh_lvl = ptp_manual_section.getint('thresh_lvl')
+    MEG_peaks_auto()
 
-    sfreq = filtered_d_resamp.info['sfreq']
-    df_pp_ampl_mags=peak_amplitude_per_epoch(mg_names=mags, df_epoch_mg=df_epochs_mags, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
-    df_pp_ampl_grads=peak_amplitude_per_epoch(mg_names=grads, df_epoch_mg=df_epochs_grads, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
+    MEG_EOG()
 
-    from universal_plots import boxplot_channel_epoch_hovering_plotly
-    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_type='Magnetometers', sid='1', what_data='peaks')
-    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_type='Gradiometers', sid='1', what_data='peaks')
+    MEG_ECG()
 
-    from universal_html_report import make_peak_html_report
-    list_of_figure_paths=[fig_path_m_pp_ampl_epoch, fig_path_g_pp_ampl_epoch]
-    make_peak_html_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths)
+    MEG_head_movements()
 
+    MEG_muscle()
 
-
-    # Peaks auto (from mne):
-    # import peaks_mne #or smth like this - when it's extracted to .py
-
-    ptp_mne_section = config['PTP_mne']
-
-    if default_section['mags_or_grads'] == 'mags':
-        peak = ptp_mne_section.getint('peak_m') 
-        flat = ptp_mne_section.getint('flat_m') 
-        df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
-    elif default_section['mags_or_grads'] == 'grads':
-        peak = ptp_mne_section.getint('peak_g') 
-        flat = ptp_mne_section.getint('flat_g') 
-        df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
-    elif default_section['mags_or_grads'] == 'both':
-        peak = ptp_mne_section.getint('peak_m') 
-        flat = ptp_mne_section.getint('flat_m') 
-        df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
-        peak = ptp_mne_section.getint('peak_g') 
-        flat = ptp_mne_section.getint('flat_g') 
-        df_ptp_amlitude_annot_grads, bad_channels_grads, amplit_annot_with_ch_names_grads=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=grads)
-    # shorten this if thing?
 
 
 #Run the pipleine over subjects
