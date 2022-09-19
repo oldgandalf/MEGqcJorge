@@ -8,8 +8,8 @@ import configparser
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
-sids = config['DEFAULT']['sid']
-sid_list = list(sids.split(","))
+# sids = config['DEFAULT']['sid']
+# sid_list = list(sids.split(","))
 
 
 #def initial_stuff(duration: int or None, config: dict):
@@ -163,6 +163,7 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
         return
 
     from universal_html_report import make_PSD_report
+    import MEG_PSD as psd
 
     freq_min = psd_section.getint('freq_min') 
     freq_max = psd_section.getint('freq_max') 
@@ -180,10 +181,10 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     list_of_figure_paths_pie = []
 
     for channel_type in channel_types:
-        freqs[channel_type], psds[channel_type], fig_path_psd[channel_type] = Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = channel_type, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[channel_type], psds[channel_type], fig_path_psd[channel_type] = psd.Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = channel_type, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[channel_type])
 
-        _,fig_path_pie[channel_type] = Power_of_freq_meg(ch_names=channels[channel_type], mags_or_grads = channel_type, freqs = freqs[channel_type], psds = psds[channel_type], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+        _,fig_path_pie[channel_type] = psd.Power_of_freq_meg(ch_names=channels[channel_type], mags_or_grads = channel_type, freqs = freqs[channel_type], psds = psds[channel_type], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
 
         list_of_figure_paths.append(fig_path_psd[channel_type])
         list_of_figure_paths_pie.append(fig_path_pie[channel_type])
@@ -195,6 +196,12 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
 
 def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     #UNFINISHED
+
+    PTP_manual_section = config['PTP_manual']
+    channel_types = selected_channel_types(PTP_manual_section)
+
+    if channel_types is None:
+        return
 
     # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
     ptp_manual_section = config['PTP_manual']
@@ -217,12 +224,21 @@ def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.R
 def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     #UNFINISHED
 
+    PTP_mne_section = config['PTP_mne']
+    channel_types = selected_channel_types(PTP_mne_section)
+
+    if channel_types is None:
+        return
+
     # import peaks_mne #or smth like this - when it's extracted to .py
 
     ptp_mne_section = config['PTP_mne']
     peak = ptp_mne_section.getint('peak_m') 
     flat = ptp_mne_section.getint('flat_m') 
     df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
+
+
+#  ADD 4 MORE SECIONS HERE
 
 
 def MEG_QC_measures(sid):
@@ -252,21 +268,21 @@ def MEG_QC_measures(sid):
     config = configparser.ConfigParser()
     config.read('settings.ini')
 
-    MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
+    # MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
 
     PSD_QC(sid, config, channels, filtered_d_resamp)
 
-    MEG_peaks_manual()
+    # MEG_peaks_manual()
 
-    MEG_peaks_auto()
+    # MEG_peaks_auto()
 
-    MEG_EOG()
+    # MEG_EOG()
 
-    MEG_ECG()
+    # MEG_ECG()
 
-    MEG_head_movements()
+    # MEG_head_movements()
 
-    MEG_muscle()
+    # MEG_muscle()
 
 
 
@@ -276,3 +292,5 @@ def MEG_QC_measures(sid):
 #     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(sid)
 #     MEG_QC_measures(sid)
 
+
+MEG_QC_measures(sid='1')
