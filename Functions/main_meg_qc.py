@@ -51,11 +51,8 @@ def initial_stuff(sid):
 
     default_section = config['DEFAULT']
     data_file = default_section['data_file']
-    #duration = default_section.getint('duration') #int(config['DEFAULT']['duration'])
-    tmin = default_section.getint('data_crop_tmin')
-    tmax = default_section.getint('data_crop_tmax')
 
-    from data_load_and_folders import load_meg_data, make_folders_meg, filter_and_resample_data, Epoch_meg
+    from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
 
     raw, mags, grads=load_meg_data(data_file)
 
@@ -63,15 +60,46 @@ def initial_stuff(sid):
     make_folders_meg(sid)
 
     #crop the data to calculate faster
+    # tmin = default_section.getfloat('data_crop_tmin')
+    # tmax = default_section.getfloat('data_crop_tmax')
+
+    tmin = default_section['data_crop_tmin']
+    tmax = default_section['data_crop_tmax']
+
+    if not tmin: 
+        tmin = 0
+    else:
+        tmin=float(tmin)
+    if not tmax: 
+        tmax = raw.times[-1] 
+    else:
+        tmax=float(tmax)
+
     raw_cropped = raw.copy()
     raw_cropped.crop(tmin, tmax)
 
-    #apply filtering and downsampling:
+    #Data filtering:
     filtering_section = config['Filter_and_resample']
-    l_freq = filtering_section.getfloat('l_freq') 
-    h_freq = filtering_section.getfloat('h_freq') 
-    method = filtering_section['method']
-    raw_bandpass, raw_bandpass_resamp=filter_and_resample_data(data=raw_cropped,l_freq=l_freq, h_freq=h_freq, method=method)
+    if filtering_section['apply_filtering'] is True:
+        l_freq = filtering_section.getfloat('l_freq') 
+        h_freq = filtering_section.getfloat('h_freq') 
+        method = filtering_section['method']
+    
+        raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
+        raw_bandpass = raw_cropped.copy()
+        raw_bandpass.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
+
+        #And downsample:
+        raw_bandpass_resamp=raw_bandpass.copy()
+        raw_bandpass_resamp.resample(sfreq=h_freq*5)
+        #frequency to resample is 5 times higher than the maximum chosen frequency of the function
+
+    else:
+        raw_bandpass = raw_cropped.copy()
+        raw_bandpass_resamp=raw_bandpass.copy()
+        #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
+        # because they are used later. Referencing might mess up things, check that.
+
 
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
@@ -293,4 +321,4 @@ def MEG_QC_measures(sid):
 #     MEG_QC_measures(sid)
 
 
-MEG_QC_measures(sid='1')
+# MEG_QC_measures(sid='1')

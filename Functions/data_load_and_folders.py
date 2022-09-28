@@ -46,46 +46,47 @@ def make_folders_meg(sid: str):
             os.mkdir(path)
 
 
-def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, method: str) -> list([mne.io.Raw, mne.io.Raw]):
+# def filter_and_resample_data(data: mne.io.Raw, l_freq: float, h_freq: float, method: str) -> list([mne.io.Raw, mne.io.Raw]):
 
-    '''Filtering and resampling the data. 
+#     '''Filtering and resampling the data. 
+#       Commented out as it was copied to main, easier.
     
-    Filtering: Recommended: 1-100Hz bandpass or 0.5-100 Hz - better for frequency spectrum
-    https://mne.tools/stable/generated/mne.io.Raw.html#mne.io.Raw.filter
-    method='iir' - using here the Butterworth filter similar to filtfilt in matlab, 
-    dont know if this one is the best possible option. 
+#     Filtering: Recommended: 1-100Hz bandpass or 0.5-100 Hz - better for frequency spectrum
+#     https://mne.tools/stable/generated/mne.io.Raw.html#mne.io.Raw.filter
+#     method='iir' - using here the Butterworth filter similar to filtfilt in matlab, 
+#     dont know if this one is the best possible option. 
     
-    Resampling:
-    LOOK AT THE WARNING HERE https://mne.tools/stable/generated/mne.io.Raw.html?highlight=resample#mne.io.Raw.resample
-    It s not recommended to epoch resampled data as it can mess up the triggers.
-    We can either downsample after epoching - if needed. https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.resample
-    And here downsample the continuous data - and use it further only in continuouys form, no epoching. This is why 2 options returned.
+#     Resampling:
+#     LOOK AT THE WARNING HERE https://mne.tools/stable/generated/mne.io.Raw.html?highlight=resample#mne.io.Raw.resample
+#     It s not recommended to epoch resampled data as it can mess up the triggers.
+#     We can either downsample after epoching - if needed. https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.resample
+#     And here downsample the continuous data - and use it further only in continuouys form, no epoching. This is why 2 options returned.
 
-    Frequency to resample is 5 times higher than the maximum chosen frequency of the function (MAKE THIS AS AN INPUT?)
+#     Frequency to resample is 5 times higher than the maximum chosen frequency of the function (MAKE THIS AS AN INPUT?)
     
-    Args:
-    data (mne.io.Raw): data in raw format 
-    l_freq (float): lowest frequency used for filtering 
-    h_freq: float: highest frequency used for filtering 
-    method(str): filtering method, example: 'iir'
+#     Args:
+#     data (mne.io.Raw): data in raw format 
+#     l_freq (float): lowest frequency used for filtering 
+#     h_freq: float: highest frequency used for filtering 
+#     method(str): filtering method, example: 'iir'
 
-    Returns:
-    raw_bandpass(mne.raw): data only filtered
-    raw_bandpass_resamp(mne.raw): data filtered and resampled
-    '''
+#     Returns:
+#     raw_bandpass(mne.raw): data only filtered
+#     raw_bandpass_resamp(mne.raw): data filtered and resampled
+#     '''
 
-    #Data has to be loaded into mememory before filetering:
-    data.load_data(verbose=True)
-    raw_bandpass = data.copy()
-    raw_bandpass.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
+#     #Data has to be loaded into mememory before filetering:
+#     data.load_data(verbose=True)
+#     raw_bandpass = data.copy()
+#     raw_bandpass.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
 
-    #And resample:
-    raw_bandpass_resamp=raw_bandpass.copy()
-    raw_bandpass_resamp.resample(sfreq=h_freq*5)
-    #frequency to resample is 5 times higher than the maximum chosen frequency of the function
+#     #And resample:
+#     raw_bandpass_resamp=raw_bandpass.copy()
+#     raw_bandpass_resamp.resample(sfreq=h_freq*5)
+#     #frequency to resample is 5 times higher than the maximum chosen frequency of the function
 
-    return(raw_bandpass, raw_bandpass_resamp)
-    #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
+#     return(raw_bandpass, raw_bandpass_resamp)
+#     #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
 
 
 def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list([int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs]):
