@@ -132,7 +132,10 @@ def make_peak_html_report(sid: str, what_data: str, list_of_figure_paths: list):
 
 def make_PSD_report(sid: str, list_of_figure_paths: list):
 
-    sid='1'
+    # for fig_n in range(len(list_of_figure_paths)):
+
+    #     with open(list_of_figure_paths[fig_n], 'r') as f[fig_n]:
+    #     fig1m = f[fig_n].read()
 
     with open(list_of_figure_paths[0], 'r') as f1m:
         fig1m = f1m.read()

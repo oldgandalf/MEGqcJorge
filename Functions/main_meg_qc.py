@@ -3,6 +3,7 @@
 
 # For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
 
+import pandas as pd
 import mne
 import configparser
 
@@ -119,7 +120,9 @@ def initial_stuff(sid):
     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
         stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
 
-    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+    channels = {'mags': mags, 'grads': grads}
+
+    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
 def selected_channel_types(section: configparser.SectionProxy):
@@ -136,7 +139,8 @@ def selected_channel_types(section: configparser.SectionProxy):
     elif do_for == 'both':
         return ['mags', 'grads']
 
-def MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events):
+#%%
+def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filtered_d_resamp, n_events: int):
 
     from universal_plots import boxplot_channel_epoch_hovering_plotly
     from universal_html_report import make_RMSE_html_report
@@ -167,11 +171,11 @@ def MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resa
     for channel_type in channel_types:
         big_std_with_value[channel_type], small_std_with_value[channel_type], rmse[channel_type] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[channel_type], std_lvl=1)
 
-        fig[channel_type], fig_path[channel_type] = boxplot_std_hovering_plotly(std_data=rmse[channel_type], tit=channel_names[channel_type], channel_names=channels[channel_type], sid=sid)
+        fig[channel_type], fig_path[channel_type] = boxplot_std_hovering_plotly(std_data=rmse[channel_type], tit=channels[channel_type], channels=channels[channel_type], sid=sid)
         
         df_std[channel_type] = RMSE_meg_epoch(ch_type=channel_type, channels=channels[channel_type], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[channel_type], sid=sid) 
 
-        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_type=channel_names[channel_type], sid=sid, what_data='stds')
+        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_type=channel_type, sid=sid, what_data='stds')
         
         list_of_figure_paths.append(fig_path[channel_type])
         list_of_figure_paths_std_epoch.append(fig_path_std_epoch[channel_type])
@@ -181,7 +185,8 @@ def MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resa
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
 
-def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+#%%
+def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
 
     # parse from config the channel types that psd has to be done for (mags, grads, both or none - as given in do_for in psd section)
     psd_section = config['PSD']
@@ -191,11 +196,11 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
         return
 
     from universal_html_report import make_PSD_report
-    import MEG_PSD as psd
+    import PSD_meg_qc as psd
 
-    freq_min = psd_section.getint('freq_min') 
-    freq_max = psd_section.getint('freq_max') 
-    mean_power_per_band_needed = psd_section['mean_power_per_band_needed']
+    freq_min = psd_section.getfloat('freq_min') 
+    freq_max = psd_section.getfloat('freq_max') 
+    mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
     n_fft = psd_section.getint('n_fft')
     n_per_seg = psd_section.getint('n_per_seg')
 
@@ -219,9 +224,18 @@ def PSD_QC(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
 
     list_of_figure_paths += list_of_figure_paths_pie
 
+    # to remove None values in list:
+    list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
+
     make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
 
 
+#%%
+
+n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid='1')
+PSD_QC('1', config, channels, filtered_d_resamp)
+
+#%%
 def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     #UNFINISHED
 
@@ -249,6 +263,7 @@ def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.R
     make_peak_html_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths)
 
 
+#%%
 def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
     #UNFINISHED
 
@@ -266,9 +281,13 @@ def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw
     df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
 
 
+#%%
 #  ADD 4 MORE SECIONS HERE
 
 
+
+
+#%%
 def MEG_QC_measures(sid):
 
     """This function will call all the QC functions.
@@ -313,7 +332,7 @@ def MEG_QC_measures(sid):
     # MEG_muscle()
 
 
-
+#%%
 #Run the pipleine over subjects
 #  UNCOMMENT THIS PART ONLY WHEN ALL MEASUREMENTS ARE SAVED INTO PY FILES. OTHERWISE IT WILL TRY TO RUN IT AND FAIL EVERY TIME THIS FILE IS CALLED IN ANY WAY
 # for sid in sid_list:
