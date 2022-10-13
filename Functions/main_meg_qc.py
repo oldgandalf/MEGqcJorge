@@ -233,8 +233,8 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
 #%%
 
 #TRY RUNNING PSD HERE: comment cell out if want to call main somewhere else!
-n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid='1')
-PSD_QC('1', config, channels, filtered_d_resamp)
+# n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid='1')
+# PSD_QC('1', config, channels, filtered_d_resamp)
 
 #%%
 def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
