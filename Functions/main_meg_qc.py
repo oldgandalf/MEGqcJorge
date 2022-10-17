@@ -4,7 +4,8 @@
 import pandas as pd
 import mne
 import configparser
-from PSD_meg_qc import PSD_QC as PSD_QC
+from PSD_meg_qc import PSD_QC 
+from RMSE_meq_qc import MEG_QC_rmse
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
@@ -132,46 +133,6 @@ def selected_m_or_g(section: configparser.SectionProxy):
     elif do_for == 'both':
         return ['mags', 'grads']
 
-#%%
-def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:pd.DataFrame, filtered_d_resamp, n_events: int, m_or_g_chosen):
-
-    from universal_plots import boxplot_channel_epoch_hovering_plotly
-    from universal_html_report import make_RMSE_html_report
-
-    rmse_section = config['RMSE']
-
-    # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
-    std_lvl = rmse_section.getint('std_lvl')
-
-    list_of_figure_paths = []
-    list_of_figure_paths_std_epoch = []
-    big_std_with_value = {}
-    small_std_with_value = {}
-    fig = {}
-    fig_path = {}
-    df_std = {}
-    fig_std_epoch = {}
-    fig_path_std_epoch = {}
-    rmse = {}
-
-    # will run for both if mags and grads both chosen,otherwise just for one of them:
-    for m_or_g in m_or_g_chosen:
-        big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[m_or_g], std_lvl=1)
-
-        fig[m_or_g], fig_path[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=channels[m_or_g], channels=channels[m_or_g], sid=sid)
-        
-        df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
-
-        fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g, sid=sid, what_data='stds')
-        
-        list_of_figure_paths.append(fig_path[m_or_g])
-        list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
-    
-    list_of_figure_paths += list_of_figure_paths_std_epoch
-
-    make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
-
-
 
 #%%
 def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
@@ -246,11 +207,10 @@ def MEG_QC_measures(sid):
     if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
         raise ValueError('Type of channels to analise has to be chose in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
 
+    list_of_figure_paths = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
+    print(list_of_figure_paths)
 
-    # MEG_QC_rmse(sid, config, channels, df_epochs, m_or_g_title, filtered_d_resamp, n_events)
-
-    psd_section = config['PSD']
-    PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, psd_section)
+    # PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
 
     # MEG_peaks_manual()
 
@@ -263,6 +223,8 @@ def MEG_QC_measures(sid):
     # MEG_head_movements()
 
     # MEG_muscle()
+
+ 
 
 
 #%%

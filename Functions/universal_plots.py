@@ -28,7 +28,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
         unit='Tesla/meter'
     else:
         unit='?unknown unit?'
-        print('Please check tit input. Has to be "Magnetoneters" or "Gradiometers"')
+        print('Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
 
     if what_data=='peaks':
         hover_tit='Amplitude'
@@ -81,7 +81,71 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
 
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
 
-    #fig.show()
+    fig.show()
     fig.write_html(fig_path)
 
     return(fig, fig_path)
+
+
+def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: str):
+
+  '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
+  each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
+  Implemebted with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
+  The figure will be saved as an interactive html file.
+
+  Args:
+  std_data (list): stds for mags or grads calculated in RMSE_meg_all, 
+  tit (str): title, like "Magnetometers", or "Gradiometers", 
+  channels (list of tuples): magnetometer channel name + its index, 
+  sid (str): subject id number, like '1'
+
+  Returns:
+  fig (go.Figure): plottly figure
+  fig_path (str): path where the figure is saved as html file
+  '''
+
+  unit='?'
+  if tit=='Magnetometers':
+    unit='T'
+  elif tit=='Gradiometers':
+    unit='T/m'
+  else:
+    print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
+
+  ch_names=[m[0] for m in channels] #names of channels for annotating the plot
+  df = pd.DataFrame (std_data, index=ch_names, columns=['std'])
+
+  fig = go.Figure()
+
+  fig.add_trace(go.Box(x=df['std'],
+  name="",
+  text=df['std'].index, 
+  opacity=0.7, 
+  boxpoints="all", 
+  pointpos=0,
+  marker_size=5,
+  line_width=1))
+  fig.update_traces(hovertemplate='%{text}'+'<br>STD: %{x: .0f}')
+      
+
+  fig.update_layout(
+      yaxis={'visible': False, 'showticklabels': False},
+      xaxis = dict(
+      showexponent = 'all',
+      exponentformat = 'e'),
+      xaxis_title="standard deviation in "+unit,
+      title={
+      'text': "Standard deviation of the data for "+tit,
+      'y':0.85,
+      'x':0.5,
+      'xanchor': 'center',
+      'yanchor': 'top'})
+      
+  fig.show()
+
+  fig_name='Stds_all_data_'+tit+'.html'
+  fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+  fig.write_html(fig_path)
+
+  return(fig, fig_path)
