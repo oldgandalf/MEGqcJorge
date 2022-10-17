@@ -4,6 +4,7 @@
 import pandas as pd
 import mne
 import configparser
+from PSD_meg_qc import PSD_QC as PSD_QC
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
@@ -171,45 +172,6 @@ def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:
     make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
 
 
-#%%
-def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
-
-    psd_section = config['PSD']
-
-    from universal_html_report import make_PSD_report
-    import PSD_meg_qc as psd
-
-    freq_min = psd_section.getfloat('freq_min') 
-    freq_max = psd_section.getfloat('freq_max') 
-    mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
-    n_fft = psd_section.getint('n_fft')
-    n_per_seg = psd_section.getint('n_per_seg')
-    
-    # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
-
-    freqs = {}
-    psds = {}
-    fig_path_psd = {}
-    fig_path_pie ={}
-    list_of_figure_paths = []
-    list_of_figure_paths_pie = []
-
-    for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g] = psd.Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
-        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
-
-        _,fig_path_pie[m_or_g] = psd.Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
-
-        list_of_figure_paths.append(fig_path_psd[m_or_g])
-        list_of_figure_paths_pie.append(fig_path_pie[m_or_g])
-
-    list_of_figure_paths += list_of_figure_paths_pie
-
-    # to remove None values in list:
-    list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
-
-    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
-
 
 #%%
 def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
@@ -287,7 +249,8 @@ def MEG_QC_measures(sid):
 
     # MEG_QC_rmse(sid, config, channels, df_epochs, m_or_g_title, filtered_d_resamp, n_events)
 
-    PSD_QC(sid, config, channels, filtered_d_resamp, m_or_g_chosen)
+    psd_section = config['PSD']
+    PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, psd_section)
 
     # MEG_peaks_manual()
 

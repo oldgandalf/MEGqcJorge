@@ -3,59 +3,15 @@
 
 # In[1]:
 
-
-#Load data, filter, make folders
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 
-#from main_meg_qc import initial_stuff
-
-
-# # In[2]:
-
-
-# n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid='1')
-
-
-#%%
-
-
-
-
-# In[38]:
-
-
-# def Plot_periodogram_old(m_or_g, freqs_mat, psds, sid):
-#     '''Plotting function for freq. spectrum OLD, not in use any more '''
-
-#     fig=plt.figure()
-#     plt.plot(freqs_mat.T, np.sqrt(psds.T))
-#     plt.yscale='log'
-#     plt.xscale='log'
-#     plt.xlabel('Frequency (Hz)')
-#     plt.ylabel('Power spectral density (T / Hz)')  #check the units!
-#     plt.title("Welch's periodogram for all "+m_or_g)
-#     plt.savefig('../derivatives/sub-'+sid+'/megqc/figures/PSD_over_all_data_'+m_or_g+'.png')
-#     #plt.show()
-
-#     #Save interactive figure:
-#     import pickle
-#     fig_name='PSD_over_all_data_interactive'+m_or_g+'.fig.pickle'
-#     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
-#     f_handle=open(fig_path, 'wb') # This is for Python 3 - py2 may need `file` instead of `open`
-#     pickle.dump(fig,f_handle) 
-#     f_handle.close()
-
-#     return fig, fig_path
-
+from universal_html_report import make_PSD_report
 
 # In[39]:
-
-
 def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):
 
     '''Plotting periodogram on the data.
@@ -117,7 +73,6 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 
 # In[40]:
 
-
 #Calculate frequency spectrum:
 #UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
 
@@ -176,22 +131,7 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, plotflag: bool, sid:str, fr
     return(freqs, psds)
     
 
-
-# In[41]:
-
-
-# #try: OVER RESAMPLED cropped DATA
-
-# # With plot:
-# freqs_mags, psds_mags, fig_path_m_psd = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'mags', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
-#      n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=mags)
-
-# freqs_grads, psds_grads, fig_path_g_psd = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'grads', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
-#      n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=grads)
-
-
 # In[42]:
-
 
 def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: float):
 
@@ -252,7 +192,6 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
 
 # In[43]:
 
-
 def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
     
     ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
@@ -296,154 +235,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
     return fig, fig_path
     
 
-
-# In[44]:
-
-
-# def Power_of_freq_meg_OLD(mags: list, grads: list, freqs_mags: np.ndarray, freqs_grads: np.ndarray, psds_mags: np.ndarray, psds_grads: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
-
-#     '''
-#     - Power of frequencies calculation for all mags + grads channels separately, 
-#     - Saving power + power/freq value into data frames.
-#     - If desired: creating a pie chart of mean power of every band over the entire data (all channels of 1 type together)
-    
-#     Args:
-#     mags (list of tuples): magnetometer channel name + its index, 
-#     grads (list of tuples): gradiometer channel name + its index, 
-#     freqs_mags (np.ndarray): numpy array of frequencies for magnetometers
-#     freqs_grads  (np.ndarray): numpy array of frequencies for gradiometers
-#     psds_mags (np.ndarray): numpy array of power spectrum dencities for amgs
-#     psds_grads (np.ndarray): numpy array of power spectrum dencities for grads
-#     mean_power_per_band_needed (bool): need to calculate mean band power in the ENTIRE signal (averaged over all channels) or not.
-#         if True, results will also be printed.
-#     plotflag (bool): need to plot pie chart of mean_power_per_band_needed or not
-#     sid (str): subject id number, like '1'
-
-#     Returns:
-#     data frames as csv files saved:
-#     2x absolute power of each frequency band in each channel (mag + grad)
-#     2x relative power of each frequency band in each channel (mag + grad)
-#     2x absolute power of each frequency band in each channel (mag + grad) divided by the number of frequencies in this band
-#     + if plotflag is True:
-#     fig_m: plottly piechart figure for mags
-#     fig_g: plottly piechart figure for grads
-#     fig_path_m: path where the figure is saved as html file - mags
-#     fig_path_g: path where the figure is saved as html file - grads
-#     '''
-    
-#     # Calculate the band power:
-#     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
-#     #delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) bands
-
-#     mags_names = [mag[0] for mag in mags]
-#     grads_names = [grad[0] for grad in grads]
-
-#     dict_mags_power = {}
-#     dict_grads_power = {}
-
-#     dict_mags_power_freq = {}
-#     dict_grads_power_freq = {}
-
-#     dict_mags_rel_power = {}
-#     dict_grads_rel_power = {}
-
-#     for w in enumerate(wave_bands): #loop over bands
-        
-#         f_low, f_high = w[1] # Define band lower and upper limits
-
-#         #loop over mags, then grads:
-
-#         power_per_band_list_m, power_by_Nfreq_per_band_list_m, rel_power_per_band_list_m=Power_of_band(freqs_mags, f_low, f_high, psds_mags)
-#         power_per_band_list_g, power_by_Nfreq_per_band_list_g, rel_power_per_band_list_g=Power_of_band(freqs_grads, f_low, f_high, psds_grads)
-        
-#         dict_mags_power[w[0]] = power_per_band_list_m
-#         dict_grads_power[w[0]] = power_per_band_list_g
-
-#         dict_mags_power_freq[w[0]] = power_by_Nfreq_per_band_list_m
-#         dict_grads_power_freq[w[0]] = power_by_Nfreq_per_band_list_g
-
-#         dict_mags_rel_power[w[0]] = rel_power_per_band_list_m
-#         dict_grads_rel_power[w[0]] = rel_power_per_band_list_g
-
-#     # Save all to data frames:
-#     df_power_mags = pd.DataFrame(dict_mags_power, index=mags_names)
-#     df_power_grads = pd.DataFrame(dict_grads_power, index=grads_names)
-
-#     df_power_freq_mags = pd.DataFrame(dict_mags_power_freq, index=mags_names)
-#     df_power_freq_grads = pd.DataFrame(dict_grads_power_freq, index=grads_names)
-
-#     df_rel_power_mags = pd.DataFrame(dict_mags_rel_power, index=mags_names)
-#     df_rel_power_grads = pd.DataFrame(dict_grads_rel_power, index=grads_names)
-
-#     # Rename columns and extract to csv:
-
-#     renamed_df_power_mags = df_power_mags.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-#     renamed_df_power_grads = df_power_grads.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-
-#     renamed_df_power_freq_mags = df_power_freq_mags.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-#     renamed_df_power_freq_grads = df_power_freq_grads.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-
-#     renamed_df_rel_power_mags = df_rel_power_mags.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-#     renamed_df_rel_power_grads = df_rel_power_grads.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
-
-#     # Create csv file  for the user:
-#     renamed_df_power_mags.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_mags.csv')
-#     renamed_df_power_grads.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_grads.csv')
-#     renamed_df_power_freq_mags.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_mags.csv')
-#     renamed_df_power_freq_grads.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_grads.csv')
-#     renamed_df_rel_power_mags.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_mags.csv')
-#     renamed_df_rel_power_grads.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_grads.csv')
-
-#     if mean_power_per_band_needed is True: #if user wants to see average power per band over all channels - calculate and plot here:
-
-#         #Calculate power per band over all mags and all grads
-
-#         import statistics 
-
-#         power_dfs=[df_power_mags, df_rel_power_mags, df_power_grads, df_rel_power_grads, df_power_freq_mags, df_power_freq_grads]
-#         #keep them in this order!  
-
-#         bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma']
-#         measure_title=['Magnetometers. Average absolute power per band:', 'Magnetometers. Average relative power per band:',
-#         'Gradiometers. Average absolute power per band:', 'Gradiometers. Average relative power per band:', 
-#         'Magnetometers. Average power/freq per band:', 'Gradiometers. Average power/freq per band:']
-
-#         mean_abs_m=[]
-#         mean_abs_g=[]
-#         mean_relative_m=[]
-#         mean_relative_g=[]
-#         mean_power_nfreq_m=[]
-#         mean_power_nfreq_g=[]
-
-#         for d in enumerate(power_dfs):
-#             print(measure_title[d[0]])
-
-#             for w in enumerate(bands_names): #loop over bands
-#                 mean_power_per_band = statistics.mean(d[1].loc[:,w[0]])
-                
-#                 if d[0]==0: #df_power_mags:
-#                     mean_abs_m.append(mean_power_per_band) 
-#                 elif d[0]==1: #df_rel_power_mags:
-#                     mean_relative_m.append(mean_power_per_band) 
-#                 elif d[0]==2: #df_power_grads:
-#                     mean_abs_g.append(mean_power_per_band)
-#                 elif d[0]==3: #df_rel_power_grads:
-#                     mean_relative_g.append(mean_power_per_band) 
-#                 elif d[0]==4: #df_power_freq_mags:
-#                     mean_power_nfreq_m.append(mean_power_per_band)
-#                 elif d[0]==5: #df_power_freq_grads:
-#                     mean_power_nfreq_g.append(mean_power_per_band)
-#                 print(w[1], mean_power_per_band)
-
-
-#         if plotflag is True: 
-#             fig_m, fig_path_m = plot_pie_chart_freq(mean_relative_freq=mean_relative_m, tit='Magnetometers', sid=sid)
-#             fig_g, fig_path_g = plot_pie_chart_freq(mean_relative_freq=mean_relative_g, tit='Gradiometers', sid=sid)
-#             return fig_m, fig_g, fig_path_m, fig_path_g
-
-
 # In[53]:
-
 
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
 
@@ -561,33 +353,43 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     
     return fig, fig_path
 
+#%%
+
+def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen, psd_section):
+    """Main psd function"""
+
+    freq_min = psd_section.getfloat('freq_min') 
+    freq_max = psd_section.getfloat('freq_max') 
+    mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
+    n_fft = psd_section.getint('n_fft')
+    n_per_seg = psd_section.getint('n_per_seg')
+    
+    # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
+    freqs = {}
+    psds = {}
+    fig_path_psd = {}
+    fig_path_pie ={}
+    list_of_figure_paths = []
+    list_of_figure_paths_pie = []
+
+    for m_or_g in m_or_g_chosen:
+        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
+
+        _,fig_path_pie[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+
+        list_of_figure_paths.append(fig_path_psd[m_or_g])
+        list_of_figure_paths_pie.append(fig_path_pie[m_or_g])
+
+    list_of_figure_paths += list_of_figure_paths_pie
+
+    # to remove None values in list:
+    list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
+
+    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
 
 # In[56]:
-
-
-#try:
-
-#%matplotlib inline
-
-# _,fig_path_m_pie=Power_of_freq_meg(ch_names=mags, m_or_g = 'mags', freqs=freqs_mags, psds=psds_mags, mean_power_per_band_needed=True, plotflag=True, sid='1')
-
-# _,fig_path_g_pie=Power_of_freq_meg(ch_names=grads, m_or_g = 'grads', freqs=freqs_grads, psds=psds_grads, mean_power_per_band_needed=True, plotflag=True, sid='1')
-# #will output dataframes
-
-
-# In[57]:
-
-
-# # Create an html report:
-
-# from universal_html_report import make_PSD_report
-
-# list_of_figure_paths=[fig_path_m_psd, fig_path_g_psd, fig_path_m_pie, fig_path_g_pie]
-# make_PSD_report(sid='1', list_of_figure_paths=list_of_figure_paths)
-
-
-# # In[ ]:
-
+# This command was used to convert notebook to this .py file:
 
 # get_ipython().system('jupyter nbconvert PSD_meg_qc.ipynb --to python')
 
