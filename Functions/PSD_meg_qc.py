@@ -122,7 +122,7 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 #UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
 
 
-def Freq_Spectrum_meg(data: mne.io.Raw, mags_or_grads: str, plotflag: bool, sid:str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
+def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, plotflag: bool, sid:str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
 
     '''Calculates frequency spectrum of the data and if desired - plots them.
 
@@ -137,7 +137,7 @@ def Freq_Spectrum_meg(data: mne.io.Raw, mags_or_grads: str, plotflag: bool, sid:
     
     Args:
     data (mne.raw): data in raw format
-    mags_or_grads (str): which channel type to use
+    m_or_g (str): which channel type to use
     plotflag (bool): do you need plot or not
     sid (str): subject id number, like '1'
     freq_min (float): minimal frequency of interest for frequency spectrum decomposition
@@ -159,10 +159,10 @@ def Freq_Spectrum_meg(data: mne.io.Raw, mags_or_grads: str, plotflag: bool, sid:
     PSD plot + saves them as html files
     '''
 
-    if mags_or_grads == 'mags':
+    if m_or_g == 'mags':
         picks = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
         tit = 'Magnetometers'
-    elif mags_or_grads == 'grads':
+    elif m_or_g == 'grads':
         picks = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
         tit = 'Gradiometers'
     else:
@@ -183,10 +183,10 @@ def Freq_Spectrum_meg(data: mne.io.Raw, mags_or_grads: str, plotflag: bool, sid:
 # #try: OVER RESAMPLED cropped DATA
 
 # # With plot:
-# freqs_mags, psds_mags, fig_path_m_psd = Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = 'mags', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
+# freqs_mags, psds_mags, fig_path_m_psd = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'mags', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
 #      n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=mags)
 
-# freqs_grads, psds_grads, fig_path_g_psd = Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = 'grads', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
+# freqs_grads, psds_grads, fig_path_g_psd = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'grads', plotflag=True, sid='1', freq_min=0.5, freq_max=100, 
 #      n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=grads)
 
 
@@ -445,7 +445,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
 # In[53]:
 
 
-def Power_of_freq_meg(ch_names: list, mags_or_grads: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
+def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
 
     '''
     - Power of frequencies calculation for all mags + grads channels separately, 
@@ -506,9 +506,9 @@ def Power_of_freq_meg(ch_names: list, mags_or_grads: str, freqs: np.ndarray, psd
     renamed_df_rel_power = df_rel_power.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
 
     # Create csv file  for the user:
-    renamed_df_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_'+mags_or_grads+'.csv')
-    renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+mags_or_grads+'.csv')
-    renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+mags_or_grads+'.csv')
+    renamed_df_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_'+m_or_g+'.csv')
+    renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
+    renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+m_or_g+'.csv')
 
     #preassiign to have some returns in case plotting is not needed:
 
@@ -531,9 +531,9 @@ def Power_of_freq_meg(ch_names: list, mags_or_grads: str, freqs: np.ndarray, psd
         mean_relative=[]
         mean_power_nfreq=[]
 
-        if mags_or_grads == 'mags':
+        if m_or_g == 'mags':
             tit='Magnetometers'
-        elif mags_or_grads == 'grads':
+        elif m_or_g == 'grads':
             tit='Gradiometers'
         else:
             TypeError ("Check channel type!")
@@ -569,9 +569,9 @@ def Power_of_freq_meg(ch_names: list, mags_or_grads: str, freqs: np.ndarray, psd
 
 #%matplotlib inline
 
-# _,fig_path_m_pie=Power_of_freq_meg(ch_names=mags, mags_or_grads = 'mags', freqs=freqs_mags, psds=psds_mags, mean_power_per_band_needed=True, plotflag=True, sid='1')
+# _,fig_path_m_pie=Power_of_freq_meg(ch_names=mags, m_or_g = 'mags', freqs=freqs_mags, psds=psds_mags, mean_power_per_band_needed=True, plotflag=True, sid='1')
 
-# _,fig_path_g_pie=Power_of_freq_meg(ch_names=grads, mags_or_grads = 'grads', freqs=freqs_grads, psds=psds_grads, mean_power_per_band_needed=True, plotflag=True, sid='1')
+# _,fig_path_g_pie=Power_of_freq_meg(ch_names=grads, m_or_g = 'grads', freqs=freqs_grads, psds=psds_grads, mean_power_per_band_needed=True, plotflag=True, sid='1')
 # #will output dataframes
 
 

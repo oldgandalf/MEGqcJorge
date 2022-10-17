@@ -1,7 +1,5 @@
-# Main script calling all other functions. 
-# Will add imports here when other functions are done and moved from notebooks into py files
-
-# For now it s wrapped into a function to be called in RMSE and Freq spectrum. When all done function will be removed
+# This version of main allows to only choose mags, grads or both for 
+# the entire pipeline in the beginning. Not for separate QC measures
 
 import pandas as pd
 import mne
@@ -47,9 +45,6 @@ def initial_stuff(sid):
     config = configparser.ConfigParser()
     config.read('settings.ini')
 
-    #config.sections()
-    #config['DEFAULT']['data_file']
-
     default_section = config['DEFAULT']
     data_file = default_section['data_file']
 
@@ -60,10 +55,7 @@ def initial_stuff(sid):
     #Create folders:
     make_folders_meg(sid)
 
-    #crop the data to calculate faster
-    # tmin = default_section.getfloat('data_crop_tmin')
-    # tmax = default_section.getfloat('data_crop_tmax')
-
+    #crop the data to calculate faster:
     tmin = default_section['data_crop_tmin']
     tmax = default_section['data_crop_tmax']
 
@@ -122,10 +114,10 @@ def initial_stuff(sid):
 
     channels = {'mags': mags, 'grads': grads}
 
-    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
-def selected_channel_types(section: configparser.SectionProxy):
+def selected_m_or_g(section: configparser.SectionProxy):
     """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads, both or none."""
 
     do_for = section['do_for']
@@ -140,18 +132,12 @@ def selected_channel_types(section: configparser.SectionProxy):
         return ['mags', 'grads']
 
 #%%
-def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filtered_d_resamp, n_events: int):
+def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:pd.DataFrame, filtered_d_resamp, n_events: int, m_or_g_chosen):
 
     from universal_plots import boxplot_channel_epoch_hovering_plotly
     from universal_html_report import make_RMSE_html_report
 
     rmse_section = config['RMSE']
-
-    # parse from config the channel types that RMSE has to be done for (mags, grads, both or none - as given in do_for in RMSE section)
-    channel_types = selected_channel_types(rmse_section)
-
-    if channel_types is None:
-        return
 
     # import RMSE_meg_qc as rmse #or smth like this - when it's extracted to .py
     std_lvl = rmse_section.getint('std_lvl')
@@ -168,17 +154,17 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
     rmse = {}
 
     # will run for both if mags and grads both chosen,otherwise just for one of them:
-    for channel_type in channel_types:
-        big_std_with_value[channel_type], small_std_with_value[channel_type], rmse[channel_type] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[channel_type], std_lvl=1)
+    for m_or_g in m_or_g_chosen:
+        big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[m_or_g], std_lvl=1)
 
-        fig[channel_type], fig_path[channel_type] = boxplot_std_hovering_plotly(std_data=rmse[channel_type], tit=channels[channel_type], channels=channels[channel_type], sid=sid)
+        fig[m_or_g], fig_path[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=channels[m_or_g], channels=channels[m_or_g], sid=sid)
         
-        df_std[channel_type] = RMSE_meg_epoch(ch_type=channel_type, channels=channels[channel_type], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[channel_type], sid=sid) 
+        df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
 
-        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_type=channel_type, sid=sid, what_data='stds')
+        fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g, sid=sid, what_data='stds')
         
-        list_of_figure_paths.append(fig_path[channel_type])
-        list_of_figure_paths_std_epoch.append(fig_path_std_epoch[channel_type])
+        list_of_figure_paths.append(fig_path[m_or_g])
+        list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
     
     list_of_figure_paths += list_of_figure_paths_std_epoch
 
@@ -186,14 +172,9 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
 
 
 #%%
-def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
+def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
 
-    # parse from config the channel types that psd has to be done for (mags, grads, both or none - as given in do_for in psd section)
     psd_section = config['PSD']
-    channel_types = selected_channel_types(psd_section)
-
-    if channel_types is None:
-        return
 
     from universal_html_report import make_PSD_report
     import PSD_meg_qc as psd
@@ -203,8 +184,8 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
     mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
     n_fft = psd_section.getint('n_fft')
     n_per_seg = psd_section.getint('n_per_seg')
-
-    # import PSD as psd #or smth like this - when it's extracted to .py
+    
+    # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
 
     freqs = {}
     psds = {}
@@ -213,14 +194,14 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
     list_of_figure_paths = []
     list_of_figure_paths_pie = []
 
-    for channel_type in channel_types:
-        freqs[channel_type], psds[channel_type], fig_path_psd[channel_type] = psd.Freq_Spectrum_meg(data=filtered_d_resamp, mags_or_grads = channel_type, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
-        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[channel_type])
+    for m_or_g in m_or_g_chosen:
+        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g] = psd.Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
 
-        _,fig_path_pie[channel_type] = psd.Power_of_freq_meg(ch_names=channels[channel_type], mags_or_grads = channel_type, freqs = freqs[channel_type], psds = psds[channel_type], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+        _,fig_path_pie[m_or_g] = psd.Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
 
-        list_of_figure_paths.append(fig_path_psd[channel_type])
-        list_of_figure_paths_pie.append(fig_path_pie[channel_type])
+        list_of_figure_paths.append(fig_path_psd[m_or_g])
+        list_of_figure_paths_pie.append(fig_path_pie[m_or_g])
 
     list_of_figure_paths += list_of_figure_paths_pie
 
@@ -231,20 +212,10 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw):
 
 
 #%%
-
-#TRY RUNNING PSD HERE: comment cell out if want to call main somewhere else!
-# n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(sid='1')
-# PSD_QC('1', config, channels, filtered_d_resamp)
-
-#%%
-def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     #UNFINISHED
 
     PTP_manual_section = config['PTP_manual']
-    channel_types = selected_channel_types(PTP_manual_section)
-
-    if channel_types is None:
-        return
 
     # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
     ptp_manual_section = config['PTP_manual']
@@ -265,14 +236,10 @@ def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.R
 
 
 #%%
-def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw):
+def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     #UNFINISHED
 
     PTP_mne_section = config['PTP_mne']
-    channel_types = selected_channel_types(PTP_mne_section)
-
-    if channel_types is None:
-        return
 
     # import peaks_mne #or smth like this - when it's extracted to .py
 
@@ -294,13 +261,9 @@ def MEG_QC_measures(sid):
     """This function will call all the QC functions.
     Here goes several sections which will in the future be called over main, but are not yet, since they are in the notebooks"""
 
-    n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
+    n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
 
-    channels = {
-        'grads': grads,
-        'mags': mags,
-    }
-    channel_names = {
+    m_or_g_title = {
         'grads': 'Gradiometers',
         'mags': 'Magnetometers'
     }
@@ -315,10 +278,16 @@ def MEG_QC_measures(sid):
 
     config = configparser.ConfigParser()
     config.read('settings.ini')
+    default_section = config['DEFAULT']
+    m_or_g_chosen = selected_m_or_g(default_section)
 
-    # MEG_QC_rmse(sid, config, channels, df_epochs, channel_names, filtered_d_resamp, n_events)
+    if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
+        raise ValueError('Type of channels to analise has to be chose in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
 
-    PSD_QC(sid, config, channels, filtered_d_resamp)
+
+    # MEG_QC_rmse(sid, config, channels, df_epochs, m_or_g_title, filtered_d_resamp, n_events)
+
+    PSD_QC(sid, config, channels, filtered_d_resamp, m_or_g_chosen)
 
     # MEG_peaks_manual()
 
@@ -340,5 +309,6 @@ def MEG_QC_measures(sid):
 #     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(sid)
 #     MEG_QC_measures(sid)
 
+#%%
 
-# MEG_QC_measures(sid='1')
+MEG_QC_measures(sid='1')
