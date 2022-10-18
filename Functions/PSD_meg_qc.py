@@ -355,9 +355,10 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 #%%
 
-def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen, psd_section):
+def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen, config):
     """Main psd function"""
 
+    psd_section = config['PSD']
     freq_min = psd_section.getfloat('freq_min') 
     freq_max = psd_section.getfloat('freq_max') 
     mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
@@ -391,5 +392,5 @@ def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen,
 # In[56]:
 # This command was used to convert notebook to this .py file:
 
-# get_ipython().system('jupyter nbconvert PSD_meg_qc.ipynb --to python')
+# !jupyter nbconvert PSD_meg_qc.ipynb --to python
 

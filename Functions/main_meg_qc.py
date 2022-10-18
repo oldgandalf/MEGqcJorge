@@ -1,7 +1,6 @@
 # This version of main allows to only choose mags, grads or both for 
 # the entire pipeline in the beginning. Not for separate QC measures
 
-import pandas as pd
 import mne
 import configparser
 from PSD_meg_qc import PSD_QC 
@@ -9,12 +8,11 @@ from RMSE_meq_qc import MEG_QC_rmse
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
-# sids = config['DEFAULT']['sid']
-# sid_list = list(sids.split(","))
+sids = config['DEFAULT']['sid']
+sid_list = list(sids.split(','))
 
 
-#def initial_stuff(duration: int or None, config: dict):
-def initial_stuff(sid):
+def initial_stuff(sid: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -24,7 +22,7 @@ def initial_stuff(sid):
     - epoch the data.
 
     Args:
-    duration (int): how long the cropped data should be, in seconds
+    sid (str): subject id
 
     Returns: 
     n_events (int): number of events(=number of epochs)
@@ -40,8 +38,6 @@ def initial_stuff(sid):
     raw(mne.io.Raw): original data in raw format, not cropped, not filtered, not resampled.
     (*): if duration was set to None - the data will not be cropped and these outputs 
     will return what is stated, but in origibal duration.
-
-    Yes, these are a lot  of data output option, we can reduce them later when we know what will not be used.
     '''
 
     config = configparser.ConfigParser()
@@ -119,8 +115,8 @@ def initial_stuff(sid):
     return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
-def selected_m_or_g(section: configparser.SectionProxy):
-    """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads, both or none."""
+def select_m_or_g(section: configparser.SectionProxy):
+    """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads or both"""
 
     do_for = section['do_for']
 
@@ -135,54 +131,9 @@ def selected_m_or_g(section: configparser.SectionProxy):
 
 
 #%%
-def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
-    #UNFINISHED
+def MEG_QC_measures(sid, config):
 
-    PTP_manual_section = config['PTP_manual']
-
-    # from Peaks_meg_qc import peak_amplitude_per_epoch as pp_epoch 
-    ptp_manual_section = config['PTP_manual']
-    pair_dist_sec = ptp_manual_section.getint('pair_dist_sec') 
-    thresh_lvl = ptp_manual_section.getint('thresh_lvl')
-
-    sfreq = filtered_d_resamp.info['sfreq']
-    df_pp_ampl_mags=peak_amplitude_per_epoch(mg_names=mags, df_epoch_mg=df_epochs_mags, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
-    df_pp_ampl_grads=peak_amplitude_per_epoch(mg_names=grads, df_epoch_mg=df_epochs_grads, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
-
-    from universal_plots import boxplot_channel_epoch_hovering_plotly
-    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_type='Magnetometers', sid='1', what_data='peaks')
-    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_type='Gradiometers', sid='1', what_data='peaks')
-
-    from universal_html_report import make_peak_html_report
-    list_of_figure_paths=[fig_path_m_pp_ampl_epoch, fig_path_g_pp_ampl_epoch]
-    make_peak_html_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths)
-
-
-#%%
-def MEG_peaks_auto(sid:str, config, channels:list, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
-    #UNFINISHED
-
-    PTP_mne_section = config['PTP_mne']
-
-    # import peaks_mne #or smth like this - when it's extracted to .py
-
-    ptp_mne_section = config['PTP_mne']
-    peak = ptp_mne_section.getint('peak_m') 
-    flat = ptp_mne_section.getint('flat_m') 
-    df_ptp_amlitude_annot_mags, bad_channels_mags, amplit_annot_with_ch_names_mags=get_amplitude_annots_per_channel(raw_cropped, peak, flat, ch_type_names=mags)
-
-
-#%%
-#  ADD 4 MORE SECIONS HERE
-
-
-
-
-#%%
-def MEG_QC_measures(sid):
-
-    """This function will call all the QC functions.
-    Here goes several sections which will in the future be called over main, but are not yet, since they are in the notebooks"""
+    """This function will call all the MEG QC functions."""
 
     n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
 
@@ -199,14 +150,13 @@ def MEG_QC_measures(sid):
         'mags': epochs_channels_mags
     }
 
-    config = configparser.ConfigParser()
-    config.read('settings.ini')
     default_section = config['DEFAULT']
-    m_or_g_chosen = selected_m_or_g(default_section)
+    m_or_g_chosen = select_m_or_g(default_section)
 
     if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
-        raise ValueError('Type of channels to analise has to be chose in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
+        raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
 
+    
     list_of_figure_paths = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
     print(list_of_figure_paths)
 
@@ -224,16 +174,8 @@ def MEG_QC_measures(sid):
 
     # MEG_muscle()
 
- 
 
+#%%   Run the pipleine over subjects
 
-#%%
-#Run the pipleine over subjects
-#  UNCOMMENT THIS PART ONLY WHEN ALL MEASUREMENTS ARE SAVED INTO PY FILES. OTHERWISE IT WILL TRY TO RUN IT AND FAIL EVERY TIME THIS FILE IS CALLED IN ANY WAY
-# for sid in sid_list:
-#     n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(sid)
-#     MEG_QC_measures(sid)
-
-#%%
-
-MEG_QC_measures(sid='1')
+for sid in sid_list:
+    MEG_QC_measures(sid)
