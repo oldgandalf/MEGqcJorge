@@ -389,6 +389,8 @@ def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen,
 
     make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
 
+    return list_of_figure_paths
+
 # In[56]:
 # This command was used to convert notebook to this .py file:
 

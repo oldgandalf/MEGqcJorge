@@ -8,11 +8,11 @@ import pandas as pd
 import mne
 
 from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly
-from universal_html_report import make_RMSE_html_report
+from universal_html_report import make_std_peak_report
 
 # In[2]:
 
-def RMSE(data_m_or_g: np.array or list) -> np.array:
+def RMSE(data_m_or_g: np.array or list):
     ''' RMSE - general root means squared error function to use in other functions of this module.
     Alternatively std could be used, but the calculation time of std is lower, result is the same.
     
@@ -48,7 +48,7 @@ def RMSE(data_m_or_g: np.array or list) -> np.array:
 
 
 # In[6]:
-def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int) -> list: 
+def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int): 
 
     '''Root mean squared error calculated over ALL data (not epoched)
     
@@ -106,7 +106,7 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int) -> list:
 
 # In[11]:
 
-def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list) -> pd.DataFrame:
+def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
     '''Calculate std for every separate epoch of mags or grads.
     Used as internal function in RMSE_meg_epoch
@@ -228,11 +228,12 @@ def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:
             df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
             fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
             list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
-            list_of_figure_paths += list_of_figure_paths_std_epoch
         else:
             print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
+        
+    list_of_figure_paths += list_of_figure_paths_std_epoch
     
-    make_RMSE_html_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths)
-    
+    make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
+
     return list_of_figure_paths
 

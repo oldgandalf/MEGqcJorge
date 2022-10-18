@@ -1,0 +1,26 @@
+{
+    "TaskName": "words",
+    "Manufacturer": "Elekta",
+    "PowerLineFrequency": 60.0,
+    "SamplingFrequency": 1000.0,
+    "SoftwareFilters": {
+        "SpatialCompensation": {
+            "GradientOrder": 0
+        }
+    },
+    "RecordingDuration": 1035.999,
+    "RecordingType": "continuous",
+    "DewarPosition": "n/a",
+    "DigitizedLandmarks": true,
+    "DigitizedHeadPoints": true,
+    "MEGChannelCount": 157,
+    "MEGREFChannelCount": 3,
+    "ContinuousHeadLocalization": false,
+    "HeadCoilFrequency": [],
+    "EEGChannelCount": 0,
+    "EOGChannelCount": 0,
+    "ECGChannelCount": 0,
+    "EMGChannelCount": 0,
+    "MiscChannelCount": 32,
+    "TriggerChannelCount": 1
+}

@@ -1,17 +1,30 @@
 # This version of main allows to only choose mags, grads or both for 
 # the entire pipeline in the beginning. Not for separate QC measures
 
+#%%
 import mne
 import configparser
 from PSD_meg_qc import PSD_QC 
 from RMSE_meq_qc import MEG_QC_rmse
+import ancpbids
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
 sids = config['DEFAULT']['sid']
 sid_list = list(sids.split(','))
 
+direct = config['DEFAULT']['data_directory']
+dataset_path = ancpbids.utils.fetch_dataset(direct)
 
+from ancpbids import BIDSLayout
+layout = BIDSLayout(dataset_path)
+
+list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
+
+#print(list_of_fifs)
+
+
+#%%
 def initial_stuff(sid: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
@@ -120,9 +133,7 @@ def select_m_or_g(section: configparser.SectionProxy):
 
     do_for = section['do_for']
 
-    if do_for == 'none':
-        return
-    elif do_for == 'mags':
+    if do_for == 'mags':
         return ['mags']
     elif do_for == 'grads':
         return ['grads']
@@ -157,10 +168,9 @@ def MEG_QC_measures(sid, config):
         raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
 
     
-    list_of_figure_paths = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
-    print(list_of_figure_paths)
+    list_of_figure_paths_RMSE = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
 
-    # PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
+    # list_of_figure_paths_PSD = PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
 
     # MEG_peaks_manual()
 
@@ -174,8 +184,13 @@ def MEG_QC_measures(sid, config):
 
     # MEG_muscle()
 
+    return list_of_figure_paths_RMSE
+
 
 #%%   Run the pipleine over subjects
+# We actually cant loop just over sids, cos each need a new data file. Add more dats files in config or?
 
 for sid in sid_list:
-    MEG_QC_measures(sid)
+    list_of_figure_paths_RMSE = MEG_QC_measures(sid, config)
+
+print(list_of_figure_paths_RMSE)
