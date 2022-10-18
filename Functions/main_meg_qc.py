@@ -193,4 +193,4 @@ def MEG_QC_measures(sid, config):
 for sid in sid_list:
     list_of_figure_paths_RMSE = MEG_QC_measures(sid, config)
 
-print(list_of_figure_paths_RMSE)
+#print(list_of_figure_paths_RMSE)
