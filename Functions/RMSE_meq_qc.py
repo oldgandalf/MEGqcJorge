@@ -208,10 +208,13 @@ def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:
     std_lvl = rmse_section.getint('std_lvl')
 
     list_of_figure_paths = []
+    list_of_figures = []
     list_of_figure_paths_std_epoch = []
+    list_of_figures_std_epoch = []
     big_std_with_value = {}
     small_std_with_value = {}
     fig_path = {}
+    figs = {}
     df_std = {}
     fig_std_epoch = {}
     fig_path_std_epoch = {}
@@ -221,19 +224,22 @@ def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:
     for m_or_g in m_or_g_chosen:
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[m_or_g], std_lvl=1)
 
-        _, fig_path[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid)
+        figs[m_or_g], fig_path[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid)
         list_of_figure_paths.append(fig_path[m_or_g])
+        list_of_figures.append(figs[m_or_g])
 
         if n_events is not None:
             df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
             fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
             list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
+            list_of_figures_std_epoch.append(fig_std_epoch[m_or_g])
         else:
             print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     list_of_figure_paths += list_of_figure_paths_std_epoch
+    list_of_figures += list_of_figures_std_epoch
     
     make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
 
-    return list_of_figure_paths
-
+    return list_of_figure_paths, list_of_figures
+    

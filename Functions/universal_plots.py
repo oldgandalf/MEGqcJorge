@@ -81,7 +81,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
 
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
 
-    #fig.show()
+    fig.show()
     fig.write_html(fig_path)
 
     return(fig, fig_path)
@@ -142,7 +142,7 @@ def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: s
       'xanchor': 'center',
       'yanchor': 'top'})
       
-  #fig.show()
+  fig.show()
 
   fig_name='Stds_all_data_'+tit+'.html'
   fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name

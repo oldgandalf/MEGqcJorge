@@ -8,21 +8,6 @@ from PSD_meg_qc import PSD_QC
 from RMSE_meq_qc import MEG_QC_rmse
 import ancpbids
 
-config = configparser.ConfigParser()
-config.read('settings.ini')
-sids = config['DEFAULT']['sid']
-sid_list = list(sids.split(','))
-
-direct = config['DEFAULT']['data_directory']
-dataset_path = ancpbids.utils.fetch_dataset(direct)
-
-from ancpbids import BIDSLayout
-layout = BIDSLayout(dataset_path)
-
-list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
-
-#print(list_of_fifs)
-
 
 #%%
 def initial_stuff(sid: str):
@@ -168,7 +153,7 @@ def MEG_QC_measures(sid, config):
         raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
 
     
-    list_of_figure_paths_RMSE = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
+    list_of_figure_paths_RMSE, list_of_figures_RMSE = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
 
     # list_of_figure_paths_PSD = PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
 
@@ -184,13 +169,62 @@ def MEG_QC_measures(sid, config):
 
     # MEG_muscle()
 
-    return list_of_figure_paths_RMSE
+    return list_of_figure_paths_RMSE, list_of_figures_RMSE
+
+
+import ancpbids
+#from ancpbidsapps.app import App
+
+def save_figs_html(dataset_path, list_of_figures, sid_list):
+
+    layout = ancpbids.BIDSLayout(dataset_path)
+    schema = layout.schema
+
+    derivative = layout.dataset.create_derivative(name="Megqc_measurements")
+    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+    for midx, model in enumerate(sid_list):
+        subject = derivative.create_folder(type_=schema.Subject, name=sid_list[midx])
+
+        # create the HTML figure
+        # model.fit(imgs, events, confounds) #DO I NEED TO CREATE SMTH HERE?
+
+        meg_artifact = subject.create_artifact()
+        meg_artifact.add_entity('desc', "qc_measurements")
+        #meg_artifact.add_entity('task', task_label)
+        meg_artifact.suffix = 'rmse'
+        meg_artifact.extension = ".html"
+        meg_artifact.content = lambda file_path: figr.write_html(file_path)
+    
+
+
+
+def create_all_reports():
+
+    return
+
+
+#%%
+config = configparser.ConfigParser()
+config.read('settings.ini')
+sids = config['DEFAULT']['sid']
+sid_list = list(sids.split(','))
+
+direct = config['DEFAULT']['data_directory']
+dataset_path = ancpbids.utils.fetch_dataset(direct)
+
+from ancpbids import BIDSLayout
+layout = BIDSLayout(dataset_path)
+
+list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
+
+#print(list_of_fifs)
 
 
 #%%   Run the pipleine over subjects
 # We actually cant loop just over sids, cos each need a new data file. Add more dats files in config or?
 
-for sid in sid_list:
-    list_of_figure_paths_RMSE = MEG_QC_measures(sid, config)
+# for sid in sid_list:
+#     list_of_figure_paths_RMSE, list_of_figures_RMSE = MEG_QC_measures(sid, config)
 
 #print(list_of_figure_paths_RMSE)

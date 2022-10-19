@@ -66,8 +66,10 @@ def make_std_peak_report(sid: str, what_data: str, list_of_figure_paths: list, c
 
     html_string = header_html_string + main_html_string + end_string
 
-    with open('../derivatives/sub-'+sid+'/megqc/reports/report_'+what_data+'.html', 'w', encoding = 'utf8') as f:
-        f.write(html_string)
+    with open('../derivatives/sub-'+sid+'/megqc/reports/report_'+what_data+'.html', 'w', encoding = 'utf8') as html_report:
+        html_report.write(html_string)
+
+
 
 
 
