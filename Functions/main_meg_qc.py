@@ -2,6 +2,7 @@
 # the entire pipeline in the beginning. Not for separate QC measures
 
 #%%
+from html import entities
 import mne
 import configparser
 from PSD_meg_qc import PSD_QC 
@@ -40,8 +41,16 @@ def initial_stuff(sid: str):
 
     config = configparser.ConfigParser()
     config.read('settings.ini')
-
+    
     default_section = config['DEFAULT']
+    dataset_path = default_section[""]
+    from ancpbids import BIDSLayout
+    layout = BIDSLayout(dataset_path)
+
+    list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
+
+data file list of fifs[i]
+ 
     data_file = default_section['data_file']
 
     from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
@@ -130,6 +139,7 @@ def select_m_or_g(section: configparser.SectionProxy):
 def MEG_QC_measures(sid, config):
 
     """This function will call all the MEG QC functions."""
+    
 
     n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
 
@@ -171,31 +181,46 @@ def MEG_QC_measures(sid, config):
 
     return list_of_figure_paths_RMSE, list_of_figures_RMSE
 
+for every element in list of fifs:
+    MEG_QC_measures()
 
 import ancpbids
 #from ancpbidsapps.app import App
 
-def save_figs_html(dataset_path, list_of_figures, sid_list):
+#%%
+
+config = configparser.ConfigParser()
+config.read('settings.ini')
+
+
+
+
+def save_figs_html(dataset_path, list_of_subs):
 
     layout = ancpbids.BIDSLayout(dataset_path)
     schema = layout.schema
 
-    derivative = layout.dataset.create_derivative(name="Megqc_measurements")
+    #create derivative folder first!
+    derivative = layout.dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    for midx, model in enumerate(sid_list):
-        subject = derivative.create_folder(type_=schema.Subject, name=sid_list[midx])
+    #for sidx, _ in enumerate(list_of_subs):
 
-        # create the HTML figure
-        # model.fit(imgs, events, confounds) #DO I NEED TO CREATE SMTH HERE?
 
-        meg_artifact = subject.create_artifact()
-        meg_artifact.add_entity('desc', "qc_measurements")
-        #meg_artifact.add_entity('task', task_label)
-        meg_artifact.suffix = 'rmse'
-        meg_artifact.extension = ".html"
-        meg_artifact.content = lambda file_path: figr.write_html(file_path)
+    subject = derivative.create_folder(type_=schema.Subject, name='sub-'+list_of_subs[sidx])
+    _, list_of_figures_RMSE = MEG_QC_measures(list_of_subs[sidx], config)
+
+    # create the HTML figure
+    # model.fit(imgs, events, confounds) #DO I NEED TO CREATE SMTH HERE?
+
+    meg_artifact = subject.create_artifact()
+    meg_artifact.add_entity('desc', "qc_measurements")
+    #meg_artifact.add_entity('task', task_label)
+    meg_artifact.suffix = 'rmse'
+    meg_artifact.extension = ".html"
+    meg_artifact.content = lambda file_path: figr.write_html(file_path)
     
+    layout.write_derivative(derivative)
 
 
 
@@ -218,7 +243,12 @@ layout = BIDSLayout(dataset_path)
 
 list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
 
-#print(list_of_fifs)
+list_of_subs = layout.get_subjects()
+list_of_entities = layout.get_entities().keys()
+
+print(list_of_entities)
+
+save_figs_html(dataset_path, list_of_subs)
 
 
 #%%   Run the pipleine over subjects
