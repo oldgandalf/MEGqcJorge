@@ -12,9 +12,6 @@ import ancpbids
 from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
 
 #%%
-
-
-#%%
 def initial_stuff(config, data_file):
 
     '''Here all the initial actions need to work with MEG data are done: 
@@ -63,6 +60,7 @@ def initial_stuff(config, data_file):
     #Create folders:
     #make_folders_meg(sid)
 
+    default_section = config['DEFAULT']
     #crop the data to calculate faster:
     tmin = default_section['data_crop_tmin']
     tmax = default_section['data_crop_tmax']
@@ -139,7 +137,7 @@ def select_m_or_g(section: configparser.SectionProxy):
 
 #%%
 
-n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file0)
+#n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file0)
 
 #%%
 def MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw):
@@ -171,7 +169,7 @@ def MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epoc
     
     list_of_figure_paths_RMSE, list_of_figures_RMSE = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
 
-    # list_of_figure_paths_PSD = PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
+    list_of_figure_paths_PSD, list_of_figures_PSD, list_of_fig_descriptions_PSD = PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
 
     # MEG_peaks_manual()
 
@@ -185,21 +183,10 @@ def MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epoc
 
     # MEG_muscle()
 
-    return list_of_figure_paths_RMSE, list_of_figures_RMSE
+    return list_of_figures_PSD, list_of_fig_descriptions_PSD
+
 
 #%%
-for every element in list of fifs:
-    MEG_QC_measures()
-
-import ancpbids
-#from ancpbidsapps.app import App
-
-#%%
-
-config = configparser.ConfigParser()
-config.read('settings.ini')
-
-
 def save_derivative_html(dataset_path, list_of_subs):
 
     config = configparser.ConfigParser()
@@ -223,30 +210,24 @@ def save_derivative_html(dataset_path, list_of_subs):
         subject = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
+        #Devide here fifs by task, ses , run
 
         for data_file in list_of_fifs:
-            n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file)
-            _, list_of_figures_RMSE = MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw)
+            n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+            list_of_figures_PSD, list_of_fig_descriptions_PSD = MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw)
 
-    # data_file0 = layout.get(suffix='meg', extension='.fif', return_type='filename', subj='001')[0]
-    # print('Try now ', data_file0)
+            #put function here wuthou wrapper
 
+            for deriv_n, _ in enumerate(list_of_figures_PSD):
+                meg_artifact = subject.create_artifact() #shell. empty derivative
+                meg_artifact.add_entity('desc', list_of_fig_descriptions_PSD[deriv_n]) #file name
+                # HERE ADD FILE DESCRIPTION: GET IT FROM THE FUNCTION WHICH CREATED IT LIKE PSD OF MAGNETOMETERS, ETC..
+                #meg_artifact.add_entity('task', task_label)
+                meg_artifact.suffix = 'meg'
+                meg_artifact.extension = ".html"
+                meg_artifact.content = lambda file_path: list_of_figures_PSD[deriv_n].write_html(file_path)
     
-
-    #for sidx, _ in enumerate(list_of_subs):
-
-
-    # create the HTML figure
-    # model.fit(imgs, events, confounds) #DO I NEED TO CREATE SMTH HERE?
-
-    meg_artifact = subject.create_artifact() #shell. empty derivative
-    meg_artifact.add_entity('desc', "qc_measurements") #file name
-    #meg_artifact.add_entity('task', task_label)
-    meg_artifact.suffix = 'rmse'
-    meg_artifact.extension = ".html"
-    meg_artifact.content = lambda file_path: figr.write_html(file_path)
-    
-    layout.write_derivative(derivative)
+    layout.write_derivative(derivative) #maybe put intide the loop if cant have so much in memory?
 
 #%%
 # def save_figs_html(dataset_path, list_of_subs):
@@ -277,17 +258,11 @@ def save_derivative_html(dataset_path, list_of_subs):
 #     layout.write_derivative(derivative)
 
 
-
-def create_all_reports():
-
-    return
-
-
 #%%
 config = configparser.ConfigParser()
 config.read('settings.ini')
-sids = config['DEFAULT']['sid']
-sid_list = list(sids.split(','))
+# sids = config['DEFAULT']['sid']
+# sid_list = list(sids.split(','))
 
 direct = config['DEFAULT']['data_directory']
 dataset_path = ancpbids.utils.fetch_dataset(direct)
@@ -295,15 +270,34 @@ dataset_path = ancpbids.utils.fetch_dataset(direct)
 from ancpbids import BIDSLayout
 layout = BIDSLayout(dataset_path)
 
-list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
+# list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
 
 list_of_subs = layout.get_subjects()
-list_of_entities = layout.get_entities().keys()
+list_of_entities = layout.get_entities()
 
 print(list_of_entities)
 
-save_figs_html(dataset_path, list_of_subs)
+#save_derivative_html(dataset_path, list_of_subs)
 
+
+#%%
+# Try on one subject:
+subj = '001'
+data_file0 = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=subj)[0]
+print('Try now ', data_file0)
+
+n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file0)
+
+print('NOW START THE QC stuff)')
+
+#list_of_figures_PSD, list_of_fig_descriptions_PSD = MEG_QC_measures(subj, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw)
+
+#%%
+
+from PSD_meg_qc import Freq_Spectrum_meg
+
+print(len(channels['mags']))
+freqs, psds, fig_path_psd, fig_psd, fig_desc = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'mags', sid=subj, freq_min=0.5, freq_max=100, n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=channels['mags'])
 
 #%%   Run the pipleine over subjects
 # We actually cant loop just over sids, cos each need a new data file. Add more dats files in config or?

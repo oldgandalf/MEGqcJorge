@@ -38,6 +38,9 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 
     mg_only_names=[n[0] for n in mg_names]
 
+    print('HERE!!!!', len(mg_only_names))
+    print(len(np.sqrt(psds)))
+
     df_psds=pd.DataFrame(np.sqrt(psds.T), columns=mg_only_names)
 
     fig = go.Figure()
@@ -64,11 +67,12 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 
     fig.show()
     
-    fig_name='PSD_over_all_data_'+tit+'.html'
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+    fig_name='PSD_over_all_data_'+tit
+    fig_name_HTML='PSD_over_all_data_'+tit+'.html'
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name_HTML
     fig.write_html(fig_path)
 
-    return fig, fig_path
+    return fig, fig_path, fig_name
 
 
 # In[40]:
@@ -77,7 +81,7 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 #UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
 
 
-def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, plotflag: bool, sid:str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
+def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
 
     '''Calculates frequency spectrum of the data and if desired - plots them.
 
@@ -123,12 +127,13 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, plotflag: bool, sid:str, fr
     else:
         TypeError('Check channel type')
 
+    print('HERE!! Freq spectrum', len(picks))
+    print('HERE!! Freq spectrum', picks)
     psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
-    if plotflag==True:
-        fig, fig_path=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
-        return(freqs, psds, fig_path) 
+    
+    fig, fig_path, fig_desc=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
 
-    return(freqs, psds)
+    return freqs, psds, fig_path, fig, fig_desc
     
 
 # In[42]:
@@ -228,11 +233,12 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
 
     fig.show()
 
-    fig_name='Relative_power_per_band_over_all_channels_'+tit+'.html'
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+    fig_name='Relative_power_per_band_over_all_channels_'+tit
+    fig_name_HTML='Relative_power_per_band_over_all_channels_'+tit+'.html'
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name_HTML
     fig.write_html(fig_path)
 
-    return fig, fig_path
+    return fig, fig_path, fig_name
     
 
 # In[53]:
@@ -348,10 +354,10 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            fig, fig_path = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
+            fig, fig_path, fig_desc = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
             return fig, fig_path
     
-    return fig, fig_path
+    return fig, fig_path, fig_desc
 
 #%%
 
@@ -368,28 +374,46 @@ def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen,
     # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
     freqs = {}
     psds = {}
+    fig_psd = {}
+    fig_pie ={}
     fig_path_psd = {}
     fig_path_pie ={}
+    fig_desc = {}
+    fig_desc_pie = {}
+    list_of_figures = []
+    list_of_figures_pie = []
     list_of_figure_paths = []
     list_of_figure_paths_pie = []
+    list_of_fig_descriptions = []
+    list_of_fig_descriptions_pie = []
 
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, plotflag=True, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g], fig_psd[m_or_g], fig_desc[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
 
-        _,fig_path_pie[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+        fig_pie[m_or_g],fig_path_pie[m_or_g], fig_desc_pie[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+
+        list_of_figures.append(fig_psd[m_or_g])
+        list_of_figures_pie.append(fig_pie[m_or_g])
+        list_of_fig_descriptions.append(fig_desc[m_or_g])
+
 
         list_of_figure_paths.append(fig_path_psd[m_or_g])
         list_of_figure_paths_pie.append(fig_path_pie[m_or_g])
+        list_of_fig_descriptions_pie.append(fig_desc_pie[m_or_g])
 
+    list_of_figures += list_of_figures_pie
     list_of_figure_paths += list_of_figure_paths_pie
+    list_of_fig_descriptions += list_of_fig_descriptions_pie
 
     # to remove None values in list:
+    list_of_figures = [i for i in list_of_figures if i is not None]
     list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
+    list_of_figure_descriptions = [i for i in list_of_figure_paths if i is not None]
 
     make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
 
-    return list_of_figure_paths
+    return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
 
 # In[56]:
 # This command was used to convert notebook to this .py file:
