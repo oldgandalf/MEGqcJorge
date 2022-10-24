@@ -361,7 +361,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 #%%
 
-def PSD_QC(sid:str, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen, config):
+def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     """Main psd function"""
 
     psd_section = config['PSD']

@@ -64,8 +64,10 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     std_channels (np.array): std values for channels
     '''
 
+
     # Separate data for mags and grads in 2 arrays.
     selected_channels = [ch[1] for ch in channels]
+
     data_channels, _ = data[selected_channels, :]  
 
     # Calculate STD or RMSE of each channel
@@ -202,7 +204,11 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
 
 
 #%%
-def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:pd.DataFrame, filtered_d_resamp, n_events: int, m_or_g_chosen):
+def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filtered_d_resamp, m_or_g_chosen):
+
+    m_or_g_title = {
+    'grads': 'Gradiometers',
+    'mags': 'Magnetometers'}
 
     rmse_section = config['RMSE']
     std_lvl = rmse_section.getint('std_lvl')
@@ -222,13 +228,15 @@ def MEG_QC_rmse(sid: str, config, channels: dict, m_or_g_title: dict, df_epochs:
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
+
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[m_or_g], std_lvl=1)
 
         figs[m_or_g], fig_path[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid)
         list_of_figure_paths.append(fig_path[m_or_g])
         list_of_figures.append(figs[m_or_g])
 
-        if n_events is not None:
+        if df_epochs[m_or_g] is not None:
+            n_events = df_epochs[m_or_g]['epoch'].nunique()
             df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
             fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
             list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])

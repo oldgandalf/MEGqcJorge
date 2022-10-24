@@ -120,9 +120,29 @@ def initial_stuff(config, data_file):
 
     channels = {'mags': mags, 'grads': grads}
 
-    return n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+    print('HERE IN INIT', channels)
 
+    df_epochs = {
+    'grads': df_epochs_grads,
+    'mags': df_epochs_mags}
 
+    epochs_mg = {
+    'grads': epochs_grads,
+    'mags': epochs_mags}
+
+    return df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+
+#%%
+# TRY:
+# data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
+# config = configparser.ConfigParser()
+# config.read('settings.ini')
+
+# df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+
+# print(df_epochs['mags']['epoch'].nunique())
+
+#%%
 def select_m_or_g(section: configparser.SectionProxy):
     """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads or both"""
 
@@ -135,55 +155,6 @@ def select_m_or_g(section: configparser.SectionProxy):
     elif do_for == 'both':
         return ['mags', 'grads']
 
-#%%
-
-#n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file0)
-
-#%%
-def MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw):
-
-    """This function will call all the MEG QC functions."""
-    
-
-    # n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(sid)
-
-    m_or_g_title = {
-        'grads': 'Gradiometers',
-        'mags': 'Magnetometers'
-    }
-    df_epochs = {
-        'grads': df_epochs_grads,
-        'mags': df_epochs_mags
-    }
-    epochs_channels = {
-        'grads': epochs_channels_grads,
-        'mags': epochs_channels_mags
-    }
-
-    default_section = config['DEFAULT']
-    m_or_g_chosen = select_m_or_g(default_section)
-
-    if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
-        raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
-
-    
-    list_of_figure_paths_RMSE, list_of_figures_RMSE = MEG_QC_rmse(sid, config, channels, m_or_g_title, df_epochs, filtered_d_resamp, n_events, m_or_g_chosen)
-
-    list_of_figure_paths_PSD, list_of_figures_PSD, list_of_fig_descriptions_PSD = PSD_QC(sid, channels, filtered_d_resamp, m_or_g_chosen, config)
-
-    # MEG_peaks_manual()
-
-    # MEG_peaks_auto()
-
-    # MEG_EOG()
-
-    # MEG_ECG()
-
-    # MEG_head_movements()
-
-    # MEG_muscle()
-
-    return list_of_figures_PSD, list_of_fig_descriptions_PSD
 
 
 #%%
@@ -193,6 +164,11 @@ def save_derivative_html(dataset_path, list_of_subs):
     config.read('settings.ini')
 
     default_section = config['DEFAULT']
+    m_or_g_chosen = select_m_or_g(default_section)
+
+    if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
+        raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
+
     dataset_path = default_section['data_directory']
 
     from ancpbids import BIDSLayout
@@ -206,63 +182,49 @@ def save_derivative_html(dataset_path, list_of_subs):
     list_of_subs = layout.get_subjects()
     #print(list_of_subs)
 
-    for sid in list_of_subs:
+    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
         subject = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        for data_file in list_of_fifs:
-            n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file)
-            list_of_figures_PSD, list_of_fig_descriptions_PSD = MEG_QC_measures(sid, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw)
+        for data_file in list_of_fifs: 
+            df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
-            #put function here wuthou wrapper
+            _, list_of_figures = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
 
-            for deriv_n, _ in enumerate(list_of_figures_PSD):
+            # _, list_of_figures, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+
+            # MEG_peaks_manual()
+
+            # MEG_peaks_auto()
+
+            # MEG_EOG()
+
+            # MEG_ECG()
+
+            # MEG_head_movements()
+
+            # MEG_muscle()
+
+            list_of_fig_descriptions = ['some_fig1', 'some_fig2', 'some_fig3', 'some_fig4']
+
+            for deriv_n, _ in enumerate(list_of_figures):
                 meg_artifact = subject.create_artifact() #shell. empty derivative
-                meg_artifact.add_entity('desc', list_of_fig_descriptions_PSD[deriv_n]) #file name
+                meg_artifact.add_entity('desc', list_of_fig_descriptions[deriv_n]) #file name
                 # HERE ADD FILE DESCRIPTION: GET IT FROM THE FUNCTION WHICH CREATED IT LIKE PSD OF MAGNETOMETERS, ETC..
                 #meg_artifact.add_entity('task', task_label)
                 meg_artifact.suffix = 'meg'
                 meg_artifact.extension = ".html"
-                meg_artifact.content = lambda file_path: list_of_figures_PSD[deriv_n].write_html(file_path)
+                meg_artifact.content = lambda file_path: list_of_figures[deriv_n].write_html(file_path)
     
     layout.write_derivative(derivative) #maybe put intide the loop if cant have so much in memory?
 
-#%%
-# def save_figs_html(dataset_path, list_of_subs):
-
-#     layout = ancpbids.BIDSLayout(dataset_path)
-#     schema = layout.schema
-
-#     #create derivative folder first!
-#     derivative = layout.dataset.create_derivative(name="Meg_QC")
-#     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
-#     #for sidx, _ in enumerate(list_of_subs):
-
-
-#     subject = derivative.create_folder(type_=schema.Subject, name='sub-'+list_of_subs[sidx])
-#     _, list_of_figures_RMSE = MEG_QC_measures(list_of_subs[sidx], config)
-
-#     # create the HTML figure
-#     # model.fit(imgs, events, confounds) #DO I NEED TO CREATE SMTH HERE?
-
-#     meg_artifact = subject.create_artifact() #shell. empty derivative
-#     meg_artifact.add_entity('desc', "qc_measurements") #file name
-#     #meg_artifact.add_entity('task', task_label)
-#     meg_artifact.suffix = 'rmse'
-#     meg_artifact.extension = ".html"
-#     meg_artifact.content = lambda file_path: figr.write_html(file_path)
-    
-#     layout.write_derivative(derivative)
 
 
 #%%
 config = configparser.ConfigParser()
 config.read('settings.ini')
-# sids = config['DEFAULT']['sid']
-# sid_list = list(sids.split(','))
 
 direct = config['DEFAULT']['data_directory']
 dataset_path = ancpbids.utils.fetch_dataset(direct)
@@ -273,11 +235,11 @@ layout = BIDSLayout(dataset_path)
 # list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
 
 list_of_subs = layout.get_subjects()
-list_of_entities = layout.get_entities()
 
-print(list_of_entities)
+# list_of_entities = layout.get_entities()
+# print(list_of_entities)
 
-#save_derivative_html(dataset_path, list_of_subs)
+save_derivative_html(dataset_path, list_of_subs)
 
 
 #%%
