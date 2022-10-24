@@ -17,10 +17,12 @@ def load_meg_data(data_file) -> list([mne.io.Raw, list, list]):
     raw = mne.io.read_raw_fif(data_file)
 
     #Separate mags and grads:
-    mags = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T)')]
-    grads = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T_M)')]
+    # mags = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T)')]
+    # grads = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T_M)')]
 
-    return(raw, mags, grads)
+    channels = {'mags': raw.copy().pick_types(meg='mag').ch_names, 'grads': raw.copy().pick_types(meg='grad').ch_names}
+
+    return(raw, channels)
 
 
 def make_folders_meg(sid: str):
@@ -107,8 +109,11 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epo
     epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
     epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers '''
 
-    picks_grad = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
-    picks_magn = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
+    # picks_grad = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
+    # picks_magn = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
+
+    picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
+    picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
 
     events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
     n_events=len(events)
@@ -123,6 +128,6 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epo
     df_epochs_mags = epochs_mags.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
     df_epochs_grads = epochs_grads.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
 
-    return(n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads)
+    return(df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads)
 
 

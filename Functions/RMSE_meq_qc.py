@@ -65,10 +65,11 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     '''
 
 
-    # Separate data for mags and grads in 2 arrays.
-    selected_channels = [ch[1] for ch in channels]
+    # Old version:
+    # selected_channels = [ch[1] for ch in channels]
+    # data_channels, _ = data[selected_channels, :]  
 
-    data_channels, _ = data[selected_channels, :]  
+    data_channels=data.get_data(picks = channels)
 
     # Calculate STD or RMSE of each channel
 
@@ -85,8 +86,8 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     ch_ind_large_std= np.where(std_channels > mean_std_channels+std_lvl*std_std_channels) #find channels with largest std
     ch_ind_small_std= np.where(std_channels < mean_std_channels-std_lvl*std_std_channels) #findchannels with smallest std
 
-    channel_big_std=np.array(channels)[ch_ind_large_std] #find the name of the channel with largest std 
-    channel_small_std=np.array(channels)[ch_ind_small_std]
+    channel_big_std_names=np.array(channels)[ch_ind_large_std] #find the name of the channel with largest std 
+    channel_small_std_names=np.array(channels)[ch_ind_small_std]
 
 
     def Channels_with_nonnormal_stds(ch_ind, all_stds_m_or_g, channels_big_std_names):
@@ -95,12 +96,12 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
         channel_big_std_vals=all_stds_m_or_g[ch_ind]
         nonnormal_std_with_value=[]
         for id, val in enumerate (ch_ind[0]):
-            new_tuple=(channels_big_std_names[id][0],  channel_big_std_vals[id])
+            new_tuple=(channels_big_std_names[id],  channel_big_std_vals[id])
             nonnormal_std_with_value.append(new_tuple)
         return(nonnormal_std_with_value)
 
-    big_std_with_value=Channels_with_nonnormal_stds(ch_ind_large_std, std_channels, channel_big_std)
-    small_std_with_value=Channels_with_nonnormal_stds(ch_ind_small_std, std_channels, channel_small_std)
+    big_std_with_value=Channels_with_nonnormal_stds(ch_ind_large_std, std_channels, channel_big_std_names)
+    small_std_with_value=Channels_with_nonnormal_stds(ch_ind_small_std, std_channels, channel_small_std_names)
         
     #Return the channel names with STD over the set STD level and under the set negative STD level.
     return(big_std_with_value, small_std_with_value, std_channels)
@@ -171,10 +172,10 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
     
     eps=list(range(0,n_events)) #list of epoch numbers
    
-    ch_names = [ch[0] for ch in channels]
+    #ch_names = [ch[0] for ch in channels]
 
     #Apply function from above for mags and grads:
-    df_std=std_mg(df_mg=df_epochs, mg_names=ch_names, epoch_numbers=eps)
+    df_std=std_mg(df_mg=df_epochs, mg_names=channels, epoch_numbers=eps)
 
     # 2) Check (which epochs for which channel) are over 1STD (or 2, 3, etc STDs) for this epoch for all channels
 

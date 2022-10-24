@@ -40,27 +40,14 @@ def initial_stuff(config, data_file):
     will return what is stated, but in origibal duration.
     '''
 
-    # config = configparser.ConfigParser()
-    # config.read('settings.ini')
-    
-    # default_section = config['DEFAULT']
-    # dataset_path = default_section[""]
-    # from ancpbids import BIDSLayout
-    # layout = BIDSLayout(dataset_path)
+    raw = mne.io.read_raw_fif(data_file)
 
-    # list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
-
-    # data file list of fifs[i]
- 
-    # data_file = default_section['data_file']
-
-    
-    raw, mags, grads=load_meg_data(data_file)
-
-    #Create folders:
-    #make_folders_meg(sid)
+    mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
+    grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
+    channels = {'mags': mag_ch_names, 'grads': grad_ch_names}
 
     default_section = config['DEFAULT']
+
     #crop the data to calculate faster:
     tmin = default_section['data_crop_tmin']
     tmax = default_section['data_crop_tmax']
@@ -115,12 +102,8 @@ def initial_stuff(config, data_file):
         for ch in picks_stim:
             stim_channel.append(raw.info['chs'][ch]['ch_name'])
     
-    n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
+    df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
         stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
-
-    channels = {'mags': mags, 'grads': grads}
-
-    print('HERE IN INIT', channels)
 
     df_epochs = {
     'grads': df_epochs_grads,
@@ -141,6 +124,7 @@ def initial_stuff(config, data_file):
 # df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
 # print(df_epochs['mags']['epoch'].nunique())
+
 
 #%%
 def select_m_or_g(section: configparser.SectionProxy):
@@ -220,7 +204,29 @@ def save_derivative_html(dataset_path, list_of_subs):
     
     layout.write_derivative(derivative) #maybe put intide the loop if cant have so much in memory?
 
+#%%
+from RMSE_meq_qc import RMSE_meg_all
+config = configparser.ConfigParser()
+config.read('settings.ini')
+data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/sub_HT05ND16/210811/mikado-1.fif'
+sid='001'
 
+df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+
+m_or_g_chosen = ['mags', 'grads']
+
+big_std_with_value = {}
+small_std_with_value = {}
+rmse = {}
+
+# for m_or_g in m_or_g_chosen:
+#     big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=raw, channels=channels[m_or_g], std_lvl=1)
+# print(big_std_with_value)
+
+_, list_of_figures = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
+
+#%%
+print(big_std_with_value)
 
 #%%
 config = configparser.ConfigParser()
