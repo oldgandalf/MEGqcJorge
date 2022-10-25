@@ -113,7 +113,7 @@ def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: s
   else:
     print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
 
-  ch_names=[m[0] for m in channels] #names of channels for annotating the plot
+  ch_names=[m for m in channels] #names of channels for annotating the plot
   df = pd.DataFrame (std_data, index=ch_names, columns=['std'])
 
   fig = go.Figure()
