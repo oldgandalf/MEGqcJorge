@@ -1,6 +1,7 @@
 
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 
 def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str):
 
@@ -149,3 +150,103 @@ def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: s
   #fig.write_html(fig_path)
 
   return(fig, fig_path, fig_name)
+
+#%%
+def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):
+
+    '''Plotting periodogram on the data.
+
+    Args:
+    tit (str): title, like "Magnetometers", or "Gradiometers", 
+    sid (str): subject id number, like '1'
+    freqs (np.ndarray): numpy array of frequencies after performing Welch (or other method) psd decomposition
+    psds (np.ndarray): numpy array of psds after performing Welch (or other method) psd decomposition
+    mg_names (list of tuples): channel name + its index
+
+    Returns:
+    fig (go.Figure): plottly figure
+    fig_path (str): path where the figure is saved as html file
+    '''
+
+    unit='?'
+    if tit=='Magnetometers':
+        unit='T/Hz'
+    elif tit=='Gradiometers':
+        unit='T/m / Hz'
+    else:
+        print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
+
+    df_psds=pd.DataFrame(np.sqrt(psds.T), columns=mg_names)
+
+    fig = go.Figure()
+
+    for col in df_psds:
+        fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
+
+    #fig.update_xaxes(type="log")
+    #fig.update_yaxes(type="log")
+    
+    fig.update_layout(
+    title={
+    'text': "Welch's periodogram for all "+tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'},
+    yaxis_title="Amplitude, "+unit,
+    yaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+    xaxis_title="Frequency (Hz)")
+    fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
+
+    fig.show()
+    
+    fig_name='PSD_over_all_data_'+tit
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    #fig.write_html(fig_path)
+
+    return fig, fig_path, fig_name
+
+
+def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
+    
+    ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
+    signal of mags or of grads, not separated by individual channels.
+
+    Args:
+    mean_relative_freq (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
+        (percentage) values: what percentage of the total power does this band take,
+    tit (str): title, like "Magnetometers", or "Gradiometers", 
+    sid (str): subject id number, like '1'.
+    
+    Returns:
+    fig (go.Figure): plottly piechart figure
+    fig_path (str): path where the figure is saved as html file
+    '''
+
+    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
+    mean_relative_unknown=[v * 100 for v in mean_relative_freq]  #in percentage
+    power_unknown_m=100-(sum(mean_relative_freq))*100
+    if power_unknown_m>0:
+        mean_relative_unknown.append(power_unknown_m)
+        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma', 'unknown']
+    else:
+        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma']
+
+    fig = go.Figure(data=[go.Pie(labels=bands_names, values=mean_relative_unknown)])
+    fig.update_layout(
+    title={
+    'text': "Relative power of each band: "+tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+
+    fig.show()
+
+    fig_name='Relative_power_per_band_over_all_channels_'+tit
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    #fig.write_html(fig_path)
+
+    return fig, fig_path, fig_name

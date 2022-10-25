@@ -9,71 +9,8 @@ import plotly.graph_objects as go
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 
-from universal_html_report import make_PSD_report
-
-# In[39]:
-def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):
-
-    '''Plotting periodogram on the data.
-
-    Args:
-    tit (str): title, like "Magnetometers", or "Gradiometers", 
-    sid (str): subject id number, like '1'
-    freqs (np.ndarray): numpy array of frequencies after performing Welch (or other method) psd decomposition
-    psds (np.ndarray): numpy array of psds after performing Welch (or other method) psd decomposition
-    mg_names (list of tuples): channel name + its index
-
-    Returns:
-    fig (go.Figure): plottly figure
-    fig_path (str): path where the figure is saved as html file
-    '''
-
-    unit='?'
-    if tit=='Magnetometers':
-        unit='T/Hz'
-    elif tit=='Gradiometers':
-        unit='T/m / Hz'
-    else:
-        print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
-
-    mg_only_names=[n[0] for n in mg_names]
-
-    print('HERE!!!!', len(mg_only_names))
-    print(len(np.sqrt(psds)))
-
-    df_psds=pd.DataFrame(np.sqrt(psds.T), columns=mg_only_names)
-
-    fig = go.Figure()
-
-    for col in df_psds:
-        fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
-
-    #fig.update_xaxes(type="log")
-    #fig.update_yaxes(type="log")
-    
-    fig.update_layout(
-    title={
-    'text': "Welch's periodogram for all "+tit,
-    'y':0.85,
-    'x':0.5,
-    'xanchor': 'center',
-    'yanchor': 'top'},
-    yaxis_title="Amplitude, "+unit,
-    yaxis = dict(
-        showexponent = 'all',
-        exponentformat = 'e'),
-    xaxis_title="Frequency (Hz)")
-    fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
-
-    fig.show()
-    
-    fig_name='PSD_over_all_data_'+tit
-    fig_name_HTML='PSD_over_all_data_'+tit+'.html'
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name_HTML
-    fig.write_html(fig_path)
-
-    return fig, fig_path, fig_name
-
+from universal_plots import Plot_periodogram, plot_pie_chart_freq
+from universal_html_report import make_PSD_report, make_std_peak_report
 
 # In[40]:
 
@@ -127,13 +64,11 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or 
     else:
         TypeError('Check channel type')
 
-    print('HERE!! Freq spectrum', len(picks))
-    print('HERE!! Freq spectrum', picks)
     psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
     
     fig, fig_path, fig_desc=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
 
-    return freqs, psds, fig_path, fig, fig_desc
+    return freqs, psds, fig, fig_path, fig_desc
     
 
 # In[42]:
@@ -195,52 +130,7 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
     return(power_per_band_list, power_by_Nfreq_per_band_list, rel_power_per_band_list)
 
 
-# In[43]:
-
-def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
     
-    ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
-    signal of mags or of grads, not separated by individual channels.
-
-    Args:
-    mean_relative_freq (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
-        (percentage) values: what percentage of the total power does this band take,
-    tit (str): title, like "Magnetometers", or "Gradiometers", 
-    sid (str): subject id number, like '1'.
-    
-    Returns:
-    fig (go.Figure): plottly piechart figure
-    fig_path (str): path where the figure is saved as html file
-    '''
-
-    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    mean_relative_unknown=[v * 100 for v in mean_relative_freq]  #in percentage
-    power_unknown_m=100-(sum(mean_relative_freq))*100
-    if power_unknown_m>0:
-        mean_relative_unknown.append(power_unknown_m)
-        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma', 'unknown']
-    else:
-        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma']
-
-    fig = go.Figure(data=[go.Pie(labels=bands_names, values=mean_relative_unknown)])
-    fig.update_layout(
-    title={
-    'text': "Relative power of each band: "+tit,
-    'y':0.85,
-    'x':0.5,
-    'xanchor': 'center',
-    'yanchor': 'top'})
-
-    fig.show()
-
-    fig_name='Relative_power_per_band_over_all_channels_'+tit
-    fig_name_HTML='Relative_power_per_band_over_all_channels_'+tit+'.html'
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name_HTML
-    fig.write_html(fig_path)
-
-    return fig, fig_path, fig_name
-    
-
 # In[53]:
 
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
@@ -355,9 +245,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
         if plotflag is True: 
             fig, fig_path, fig_desc = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
-            return fig, fig_path
-    
-    return fig, fig_path, fig_desc
+            return fig, fig_path, fig_desc
+        else:
+            return None, None, None
 
 #%%
 
@@ -388,7 +278,7 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g
     list_of_fig_descriptions_pie = []
 
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_path_psd[m_or_g], fig_psd[m_or_g], fig_desc[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[m_or_g], psds[m_or_g], fig_psd[m_or_g], fig_path_psd[m_or_g], fig_desc[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
 
         fig_pie[m_or_g],fig_path_pie[m_or_g], fig_desc_pie[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
@@ -409,9 +299,10 @@ def PSD_QC(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g
     # to remove None values in list:
     list_of_figures = [i for i in list_of_figures if i is not None]
     list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
-    list_of_figure_descriptions = [i for i in list_of_figure_paths if i is not None]
+    list_of_figure_descriptions = [i for i in list_of_fig_descriptions if i is not None]
 
-    make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
+    # make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
+    # make_std_peak_report(sid=sid, what_data='psd', list_of_figure_paths=list_of_figure_paths, config=config)
 
     return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
 

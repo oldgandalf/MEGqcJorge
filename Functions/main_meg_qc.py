@@ -168,10 +168,10 @@ def save_derivative_html(dataset_path, list_of_subs):
     list_of_subs = layout.get_subjects()
     #print(list_of_subs)
 
-    #for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
-    for sid in list_of_subs: 
+    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
+    #for sid in list_of_subs: 
 
-        subject = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+        subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
@@ -183,9 +183,9 @@ def save_derivative_html(dataset_path, list_of_subs):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            _, list_of_figures, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
 
-            # _, list_of_figures, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            list_of_figures, _, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
             # MEG_peaks_manual()
 
@@ -200,14 +200,16 @@ def save_derivative_html(dataset_path, list_of_subs):
             # MEG_muscle()
 
 
-            for deriv_n, _ in enumerate(list_of_figures):
-                meg_artifact = subject.create_artifact() #shell. empty derivative
+            for deriv_n, figu in enumerate(list_of_figures):
+            #for deriv_n, _ in enumerate([list_of_figures[0]]):
+                meg_artifact = subject_folder.create_artifact() #shell. empty derivative
                 meg_artifact.add_entity('desc', list_of_fig_descriptions[deriv_n]) #file name
-                # HERE ADD FILE DESCRIPTION: GET IT FROM THE FUNCTION WHICH CREATED IT LIKE PSD OF MAGNETOMETERS, ETC..
                 #meg_artifact.add_entity('task', task_label)
                 meg_artifact.suffix = 'meg'
                 meg_artifact.extension = ".html"
-                meg_artifact.content = lambda file_path: list_of_figures[deriv_n].write_html(file_path)
+
+                print('FIGURE!', figu)
+                meg_artifact.content = lambda file_path: figu.write_html(file_path)
     
     layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
 

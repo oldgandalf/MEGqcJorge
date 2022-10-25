@@ -36,6 +36,8 @@ def make_std_peak_report(sid: str, what_data: str, list_of_figure_paths: list, c
         heading_measurement = 'Peak-to-peak amplitudes'
     elif what_data == 'stds':
         heading_measurement = 'Standard deviation'
+    elif what_data == 'psd':
+        heading_measurement = 'Frequency spectrum'
 
 
     header_html_string = '''

@@ -257,5 +257,5 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
     
     # make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
 
-    return list_of_figure_paths, list_of_figures, list_of_figure_descriptions
+    return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
     
