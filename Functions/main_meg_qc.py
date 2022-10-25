@@ -5,11 +5,13 @@
 
 import mne
 import configparser
-from PSD_meg_qc import PSD_QC 
-from RMSE_meq_qc import MEG_QC_rmse
 import ancpbids
+from ancpbids import BIDSLayout
 
 from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
+from RMSE_meq_qc import MEG_QC_rmse
+from PSD_meg_qc import PSD_QC 
+
 
 #%%
 def initial_stuff(config, data_file):
@@ -115,16 +117,6 @@ def initial_stuff(config, data_file):
 
     return df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
-#%%
-# TRY:
-# data_file = '../data/sub_HT05ND16/210811/mikado-1.fif/'
-# config = configparser.ConfigParser()
-# config.read('settings.ini')
-
-# df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
-
-# print(df_epochs['mags']['epoch'].nunique())
-
 
 #%%
 def select_m_or_g(section: configparser.SectionProxy):
@@ -140,7 +132,9 @@ def select_m_or_g(section: configparser.SectionProxy):
         return ['mags', 'grads']
 
 
-def sanity_check(m_or_g_chosen):
+def sanity_check(m_or_g_chosen, channels):
+    if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
+        m_or_g_chosen = []
     if channels['mags'] is None and 'mags' in m_or_g_chosen:
         print('There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
         m_or_g_chosen.remove('mags')
@@ -152,6 +146,7 @@ def sanity_check(m_or_g_chosen):
         m_or_g_chosen = []
     return m_or_g_chosen
 
+
 #%%
 def save_derivative_html(dataset_path, list_of_subs):
 
@@ -161,12 +156,8 @@ def save_derivative_html(dataset_path, list_of_subs):
     default_section = config['DEFAULT']
     m_or_g_chosen = select_m_or_g(default_section)
 
-    if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
-        raise ValueError('Type of channels to analise has to be chosen in setting.ini. Use "mags", "grads" or "both" as parameter of do_for. Otherwise the analysis can not be done.')
-
     dataset_path = default_section['data_directory']
 
-    from ancpbids import BIDSLayout
     layout = BIDSLayout(dataset_path)
     schema = layout.schema
 
@@ -177,7 +168,9 @@ def save_derivative_html(dataset_path, list_of_subs):
     list_of_subs = layout.get_subjects()
     #print(list_of_subs)
 
-    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
+    #for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
+    for sid in list_of_subs: 
+
         subject = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
@@ -186,7 +179,7 @@ def save_derivative_html(dataset_path, list_of_subs):
         for data_file in list_of_fifs: 
             df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
-            m_or_g_chosen = sanity_check(m_or_g_chosen)
+            m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
@@ -216,70 +209,5 @@ def save_derivative_html(dataset_path, list_of_subs):
                 meg_artifact.extension = ".html"
                 meg_artifact.content = lambda file_path: list_of_figures[deriv_n].write_html(file_path)
     
-    layout.write_derivative(derivative) #maybe put intide the loop if cant have so much in memory?
+    layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
 
-#%% TRY SEPARATE FUNCTIONS HERE
-
-config = configparser.ConfigParser()
-config.read('settings.ini')
-#data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/sub_HT05ND16/210811/mikado-1.fif'
-data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/ds004276/sub-001/meg/sub-001_task-words_meg.fif'
-sid='001'
-
-df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
-m_or_g_chosen = ['grads']
-
-m_or_g_chosen = sanity_check(m_or_g_chosen)
-
-if len(m_or_g_chosen) == 0: 
-    raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
-
-_, list_of_figures = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
-
-
-#%% TRY TO SAVE DERIVATIVE WITH BIDS DATASET HERE:
-config = configparser.ConfigParser()
-config.read('settings.ini')
-
-direct = config['DEFAULT']['data_directory']
-dataset_path = ancpbids.utils.fetch_dataset(direct)
-
-from ancpbids import BIDSLayout
-layout = BIDSLayout(dataset_path)
-
-# list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename')
-
-list_of_subs = layout.get_subjects()
-
-# list_of_entities = layout.get_entities()
-# print(list_of_entities)
-
-save_derivative_html(dataset_path, list_of_subs)
-
-
-#%%
-# Try on one subject:
-subj = '001'
-data_file0 = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=subj)[0]
-print('Try now ', data_file0)
-
-n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw = initial_stuff(config, data_file=data_file0)
-
-print('NOW START THE QC stuff)')
-
-#list_of_figures_PSD, list_of_fig_descriptions_PSD = MEG_QC_measures(subj, config, n_events, df_epochs_mags, df_epochs_grads, epochs_channels_mags, epochs_channels_grads, channels, filtered_d, filtered_d_resamp, raw_cropped, raw)
-
-#%%
-
-from PSD_meg_qc import Freq_Spectrum_meg
-
-print(len(channels['mags']))
-freqs, psds, fig_path_psd, fig_psd, fig_desc = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = 'mags', sid=subj, freq_min=0.5, freq_max=100, n_fft=1000, n_per_seg=1000, freq_tmin=None, freq_tmax=None, ch_names=channels['mags'])
-
-#%%   Run the pipleine over subjects
-# We actually cant loop just over sids, cos each need a new data file. Add more dats files in config or?
-
-# for sid in sid_list:
-#     list_of_figure_paths_RMSE, list_of_figures_RMSE = MEG_QC_measures(sid, config)
-
-#print(list_of_figure_paths_RMSE)

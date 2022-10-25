@@ -50,8 +50,6 @@ def RMSE(data_m_or_g: np.array or list):
 # In[6]:
 def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int): 
 
-    print('HERE!', channels)
-
     '''Root mean squared error calculated over ALL data (not epoched)
     
     Args:
@@ -257,7 +255,7 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
     list_of_figures += list_of_figures_std_epoch
     list_of_figure_descriptions += list_of_figure_descriptions_std_epoch
     
-    make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
+    # make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
 
     return list_of_figure_paths, list_of_figures, list_of_figure_descriptions
     
