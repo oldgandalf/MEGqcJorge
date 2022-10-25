@@ -33,11 +33,11 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     if what_data=='peaks':
         hover_tit='Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_amplitude_epochs_per_channel_'+ch_type+'.html'
+        fig_name='PP_amplitude_epochs_per_channel_'+ch_type
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='Stds_epochs_per_channel_'+ch_type+'.html'
+        fig_name='Stds_epochs_per_channel_'+ch_type
 
     #transpose the data to plot the boxplots on x axes
     df_mg_transposed = df_mg.T 
@@ -79,12 +79,12 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
             'yanchor': 'top'})
         
 
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
 
     fig.show()
     fig.write_html(fig_path)
 
-    return(fig, fig_path)
+    return(fig, fig_path, fig_name)
 
 
 def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: str):
@@ -144,8 +144,8 @@ def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: s
       
   fig.show()
 
-  fig_name='Stds_all_data_'+tit+'.html'
-  fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name
+  fig_name='Stds_all_data_'+tit
+  fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
   fig.write_html(fig_path)
 
-  return(fig, fig_path)
+  return(fig, fig_path, fig_name)

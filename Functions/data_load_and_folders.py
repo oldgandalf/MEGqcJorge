@@ -120,7 +120,7 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epo
 
     if n_events == 0:
         print('No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different even duration in settings.')
-        return(None, None, None, None, None)
+        return(None, None, None, None)
 
     epochs_mags = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
     epochs_grads = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)

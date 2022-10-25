@@ -140,6 +140,17 @@ def select_m_or_g(section: configparser.SectionProxy):
         return ['mags', 'grads']
 
 
+def sanity_check(m_or_g_chosen):
+    if channels['mags'] is None and 'mags' in m_or_g_chosen:
+        print('There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
+        m_or_g_chosen.remove('mags')
+    elif channels['grads'] is None and 'grads' in m_or_g_chosen:
+        print('There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
+        m_or_g_chosen.remove('grads')
+    elif channels['mags'] is None and channels['grads'] is None:
+        print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
+        m_or_g_chosen = []
+    return m_or_g_chosen
 
 #%%
 def save_derivative_html(dataset_path, list_of_subs):
@@ -175,7 +186,11 @@ def save_derivative_html(dataset_path, list_of_subs):
         for data_file in list_of_fifs: 
             df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
-            _, list_of_figures = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
+            m_or_g_chosen = sanity_check(m_or_g_chosen)
+            if len(m_or_g_chosen) == 0: 
+                raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
+
+            _, list_of_figures, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
 
             # _, list_of_figures, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
@@ -191,7 +206,6 @@ def save_derivative_html(dataset_path, list_of_subs):
 
             # MEG_muscle()
 
-            list_of_fig_descriptions = ['some_fig1', 'some_fig2', 'some_fig3', 'some_fig4']
 
             for deriv_n, _ in enumerate(list_of_figures):
                 meg_artifact = subject.create_artifact() #shell. empty derivative
@@ -204,31 +218,26 @@ def save_derivative_html(dataset_path, list_of_subs):
     
     layout.write_derivative(derivative) #maybe put intide the loop if cant have so much in memory?
 
-#%%
-from RMSE_meq_qc import RMSE_meg_all
+#%% TRY SEPARATE FUNCTIONS HERE
+
 config = configparser.ConfigParser()
 config.read('settings.ini')
-data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/sub_HT05ND16/210811/mikado-1.fif'
+#data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/sub_HT05ND16/210811/mikado-1.fif'
+data_file='/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/data/ds004276/sub-001/meg/sub-001_task-words_meg.fif'
 sid='001'
 
 df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+m_or_g_chosen = ['grads']
 
-m_or_g_chosen = ['mags', 'grads']
+m_or_g_chosen = sanity_check(m_or_g_chosen)
 
-big_std_with_value = {}
-small_std_with_value = {}
-rmse = {}
-
-# for m_or_g in m_or_g_chosen:
-#     big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=raw, channels=channels[m_or_g], std_lvl=1)
-# print(big_std_with_value)
+if len(m_or_g_chosen) == 0: 
+    raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
 _, list_of_figures = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
 
-#%%
-print(big_std_with_value)
 
-#%%
+#%% TRY TO SAVE DERIVATIVE WITH BIDS DATASET HERE:
 config = configparser.ConfigParser()
 config.read('settings.ini')
 
