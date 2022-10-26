@@ -88,68 +88,78 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     return(fig, fig_path, fig_name)
 
 
-def boxplot_std_hovering_plotly(std_data: list, tit: str, channels: list, sid: str):
+def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, sid: str, what_data: str):
 
-  '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
-  each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
-  Implemebted with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
-  The figure will be saved as an interactive html file.
+    '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
+    each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
+    Implemebted with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
+    The figure will be saved as an interactive html file.
 
-  Args:
-  std_data (list): stds for mags or grads calculated in RMSE_meg_all, 
-  tit (str): title, like "Magnetometers", or "Gradiometers", 
-  channels (list of tuples): magnetometer channel name + its index, 
-  sid (str): subject id number, like '1'
+    Args:
+    std_data (list): stds for mags or grads calculated in RMSE_meg_all, 
+    ch_type (str): "Magnetometers" or "Gradiometers", 
+    channels (list of tuples): magnetometer channel name + its index, 
+    sid (str): subject id, like '1'
+    what_data (str): 'peaks' or 'stds'
 
-  Returns:
-  fig (go.Figure): plottly figure
-  fig_path (str): path where the figure is saved as html file
-  '''
+    Returns:
+    fig (go.Figure): plottly figure
+    fig_path (str): path where the figure is saved as html file
+    fig_name (str): figure name
+    '''
 
-  unit='?'
-  if tit=='Magnetometers':
-    unit='T'
-  elif tit=='Gradiometers':
-    unit='T/m'
-  else:
-    print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
+    if ch_type=='Magnetometers':
+        unit='Tesla'
+    elif ch_type=='Gradiometers':
+        unit='Tesla/meter'
+    else:
+        unit='?unknown unit?'
+        print('Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
 
-  ch_names=[m for m in channels] #names of channels for annotating the plot
-  df = pd.DataFrame (std_data, index=ch_names, columns=['std'])
 
-  fig = go.Figure()
+    if what_data=='peaks':
+        hover_tit='PP_Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_amplitude_epochs_per_channel_'+ch_type
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='Stds_epochs_per_channel_'+ch_type
 
-  fig.add_trace(go.Box(x=df['std'],
-  name="",
-  text=df['std'].index, 
-  opacity=0.7, 
-  boxpoints="all", 
-  pointpos=0,
-  marker_size=5,
-  line_width=1))
-  fig.update_traces(hovertemplate='%{text}'+'<br>STD: %{x: .0f}')
-      
+    df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
-  fig.update_layout(
-      yaxis={'visible': False, 'showticklabels': False},
-      xaxis = dict(
-      showexponent = 'all',
-      exponentformat = 'e'),
-      xaxis_title="standard deviation in "+unit,
-      title={
-      'text': 'Standard deviation of the data for '+tit+' over whole time series',
-      'y':0.85,
-      'x':0.5,
-      'xanchor': 'center',
-      'yanchor': 'top'})
-      
-  #fig.show()
+    fig = go.Figure()
 
-  fig_name='Stds_all_data_'+tit
-  fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
-  #fig.write_html(fig_path)
+    fig.add_trace(go.Box(x=df[hover_tit],
+    name="",
+    text=df[hover_tit].index, 
+    opacity=0.7, 
+    boxpoints="all", 
+    pointpos=0,
+    marker_size=5,
+    line_width=1))
+    fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
+        
 
-  return(fig, fig_path, fig_name)
+    fig.update_layout(
+        yaxis={'visible': False, 'showticklabels': False},
+        xaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+        xaxis_title=y_ax_and_fig_title+" in "+unit,
+        title={
+        'text': y_ax_and_fig_title+' of the data for '+ch_type+' over the entire time series',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+        
+    fig.show()
+
+    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    fig.write_html(fig_path)
+
+    return(fig, fig_path, fig_name)
 
 #%%
 def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):

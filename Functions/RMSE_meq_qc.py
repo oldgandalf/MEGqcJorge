@@ -26,14 +26,14 @@ def RMSE(data_m_or_g: np.array or list):
     data_m_or_g=np.array(data_m_or_g) #convert to numpy array if it s not
     rmse_list=[]
 
-    data_minentions=len(data_m_or_g.shape)
-    if data_minentions==2: #if the data has raws and columns - iterate over raws. if input is 1 dimentional - juat calculate the whole thing.
-        for i, dat_raw in enumerate (data_m_or_g):
+    data_dimentions=len(data_m_or_g.shape)
+    if data_dimentions==2: #if the data has raws and columns - iterate over raws. if input is 1 dimentional - just calculate the whole thing.
+        for dat_raw in data_m_or_g:
             y_actual=dat_raw
             y_pred=y_actual.mean()
             rmse_data=np.sqrt(((y_pred - y_actual) ** 2).mean())
             rmse_list.append(rmse_data)
-    elif data_minentions==1:
+    elif data_dimentions==1:
         y_actual=data_m_or_g
         y_pred=data_m_or_g.mean()
         rmse_data=np.sqrt(((y_pred - y_actual) ** 2).mean())
@@ -63,11 +63,6 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     small_std_with_value (list of tuples): list of channels with too low std value
     std_channels (np.array): std values for channels
     '''
-
-
-    # Old version:
-    # selected_channels = [ch[1] for ch in channels]
-    # data_channels, _ = data[selected_channels, :]  
 
     data_channels=data.get_data(picks = channels)
 
@@ -222,13 +217,13 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
     list_of_figure_descriptions_std_epoch = []
     big_std_with_value = {}
     small_std_with_value = {}
-    fig_path = {}
     figs = {}
+    fig_path = {}
+    fig_name = {}
     df_std = {}
     fig_std_epoch = {}
     fig_path_std_epoch = {}
     fig_name_epoch = {}
-    fig_name = {}
     rmse = {}
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
@@ -236,7 +231,7 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
 
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=filtered_d_resamp, channels=channels[m_or_g], std_lvl=1)
 
-        figs[m_or_g], fig_path[m_or_g], fig_name[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], tit=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid)
+        figs[m_or_g], fig_path[m_or_g], fig_name[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds')
         list_of_figure_paths.append(fig_path[m_or_g])
         list_of_figures.append(figs[m_or_g])
         list_of_figure_descriptions.append(fig_name[m_or_g])
