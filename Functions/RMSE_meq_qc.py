@@ -143,7 +143,7 @@ def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
 #%% STD over epochs: use 2 separate data frames for mags and grads in calculations:
 
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df_epochs: pd.DataFrame, sid: str):
+def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: list, df_epochs: pd.DataFrame, sid: str):
 
     '''
     - Calculate std for every separate epoch of mags + grads
@@ -154,7 +154,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
     channels (list of tuples): channel name + its index as list,
     std_lvl (int): how many standard deviations from the mean are acceptable in the data. 
         data variability over this setting will be concedered as too too noisy, under -std_lvl as too flat 
-    n_events(int): number of events, 
+    epoch_numbers(list): list of event numbers, 
     df_epochs (pd.DataFrame): data frame containing stds for all epoch for each channel
     sid (str): subject id number, like '1'
 
@@ -164,13 +164,9 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
     '''
 
     # 1) Loop over the epochs of each channel and check for every separate magn and grad and calculate std
-    
-    eps=list(range(0,n_events)) #list of epoch numbers
-   
-    #ch_names = [ch[0] for ch in channels]
 
     #Apply function from above for mags and grads:
-    df_std=std_mg(df_mg=df_epochs, mg_names=channels, epoch_numbers=eps)
+    df_std=std_mg(df_mg=df_epochs, mg_names=channels, epoch_numbers=epoch_numbers)
 
     # 2) Check (which epochs for which channel) are over 1STD (or 2, 3, etc STDs) for this epoch for all channels
 
@@ -178,7 +174,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
     std_std_per_epoch=[]
     mean_std_per_epoch=[]
 
-    for ep in eps: #goes over each epoch
+    for ep in epoch_numbers: #goes over each epoch
         std_std_per_epoch.append(np.std(df_std.iloc[:, ep])) #std of stds of all channels of every single epoch
         mean_std_per_epoch.append(np.mean(df_std.iloc[:, ep])) #mean of stds of all channels of every single epoch
 
@@ -186,7 +182,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, n_events: int, df
     df_ch_ep_small_std=df_std.copy()
 
     #Now see which channles in epoch are over 1 std or under -1 std:
-    for ep in eps: #goes over each epoch   
+    for ep in epoch_numbers: #goes over each epoch   
         df_ch_ep_large_std.iloc[:,ep] = df_ch_ep_large_std.iloc[:,ep] > mean_std_per_epoch[ep]+std_lvl*std_std_per_epoch[ep] 
         df_ch_ep_small_std.iloc[:,ep] = df_ch_ep_small_std.iloc[:,ep] < mean_std_per_epoch[ep]-std_lvl*std_std_per_epoch[ep] 
 
@@ -208,6 +204,8 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
 
     rmse_section = config['RMSE']
     std_lvl = rmse_section.getint('std_lvl')
+
+    epoch_numbers = df_epochs[m_or_g_chosen[0]]['epoch'].unique()
 
     list_of_figure_paths = []
     list_of_figures = []
@@ -237,8 +235,7 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
         list_of_figure_descriptions.append(fig_name[m_or_g])
 
         if df_epochs[m_or_g] is not None:
-            n_events = df_epochs[m_or_g]['epoch'].nunique()
-            df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[m_or_g], sid=sid) 
+            df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=df_epochs[m_or_g], sid=sid) 
             fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g], fig_name_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
             list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
             list_of_figures_std_epoch.append(fig_std_epoch[m_or_g])
