@@ -9,12 +9,13 @@ import ancpbids
 from ancpbids import BIDSLayout
 
 from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
-from RMSE_meq_qc import MEG_QC_rmse
-from PSD_meg_qc import PSD_QC 
+from RMSE_meq_qc import RMSE_meg_qc
+from PSD_meg_qc import PSD_meg_qc
+from Peaks_manual_meg_qc import PP_manual_meg_qc
 
 
 #%%
-def initial_stuff(config, data_file):
+def initial_stuff(config: dict, data_file: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -24,16 +25,13 @@ def initial_stuff(config, data_file):
     - epoch the data.
 
     Args:
-    sid (str): subject id
+    config: config file like settings.ini
+    data_file (str): path to the data file
 
     Returns: 
-    n_events (int): number of events(=number of epochs)
-    df_epochs_mags (pd. Dataframe): data frame containing data for all epochs for mags 
-    df_epochs_grads (pd. Dataframe): data frame containing data for all epochs for grads 
-    epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
-    epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers 
-    mags (list of tuples): magnetometer channel name + its index
-    grads (list of tuples): gradiometer channel name + its index
+    dict_of_dfs_epoch (dict with 2 pd. Dataframe): 2 data frames containing data for all epochs for mags and grads
+    epochs_mg (dict with 2 mne. Epochs): 2 epoch objects for mags and  grads
+    channels (dict): mags and grads channels names
     raw_bandpass(mne.raw): data only filtered, cropped (*)
     raw_bandpass_resamp(mne.raw): data filtered and resampled, cropped (*)
     raw_cropped(mne.io.Raw): data in raw format, cropped, not filtered, not resampled (*)
@@ -107,7 +105,7 @@ def initial_stuff(config, data_file):
     df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
         stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
 
-    df_epochs = {
+    dict_of_dfs_epoch = {
     'grads': df_epochs_grads,
     'mags': df_epochs_mags}
 
@@ -115,7 +113,7 @@ def initial_stuff(config, data_file):
     'grads': epochs_grads,
     'mags': epochs_mags}
 
-    return df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+    return dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
 #%%
@@ -133,6 +131,8 @@ def select_m_or_g(section: configparser.SectionProxy):
 
 
 def sanity_check(m_or_g_chosen, channels):
+    '''Check if the channels which the user gave in config file to analize actually present in the data set'''
+
     if m_or_g_chosen != ['mags'] and m_or_g_chosen != ['grads'] and m_or_g_chosen != ['mags', 'grads']:
         m_or_g_chosen = []
     if channels['mags'] is None and 'mags' in m_or_g_chosen:
@@ -148,10 +148,16 @@ def sanity_check(m_or_g_chosen, channels):
 
 
 #%%
-def make_derivative_html():
+def make_derivative_html(config_file_name):
+
+    """Main function of MEG QC.
+    - Parce parameters from config
+    - Get the data .fif file for each subject
+    - Run whole analysis for every subject, every fif
+    - Make and save derivatives (html figures, csvs, html reports, etc...)"""
 
     config = configparser.ConfigParser()
-    config.read('settings.ini')
+    config.read(config_file_name)
 
     default_section = config['DEFAULT']
     m_or_g_chosen = select_m_or_g(default_section)
@@ -177,17 +183,17 @@ def make_derivative_html():
         #Devide here fifs by task, ses , run
 
         for data_file in list_of_fifs: 
-            df_epochs, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+            dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            # list_of_figures, _, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            list_of_figures, _, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
-            # MEG_peaks_manual()
+            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
             # MEG_peaks_auto()
 

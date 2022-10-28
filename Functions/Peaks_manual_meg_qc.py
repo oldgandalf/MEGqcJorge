@@ -141,7 +141,7 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
     return dict_ep_mg
 
 
-def MEG_QC_PP_manual(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, filtered_d_resamp, m_or_g_chosen: list):
+def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     m_or_g_title = {
     'grads': 'Gradiometers',
@@ -151,11 +151,7 @@ def MEG_QC_PP_manual(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, f
     pair_dist_sec = ptp_manual_section.getfloat('pair_dist_sec') 
     thresh_lvl = ptp_manual_section.getfloat('ptp_thresh_lvl')
 
-    sfreq = filtered_d_resamp.info['sfreq']
-
-    m_or_g_chosen_chosen = m_or_g_chosen[0]
-
-    epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen_chosen]['epoch'].unique()
+    sfreq = data.info['sfreq']
 
     list_of_figure_paths = []
     list_of_figures = []
@@ -176,7 +172,7 @@ def MEG_QC_PP_manual(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, f
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
 
-        peak_ampl[m_or_g] = peak_amplitude_all_data(filtered_d_resamp, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
+        peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
 
         figs_pp[m_or_g], fig_path_pp[m_or_g], fig_name_pp[m_or_g] = boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks')
         list_of_figure_paths.append(fig_path_pp[m_or_g])
@@ -184,6 +180,7 @@ def MEG_QC_PP_manual(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, f
         list_of_figure_descriptions.append(fig_name_pp[m_or_g])
 
         if dict_of_dfs_epoch[m_or_g] is not None:
+            epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
             dict_ep_mg[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers)
             fig_pp_epoch[m_or_g], fig_path_pp_epoch[m_or_g], fig_name_pp_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=dict_ep_mg[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')
             list_of_figure_paths_epoch.append(fig_path_pp_epoch[m_or_g])
