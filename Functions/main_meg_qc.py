@@ -148,7 +148,7 @@ def sanity_check(m_or_g_chosen, channels):
 
 
 #%%
-def save_derivative_html(dataset_path, list_of_subs):
+def make_derivative_html():
 
     config = configparser.ConfigParser()
     config.read('settings.ini')
@@ -183,9 +183,9 @@ def save_derivative_html(dataset_path, list_of_subs):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            list_of_figures, _, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = MEG_QC_rmse(sid, config, channels, df_epochs, raw_bandpass_resamp, m_or_g_chosen)
 
-            # list_of_figures, _, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            list_of_figures, _, list_of_fig_descriptions = PSD_QC(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
             # MEG_peaks_manual()
 
@@ -199,34 +199,15 @@ def save_derivative_html(dataset_path, list_of_subs):
 
             # MEG_muscle()
 
-
-            #for deriv_n, figu in enumerate(list_of_figures):
-            # for deriv_n, figu in enumerate([list_of_figures[0]]):
-            #     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-            #     meg_artifact.add_entity('desc', list_of_fig_descriptions[deriv_n]) #file name
-            #     #meg_artifact.add_entity('task', task_label)
-            #     meg_artifact.suffix = 'meg'
-            #     meg_artifact.extension = ".html"
-
-            #     print('FIGURE!', figu)
-            #     meg_artifact.content = lambda file_path: figu.write_html(file_path)
-
-            i = 0
-            for i in range(0, len(list_of_figures)-1):
+            for i in range(0, len(list_of_figures)):
                 meg_artifact = subject_folder.create_artifact() #shell. empty derivative
                 meg_artifact.add_entity('desc', list_of_fig_descriptions[i]) #file name
                 #meg_artifact.add_entity('task', task_label)
                 meg_artifact.suffix = 'meg'
-                meg_artifact.extension = ".html"
-
-                figu = list_of_figures[i]
+                meg_artifact.extension = '.html'
 
                 print('FIGURE!', list_of_figures[i])
-                meg_artifact.content = lambda file_path: figu.write_html(file_path)
-
-
-                # def content_thing(list_of_figures[i], file_path):
-                #     meg_artifact.content = list_of_figures[i].write_html(file_path)
+                meg_artifact.content = lambda file_path: list_of_figures[i].write_html(file_path)
     
                 layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
 
