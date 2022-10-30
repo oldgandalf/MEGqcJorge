@@ -212,8 +212,10 @@ def make_derivative_html(config_file_name):
                 meg_artifact.suffix = 'meg'
                 meg_artifact.extension = '.html'
 
-                print('FIGURE!', list_of_figures[i])
-                meg_artifact.content = lambda file_path: list_of_figures[i].write_html(file_path)
+                #print('FIGURE!', list_of_figures[i])
+                meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
+                #problem with lambda explained:
+                #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
     
-                layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
+    layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
 
