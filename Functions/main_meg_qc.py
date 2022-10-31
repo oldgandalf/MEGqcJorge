@@ -12,6 +12,7 @@ from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
 from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
+from Peaks_auto_meg_qc import PP_auto_meg_qc
 
 
 #%%
@@ -195,7 +196,7 @@ def make_derivative_html(config_file_name):
 
             # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            # MEG_peaks_auto()
+            # dfs_ptp_amlitude_annot, bad_channels, amplit_annot_with_ch_names = PP_auto_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
             # MEG_EOG()
 
@@ -217,5 +218,5 @@ def make_derivative_html(config_file_name):
                 #problem with lambda explained:
                 #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
     
-    layout.write_derivative(derivative) #maybe put istide the loop if cant have so much in memory?
+    layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
 
