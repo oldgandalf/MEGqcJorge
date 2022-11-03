@@ -118,11 +118,12 @@ def Epoch_meg(config, data: mne.io.Raw):
     stim_channel = stim_channel.replace(" ", "")
     stim_channel = stim_channel.split(",")
 
-    if len(stim_channel) == 0:
+    if stim_channel==['']:
         picks_stim = mne.pick_types(data.info, stim=True)
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
+        print('Stimulus channels detected:', stim_channel)
 
     picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
