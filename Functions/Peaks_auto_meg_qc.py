@@ -1,5 +1,8 @@
 # Calculating peak-to-peak amplitudes using mne annotations.
 
+# !!! Automatically choose peak and flat values by averaging the data maybe?
+
+
 import numpy as np
 import pandas as pd
 import mne

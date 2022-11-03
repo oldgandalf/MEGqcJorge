@@ -91,16 +91,13 @@ def make_folders_meg(sid: str):
 #     #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
 
 
-def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epoch_tmin: float, epoch_tmax: float) -> list([int, pd.DataFrame, pd.DataFrame, mne.Epochs, mne.Epochs]):
+def Epoch_meg(config, data: mne.io.Raw):
 
     '''Gives epoched data in 2 separated data frames: mags and grads + as epoch objects.
     
     Args:
+    config
     data (mne.io.Raw): data in raw format
-    stim_channel (str): stimulus channel name, eg. 'STI101'
-    event_dur (float): min duration of an event, eg. 1.2 s
-    epoch_tmin (float): how long before the event the epoch starts, in sec, eg. -0.2
-    epoch_tmax (float): how late after the event the epoch ends, in sec, eg. 1
     
     Returns: 
     n_events (int): number of events(=number of epochs)
@@ -111,6 +108,22 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epo
 
     # picks_grad = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
     # picks_magn = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
+
+    epoching_section = config['Epoching']
+    event_dur = epoching_section.getfloat('event_dur') 
+    epoch_tmin = epoching_section.getfloat('epoch_tmin') 
+    epoch_tmax = epoching_section.getfloat('epoch_tmax') 
+
+    default_section = config['DEFAULT']
+    stim_channel = default_section['stim_channel'] 
+    stim_channel = stim_channel.replace(" ", "")
+    stim_channel = stim_channel.split(",")
+
+    if len(stim_channel) == 0:
+        picks_stim = mne.pick_types(data.info, stim=True)
+        stim_channel = []
+        for ch in picks_stim:
+            stim_channel.append(data.info['chs'][ch]['ch_name'])
 
     picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
@@ -128,6 +141,14 @@ def Epoch_meg(data: mne.io.Raw, stim_channel: str or list, event_dur: float, epo
     df_epochs_mags = epochs_mags.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
     df_epochs_grads = epochs_grads.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
 
-    return(df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads)
+    dict_of_dfs_epoch = {
+    'grads': df_epochs_grads,
+    'mags': df_epochs_mags}
+
+    epochs_mg = {
+    'grads': epochs_grads,
+    'mags': epochs_mags}
+
+    return dict_of_dfs_epoch, epochs_mg
 
 

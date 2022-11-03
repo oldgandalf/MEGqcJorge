@@ -91,28 +91,7 @@ def initial_stuff(config: dict, data_file: str):
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    epoching_section = config['Epoching']
-    event_dur = epoching_section.getfloat('event_dur') 
-    epoch_tmin = epoching_section.getfloat('epoch_tmin') 
-    epoch_tmax = epoching_section.getfloat('epoch_tmax') 
-    stim_channel = default_section['stim_channel'] 
-
-    if len(stim_channel) == 0:
-        picks_stim = mne.pick_types(raw.info, stim=True)
-        stim_channel = []
-        for ch in picks_stim:
-            stim_channel.append(raw.info['chs'][ch]['ch_name'])
-    
-    df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads=Epoch_meg(data=raw_bandpass, 
-        stim_channel=stim_channel, event_dur=event_dur, epoch_tmin=epoch_tmin, epoch_tmax=epoch_tmax)
-
-    dict_of_dfs_epoch = {
-    'grads': df_epochs_grads,
-    'mags': df_epochs_mags}
-
-    epochs_mg = {
-    'grads': epochs_grads,
-    'mags': epochs_mags}
+    dict_of_dfs_epoch, epochs_mg = Epoch_meg(config, raw_bandpass)
 
     return dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
@@ -152,7 +131,7 @@ def sanity_check(m_or_g_chosen, channels):
 def make_derivative_html(config_file_name):
 
     """Main function of MEG QC.
-    - Parce parameters from config
+    - Parse parameters from config
     - Get the data .fif file for each subject
     - Run whole analysis for every subject, every fif
     - Make and save derivatives (html figures, csvs, html reports, etc...)"""
