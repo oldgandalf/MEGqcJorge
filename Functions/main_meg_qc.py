@@ -96,19 +96,6 @@ def initial_stuff(config: dict, data_file: str):
     return dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
 
 
-#%%
-# def select_m_or_g(section: configparser.SectionProxy):
-#     """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads or both"""
-
-#     do_for = section['do_for']
-
-#     if do_for == 'mags':
-#         return ['mags']
-#     elif do_for == 'grads':
-#         return ['grads']
-#     elif do_for == 'both':
-#         return ['mags', 'grads']
-
 
 def sanity_check(m_or_g_chosen, channels):
     '''Check if the channels which the user gave in config file to analize actually present in the data set'''
@@ -166,7 +153,8 @@ def make_derivative_html(config_file_name):
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        for data_file in list_of_fifs: 
+
+        for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF becauseis not divided by tasts yet..
             dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
@@ -175,9 +163,9 @@ def make_derivative_html(config_file_name):
 
             # list_of_figures, _, list_of_fig_descriptions = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
-            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
+            list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels, amplit_annot_with_ch_names = PP_auto_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
@@ -197,6 +185,7 @@ def make_derivative_html(config_file_name):
                 meg_artifact.extension = '.html'
 
                 #print('FIGURE!', list_of_figures[i])
+                #print('FIG DESC!', list_of_fig_descriptions[i])
                 meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
                 #problem with lambda explained:
                 #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result

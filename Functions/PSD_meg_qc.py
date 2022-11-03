@@ -194,9 +194,10 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     renamed_df_rel_power = df_rel_power.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
 
     # Create csv file  for the user:
-    renamed_df_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_'+m_or_g+'.csv')
-    renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
-    renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+m_or_g+'.csv')
+    if sid=='001':
+        renamed_df_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_'+m_or_g+'.csv')
+        renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
+        renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+m_or_g+'.csv')
 
     #preassiign to have some returns in case plotting is not needed:
 

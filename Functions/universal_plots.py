@@ -83,7 +83,9 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
 
     fig.show()
-    fig.write_html(fig_path)
+
+    if sid=='001':
+        fig.write_html(fig_path)
 
     return(fig, fig_path, fig_name)
 
@@ -120,11 +122,11 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
     if what_data=='peaks':
         hover_tit='PP_Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_amplitude_epochs_per_channel_'+ch_type
+        fig_name='PP_amplitude_all_data_'+ch_type
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='Stds_epochs_per_channel_'+ch_type
+        fig_name='Stds_epochs_all_data_'+ch_type
 
     df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
@@ -157,7 +159,9 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
     fig.show()
 
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
-    fig.write_html(fig_path)
+
+    if sid=='001':
+        fig.write_html(fig_path)
 
     return(fig, fig_path, fig_name)
 
@@ -214,7 +218,9 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
     
     fig_name='PSD_over_all_data_'+tit
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
-    #fig.write_html(fig_path)
+    
+    if sid=='001':
+        fig.write_html(fig_path)
 
     return fig, fig_path, fig_name
 
@@ -257,6 +263,8 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
 
     fig_name='Relative_power_per_band_over_all_channels_'+tit
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
-    #fig.write_html(fig_path)
+    
+    if sid=='001':
+        fig.write_html(fig_path)
 
     return fig, fig_path, fig_name

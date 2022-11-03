@@ -188,9 +188,11 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
 
 
     # Create csv files  for the user:
-    df_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/std_per_epoch_'+ch_type+'.csv')
-    df_ch_ep_large_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Large_std_per_epoch_'+ch_type+'.csv')
-    df_ch_ep_small_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Small_std_per_epoch_'+ch_type+'.csv')
+
+    if sid=='001':
+        df_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/std_per_epoch_'+ch_type+'.csv')
+        df_ch_ep_large_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Large_std_per_epoch_'+ch_type+'.csv')
+        df_ch_ep_small_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Small_std_per_epoch_'+ch_type+'.csv')
 
     return df_std
 
@@ -234,7 +236,7 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
 
         if dict_of_dfs_epoch[m_or_g] is not None:
             epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
-            df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=df_epochs[m_or_g], sid=sid) 
+            df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
             fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g], fig_name_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
             list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
             list_of_figures_std_epoch.append(fig_std_epoch[m_or_g])
