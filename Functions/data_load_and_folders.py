@@ -1,6 +1,5 @@
 import os
 import mne
-import pandas as pd
 
 def load_meg_data(data_file) -> list([mne.io.Raw, list, list]):
     '''Load data and separate magnetometers and gradiometers.
@@ -150,5 +149,3 @@ def Epoch_meg(config, data: mne.io.Raw):
     'mags': epochs_mags}
 
     return dict_of_dfs_epoch, epochs_mg
-
-

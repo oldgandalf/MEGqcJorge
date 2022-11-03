@@ -97,17 +97,17 @@ def initial_stuff(config: dict, data_file: str):
 
 
 #%%
-def select_m_or_g(section: configparser.SectionProxy):
-    """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads or both"""
+# def select_m_or_g(section: configparser.SectionProxy):
+#     """get do_for selection for given config: is the calculation of this particilatr quality measure done for mags, grads or both"""
 
-    do_for = section['do_for']
+#     do_for = section['do_for']
 
-    if do_for == 'mags':
-        return ['mags']
-    elif do_for == 'grads':
-        return ['grads']
-    elif do_for == 'both':
-        return ['mags', 'grads']
+#     if do_for == 'mags':
+#         return ['mags']
+#     elif do_for == 'grads':
+#         return ['grads']
+#     elif do_for == 'both':
+#         return ['mags', 'grads']
 
 
 def sanity_check(m_or_g_chosen, channels):
@@ -140,7 +140,11 @@ def make_derivative_html(config_file_name):
     config.read(config_file_name)
 
     default_section = config['DEFAULT']
-    m_or_g_chosen = select_m_or_g(default_section)
+
+    m_or_g_chosen = default_section['do_for'] 
+    m_or_g_chosen = m_or_g_chosen.replace(" ", "")
+    m_or_g_chosen = m_or_g_chosen.split(",")
+    #m_or_g_chosen = select_m_or_g(default_section)
 
     dataset_path = default_section['data_directory']
 
