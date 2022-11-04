@@ -115,7 +115,7 @@ def sanity_check(m_or_g_chosen, channels):
 
 
 #%%
-def make_derivative_html(config_file_name):
+def make_derivative_meg_qc(config_file_name):
 
     """Main function of MEG QC.
     - Parse parameters from config
@@ -153,7 +153,7 @@ def make_derivative_html(config_file_name):
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-
+        list_of_figures= []
         for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF becauseis not divided by tasts yet..
             dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
 
@@ -165,9 +165,9 @@ def make_derivative_html(config_file_name):
 
             # list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
-            list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            # dfs_ptp_amlitude_annot, bad_channels, amplit_annot_with_ch_names = PP_auto_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
 
             # MEG_EOG()
 
@@ -177,18 +177,20 @@ def make_derivative_html(config_file_name):
 
             # MEG_muscle()
 
-            for i in range(0, len(list_of_figures)):
-                meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                meg_artifact.add_entity('desc', list_of_fig_descriptions[i]) #file name
-                #meg_artifact.add_entity('task', task_label)
-                meg_artifact.suffix = 'meg'
-                meg_artifact.extension = '.html'
+            if list_of_figures:
+                for i in range(0, len(list_of_figures)):
+                    meg_artifact = subject_folder.create_artifact() #shell. empty derivative
+                    meg_artifact.add_entity('desc', list_of_fig_descriptions[i]) #file name
+                    #meg_artifact.add_entity('task', task_label)
+                    meg_artifact.suffix = 'meg'
+                    meg_artifact.extension = '.html'
 
-                #print('FIGURE!', list_of_figures[i])
-                #print('FIG DESC!', list_of_fig_descriptions[i])
-                meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
-                #problem with lambda explained:
-                #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
-    
+                    #print('FIGURE!', list_of_figures[i])
+                    #print('FIG DESC!', list_of_fig_descriptions[i])
+                    meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
+                    #problem with lambda explained:
+                    #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+        
     layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
 
+    return dfs_ptp_amlitude_annot, bad_channels
