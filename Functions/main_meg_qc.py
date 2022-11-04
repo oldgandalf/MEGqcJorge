@@ -73,17 +73,17 @@ def initial_stuff(config: dict, data_file: str):
         method = filtering_section['method']
     
         raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
-        raw_bandpass = raw_cropped.copy()
-        raw_bandpass.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
+        raw_filtered = raw_cropped.copy()
+        raw_filtered.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
 
         #And downsample:
-        raw_bandpass_resamp=raw_bandpass.copy()
-        raw_bandpass_resamp.resample(sfreq=h_freq*5)
+        raw_filtered_resampled=raw_filtered.copy()
+        raw_filtered_resampled.resample(sfreq=h_freq*5)
         #frequency to resample is 5 times higher than the maximum chosen frequency of the function
 
     else:
-        raw_bandpass = raw_cropped.copy()
-        raw_bandpass_resamp=raw_bandpass.copy()
+        raw_filtered = raw_cropped.copy()
+        raw_filtered_resampled=raw_filtered.copy()
         #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
         # because they are used later. Referencing might mess up things, check that.
 
@@ -91,9 +91,9 @@ def initial_stuff(config: dict, data_file: str):
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    dict_of_dfs_epoch, epochs_mg = Epoch_meg(config, raw_bandpass)
+    dict_of_dfs_epoch, epochs_mg = Epoch_meg(config, raw_filtered)
 
-    return dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw
+    return dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw
 
 
 
@@ -155,7 +155,7 @@ def make_derivative_meg_qc(config_file_name):
 
         list_of_figures= []
         for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF becauseis not divided by tasts yet..
-            dict_of_dfs_epoch, epochs_mg, channels, raw_bandpass, raw_bandpass_resamp, raw_cropped, raw = initial_stuff(config, data_file)
+            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
@@ -167,7 +167,7 @@ def make_derivative_meg_qc(config_file_name):
 
             # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
             # MEG_EOG()
 

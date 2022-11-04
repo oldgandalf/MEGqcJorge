@@ -4,11 +4,8 @@
 *.fif
 *.csv
 *.html
-*.png
-*.png
 *.pickle
 *.pyc
-*.png
 *.pickle
 derivatives/sub-1/megqc/figures/PSD_over_all_data_gradiometers.png
 derivatives/sub-1/megqc/figures/PSD_over_all_data_interactivemagnetomoters.fig.pickle
