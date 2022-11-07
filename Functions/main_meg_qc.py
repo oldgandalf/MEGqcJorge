@@ -7,12 +7,14 @@ import mne
 import configparser
 import ancpbids
 from ancpbids import BIDSLayout
+import mpld3
 
 from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
 from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
+from ECG_meg_qc import ECG_meg_qc
 
 
 #%%
@@ -167,9 +169,9 @@ def make_derivative_meg_qc(config_file_name):
 
             # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
 
-            dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # MEG_EOG()
+            list_of_figures, list_of_fig_descriptions, output_format = ECG_meg_qc(config, raw, m_or_g_chosen)
 
             # MEG_ECG()
 
@@ -187,10 +189,17 @@ def make_derivative_meg_qc(config_file_name):
 
                     #print('FIGURE!', list_of_figures[i])
                     #print('FIG DESC!', list_of_fig_descriptions[i])
-                    meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
+                    if output_format == 'matplotlib':
+                        #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
+                        meg_artifact.content = lambda file_path, fig=list_of_figures[i]: mpld3.save_html(fig, file_path)
+                    elif output_format == 'df':
+                        meg_artifact.extension = '.csv'
+                        meg_artifact.content = lambda file_path, df=list_of_dfs[i]: df.to_csv(file_path)
+                    else:
+                        meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
                     #problem with lambda explained:
                     #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
     layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
 
-    return dfs_ptp_amlitude_annot, bad_channels
+    return 
