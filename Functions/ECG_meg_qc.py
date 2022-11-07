@@ -1,12 +1,4 @@
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
 import mne
-from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
-
-from universal_plots import Plot_periodogram, plot_pie_chart_freq
-from universal_html_report import make_PSD_report, make_std_peak_report
-
 
 def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main psd function"""

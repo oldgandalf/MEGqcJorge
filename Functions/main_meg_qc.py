@@ -15,6 +15,7 @@ from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
+from EOG_meg_qc import EOG_meg_qc
 
 
 #%%
@@ -171,9 +172,9 @@ def make_derivative_meg_qc(config_file_name):
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            list_of_figures, list_of_fig_descriptions, output_format = ECG_meg_qc(config, raw, m_or_g_chosen)
+            # list_of_figures, list_of_fig_descriptions, output_format = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            # MEG_ECG()
+            list_of_figures, list_of_fig_descriptions, output_format = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # MEG_head_movements()
 
