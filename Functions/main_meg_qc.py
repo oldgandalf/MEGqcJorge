@@ -169,13 +169,13 @@ def make_derivative_meg_qc(config_file_name):
 
             # deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
             # deriv_with_name_and_format = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            # deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
+            deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 

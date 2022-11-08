@@ -1,4 +1,5 @@
 import mne
+from universal_plots import add_output_format
 
 def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main psd function"""
@@ -25,27 +26,24 @@ def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
 
     ecg_epochs = mne.preprocessing.create_ecg_epochs(raw)
 
-    list_of_desc = []
-    list_of_figs = []
-    list_of_figs_ecg_sensors = []
-    list_of_desc_fig_ecg_sensors = []
+    figs_with_names = []
+    fig_path=None
 
     for m_or_g  in m_or_g_chosen:
-        list_of_figs.append(ecg_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0])
-        list_of_desc.append('mean_ECG_epoch_'+m_or_g)
+        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0]
+        fig_ecg_desc = 'mean_ECG_epoch_'+m_or_g
+        figs_with_names.append((fig_ecg,fig_ecg_desc,fig_path))
 
         #averaging the ECG epochs together:
         avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
 
-        list_of_figs_ecg_sensors.append(avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g[0:-1]))
-        list_of_desc_fig_ecg_sensors.append('ECG_field_pattern_sensors_'+m_or_g)
+        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g[0:-1])
+        fig_ecg_sensors_desc = 'ECG_field_pattern_sensors_'+m_or_g
+        figs_with_names.append((fig_ecg_sensors,fig_ecg_sensors_desc,fig_path))
 
-    list_of_figs += list_of_figs_ecg_sensors
-    list_of_desc += list_of_desc_fig_ecg_sensors
+    figs_with_name_and_format = add_output_format(figs_with_names, 'matplotlib')
 
-    output_format = 'matplotlib'
-
-    return list_of_figs, list_of_desc, output_format
+    return figs_with_name_and_format
 
 
 
