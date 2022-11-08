@@ -165,9 +165,9 @@ def make_derivative_meg_qc(config_file_name):
 
             # deriv_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)
 
-            # deriv_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            deriv_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
             # deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
@@ -196,7 +196,7 @@ def make_derivative_meg_qc(config_file_name):
 
                     #print('FIGURE!', list_of_figures[i])
                     #print('FIG DESC!', list_of_fig_descriptions[i])
-                    
+
                     if deriv_with_name_and_format[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
                         meg_artifact.extension = '.html'
