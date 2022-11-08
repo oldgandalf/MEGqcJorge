@@ -95,7 +95,7 @@ def peak_amplitude_all_data(data: mne.io.Raw, channels: list, sfreq: int, thresh
 
 # In[7]:
 
-def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_lvl: float, pair_dist_sec: float, epoch_numbers:list):
+def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_lvl: float, pair_dist_sec: float, epoch_numbers:list, ch_type:  str):
 
     '''Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
@@ -112,8 +112,6 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
     df_pp_ampl_mg (pd.DataFrame): contains the mean peak-to-peak aplitude for each epoch for each channel
 
     '''
-
-    dict_ep_mg = {}
 
     dict_ep = {}
 
@@ -136,9 +134,14 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
 
         dict_ep[ep] = peak_ampl_epoch
     df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
-    dict_ep_mg = df_pp_ampl_mg
+    df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
-    return dict_ep_mg
+    file_path = None
+    dfs_with_name = [(df_pp_ampl_mg, df_pp_name, file_path)]
+    #yes, it s not nessesary to put tuple in a list since we got only one, but this is the way it is done in rmse function,
+    #easier to keep this way to avoid errors in case i change something in one of them.
+
+    return dfs_with_name
 
 
 def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
@@ -161,8 +164,9 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
 
     fig_with_name = []
     fig_ptp_epoch_with_name = []
-    dict_ep_mg ={}
+    dfs_with_name ={}
     peak_ampl = {}
+    dfs_with_name_list = []
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
@@ -173,14 +177,22 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
     if dict_of_dfs_epoch[m_or_g] is not None:
         epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
-            dict_ep_mg[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers)
-            fig_ptp_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=dict_ep_mg[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks'))
-        else:
-            print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
+            dfs_with_name[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers, m_or_g)
+            dfs_with_name_list += dfs_with_name[m_or_g]
+
+            fig_ptp_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=dfs_with_name[m_or_g][0][0], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks'))
+            #dfs_with_name[m_or_g][0][0] - take from list of tuples the first tuple, from there the first element which is the df with stds
+
+    else:
+        print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     fig_with_name += fig_ptp_epoch_with_name
 
     deriv_with_name_and_format = add_output_format(fig_with_name, 'plotly')
+
+    dfs_with_name_and_format = add_output_format(dfs_with_name_list, 'df')
+
+    deriv_with_name_and_format += dfs_with_name_and_format
     
     return deriv_with_name_and_format
     
