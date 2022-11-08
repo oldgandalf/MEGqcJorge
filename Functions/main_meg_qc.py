@@ -156,7 +156,6 @@ def make_derivative_meg_qc(config_file_name):
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        list_of_figures= []
         for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF becauseis not divided by tasts yet..
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
 
@@ -164,43 +163,43 @@ def make_derivative_meg_qc(config_file_name):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            # out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)
+            # deriv_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)
 
-            out_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # deriv_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            # list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # list_of_figures, list_of_fig_descriptions, output_format = ECG_meg_qc(config, raw, m_or_g_chosen)
+            # deriv_with_name_and_format = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            list_of_figures, list_of_fig_descriptions, output_format = EOG_meg_qc(config, raw, m_or_g_chosen)
+            # deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
-            if out_with_name_and_format:
-                for i in range(0, len(out_with_name_and_format)):
+            if deriv_with_name_and_format:
+                for i in range(0, len(deriv_with_name_and_format)):
                     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                    meg_artifact.add_entity('desc', out_with_name_and_format[i][1]) #file name
+                    meg_artifact.add_entity('desc', deriv_with_name_and_format[i][1]) #file name
                     #meg_artifact.add_entity('task', task_label)
                     meg_artifact.suffix = 'meg'
 
                     #print('FIGURE!', list_of_figures[i])
                     #print('FIG DESC!', list_of_fig_descriptions[i])
-                    if out_with_name_and_format[i][3] == 'matplotlib':
+                    if deriv_with_name_and_format[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
                         meg_artifact.extension = '.html'
-                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: mpld3.save_html(cont, file_path)
-                    elif out_with_name_and_format[i][3] == 'plotly':
+                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: mpld3.save_html(cont, file_path)
+                    elif deriv_with_name_and_format[i][3] == 'plotly':
                         meg_artifact.extension = '.html'
-                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: cont.write_html(file_path)
-                    elif out_with_name_and_format[i][3] == 'df':
+                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.write_html(file_path)
+                    elif deriv_with_name_and_format[i][3] == 'df':
                         meg_artifact.extension = '.csv'
-                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: cont.to_csv(file_path)
+                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.to_csv(file_path)
 
                     #problem with lambda explained:
                     #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result

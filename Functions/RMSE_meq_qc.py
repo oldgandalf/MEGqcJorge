@@ -226,20 +226,18 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
         fig_with_name.append(boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds'))
 
-
     if dict_of_dfs_epoch[m_or_g] is not None:
         epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
             df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
             fig_std_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds'))
-
     else:
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     fig_with_name += fig_std_epoch_with_name
 
-    out_with_name_and_format = add_output_format(fig_with_name, 'plotly')
+    deriv_with_name_and_format = add_output_format(fig_with_name, 'plotly')
     
-    return out_with_name_and_format
+    return deriv_with_name_and_format
 
     

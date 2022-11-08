@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, add_output_format
 
 
 def neighbour_peak_amplitude(pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:
@@ -143,6 +143,12 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
 
 def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
+
+    """Main Peak to peak amplitude function.
+    
+    Output:
+    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
+
     m_or_g_title = {
     'grads': 'Gradiometers',
     'mags': 'Magnetometers'}
@@ -153,47 +159,31 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
 
     sfreq = data.info['sfreq']
 
-    list_of_figure_paths = []
-    list_of_figures = []
-    list_of_figure_descriptions = []
-    list_of_figure_paths_epoch = []
-    list_of_figures_epoch = []
-    list_of_figure_descriptions_epoch = []
-
-    figs_pp = {}
-    fig_path_pp = {}
-    fig_name_pp = {}
+    fig_with_name = []
+    fig_ptp_epoch_with_name = []
     dict_ep_mg ={}
-    fig_pp_epoch = {}
-    fig_path_pp_epoch = {}
-    fig_name_pp_epoch = {}
     peak_ampl = {}
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
 
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
+        fig_with_name.append(boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks'))
 
-        figs_pp[m_or_g], fig_path_pp[m_or_g], fig_name_pp[m_or_g] = boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks')
-        list_of_figure_paths.append(fig_path_pp[m_or_g])
-        list_of_figures.append(figs_pp[m_or_g])
-        list_of_figure_descriptions.append(fig_name_pp[m_or_g])
-
-        if dict_of_dfs_epoch[m_or_g] is not None:
-            epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+    if dict_of_dfs_epoch[m_or_g] is not None:
+        epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+        for m_or_g in m_or_g_chosen:
             dict_ep_mg[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers)
-            fig_pp_epoch[m_or_g], fig_path_pp_epoch[m_or_g], fig_name_pp_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=dict_ep_mg[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')
-            list_of_figure_paths_epoch.append(fig_path_pp_epoch[m_or_g])
-            list_of_figures_epoch.append(fig_pp_epoch[m_or_g])
-            list_of_figure_descriptions_epoch.append(fig_name_pp_epoch[m_or_g])
+            fig_ptp_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=dict_ep_mg[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks'))
         else:
             print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
-    list_of_figure_paths += list_of_figure_paths_epoch
-    list_of_figures += list_of_figures_epoch
-    list_of_figure_descriptions += list_of_figure_descriptions_epoch
+    fig_with_name += fig_ptp_epoch_with_name
+
+    deriv_with_name_and_format = add_output_format(fig_with_name, 'plotly')
+    
+    return deriv_with_name_and_format
     
     # make_std_peak_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths, config=config)
 
-    return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
 

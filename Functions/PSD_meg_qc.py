@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 
-from universal_plots import Plot_periodogram, plot_pie_chart_freq
+from universal_plots import Plot_periodogram, plot_pie_chart_freq, add_output_format
 from universal_html_report import make_PSD_report, make_std_peak_report
 
 # In[40]:
