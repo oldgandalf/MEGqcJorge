@@ -11,15 +11,19 @@ def load_meg_data(data_file) -> list([mne.io.Raw, list, list]):
     raw(mne.io.Raw): data in raw format, 
     mags: list of tuples: magnetometer channel name + its index
     grads: list of tuples: gradiometer channel name + its index'''
-
-    #data_file = os.path.join('Katharinas_Data','sub_HT05ND16', '210811', 'mikado-1.fif')                               
+                          
     raw = mne.io.read_raw_fif(data_file)
 
-    #Separate mags and grads:
-    # mags = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T)')]
-    # grads = [(chs['ch_name'], i) for i, chs in enumerate(raw.info['chs']) if str(chs['unit']).endswith('UNIT_T_M)')]
+    channels = {}
+    try:
+        channels['mags'] = raw.copy().pick_types(meg='mag').ch_names
+    except:
+        print('No magnetometers in this data set')
 
-    channels = {'mags': raw.copy().pick_types(meg='mag').ch_names, 'grads': raw.copy().pick_types(meg='grad').ch_names}
+    try:
+        channels['grads'] = raw.copy().pick_types(meg='grad').ch_names
+    except:
+        print('No gradiometers in this data set')
 
     return(raw, channels)
 
