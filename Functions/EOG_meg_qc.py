@@ -3,7 +3,7 @@ import mne
 def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main psd function"""
 
-    #ecg_section = config['ECG']
+    #eog_section = config['EOG']
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:
