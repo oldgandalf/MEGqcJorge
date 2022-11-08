@@ -164,11 +164,13 @@ def make_derivative_meg_qc(config_file_name):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            # list_of_figures, _, list_of_fig_descriptions = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
+            # out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)
 
-            # list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_bandpass_resamp, m_or_g_chosen)
+            out_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_bandpass_resamp, m_or_g_chosen)
+            # list_of_figures, _, list_of_fig_descriptions = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+
+            # list_of_figures, _, list_of_fig_descriptions = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
@@ -176,28 +178,30 @@ def make_derivative_meg_qc(config_file_name):
 
             list_of_figures, list_of_fig_descriptions, output_format = EOG_meg_qc(config, raw, m_or_g_chosen)
 
-            # MEG_head_movements()
+            # HEAD_movements_meg_qc()
 
-            # MEG_muscle()
+            # MUSCLE_meg_qc()
 
-            if list_of_figures:
-                for i in range(0, len(list_of_figures)):
+            if out_with_name_and_format:
+                for i in range(0, len(out_with_name_and_format)):
                     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                    meg_artifact.add_entity('desc', list_of_fig_descriptions[i]) #file name
+                    meg_artifact.add_entity('desc', out_with_name_and_format[i][1]) #file name
                     #meg_artifact.add_entity('task', task_label)
                     meg_artifact.suffix = 'meg'
-                    meg_artifact.extension = '.html'
 
                     #print('FIGURE!', list_of_figures[i])
                     #print('FIG DESC!', list_of_fig_descriptions[i])
-                    if output_format == 'matplotlib':
+                    if out_with_name_and_format[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
-                        meg_artifact.content = lambda file_path, fig=list_of_figures[i]: mpld3.save_html(fig, file_path)
-                    elif output_format == 'df':
+                        meg_artifact.extension = '.html'
+                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: mpld3.save_html(cont, file_path)
+                    elif out_with_name_and_format[i][3] == 'plotly':
+                        meg_artifact.extension = '.html'
+                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: cont.write_html(file_path)
+                    elif out_with_name_and_format[i][3] == 'df':
                         meg_artifact.extension = '.csv'
-                        meg_artifact.content = lambda file_path, df=list_of_dfs[i]: df.to_csv(file_path)
-                    else:
-                        meg_artifact.content = lambda file_path, fig=list_of_figures[i]: fig.write_html(file_path)
+                        meg_artifact.content = lambda file_path, cont=out_with_name_and_format[i][0]: cont.to_csv(file_path)
+
                     #problem with lambda explained:
                     #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         

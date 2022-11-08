@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import mne
 
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, add_output_format
 from universal_html_report import make_std_peak_report
 
 # In[2]:
@@ -200,6 +200,11 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
 #%%
 def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen):
 
+    """Main RMSE function.
+    
+    Output:
+    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
+
     m_or_g_title = {
     'grads': 'Gradiometers',
     'mags': 'Magnetometers'}
@@ -207,48 +212,34 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
     rmse_section = config['RMSE']
     std_lvl = rmse_section.getint('std_lvl')
 
-    list_of_figure_paths = []
-    list_of_figures = []
-    list_of_figure_descriptions = []
-    list_of_figure_paths_std_epoch = []
-    list_of_figures_std_epoch = []
-    list_of_figure_descriptions_std_epoch = []
     big_std_with_value = {}
     small_std_with_value = {}
-    figs = {}
-    fig_path = {}
-    fig_name = {}
-    df_std = {}
-    fig_std_epoch = {}
-    fig_path_std_epoch = {}
-    fig_name_epoch = {}
     rmse = {}
+    df_std = {}
+    fig_with_name = []
+    fig_std_epoch_with_name = []
+
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
 
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
+        fig_with_name.append(boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds'))
 
-        figs[m_or_g], fig_path[m_or_g], fig_name[m_or_g] = boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds')
-        list_of_figure_paths.append(fig_path[m_or_g])
-        list_of_figures.append(figs[m_or_g])
-        list_of_figure_descriptions.append(fig_name[m_or_g])
 
-        if dict_of_dfs_epoch[m_or_g] is not None:
-            epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+    if dict_of_dfs_epoch[m_or_g] is not None:
+        epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+        for m_or_g in m_or_g_chosen:
             df_std[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
-            fig_std_epoch[m_or_g], fig_path_std_epoch[m_or_g], fig_name_epoch[m_or_g] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')
-            list_of_figure_paths_std_epoch.append(fig_path_std_epoch[m_or_g])
-            list_of_figures_std_epoch.append(fig_std_epoch[m_or_g])
-            list_of_figure_descriptions_std_epoch.append(fig_name_epoch[m_or_g])
-        else:
-            print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
-        
-    list_of_figure_paths += list_of_figure_paths_std_epoch
-    list_of_figures += list_of_figures_std_epoch
-    list_of_figure_descriptions += list_of_figure_descriptions_std_epoch
-    
-    # make_std_peak_report(sid=sid, what_data='stds', list_of_figure_paths=list_of_figure_paths, config=config)
+            fig_std_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=df_std[m_or_g], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds'))
 
-    return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
+    else:
+        print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
+        
+    fig_with_name += fig_std_epoch_with_name
+
+    out_with_name_and_format = add_output_format(fig_with_name, 'plotly')
+    
+    return out_with_name_and_format
+
     
