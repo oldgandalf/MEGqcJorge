@@ -156,7 +156,7 @@ def make_derivative_meg_qc(config_file_name):
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF becauseis not divided by tasts yet..
+        for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF because is not divided by tasks yet..
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
@@ -167,9 +167,9 @@ def make_derivative_meg_qc(config_file_name):
 
             # deriv_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            # deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
@@ -182,6 +182,12 @@ def make_derivative_meg_qc(config_file_name):
             # MUSCLE_meg_qc()
 
             if deriv_with_name_and_format:
+
+                # print('HERE!!')
+                # print(deriv_with_name_and_format[1])
+                # print(deriv_with_name_and_format[2])
+                # print(deriv_with_name_and_format[3])
+
                 for i in range(0, len(deriv_with_name_and_format)):
                     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
                     meg_artifact.add_entity('desc', deriv_with_name_and_format[i][1]) #file name
@@ -190,6 +196,7 @@ def make_derivative_meg_qc(config_file_name):
 
                     #print('FIGURE!', list_of_figures[i])
                     #print('FIG DESC!', list_of_fig_descriptions[i])
+                    
                     if deriv_with_name_and_format[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
                         meg_artifact.extension = '.html'

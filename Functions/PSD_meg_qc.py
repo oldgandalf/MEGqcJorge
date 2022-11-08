@@ -66,9 +66,9 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or 
 
     psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
     
-    fig, fig_path, fig_desc=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
+    fig_with_name=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
 
-    return freqs, psds, fig, fig_path, fig_desc
+    return freqs, psds, fig_with_name
     
 
 # In[42]:
@@ -163,12 +163,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
     #delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) bands
 
-    channel = [name[0] for name in ch_names]
-
     dict_power = {}
     dict_power_freq = {}
     dict_rel_power = {}
-
 
     for w in enumerate(wave_bands): #loop over bands
         
@@ -183,15 +180,21 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
     # Save all to data frames:
-    df_power = pd.DataFrame(dict_power, index=channel)
-    df_power_freq = pd.DataFrame(dict_power_freq, index=channel)
-    df_rel_power = pd.DataFrame(dict_rel_power, index=channel)
+    df_power = pd.DataFrame(dict_power, index=ch_names)
+    df_power_freq = pd.DataFrame(dict_power_freq, index=ch_names)
+    df_rel_power = pd.DataFrame(dict_rel_power, index=ch_names)
 
     # Rename columns and extract to csv:
 
     renamed_df_power = df_power.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
+    renamed_df_power_name = 'abs_power_'+m_or_g
     renamed_df_power_freq = df_power_freq.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
+    renamed_df_power_freq_name = 'power_by_Nfreq_'+m_or_g
     renamed_df_rel_power = df_rel_power.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
+    renamed_df_rel_power_name = 'relative_power_'+m_or_g
+
+    file_path = None
+    dfs_with_name = [(renamed_df_power,renamed_df_power_name,file_path), (renamed_df_power_freq, renamed_df_power_freq_name, file_path), (renamed_df_rel_power, renamed_df_rel_power_name, file_path)]
 
     # Create csv file  for the user:
     if sid=='001':
@@ -199,10 +202,6 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
         renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+m_or_g+'.csv')
 
-    #preassiign to have some returns in case plotting is not needed:
-
-    fig = None
-    fig_path = None
 
     if mean_power_per_band_needed is True: #if user wants to see average power per band over all channels - calculate and plot here:
 
@@ -245,15 +244,20 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            fig, fig_path, fig_desc = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
-            return fig, fig_path, fig_desc
+            fig_power_with_name = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
         else:
-            return None, None, None
+            fig_power_with_name = None, None, None
+
+    
+    return fig_power_with_name, dfs_with_name
 
 #%%
 
 def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
-    """Main psd function"""
+    """Main psd function
+
+    Output:
+    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
 
     psd_section = config['PSD']
     freq_min = psd_section.getfloat('freq_min') 
@@ -265,47 +269,33 @@ def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_
     # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
     freqs = {}
     psds = {}
-    fig_psd = {}
-    fig_pie ={}
-    fig_path_psd = {}
-    fig_path_pie ={}
-    fig_desc = {}
-    fig_desc_pie = {}
-    list_of_figures = []
-    list_of_figures_pie = []
-    list_of_figure_paths = []
-    list_of_figure_paths_pie = []
-    list_of_fig_descriptions = []
-    list_of_fig_descriptions_pie = []
 
+    fig_with_name = {}
+    fig_power_with_name = {}
+    dfs_with_name = {}
+    all_fig_with_name = []
+    dfs_with_name_list = []
+
+    #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_psd[m_or_g], fig_path_psd[m_or_g], fig_desc[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[m_or_g], psds[m_or_g], fig_with_name[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
 
-        fig_pie[m_or_g],fig_path_pie[m_or_g], fig_desc_pie[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+        all_fig_with_name.append(fig_with_name[m_or_g])
 
-        list_of_figures.append(fig_psd[m_or_g])
-        list_of_figures_pie.append(fig_pie[m_or_g])
-        list_of_fig_descriptions.append(fig_desc[m_or_g])
+        fig_power_with_name[m_or_g], dfs_with_name[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
 
+        all_fig_with_name.append(fig_power_with_name[m_or_g])
 
-        list_of_figure_paths.append(fig_path_psd[m_or_g])
-        list_of_figure_paths_pie.append(fig_path_pie[m_or_g])
-        list_of_fig_descriptions_pie.append(fig_desc_pie[m_or_g])
+        dfs_with_name_list += dfs_with_name[m_or_g]
 
-    list_of_figures += list_of_figures_pie
-    list_of_figure_paths += list_of_figure_paths_pie
-    list_of_fig_descriptions += list_of_fig_descriptions_pie
+    deriv_with_name_and_format = add_output_format(all_fig_with_name, 'plotly')
 
-    # to remove None values in list:
-    list_of_figures = [i for i in list_of_figures if i is not None]
-    list_of_figure_paths = [i for i in list_of_figure_paths if i is not None]
-    list_of_figure_descriptions = [i for i in list_of_fig_descriptions if i is not None]
+    dfs_with_name_and_format = add_output_format(dfs_with_name_list, 'df')
 
-    # make_PSD_report(sid=sid, list_of_figure_paths=list_of_figure_paths)
-    # make_std_peak_report(sid=sid, what_data='psd', list_of_figure_paths=list_of_figure_paths, config=config)
+    deriv_with_name_and_format += dfs_with_name_and_format
 
-    return list_of_figures, list_of_figure_paths, list_of_figure_descriptions
+    return deriv_with_name_and_format
 
 # In[56]:
 # This command was used to convert notebook to this .py file:
