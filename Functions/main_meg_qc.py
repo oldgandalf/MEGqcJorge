@@ -16,6 +16,7 @@ from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
+from universal_html_report import keep_fig_derivs, make_joined_report
 
 
 #%%
@@ -163,58 +164,63 @@ def make_derivative_meg_qc(config_file_name):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            # deriv_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)
+            all_derivs = []
+            # all_derivs: list of tuples(figure, fig_name, fig_path, format_of_output_content) - output of every funct also has this format
 
-            # deriv_with_name_and_format = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # all_derivs += RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            # deriv_with_name_and_format = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            all_derivs += PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # deriv_with_name_and_format = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # all_derivs += PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # deriv_with_name_and_format = ECG_meg_qc(config, raw, m_or_g_chosen)
+            # all_derivs += ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            # deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
+            all_derivs += EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
-            html_string='''<html>
-                <head>
-                <title>HTML File</title>
-                </head>
-                <body>
-                <h1>stuff</h1>
-                <p>Example stuff</p>
-                </body>
-                </html>'''
-            deriv_with_name_and_format=[(html_string, 'stuff_report', None, 'report')]
+            # html_string='''<html>
+            #     <head>
+            #     <title>HTML File</title>
+            #     </head>
+            #     <body>
+            #     <h1>stuff</h1>
+            #     <p>Example stuff</p>
+            #     </body>
+            #     </html>'''
+            # all_derivs=[(html_string, 'stuff_report', None, 'report')]
 
-            if deriv_with_name_and_format:
+            if all_derivs:
+
+                all_fig_derivs = keep_fig_derivs(all_derivs)
+                html_string = make_joined_report(all_fig_derivs)
+                all_derivs += [(html_string, 'REPORT', None, 'report')]
 
                 # print('HERE!!')
-                # print(deriv_with_name_and_format[1])
-                # print(deriv_with_name_and_format[2])
-                # print(deriv_with_name_and_format[3])
+                # print(all_derivs[1])
+                # print(all_derivs[2])
+                # print(all_derivs[3])
 
-                for i in range(0, len(deriv_with_name_and_format)):
+                for i in range(0, len(all_derivs)):
                     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                    meg_artifact.add_entity('desc', deriv_with_name_and_format[i][1]) #file name
+                    meg_artifact.add_entity('desc', all_derivs[i][1]) #file name
                     #meg_artifact.add_entity('task', task_label)
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-                    if deriv_with_name_and_format[i][3] == 'matplotlib':
+                    if all_derivs[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
-                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: mpld3.save_html(cont, file_path)
-                    elif deriv_with_name_and_format[i][3] == 'plotly':
-                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.write_html(file_path)
-                    elif deriv_with_name_and_format[i][3] == 'df':
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: mpld3.save_html(cont, file_path)
+                    elif all_derivs[i][3] == 'plotly':
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: cont.write_html(file_path)
+                    elif all_derivs[i][3] == 'df':
                         meg_artifact.extension = '.csv'
-                        meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.to_csv(file_path)
-                    elif deriv_with_name_and_format[i][3] == 'report':
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: cont.to_csv(file_path)
+                    elif all_derivs[i][3] == 'report':
                         def html_writer(file_path):
                             with open(file_path, "w") as file:
                                 file.write(html_string)

@@ -1,4 +1,5 @@
 import plotly
+import mpld3
 
 
 def make_html_section(figure_report):
@@ -9,13 +10,33 @@ def make_html_section(figure_report):
     return single_html_string
 
 
-def make_joined_report(list_of_figures_plotly: list):
+def keep_fig_derivs(all_derivs):
     
-    figures_report = {}
-    for x in range(0, len(list_of_figures_plotly)):
-        figures_report["f{0}".format(x)] = plotly.io.to_html(list_of_figures_plotly[x])
+    all_fig_derivs=[]
+    for d in all_derivs:
+        if d[3] == 'plotly' or d[3] == 'matplotlib':
+            print(d)
+            all_fig_derivs.append(d)
 
+    return all_fig_derivs
+
+def convert_figs_to_html(all_fig_derivs: list):
+
+    figures_report = {}
+    for x in range(0, len(all_fig_derivs)):
+        if all_fig_derivs[x][3]=='plotly':
+            figures_report["f{0}".format(x)] = plotly.io.to_html(all_fig_derivs[x][0])
+
+        elif all_fig_derivs[x][3]=='matplotlib':
+            figures_report["f{0}".format(x)] = mpld3.fig_to_html(all_fig_derivs[x][0])
     
+    return figures_report
+
+
+def make_joined_report(all_fig_derivs: list):
+
+    figures_report = convert_figs_to_html(all_fig_derivs)
+
     header_html_string = '''
     <!doctype html>
     <html>
@@ -31,7 +52,7 @@ def make_joined_report(list_of_figures_plotly: list):
             <br></br>'''
 
     main_html_string = ''
-    for x in range(0, len(list_of_figures_plotly)):
+    for x in range(0, len(all_fig_derivs)):
         new_html_string = make_html_section(figures_report["f{0}".format(x)])
         main_html_string +=new_html_string
 
