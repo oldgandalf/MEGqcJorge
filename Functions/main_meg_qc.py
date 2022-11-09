@@ -175,11 +175,22 @@ def make_derivative_meg_qc(config_file_name):
 
             # deriv_with_name_and_format = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
+            # deriv_with_name_and_format = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
+
+            html_string='''<html>
+                <head>
+                <title>HTML File</title>
+                </head>
+                <body>
+                <h1>stuff</h1>
+                <p>Example stuff</p>
+                </body>
+                </html>'''
+            deriv_with_name_and_format=[(html_string, 'stuff_report', None, 'report')]
 
             if deriv_with_name_and_format:
 
@@ -193,21 +204,22 @@ def make_derivative_meg_qc(config_file_name):
                     meg_artifact.add_entity('desc', deriv_with_name_and_format[i][1]) #file name
                     #meg_artifact.add_entity('task', task_label)
                     meg_artifact.suffix = 'meg'
-
-                    #print('FIGURE!', list_of_figures[i])
-                    #print('FIG DESC!', list_of_fig_descriptions[i])
+                    meg_artifact.extension = '.html'
 
                     if deriv_with_name_and_format[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
-                        meg_artifact.extension = '.html'
                         meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: mpld3.save_html(cont, file_path)
                     elif deriv_with_name_and_format[i][3] == 'plotly':
-                        meg_artifact.extension = '.html'
                         meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.write_html(file_path)
                     elif deriv_with_name_and_format[i][3] == 'df':
                         meg_artifact.extension = '.csv'
                         meg_artifact.content = lambda file_path, cont=deriv_with_name_and_format[i][0]: cont.to_csv(file_path)
-
+                    elif deriv_with_name_and_format[i][3] == 'report':
+                        def html_writer(file_path):
+                            with open(file_path, "w") as file:
+                                file.write(html_string)
+                            #'with'command doesnt work in lambda
+                        meg_artifact.content = html_writer # function pointer instead of lambda
                     #problem with lambda explained:
                     #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
