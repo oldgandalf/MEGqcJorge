@@ -164,24 +164,34 @@ def make_derivative_meg_qc(config_file_name):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-            all_derivs = []
-            # all_derivs: list of tuples(figure, fig_name, fig_path, format_of_output_content) - output of every funct also has this format
+            
+            rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs = [],[],[],[],[]
+            # rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            # all_derivs += RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            psd_derivs = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            all_derivs += PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
-
-            # all_derivs += PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
             # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
-            # all_derivs += ECG_meg_qc(config, raw, m_or_g_chosen)
+            # ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            all_derivs += EOG_meg_qc(config, raw, m_or_g_chosen)
+            eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
+
+            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ecg_derivs + eog_derivs
+            # all_derivs: list of tuples(figure, fig_name, fig_path, format_of_output_content) - output of every funct also has this format
+
+            #put all figure derivatives into dectionary, each with own section to later use in making report with sections
+            # derivs_list=[rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs]
+            # derivs_names_list=['rmse', 'psd', 'pp_manual', 'ecg', 'eog']
+            # derivs_per_section = {}
+            # for d_ind, d in enumerate(derivs_list):
+            #     all_fig_derivs = keep_fig_derivs(d)
+            #     derivs_per_section[derivs_names_list[d_ind]]=all_fig_derivs
 
             # html_string='''<html>
             #     <head>

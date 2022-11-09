@@ -34,11 +34,11 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     if what_data=='peaks':
         hover_tit='Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_amplitude_epochs_per_channel_'+ch_type
+        fig_name='PP_manual_epoch_per_channel_'+ch_type
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='Stds_epochs_per_channel_'+ch_type
+        fig_name='STD_epoch_per_channel_'+ch_type
 
     #transpose the data to plot the boxplots on x axes
     df_mg_transposed = df_mg.T 
@@ -122,11 +122,11 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
     if what_data=='peaks':
         hover_tit='PP_Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_amplitude_all_data_'+ch_type
+        fig_name='PP_manual_all_data_'+ch_type
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='Stds_epochs_all_data_'+ch_type
+        fig_name='STD_epoch_all_data_'+ch_type
 
     df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
@@ -216,7 +216,7 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
 
     fig.show()
     
-    fig_name='PSD_over_all_data_'+tit
+    fig_name='PSD_all_data_'+tit
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
     
     if sid=='001':
@@ -261,7 +261,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
 
     fig.show()
 
-    fig_name='Relative_power_per_band_over_all_channels_'+tit
+    fig_name='PSD_Relative_power_per_band_over_all_channels_'+tit
     fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
     
     if sid=='001':

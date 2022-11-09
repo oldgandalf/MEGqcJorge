@@ -2,6 +2,40 @@ import plotly
 import mpld3
 
 
+# def add_fig_to_html_section(figure_report):
+
+#     figure_with_descr_str = '''
+#             <br></br>
+#             ''' + figure_report + '''
+#             <p>graph description...</p>'''
+
+#     return figure_with_descr_str
+
+
+# def make_html_section(section_name, section_figures):
+
+#     section_headers={
+#         'STD': 'Standart deviation of the data',
+#         'PSD': 'Frequency spectrum',
+#         'PTP': 'Peak-to-peak amplitudes',
+#         'ECG': 'ECG artifacts',
+#         'EOG': 'EOG artifacts'}
+    
+
+#     section_html = '''
+#     <!-- *** Section *** --->
+#     <h2>'''+section_headers[section_name]+'''</h2>
+#     '''
+
+#     for x in range(0, len(section_figures)):
+#         figure_with_descr_str = add_fig_to_html_section(figures_report["f{0}".format(x)])
+
+#         section_html += figure_with_descr_str
+
+#     return section_html
+
+
+
 def make_html_section(figure_report):
     single_html_string='''
             <!-- *** Section *** --->
@@ -15,7 +49,6 @@ def keep_fig_derivs(all_derivs):
     all_fig_derivs=[]
     for d in all_derivs:
         if d[3] == 'plotly' or d[3] == 'matplotlib':
-            print(d)
             all_fig_derivs.append(d)
 
     return all_fig_derivs
@@ -25,10 +58,10 @@ def convert_figs_to_html(all_fig_derivs: list):
     figures_report = {}
     for x in range(0, len(all_fig_derivs)):
         if all_fig_derivs[x][3]=='plotly':
-            figures_report["f{0}".format(x)] = plotly.io.to_html(all_fig_derivs[x][0])
+            figures_report["f{0}".format(x)] = plotly.io.to_html(all_fig_derivs[x][0], full_html=False)
 
         elif all_fig_derivs[x][3]=='matplotlib':
-            figures_report["f{0}".format(x)] = mpld3.fig_to_html(all_fig_derivs[x][0])
+            figures_report["f{0}".format(x)] = mpld3.fig_to_html(all_fig_derivs[x][0]);
     
     return figures_report
 
@@ -51,10 +84,19 @@ def make_joined_report(all_fig_derivs: list):
             <h1>MEG data quality analysis report</h1>
             <br></br>'''
 
+    # divider = '''
+
+    #         '''
+
     main_html_string = ''
     for x in range(0, len(all_fig_derivs)):
         new_html_string = make_html_section(figures_report["f{0}".format(x)])
-        main_html_string +=new_html_string
+
+        # #add some section divider... still thinking
+        # if figures_report["f{0}".format(x)]:
+        #     main_html_string += divider
+
+        main_html_string += new_html_string
 
 
     end_string = '''
