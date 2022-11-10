@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
 
 
 def neighbour_peak_amplitude(pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:
@@ -137,9 +137,7 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
     df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
     file_path = None
-    dfs_with_name = [(df_pp_ampl_mg, df_pp_name, file_path)]
-    #yes, it s not nessesary to put tuple in a list since we got only one, but this is the way it is done in rmse function,
-    #easier to keep this way to avoid errors in case i change something in one of them.
+    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
 
     return dfs_with_name
 
@@ -162,39 +160,32 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
 
     sfreq = data.info['sfreq']
 
-    fig_with_name = []
+    derivs_ptp = []
     fig_ptp_epoch_with_name = []
-    dfs_with_name ={}
+    dfs_list = []
     peak_ampl = {}
-    dfs_with_name_list = []
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
 
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
-        fig_with_name.append(boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks'))
+        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks')]
 
     if dict_of_dfs_epoch[m_or_g] is not None:
         epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
-            dfs_with_name[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers, m_or_g)
-            dfs_with_name_list += dfs_with_name[m_or_g]
+            df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers, m_or_g)
+            dfs_list += df_ptp
 
-            fig_ptp_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=dfs_with_name[m_or_g][0][0], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks'))
-            #dfs_with_name[m_or_g][0][0] - take from list of tuples the first tuple, from there the first element which is the df with stds
+            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')]
+            #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with ptp
 
     else:
         print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
-    fig_with_name += fig_ptp_epoch_with_name
-
-    deriv_with_name_and_format = add_output_format(fig_with_name, 'plotly')
-
-    dfs_with_name_and_format = add_output_format(dfs_with_name_list, 'df')
-
-    deriv_with_name_and_format += dfs_with_name_and_format
+    derivs_ptp += fig_ptp_epoch_with_name + dfs_list
     
-    return deriv_with_name_and_format
+    return derivs_ptp
     
     # make_std_peak_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths, config=config)
 

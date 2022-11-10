@@ -245,7 +245,7 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
             df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
             dfs_list += df_epoch_rmse
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')]
-            #dfs_with_name[0][0] - take from list the first obj, from there the content which is the df with stds
+            #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
     else:
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
