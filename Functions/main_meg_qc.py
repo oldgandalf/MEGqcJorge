@@ -158,7 +158,7 @@ def make_derivative_meg_qc(config_file_name):
         #Devide here fifs by task, ses , run
 
         for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF because is not divided by tasks yet..
-            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
+            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
@@ -167,13 +167,13 @@ def make_derivative_meg_qc(config_file_name):
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs = [],[],[],[],[]
             
-            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # psd_derivs = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
             # ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 

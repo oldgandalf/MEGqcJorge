@@ -179,8 +179,9 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
 
             fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with ptp
-
     else:
+        for m_or_g in m_or_g_chosen:
+            fig_ptp_epoch_with_name += [QC_derivative(None, 'skipped_ptp_epoch'+m_or_g, None, 'skipped')]
         print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     derivs_ptp += fig_ptp_epoch_with_name + dfs_list

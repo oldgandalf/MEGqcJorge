@@ -5,11 +5,10 @@
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 
-from universal_plots import Plot_periodogram, plot_pie_chart_freq
+from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
 from universal_html_report import make_PSD_report, make_std_peak_report
 
 # In[40]:
@@ -66,9 +65,9 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or 
 
     psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
     
-    fig_with_name=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
+    psd_derivative=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
 
-    return freqs, psds, fig_with_name
+    return freqs, psds, psd_derivative
     
 
 # In[42]:
@@ -194,7 +193,11 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     renamed_df_rel_power_name = 'relative_power_'+m_or_g
 
     file_path = None
-    dfs_with_name = [(renamed_df_power,renamed_df_power_name,file_path), (renamed_df_power_freq, renamed_df_power_freq_name, file_path), (renamed_df_rel_power, renamed_df_rel_power_name, file_path)]
+    dfs_with_name = [
+        QC_derivative(renamed_df_power,renamed_df_power_name,file_path, 'df'),
+        QC_derivative(renamed_df_power_freq, renamed_df_power_freq_name, file_path, 'df'),
+        QC_derivative(renamed_df_rel_power, renamed_df_rel_power_name, file_path, 'df')
+        ]
 
     # Create csv file  for the user:
     if sid=='001':
@@ -244,16 +247,14 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            fig_power_with_name = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
+            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
         else:
-            fig_power_with_name = None, None, None
+            psd_pie_derivative = QC_derivative(None, 'skipped_psd_pie', None, 'skipped')
 
     
-    return fig_power_with_name, dfs_with_name
+    return psd_pie_derivative, dfs_with_name
 
 #%%
-
-
 
 
 def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
@@ -272,33 +273,18 @@ def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_
     # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
     freqs = {}
     psds = {}
-
-    fig_with_name = {}
-    fig_power_with_name = {}
-    dfs_with_name = {}
-    all_fig_with_name = []
-    dfs_with_name_list = []
+    derivs_psd = []
 
     #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_with_name[m_or_g] = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
+        
+        fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
 
-        all_fig_with_name.append(fig_with_name[m_or_g])
+        derivs_psd += [fig_with_name] + [fig_power_with_name] + dfs_with_name
 
-        fig_power_with_name[m_or_g], dfs_with_name[m_or_g] = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
-
-        all_fig_with_name.append(fig_power_with_name[m_or_g])
-
-        dfs_with_name_list += dfs_with_name[m_or_g]
-
-    deriv_with_name_and_format = add_output_format(all_fig_with_name, 'plotly')
-
-    dfs_with_name_and_format = add_output_format(dfs_with_name_list, 'df')
-
-    deriv_with_name_and_format += dfs_with_name_and_format
-
-    return deriv_with_name_and_format
+    return derivs_psd
 
 # In[56]:
 # This command was used to convert notebook to this .py file:
