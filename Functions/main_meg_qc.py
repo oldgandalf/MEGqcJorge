@@ -17,6 +17,7 @@ from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
 from universal_html_report import keep_fig_derivs, make_joined_report
+from universal_plots import QC_derivative
 
 
 #%%
@@ -165,25 +166,25 @@ def make_derivative_meg_qc(config_file_name):
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
             
-            rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs = [],[],[],[],[]
+            rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs, ptp_auto_derivs = [],[],[],[],[], []
             
-            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
             # psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
             # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # dfs_ptp_amlitude_annot, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
             # ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
+            # eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
-            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ecg_derivs + eog_derivs
+            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ecg_derivs + eog_derivs + ptp_auto_derivs
             # all_derivs: list of tuples(figure, fig_name, fig_path, format_of_output_content) - output of every funct also has this format
 
             #put all figure derivatives into dectionary, each with own section to later use in making report with sections
@@ -209,7 +210,7 @@ def make_derivative_meg_qc(config_file_name):
 
                 all_fig_derivs = keep_fig_derivs(all_derivs)
                 html_string = make_joined_report(all_fig_derivs)
-                all_derivs += [(html_string, 'REPORT', None, 'report')]
+                all_derivs += [QC_derivative(html_string, 'REPORT', None, 'report')]
 
                 # print('HERE!!')
                 # print(all_derivs[1])

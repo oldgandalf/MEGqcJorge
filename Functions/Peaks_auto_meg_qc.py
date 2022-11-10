@@ -4,6 +4,7 @@
 
 import pandas as pd
 import mne
+from universal_plots import QC_derivative
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float) -> tuple[pd.DataFrame, list]:
     """Function creates amplitude (peak-to-peak annotations) for every channel separately"""
@@ -37,7 +38,6 @@ def PP_auto_meg_qc(sid:str, config, channels:list, data: mne.io.Raw, m_or_g_chos
 
     peaks = {}
     flats = {}
-    dfs_ptp_amlitude_annot = {}
     bad_channels = {}
 
     if 'mags' in m_or_g_chosen:
@@ -56,12 +56,14 @@ def PP_auto_meg_qc(sid:str, config, channels:list, data: mne.io.Raw, m_or_g_chos
             peaks['grads'] = float(peak_g)
             flats['grads'] = float(flat_g)
 
+    deriv_ptp_auto= []
     for  m_or_g in m_or_g_chosen:
-        dfs_ptp_amlitude_annot[m_or_g], bad_channels[m_or_g] = get_amplitude_annots_per_channel(data, peaks[m_or_g], flats[m_or_g], channels[m_or_g], bad_percent, min_duration)
+        dfs_ptp_amlitude_annot, bad_channels[m_or_g] = get_amplitude_annots_per_channel(data, peaks[m_or_g], flats[m_or_g], channels[m_or_g], bad_percent, min_duration)
+        deriv_ptp_auto += [QC_derivative(dfs_ptp_amlitude_annot,'ptp_amplitude_annots_'+m_or_g, None, 'df')]
 
     #export to csv:
     if sid=='001' or sid=='009':
-        for  m_or_g in m_or_g_chosen:
-            dfs_ptp_amlitude_annot[m_or_g].to_csv('/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/derivatives/sub-'+sid+'/megqc/csv files/ptp_amplitude_annots_'+m_or_g+'.csv')
+        for d in range(0,  len(deriv_ptp_auto)):
+            deriv_ptp_auto[d].content.to_csv('/Users/jenya/Local Storage/Job Uni Rieger lab/MEG QC code/derivatives/sub-'+sid+'/megqc/csv files/ptp_amplitude_annots_'+m_or_g+'.csv')
 
-    return dfs_ptp_amlitude_annot, bad_channels
+    return deriv_ptp_auto, bad_channels
