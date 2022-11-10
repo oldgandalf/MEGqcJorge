@@ -1,4 +1,5 @@
 import mne
+from universal_plots import QC_derivative
 
 def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main psd function"""
@@ -26,23 +27,17 @@ def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     #WHAT SHOULD WE SHOW? CAN PLOT THE EOG CHANNEL. OR EOG EVENTS ON TOP OF 1 OF THE CHANNELS DATA. OR ON EVERY CHANNELS DATA?
 
     eog_epochs = mne.preprocessing.create_eog_epochs(raw, baseline=(-0.5, -0.2))
-
-    figs_with_names = []
-    fig_path=None
+    eog_deriv = []
 
     for m_or_g  in m_or_g_chosen:
-        fig_ecg = eog_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0]
-        fig_ecg_desc = 'mean_EOG_epoch_'+m_or_g
-        figs_with_names.append((fig_ecg,fig_ecg_desc,fig_path))
+        fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0]
+        eog_deriv += [QC_derivative(fig_eog, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
 
         #averaging the ECG epochs together:
         fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g[0:-1])
-        fig_eog_sensors_desc = 'EOG_field_pattern_sensors_'+m_or_g
-        figs_with_names.append((fig_eog_sensors,fig_eog_sensors_desc,fig_path))
+        eog_deriv += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
-    figs_with_name_and_format = add_output_format(figs_with_names, 'matplotlib')
-
-    return figs_with_name_and_format
+    return eog_deriv
 
 
 
