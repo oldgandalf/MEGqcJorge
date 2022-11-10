@@ -11,6 +11,10 @@ class QC_derivative:
         self.filepath = filepath
         self.content_type = content_type
 
+    def __repr__(self):
+        rep = 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type
+        return rep
+
 def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str) -> QC_derivative:
 
     '''
