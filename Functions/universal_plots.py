@@ -1,7 +1,9 @@
-
+import plotly
 import plotly.graph_objects as go
+import mpld3
 import pandas as pd
 import numpy as np
+import warnings
 
 class QC_derivative:
 
@@ -14,6 +16,37 @@ class QC_derivative:
     def __repr__(self):
         rep = 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type
         return rep
+
+    def convert_fig_to_html(self):
+        if self.content_type == 'plotly':
+            return plotly.io.to_html(self.content, full_html=False)
+        elif self.content_type == 'matplotlib':
+            return mpld3.fig_to_html(self.content)
+        elif not self.content_type:
+            warnings.warn("Empty content_type of this QC_derivative instance")
+        else:
+            return None
+
+    def get_section(self):
+        if 'std' in self.description or 'rmse' in self.description or 'STD' in self.description or 'RMSE' in self.description:
+            return 'std'
+        elif 'ptp_manual' in self.description or 'pp_manual' in self.description or 'PTP_manual' in self.description or 'PP_manual'in self.description:
+            return 'ptp_manual'
+        elif 'ptp_auto' in self.description or 'pp_auto' in self.description or 'PTP_auto' in self.description or 'PP_auto' in self.description:
+            return 'ptp_auto'
+        elif 'psd' in self.description or 'PSD' in self.description:
+            return 'psd'
+        elif 'eog' in self.description or 'EOG' in self.description:
+            return 'eog'
+        elif 'ecg' in self.description or 'ECG' in self.description:
+            return 'ecg'
+        elif 'head' in self.description or 'HEAD' in self.description:
+            return 'head'
+        elif 'muscle' in self.description or 'MUSCLE' in self.description:
+            return 'muscle'
+        else:  
+            warnings.warn("Check description of this QC_derivative instance: " + self.description)
+        
 
 def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str) -> QC_derivative:
 

@@ -48,7 +48,7 @@ def keep_fig_derivs(all_derivs):
     
     all_fig_derivs=[]
     for d in all_derivs:
-        if d[3] == 'plotly' or d[3] == 'matplotlib':
+        if d.content_type == 'plotly' or d.content_type == 'matplotlib':
             all_fig_derivs.append(d)
 
     return all_fig_derivs
@@ -57,10 +57,10 @@ def convert_figs_to_html(all_fig_derivs: list):
 
     figures_report = {}
     for x in range(0, len(all_fig_derivs)):
-        if all_fig_derivs[x][3]=='plotly':
+        if all_fig_derivs[x].content_type == 'plotly':
             figures_report["f{0}".format(x)] = plotly.io.to_html(all_fig_derivs[x][0], full_html=False)
 
-        elif all_fig_derivs[x][3]=='matplotlib':
+        elif all_fig_derivs[x].content_type == 'matplotlib':
             figures_report["f{0}".format(x)] = mpld3.fig_to_html(all_fig_derivs[x][0]);
     
     return figures_report

@@ -170,13 +170,13 @@ def make_derivative_meg_qc(config_file_name):
             
             # rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
             # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            # ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
+            ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
             # eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
@@ -219,23 +219,23 @@ def make_derivative_meg_qc(config_file_name):
 
                 for i in range(0, len(all_derivs)):
                     meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                    meg_artifact.add_entity('desc', all_derivs[i][1]) #file name
+                    meg_artifact.add_entity('desc', all_derivs[i].description) #file name
                     #meg_artifact.add_entity('task', task_label)
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-                    if all_derivs[i][3] == 'matplotlib':
+                    if all_derivs[i].content_type == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
                         meg_artifact.content = lambda file_path, cont=all_derivs[i].content: mpld3.save_html(cont, file_path)
-                    elif all_derivs[i][3] == 'plotly':
+                    elif all_derivs[i].content_type == 'plotly':
                         meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.write_html(file_path)
-                    elif all_derivs[i][3] == 'df':
+                    elif all_derivs[i].content_type == 'df':
                         meg_artifact.extension = '.csv'
                         meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.to_csv(file_path)
-                    elif all_derivs[i][3] == 'report':
+                    elif all_derivs[i].content_type == 'report':
                         def html_writer(file_path):
                             with open(file_path, "w") as file:
-                                file.write(html_string)
+                                file.write(all_derivs[i].content)
                             #'with'command doesnt work in lambda
                         meg_artifact.content = html_writer # function pointer instead of lambda
                     #problem with lambda explained:
