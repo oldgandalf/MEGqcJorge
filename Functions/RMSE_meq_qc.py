@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import mne
 
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, add_output_format
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
 from universal_html_report import make_std_peak_report
 
 # In[2]:
@@ -195,7 +195,11 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
     df_ch_ep_small_std_name = 'Small_std_per_epoch_'+ch_type
 
     file_path = None
-    dfs_with_name = [(df_std,df_std_name,file_path), (df_ch_ep_large_std, df_ch_ep_large_std_name, file_path), (df_ch_ep_small_std, df_ch_ep_small_std_name, file_path)]
+    dfs_with_name = [
+        QC_derivative(df_std,df_std_name,file_path, 'df'),
+        QC_derivative(df_ch_ep_large_std, df_ch_ep_large_std_name, file_path, 'df'),
+        QC_derivative(df_ch_ep_small_std, df_ch_ep_small_std_name, file_path, 'df')
+        ]
 
 
     if sid=='001':
@@ -224,36 +228,27 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
     big_std_with_value = {}
     small_std_with_value = {}
     rmse = {}
-    fig_with_name = []
+    derivs_rmse = []
     fig_std_epoch_with_name = []
-    dfs_with_name = {}
-    dfs_with_name_list = []
+    dfs_list = []
 
     # will run for both if mags+grads are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
 
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
-        fig_with_name.append(boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds'))
+        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds')]
 
     if dict_of_dfs_epoch[m_or_g] is not None:
         epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
-            dfs_with_name[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
-            
-            fig_std_epoch_with_name.append(boxplot_channel_epoch_hovering_plotly(df_mg=dfs_with_name[m_or_g][0][0], ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds'))
-            #dfs_with_name[m_or_g][0][0] - take from list of tuples the first tuple, from there the first element which is the df with stds
 
-            dfs_with_name_list += dfs_with_name[m_or_g]
+            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
+            dfs_list += df_epoch_rmse
+            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')]
+            #dfs_with_name[0][0] - take from list the first obj, from there the content which is the df with stds
     else:
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
-    fig_with_name += fig_std_epoch_with_name
-
-    deriv_with_name_and_format = add_output_format(fig_with_name, 'plotly')
-    dfs_with_name_and_format = add_output_format(dfs_with_name_list, 'df')
-
-    deriv_with_name_and_format += dfs_with_name_and_format
+    derivs_rmse += fig_std_epoch_with_name + dfs_list
     
-    return deriv_with_name_and_format
-
-    
+    return derivs_rmse

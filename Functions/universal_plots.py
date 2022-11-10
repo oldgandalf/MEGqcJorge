@@ -3,7 +3,15 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str):
+class QC_derivative:
+
+    def __init__(self, content, description, filepath, content_type) -> None:
+        self.content =  content
+        self.description = description
+        self.filepath = filepath
+        self.content_type = content_type
+
+def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str) -> QC_derivative:
 
     '''
     Creates representation of calculated data as multiple boxplots: 
@@ -87,7 +95,9 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     if sid=='001':
         fig.write_html(fig_path)
 
-    return(fig, fig_name, fig_path)
+    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+
+    return qc_derivative
 
 
 def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, sid: str, what_data: str):
@@ -163,7 +173,9 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
     if sid=='001':
         fig.write_html(fig_path)
 
-    return(fig, fig_name, fig_path)
+    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+
+    return qc_derivative
 
 #%%
 def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):
@@ -222,7 +234,9 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
     if sid=='001':
         fig.write_html(fig_path)
 
-    return (fig, fig_name, fig_path)
+    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+
+    return qc_derivative
 
 
 def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
@@ -267,14 +281,16 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
     if sid=='001':
         fig.write_html(fig_path)
 
-    return (fig, fig_name, fig_path)
+    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+
+    return qc_derivative
 
 
-def add_output_format(list_of_output_tuples:list, output_format:str):
+# def add_output_format(list_of_output_tuples:list, output_format:str):
 
-    out_with_name_and_format = []
-    for ou in list_of_output_tuples:
-        ou1 = ou+(output_format,)
-        out_with_name_and_format.append(ou1)
+#     out_with_name_and_format = []
+#     for ou in list_of_output_tuples:
+#         ou1 = ou+(output_format,)
+#         out_with_name_and_format.append(ou1)
 
-    return out_with_name_and_format
+#     return out_with_name_and_format

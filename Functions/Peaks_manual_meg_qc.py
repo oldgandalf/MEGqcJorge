@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, add_output_format
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly
 
 
 def neighbour_peak_amplitude(pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:

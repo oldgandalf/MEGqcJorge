@@ -166,9 +166,10 @@ def make_derivative_meg_qc(config_file_name):
 
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs = [],[],[],[],[]
-            # rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
+            
+            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
-            psd_derivs = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
+            # psd_derivs = PSD_meg_qc(sid, config, channels, raw_filered_resampled, m_or_g_chosen)
 
             # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filered_resampled, m_or_g_chosen)
 
@@ -224,12 +225,12 @@ def make_derivative_meg_qc(config_file_name):
 
                     if all_derivs[i][3] == 'matplotlib':
                         #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: mpld3.save_html(cont, file_path)
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: mpld3.save_html(cont, file_path)
                     elif all_derivs[i][3] == 'plotly':
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: cont.write_html(file_path)
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.write_html(file_path)
                     elif all_derivs[i][3] == 'df':
                         meg_artifact.extension = '.csv'
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i][0]: cont.to_csv(file_path)
+                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.to_csv(file_path)
                     elif all_derivs[i][3] == 'report':
                         def html_writer(file_path):
                             with open(file_path, "w") as file:

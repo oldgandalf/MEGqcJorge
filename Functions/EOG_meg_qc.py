@@ -1,5 +1,4 @@
 import mne
-from universal_plots import add_output_format
 
 def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main psd function"""

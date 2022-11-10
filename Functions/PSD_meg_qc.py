@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 
-from universal_plots import Plot_periodogram, plot_pie_chart_freq, add_output_format
+from universal_plots import Plot_periodogram, plot_pie_chart_freq
 from universal_html_report import make_PSD_report, make_std_peak_report
 
 # In[40]:
@@ -252,6 +252,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     return fig_power_with_name, dfs_with_name
 
 #%%
+
+
+
 
 def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     """Main psd function
