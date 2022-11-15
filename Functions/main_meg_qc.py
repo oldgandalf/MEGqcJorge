@@ -190,61 +190,44 @@ def make_derivative_meg_qc(config_file_name):
 
             # MUSCLE_meg_qc()
 
-            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ptp_auto_derivs + ecg_derivs + eog_derivs
-            # all_derivs: list of QC_derivative objects - output of every funct also has this format
 
-            #put all figure derivatives into dectionary, each with own section to later use in making report with sections
-            # derivs_list=[rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs]
-            # derivs_names_list=['rmse', 'psd', 'pp_manual', 'ecg', 'eog']
-            # derivs_per_section = {}
-            # for d_ind, d in enumerate(derivs_list):
-            #     all_fig_derivs = keep_fig_derivs(d)
-            #     derivs_per_section[derivs_names_list[d_ind]]=all_fig_derivs
+            QC_derivs={
+            'Standart deviation of data':rmse_derivs, 
+            'Frequency spectrum': psd_derivs, 
+            'Peak-to-Peak manual': pp_manual_derivs, 
+            'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
+            'ECG': ecg_derivs, 
+            'EOG': eog_derivs}
 
-            # html_string='''<html>
-            #     <head>
-            #     <title>HTML File</title>
-            #     </head>
-            #     <body>
-            #     <h1>stuff</h1>
-            #     <p>Example stuff</p>
-            #     </body>
-            #     </html>'''
-            # all_derivs=[(html_string, 'stuff_report', None, 'report')]
 
-            if all_derivs:
+            report_html_string = make_joined_report(active_shielding_used, sections=QC_derivs)
+            QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
-                report_html_string = make_joined_report(active_shielding_used, rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs)
-                all_derivs += [QC_derivative(report_html_string, 'REPORT', None, 'report')]
+            for section in QC_derivs.values():
+                if section: #if there are any derivs calculated in this section:
+                    for deriv in section:
+                        meg_artifact = subject_folder.create_artifact() #shell. empty derivative
+                        meg_artifact.add_entity('desc', deriv.description) #file name
+                        #meg_artifact.add_entity('task', task_label)
+                        meg_artifact.suffix = 'meg'
+                        meg_artifact.extension = '.html'
 
-                # print('HERE!!')
-                # print(all_derivs[1])
-                # print(all_derivs[2])
-                # print(all_derivs[3])
-
-                for i in range(0, len(all_derivs)):
-                    meg_artifact = subject_folder.create_artifact() #shell. empty derivative
-                    meg_artifact.add_entity('desc', all_derivs[i].description) #file name
-                    #meg_artifact.add_entity('task', task_label)
-                    meg_artifact.suffix = 'meg'
-                    meg_artifact.extension = '.html'
-
-                    if all_derivs[i].content_type == 'matplotlib':
-                        #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: mpld3.save_html(cont, file_path)
-                    elif all_derivs[i].content_type == 'plotly':
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.write_html(file_path)
-                    elif all_derivs[i].content_type == 'df':
-                        meg_artifact.extension = '.csv'
-                        meg_artifact.content = lambda file_path, cont=all_derivs[i].content: cont.to_csv(file_path)
-                    elif all_derivs[i].content_type == 'report':
-                        def html_writer(file_path):
-                            with open(file_path, "w") as file:
-                                file.write(all_derivs[i].content)
-                            #'with'command doesnt work in lambda
-                        meg_artifact.content = html_writer # function pointer instead of lambda
-                    #problem with lambda explained:
-                    #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+                        if deriv.content_type == 'matplotlib':
+                            #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
+                            meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
+                        elif deriv.content_type == 'plotly':
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
+                        elif deriv.content_type == 'df':
+                            meg_artifact.extension = '.csv'
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
+                        elif deriv.content_type == 'report':
+                            def html_writer(file_path):
+                                with open(file_path, "w") as file:
+                                    file.write(deriv.content)
+                                #'with'command doesnt work in lambda
+                            meg_artifact.content = html_writer # function pointer instead of lambda
+                        #problem with lambda explained:
+                        #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
     layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
 

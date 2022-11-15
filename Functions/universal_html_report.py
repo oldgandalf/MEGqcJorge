@@ -74,20 +74,12 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     return fig_derivs_section
 
 
-def make_joined_report(active_shielding_used: bool, rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs):
+def make_joined_report(active_shielding_used: bool, sections:dict):
 
     if active_shielding_used is False:
         shielding_str=''
     else: 
         shielding_str=''' <p>This filecontains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
-
-    sections={
-    'Standart deviation of data':rmse_derivs, 
-    'Frequency spectrum': psd_derivs, 
-    'Peak-to-Peak manual': pp_manual_derivs, 
-    'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
-    'ECG': ecg_derivs, 
-    'EOG': eog_derivs}
 
     header_html_string = '''
     <!doctype html>

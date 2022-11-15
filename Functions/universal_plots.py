@@ -15,7 +15,7 @@ class QC_derivative:
         self.description_for_user = 'Add measurement description for a user description here...'
 
     def __repr__(self):
-        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user' + self.description_for_user
+        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
 
     def convert_fig_to_html(self):
         if self.content_type == 'plotly':
