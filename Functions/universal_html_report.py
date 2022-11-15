@@ -41,25 +41,27 @@ def make_html_section(derivs_section, section_title):
     - Loop over list of derivs belonging to 1 section, keep only figures
     - Put them one after another with description under."""
 
+    all_figs_of_section=''
     fig_derivs_section = keep_fig_derivs(derivs_section)
+    
+    if not fig_derivs_section:
+        all_figs_of_section='''<p>This measurement has no figures. Please see csv files.</p>'''
+    else:
+        for f in range(0, len(fig_derivs_section)):
+            all_figs_of_section += fig_derivs_section[f].convert_fig_to_html_add_description()
+
+    html_section_str='''
+        <!-- *** Section *** --->
+        <h2>'''+section_title+'''</h2>
+        ''' + all_figs_of_section+'''
+        <br></br>
+        <br></br>'''
 
     # figures = {}
     # figures_report= {}
     # for x in range(0, len(fig_derivs_section)):
     #     with open(fig_derivs_section[x], 'r') as figures["f{0}".format(x)]:
     #         figures_report["f{0}".format(x)] = figures["f{0}".format(x)].read()
-
-    all_figs_of_section=''
-    for f in range(0, len(fig_derivs_section)):
-        all_figs_of_section += fig_derivs_section[f].convert_fig_to_html_add_description()
-
-
-    html_section_str='''
-            <!-- *** Section *** --->
-            <h2>'''+section_title+'''</h2>
-            ''' + all_figs_of_section+'''
-            <br></br>
-            <br></br>'''
 
     return html_section_str
 
