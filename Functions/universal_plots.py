@@ -12,10 +12,10 @@ class QC_derivative:
         self.description = description
         self.filepath = filepath
         self.content_type = content_type
+        self.description_for_user = 'Add measurement description for a user description here...'
 
     def __repr__(self):
-        rep = 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type
-        return rep
+        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user' + self.description_for_user
 
     def convert_fig_to_html(self):
         if self.content_type == 'plotly':
@@ -26,6 +26,13 @@ class QC_derivative:
             warnings.warn("Empty content_type of this QC_derivative instance")
         else:
             return None
+
+    def convert_fig_to_html_add_description(self):
+
+        figure_report = self.convert_fig_to_html()
+
+        return '''<br></br>'''+ figure_report + '''<p>'''+self.description_for_user+'''</p>'''
+
 
     def get_section(self):
         if 'std' in self.description or 'rmse' in self.description or 'STD' in self.description or 'RMSE' in self.description:

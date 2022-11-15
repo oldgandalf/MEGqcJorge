@@ -46,7 +46,8 @@ def initial_stuff(config: dict, data_file: str):
     will return what is stated, but in origibal duration.
     '''
 
-    raw = mne.io.read_raw_fif(data_file)
+    raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
+
 
     mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
     grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
@@ -166,26 +167,26 @@ def make_derivative_meg_qc(config_file_name):
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
             
-            rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs, ptp_auto_derivs = [],[],[],[],[], []
+            rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            # rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            #rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
             psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            # pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            #pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            #ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
+            #ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            # eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
+            eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
-            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ecg_derivs + eog_derivs + ptp_auto_derivs
-            # all_derivs: list of tuples(figure, fig_name, fig_path, format_of_output_content) - output of every funct also has this format
+            all_derivs = rmse_derivs + psd_derivs + pp_manual_derivs + ptp_auto_derivs + ecg_derivs + eog_derivs
+            # all_derivs: list of QC_derivative objects - output of every funct also has this format
 
             #put all figure derivatives into dectionary, each with own section to later use in making report with sections
             # derivs_list=[rmse_derivs, psd_derivs, pp_manual_derivs, ecg_derivs, eog_derivs]
@@ -208,9 +209,8 @@ def make_derivative_meg_qc(config_file_name):
 
             if all_derivs:
 
-                all_fig_derivs = keep_fig_derivs(all_derivs)
-                html_string = make_joined_report(all_fig_derivs)
-                all_derivs += [QC_derivative(html_string, 'REPORT', None, 'report')]
+                report_html_string = make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs)
+                all_derivs += [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
                 # print('HERE!!')
                 # print(all_derivs[1])

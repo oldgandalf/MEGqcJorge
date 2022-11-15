@@ -1,6 +1,4 @@
-import plotly
-import mpld3
-
+from universal_plots import QC_derivative
 
 # def add_fig_to_html_section(figure_report):
 
@@ -36,39 +34,55 @@ import mpld3
 
 
 
-def make_html_section(figure_report):
-    single_html_string='''
+def make_html_section(derivs_section, section_title):
+
+    """
+    - Add section title
+    - Loop over list of derivs belonging to 1 section, keep only figures
+    - Put them one after another with description under."""
+
+    fig_derivs_section = keep_fig_derivs(derivs_section)
+
+    # figures = {}
+    # figures_report= {}
+    # for x in range(0, len(fig_derivs_section)):
+    #     with open(fig_derivs_section[x], 'r') as figures["f{0}".format(x)]:
+    #         figures_report["f{0}".format(x)] = figures["f{0}".format(x)].read()
+
+    all_figs_of_section=''
+    for f in range(0, len(fig_derivs_section)):
+        all_figs_of_section += fig_derivs_section[f].convert_fig_to_html_add_description()
+
+
+    html_section_str='''
             <!-- *** Section *** --->
-            ''' + figure_report + '''
-            <p>graph description...</p>'''
-    return single_html_string
+            <h2>'''+section_title+'''</h2>
+            ''' + all_figs_of_section+'''
+            <br></br>
+            <br></br>'''
+
+    return html_section_str
 
 
-def keep_fig_derivs(all_derivs):
+def keep_fig_derivs(derivs_section:list[QC_derivative]):
     
-    all_fig_derivs=[]
-    for d in all_derivs:
+    fig_derivs_section=[]
+    for d in derivs_section:
         if d.content_type == 'plotly' or d.content_type == 'matplotlib':
-            all_fig_derivs.append(d)
+            fig_derivs_section.append(d)
 
-    return all_fig_derivs
-
-def convert_figs_to_html(all_fig_derivs: list):
-
-    figures_report = {}
-    for x in range(0, len(all_fig_derivs)):
-        if all_fig_derivs[x].content_type == 'plotly':
-            figures_report["f{0}".format(x)] = plotly.io.to_html(all_fig_derivs[x][0], full_html=False)
-
-        elif all_fig_derivs[x].content_type == 'matplotlib':
-            figures_report["f{0}".format(x)] = mpld3.fig_to_html(all_fig_derivs[x][0]);
-    
-    return figures_report
+    return fig_derivs_section
 
 
-def make_joined_report(all_fig_derivs: list):
+def make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs):
 
-    figures_report = convert_figs_to_html(all_fig_derivs)
+    sections={
+    'Standart deviation of data':rmse_derivs, 
+    'Frequency spectrum': psd_derivs, 
+    'Peak-to-Peak manual': pp_manual_derivs, 
+    'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
+    'ECG': ecg_derivs, 
+    'EOG': eog_derivs}
 
     header_html_string = '''
     <!doctype html>
@@ -89,14 +103,24 @@ def make_joined_report(all_fig_derivs: list):
     #         '''
 
     main_html_string = ''
-    for x in range(0, len(all_fig_derivs)):
-        new_html_string = make_html_section(figures_report["f{0}".format(x)])
+    for key in sections:
+
+        if sections[key]:
+            html_section_str = make_html_section(derivs_section = sections[key], section_title = key)
+            #html_section_str = make_html_section(figures_report["f{0}".format(x)], section_titles[x])
+        else:
+            html_section_str = '''
+            <!-- *** Section *** --->
+            <h2>'''+key+'''</h2>
+            <p>This measurement could not be calculated because.....</p>
+            <br></br>
+            <br></br>'''
 
         # #add some section divider... still thinking
         # if figures_report["f{0}".format(x)]:
         #     main_html_string += divider
 
-        main_html_string += new_html_string
+        main_html_string += html_section_str
 
 
     end_string = '''
