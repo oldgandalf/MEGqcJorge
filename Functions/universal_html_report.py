@@ -74,12 +74,21 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     return fig_derivs_section
 
 
-def make_joined_report(active_shielding_used: bool, sections:dict):
+def make_joined_report(active_shielding_used: bool, sections:dict, m_or_g_chosen: list, dict_of_dfs_epoch):
 
-    if active_shielding_used is False:
-        shielding_str=''
-    else: 
-        shielding_str=''' <p>This filecontains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+    shielding_str, channels_skipped_str, epoching_skipped_str = '', '', ''
+
+    if active_shielding_used is True: 
+        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+
+    if 'mags' not in m_or_g_chosen:
+        channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+    elif 'grads' not in m_or_g_chosen:
+        channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+
+    if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
+        epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
+
 
     header_html_string = '''
     <!doctype html>
@@ -94,7 +103,7 @@ def make_joined_report(active_shielding_used: bool, sections:dict):
             <center>
             <h1>MEG data quality analysis report</h1>
             <br></br>
-            '''+shielding_str
+            '''+shielding_str+channels_skipped_str+epoching_skipped_str
 
     main_html_string = ''
     for key in sections:

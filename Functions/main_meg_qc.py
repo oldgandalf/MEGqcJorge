@@ -155,6 +155,9 @@ def make_derivative_meg_qc(config_file_name):
 
     list_of_subs = layout.get_subjects()
     #print(list_of_subs)
+    if not list_of_subs:
+        print('No subjects found. Check your data set and directory path.')
+        return
 
     for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
     #for sid in list_of_subs: 
@@ -170,19 +173,18 @@ def make_derivative_meg_qc(config_file_name):
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
-
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            #rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
             psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            #pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            #ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            #ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
+            ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
             eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
@@ -200,7 +202,7 @@ def make_derivative_meg_qc(config_file_name):
             'EOG': eog_derivs}
 
 
-            report_html_string = make_joined_report(active_shielding_used, sections=QC_derivs)
+            report_html_string = make_joined_report(active_shielding_used, sections=QC_derivs, m_or_g_chosen=m_or_g_chosen, dict_of_dfs_epoch=dict_of_dfs_epoch)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
             for section in QC_derivs.values():

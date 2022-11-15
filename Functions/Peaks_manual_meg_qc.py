@@ -171,8 +171,9 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks')]
 
-    if dict_of_dfs_epoch[m_or_g] is not None:
-        epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+    if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
+
+        epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
             df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers, m_or_g)
             dfs_list += df_ptp
@@ -180,8 +181,6 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
             fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with ptp
     else:
-        for m_or_g in m_or_g_chosen:
-            fig_ptp_epoch_with_name += [QC_derivative(None, 'skipped_ptp_epoch'+m_or_g, None, 'skipped')]
         print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     derivs_ptp += fig_ptp_epoch_with_name + dfs_list

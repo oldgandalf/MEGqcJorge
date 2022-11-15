@@ -238,8 +238,9 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
         big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds')]
 
-    if dict_of_dfs_epoch[m_or_g] is not None:
-        epoch_numbers = dict_of_dfs_epoch[m_or_g]['epoch'].unique()
+    if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
+
+        epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
 
             df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
@@ -247,8 +248,6 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
     else:
-        for m_or_g in m_or_g_chosen:
-            fig_std_epoch_with_name += [QC_derivative(None, 'skipped_std_epoch'+m_or_g, None, 'skipped')]
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     derivs_rmse += fig_std_epoch_with_name + dfs_list

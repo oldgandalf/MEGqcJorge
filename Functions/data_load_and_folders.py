@@ -137,7 +137,14 @@ def Epoch_meg(config, data: mne.io.Raw):
 
     if n_events == 0:
         print('No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
-        return(None, None)
+        dict_of_dfs_epoch = {
+        'grads': None,
+        'mags': None}
+
+        epochs_mg = {
+        'grads': None,
+        'mags': None}
+        return dict_of_dfs_epoch, epochs_mg
 
     epochs_mags = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
     epochs_grads = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
