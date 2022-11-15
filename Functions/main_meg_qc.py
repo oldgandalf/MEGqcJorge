@@ -46,7 +46,12 @@ def initial_stuff(config: dict, data_file: str):
     will return what is stated, but in origibal duration.
     '''
 
-    raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
+    active_shielding_used = False
+    try:
+        raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
+    except: 
+        raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
+        active_shielding_used = True
 
 
     mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
@@ -99,7 +104,7 @@ def initial_stuff(config: dict, data_file: str):
 
     dict_of_dfs_epoch, epochs_mg = Epoch_meg(config, raw_filtered)
 
-    return dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw
+    return dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used
 
 
 
@@ -160,7 +165,7 @@ def make_derivative_meg_qc(config_file_name):
         #Devide here fifs by task, ses , run
 
         for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF because is not divided by tasks yet..
-            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw = initial_stuff(config, data_file)
+            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
@@ -209,7 +214,7 @@ def make_derivative_meg_qc(config_file_name):
 
             if all_derivs:
 
-                report_html_string = make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs)
+                report_html_string = make_joined_report(active_shielding_used, rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs)
                 all_derivs += [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
                 # print('HERE!!')

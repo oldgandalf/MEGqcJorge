@@ -74,7 +74,12 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     return fig_derivs_section
 
 
-def make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs):
+def make_joined_report(active_shielding_used: bool, rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs):
+
+    if active_shielding_used is False:
+        shielding_str=''
+    else: 
+        shielding_str=''' <p>This filecontains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
 
     sections={
     'Standart deviation of data':rmse_derivs, 
@@ -96,11 +101,8 @@ def make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_deriv
         <body style="font-family: Arial">
             <center>
             <h1>MEG data quality analysis report</h1>
-            <br></br>'''
-
-    # divider = '''
-
-    #         '''
+            <br></br>
+            '''+shielding_str
 
     main_html_string = ''
     for key in sections:
@@ -115,10 +117,6 @@ def make_joined_report(rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_deriv
             <p>This measurement could not be calculated because.....</p>
             <br></br>
             <br></br>'''
-
-        # #add some section divider... still thinking
-        # if figures_report["f{0}".format(x)]:
-        #     main_html_string += divider
 
         main_html_string += html_section_str
 
