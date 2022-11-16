@@ -34,29 +34,36 @@ from universal_plots import QC_derivative
 
 
 
-def make_html_section(derivs_section, section_title):
+def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str):
 
     """
     - Add section title
     - Loop over list of derivs belonging to 1 section, keep only figures
     - Put them one after another with description under."""
 
-    all_figs_of_section=''
+    all_section_content=''
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
-    if not fig_derivs_section:
-        all_figs_of_section='''<p>This measurement has no figures. Please see csv files.</p>'''
+    if not fig_derivs_section and 'ECG' in section_title:
+        all_section_content='''<p>'''+no_ecg_str+'''</p>'''
+    elif not fig_derivs_section and 'EOG' in section_title:
+        all_section_content='''<p>'''+no_eog_str+'''</p>'''
+    elif derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
+        all_section_content='''<p>This measurement has no figures. Please see csv files.</p>'''
+    elif not derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
+        all_section_content='''<p>This measurement was not calculated because...</p>'''
     else:
         for f in range(0, len(fig_derivs_section)):
-            all_figs_of_section += fig_derivs_section[f].convert_fig_to_html_add_description()
+            all_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
 
     html_section_str='''
         <!-- *** Section *** --->
         <h2>'''+section_title+'''</h2>
-        ''' + all_figs_of_section+'''
+        ''' + all_section_content+'''
         <br></br>
         <br></br>'''
 
+    # The way to get figures if need to open them from saved files:
     # figures = {}
     # figures_report= {}
     # for x in range(0, len(fig_derivs_section)):
@@ -76,21 +83,7 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     return fig_derivs_section
 
 
-def make_joined_report(active_shielding_used: bool, sections:dict, m_or_g_chosen: list, dict_of_dfs_epoch):
-
-    shielding_str, channels_skipped_str, epoching_skipped_str = '', '', ''
-
-    if active_shielding_used is True: 
-        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
-
-    if 'mags' not in m_or_g_chosen:
-        channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
-    elif 'grads' not in m_or_g_chosen:
-        channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
-
-    if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
-        epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
-
+def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str):
 
     header_html_string = '''
     <!doctype html>
@@ -110,16 +103,18 @@ def make_joined_report(active_shielding_used: bool, sections:dict, m_or_g_chosen
     main_html_string = ''
     for key in sections:
 
-        if sections[key]:
-            html_section_str = make_html_section(derivs_section = sections[key], section_title = key)
-            #html_section_str = make_html_section(figures_report["f{0}".format(x)], section_titles[x])
-        else:
-            html_section_str = '''
-            <!-- *** Section *** --->
-            <h2>'''+key+'''</h2>
-            <p>This measurement could not be calculated because.....</p>
-            <br></br>
-            <br></br>'''
+        html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
+
+        # if sections[key]:
+        #     html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
+        #     #html_section_str = make_html_section(figures_report["f{0}".format(x)], section_titles[x])
+        # else:
+        #     html_section_str = '''
+        #     <!-- *** Section *** --->
+        #     <h2>'''+key+'''</h2>
+        #     <p>This measurement could not be calculated because.....</p>
+        #     <br></br>
+        #     <br></br>'''
 
         main_html_string += html_section_str
 

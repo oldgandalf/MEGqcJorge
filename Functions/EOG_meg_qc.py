@@ -6,10 +6,13 @@ def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
 
     #eog_section = config['EOG']
 
+    eog_deriv = []
+
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:
-        print('No EOG channels found is this data set - EOG artifacts can not br detected')
-        return
+        print('No EOG channels found is this data set - EOG artifacts can not be detected.')
+        return eog_deriv
+
     # else:
     #     EOG_channel_name=[]
     #     for i in range(0,len(picks_EOG)):

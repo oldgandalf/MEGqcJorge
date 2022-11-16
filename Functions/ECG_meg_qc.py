@@ -6,10 +6,12 @@ def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
 
     #ecg_section = config['ECG']
 
+    ecg_deriv = []
+
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     if picks_ECG.size == 0:
-        print('No ECG channels found is this data set. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and us not recommended.')
-        return
+        print('No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.')
+        return ecg_deriv
     # else:
     #     ECG_channel_name=[]
     #     for i in range(0,len(picks_ECG)):
@@ -36,7 +38,7 @@ def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
         fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g[0:-1])
         ecg_deriv += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
-    return ecg_deriv 
+    return ecg_deriv
 
 
 

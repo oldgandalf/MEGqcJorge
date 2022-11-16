@@ -3,6 +3,7 @@
 
 #%%
 
+import os
 import mne
 import configparser
 import ancpbids
@@ -150,6 +151,9 @@ def make_derivative_meg_qc(config_file_name):
     schema = layout.schema
 
     #create derivative folder first!
+    if os.path.isdir(dataset_path+'/derivatives')==False: 
+            os.mkdir(dataset_path+'/derivatives')
+
     derivative = layout.dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
@@ -194,15 +198,37 @@ def make_derivative_meg_qc(config_file_name):
 
 
             QC_derivs={
-            'Standart deviation of data':rmse_derivs, 
+            'Standart deviation of the data':rmse_derivs, 
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 
             'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
             'ECG': ecg_derivs, 
-            'EOG': eog_derivs}
+            'EOG': eog_derivs,
+            'Head movement artifacts': [],
+            'Muscle artifacts': []}
+
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str = '', '', '', '', ''
+            if active_shielding_used is True: 
+                shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+            
+            if 'mags' not in m_or_g_chosen:
+                channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+            elif 'grads' not in m_or_g_chosen:
+                channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
 
-            report_html_string = make_joined_report(active_shielding_used, sections=QC_derivs, m_or_g_chosen=m_or_g_chosen, dict_of_dfs_epoch=dict_of_dfs_epoch)
+            if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
+                epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
+
+
+            if not ecg_derivs:
+                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.'
+
+            if not eog_derivs:
+                no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
+
+
+            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
             for section in QC_derivs.values():
