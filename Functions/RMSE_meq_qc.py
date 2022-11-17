@@ -7,7 +7,7 @@ from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_h
 
 def RMSE(data_m_or_g: np.array or list):
     ''' RMSE - general root means squared error function to use in other functions of this module.
-    Alternatively std could be used, but the calculation time of std is lower, result is the same.
+    Alternatively std could be used, but the calculation time of std is longer, result is the same.
     
     Args:
     data_m_or_g (np.array or list): data for magnetometer or gradiometer given as np array or list 
