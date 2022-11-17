@@ -39,7 +39,6 @@ def RMSE(data_m_or_g: np.array or list):
 
     return rmse_np
 
-
 # In[6]:
 def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int): 
 

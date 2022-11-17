@@ -2,16 +2,14 @@ import mne
 from universal_plots import QC_derivative
 
 def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
-    """Main psd function"""
+    """Main EOG function"""
 
     #eog_section = config['EOG']
-
-    eog_deriv = []
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:
         print('No EOG channels found is this data set - EOG artifacts can not be detected.')
-        return eog_deriv
+        return None, None
 
     # else:
     #     EOG_channel_name=[]
@@ -19,11 +17,11 @@ def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
     #         EOG_channel_name.append(raw.info['chs'][picks_EOG[i]]['ch_name'])
     #     print('EOG channels found: ', EOG_channel_name)
     # eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=EOG_channel_name)
-    eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
 
+    eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
     # ch_name: This doesn’t have to be a channel of eog type; it could, for example, also be an ordinary 
     # EEG channel that was placed close to the eyes, like Fp1 or Fp2.
-    #or just use none as channel, so the eog will be found automatically
+    # or just use none as channel, so the eog will be found automatically
 
     eog_events_times  = (eog_events[:, 0] - raw.first_samp) / raw.info['sfreq']
 
@@ -40,7 +38,7 @@ def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
         fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g[0:-1])
         eog_deriv += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
-    return eog_deriv
+    return eog_deriv, eog_events_times
 
 
 

@@ -177,10 +177,7 @@ def make_derivative_meg_qc(config_file_name):
 
         print('HERE! 111', list_of_sub_jsons)
 
-        for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
-
-            # test_ds = ancpbids.load_dataset(dataset_path)
-            # sub_json = test_ds.query(sub=sid, suffix='meg', extension='.fif')[0]
+        for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
 
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_stuff(config, data_file)
 
@@ -190,22 +187,44 @@ def make_derivative_meg_qc(config_file_name):
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            #rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            #psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            psd_derivs = PSD_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            #pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            pp_manual_derivs = PP_manual_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            #ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            #ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
+            ecg_derivs, ecg_events_times = ECG_meg_qc(config, raw, m_or_g_chosen)
 
-            eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
+            eog_derivs, eog_events_times = EOG_meg_qc(config, raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
+
+            # Make strings to add to html report:
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str = '', '', '', '', ''
+
+            if active_shielding_used is True: 
+                shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+            
+            if 'mags' not in m_or_g_chosen:
+                channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+            elif 'grads' not in m_or_g_chosen:
+                channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+
+            if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
+                epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
+
+            if ecg_derivs is None:
+                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.'
+                ecg_derivs = []
+
+            if eog_derivs is None:
+                no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
+                eog_derivs = []
 
             QC_derivs={
             'Standart deviation of the data':rmse_derivs, 
@@ -216,27 +235,6 @@ def make_derivative_meg_qc(config_file_name):
             'EOG': eog_derivs,
             'Head movement artifacts': [],
             'Muscle artifacts': []}
-
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str = '', '', '', '', ''
-            if active_shielding_used is True: 
-                shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
-            
-            if 'mags' not in m_or_g_chosen:
-                channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
-            elif 'grads' not in m_or_g_chosen:
-                channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
-
-
-            if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
-                epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
-
-
-            if not ecg_derivs:
-                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.'
-
-            if not eog_derivs:
-                no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-
 
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]

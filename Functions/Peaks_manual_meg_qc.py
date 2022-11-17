@@ -142,7 +142,7 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
     return dfs_with_name
 
 
-def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def PP_manual_meg_qc(config, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
 
     """Main Peak to peak amplitude function.
@@ -169,7 +169,7 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
     for m_or_g in m_or_g_chosen:
 
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl, pair_dist_sec)
-        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='peaks')]
+        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='peaks')]
 
     if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
 
@@ -178,7 +178,7 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
             df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl, pair_dist_sec, epoch_numbers, m_or_g)
             dfs_list += df_ptp
 
-            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='peaks')]
+            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], what_data='peaks')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with ptp
     else:
         print('Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
@@ -186,7 +186,3 @@ def PP_manual_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch: dict, 
     derivs_ptp += fig_ptp_epoch_with_name + dfs_list
     
     return derivs_ptp
-    
-    # make_std_peak_report(sid=sid, what_data='peaks', list_of_figure_paths=list_of_figure_paths, config=config)
-
-

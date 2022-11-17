@@ -17,7 +17,7 @@ from universal_html_report import make_PSD_report, make_std_peak_report
 #UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
 
 
-def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
+def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
 
     '''Calculates frequency spectrum of the data and if desired - plots them.
 
@@ -34,7 +34,6 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or 
     data (mne.raw): data in raw format
     m_or_g (str): which channel type to use
     plotflag (bool): do you need plot or not
-    sid (str): subject id number, like '1'
     freq_min (float): minimal frequency of interest for frequency spectrum decomposition
     freq_max (float): maximal frequency of interest for frequency spectrum decomposition
     n_fft (float): The length of FFT used, must be >= n_per_seg (default: 256). The segments will be zero-padded if n_fft > n_per_seg. 
@@ -65,7 +64,7 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, sid:str, freq_min:float or 
 
     psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
     
-    psd_derivative=Plot_periodogram(tit, freqs, psds, sid, ch_names) 
+    psd_derivative=Plot_periodogram(tit, freqs, psds, ch_names) 
 
     return freqs, psds, psd_derivative
     
@@ -132,7 +131,7 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
     
 # In[53]:
 
-def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool, sid: str):
+def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool):
 
     '''
     - Power of frequencies calculation for all mags + grads channels separately, 
@@ -146,7 +145,6 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     mean_power_per_band_needed (bool): need to calculate mean band power in the ENTIRE signal (averaged over all channels) or not.
         if True, results will also be printed.
     plotflag (bool): need to plot pie chart of mean_power_per_band_needed or not
-    sid (str): subject id number, like '1'
 
     Returns:
     data frames as csv files saved:
@@ -199,11 +197,10 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         QC_derivative(renamed_df_rel_power, renamed_df_rel_power_name, file_path, 'df')
         ]
 
-    # Create csv file  for the user:
-    if sid=='001':
-        renamed_df_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/abs_power_'+m_or_g+'.csv')
-        renamed_df_power_freq.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
-        renamed_df_rel_power.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/relative_power_'+m_or_g+'.csv')
+
+    # renamed_df_power.to_csv('../derivatives/megqc/csv files/abs_power_'+m_or_g+'.csv')
+    # renamed_df_power_freq.to_csv('../derivatives/megqc/csv files/power_by_Nfreq_'+m_or_g+'.csv')
+    # renamed_df_rel_power.to_csv('../derivatives/megqc/csv files/relative_power_'+m_or_g+'.csv')
 
 
     if mean_power_per_band_needed is True: #if user wants to see average power per band over all channels - calculate and plot here:
@@ -247,7 +244,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, sid=sid)
+            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit)
         else:
             psd_pie_derivative = QC_derivative(None, 'skipped_psd_pie', None, 'skipped')
 
@@ -257,7 +254,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 #%%
 
 
-def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
+def PSD_meg_qc(config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     """Main psd function
 
     Output:
@@ -277,10 +274,10 @@ def PSD_meg_qc(sid:str, config, channels:dict, filtered_d_resamp: mne.io.Raw, m_
 
     #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, sid=sid, freq_min=freq_min, freq_max=freq_max, 
+        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, freq_min=freq_min, freq_max=freq_max, 
         n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
         
-        fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True, sid = sid)
+        fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True)
 
         derivs_psd += [fig_with_name] + [fig_power_with_name] + dfs_with_name
 
