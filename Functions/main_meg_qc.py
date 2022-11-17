@@ -8,6 +8,7 @@ import mne
 import configparser
 import ancpbids
 from ancpbids import BIDSLayout
+from ancpbids import load_dataset
 import mpld3
 
 from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
@@ -166,12 +167,21 @@ def make_derivative_meg_qc(config_file_name):
     for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
     #for sid in list_of_subs: 
 
-        subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+        subject_folder = derivative.create_folder(type_=schema.Subject, name='Folder_sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        for data_file in [list_of_fifs[0]]: #RUN OVER JUST 1 FIF because is not divided by tasks yet..
+        dataset_ancp_loaded = ancpbids.load_dataset(dataset_path)
+        list_of_sub_jsons = dataset_ancp_loaded.query(sub=sid, suffix='meg', extension='.fif')
+
+        print('HERE! 111', list_of_sub_jsons)
+
+        for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
+
+            # test_ds = ancpbids.load_dataset(dataset_path)
+            # sub_json = test_ds.query(sub=sid, suffix='meg', extension='.fif')[0]
+
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_stuff(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
@@ -180,15 +190,15 @@ def make_derivative_meg_qc(config_file_name):
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            #rmse_derivs = RMSE_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            #psd_derivs = PSD_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            #pp_manual_derivs = PP_manual_meg_qc(sid, config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
+            #ptp_auto_derivs, bad_channels = PP_auto_meg_qc(sid, config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
+            #ecg_derivs = ECG_meg_qc(config, raw, m_or_g_chosen)
 
             eog_derivs = EOG_meg_qc(config, raw, m_or_g_chosen)
 
@@ -234,7 +244,8 @@ def make_derivative_meg_qc(config_file_name):
             for section in QC_derivs.values():
                 if section: #if there are any derivs calculated in this section:
                     for deriv in section:
-                        meg_artifact = subject_folder.create_artifact() #shell. empty derivative
+                        print('HERE!',list_of_sub_jsons[fif_ind])
+                        meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.description) #file name
                         #meg_artifact.add_entity('task', task_label)
                         meg_artifact.suffix = 'meg'
