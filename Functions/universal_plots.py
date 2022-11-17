@@ -55,7 +55,7 @@ class QC_derivative:
             warnings.warn("Check description of this QC_derivative instance: " + self.description)
         
 
-def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid: str, what_data: str) -> QC_derivative:
+def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
 
     '''
     Creates representation of calculated data as multiple boxplots: 
@@ -67,7 +67,6 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
     df_mg(pd.DataFrame): data frame containing data (stds, peak-to-peak amplitudes, etc) for each epoch, each channel, 
         mags OR grads, not together
     ch_type (str): title, like "Magnetometers", or "Gradiometers", 
-    sid (str): subject id number, like '1'
     what_data (str): 'peaks' for peak-to-peak amplitudes or 'stds'
 
     Returns:
@@ -132,19 +131,17 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, sid
             'yanchor': 'top'})
         
 
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
 
     fig.show()
-
-    if sid=='001':
-        fig.write_html(fig_path)
+    #fig.write_html(fig_path)
 
     qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, sid: str, what_data: str):
+def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
 
     '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
     each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
@@ -155,7 +152,6 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
     std_data (list): stds for mags or grads calculated in RMSE_meg_all, 
     ch_type (str): "Magnetometers" or "Gradiometers", 
     channels (list of tuples): magnetometer channel name + its index, 
-    sid (str): subject id, like '1'
     what_data (str): 'peaks' or 'stds'
 
     Returns:
@@ -212,23 +208,19 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, si
         
     fig.show()
 
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
-
-    if sid=='001':
-        fig.write_html(fig_path)
+    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
 
     qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
 #%%
-def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_names: list):
+def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list):
 
     '''Plotting periodogram on the data.
 
     Args:
     tit (str): title, like "Magnetometers", or "Gradiometers", 
-    sid (str): subject id number, like '1'
     freqs (np.ndarray): numpy array of frequencies after performing Welch (or other method) psd decomposition
     psds (np.ndarray): numpy array of psds after performing Welch (or other method) psd decomposition
     mg_names (list of tuples): channel name + its index
@@ -273,17 +265,16 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, sid: str, mg_n
     fig.show()
     
     fig_name='PSD_all_data_'+tit
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
     
-    if sid=='001':
-        fig.write_html(fig_path)
+    #fig.write_html(fig_path)
 
     qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
 
-def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
+def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
     
     ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
     signal of mags or of grads, not separated by individual channels.
@@ -320,21 +311,11 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, sid: str):
     fig.show()
 
     fig_name='PSD_Relative_power_per_band_over_all_channels_'+tit
-    fig_path='../derivatives/sub-'+sid+'/megqc/figures/'+fig_name+'.html'
+    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
     
-    if sid=='001':
-        fig.write_html(fig_path)
+    #fig.write_html(fig_path)
 
     qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
-
-# def add_output_format(list_of_output_tuples:list, output_format:str):
-
-#     out_with_name_and_format = []
-#     for ou in list_of_output_tuples:
-#         ou1 = ou+(output_format,)
-#         out_with_name_and_format.append(ou1)
-
-#     return out_with_name_and_format

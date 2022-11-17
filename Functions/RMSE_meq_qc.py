@@ -1,14 +1,7 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
 import numpy as np
 import pandas as pd
 import mne
-
 from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
-from universal_html_report import make_std_peak_report
 
 # In[2]:
 
@@ -18,10 +11,10 @@ def RMSE(data_m_or_g: np.array or list):
     
     Args:
     data_m_or_g (np.array or list): data for magnetometer or gradiometer given as np array or list 
-        (it can be 1 channel or several as 2 dimentional array or list of lists
+        (it can be 1 or several channels data  as 2 dimentional array or as list of lists)
         
     Returns:
-    rmse_np (np.array): rmse as numpy array (1 if 1 channel was given, more if more channels)'''
+    rmse_np (np.array): rmse as numpy array (1-dimentional if 1 channel was given, 2-dim if more channels)'''
 
     data_m_or_g=np.array(data_m_or_g) #convert to numpy array if it s not
     rmse_list=[]
@@ -55,8 +48,8 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     Args:
     data (mne.raw): data in raw format
     channels (list of tuples): list of channel names + their indexes (mags or grads)
-    std_lvl (int): how many standard deviations from the mean are acceptable in the data. 
-        data variability over this setting will be concedered as too too noisy, under -std_lvl as too flat 
+    std_lvl (int): how many standard deviations from the mean are acceptable. 
+        data variability over this setting will be considered as too too noisy, under -std_lvl as too flat 
     
     Returns:
     big_std_with_value (list of tuples): list of channels with too high std value, 
@@ -99,14 +92,14 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     small_std_with_value=Channels_with_nonnormal_stds(ch_ind_small_std, std_channels, channel_small_std_names)
         
     #Return the channel names with STD over the set STD level and under the set negative STD level.
-    return(big_std_with_value, small_std_with_value, std_channels)
+    return big_std_with_value, small_std_with_value, std_channels
 
 
 # In[11]:
 
-def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
+def std_of_epochs(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
-    '''Calculate std for every separate epoch of mags or grads.
+    '''Calculate std for multiple epochs for a list of channels.
     Used as internal function in RMSE_meg_epoch
 
     Args:
@@ -127,13 +120,10 @@ def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
         for ch_name in mg_names: #loop over channel names
             data_ch_epoch = [row_mg[ch_name] for row_mg in rows_for_ep] #take the data for 1 epoch for 1 channel
-            rmse_ch_ep = RMSE(data_ch_epoch)
-            rmse_ch_ep=np.float64(rmse_ch_ep) #convert from ndarray to float
-            rmse_epoch.append(rmse_ch_ep)
+            rmse_epoch.append(np.float64(RMSE(data_ch_epoch)))
 
-            #std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
+            #std_epoch.append(np.std(data_ch_epoch)) #if want to use std instead - but it will take longer.
             
-
         dict_mg[ep] = rmse_epoch
 
     df_std_mg = pd.DataFrame(dict_mg, index=mg_names)
@@ -143,12 +133,12 @@ def std_mg(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
 #%% STD over epochs: use 2 separate data frames for mags and grads in calculations:
 
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: list, df_epochs: pd.DataFrame, sid: str):
+def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: list, df_epochs: pd.DataFrame):
 
     '''
-    - Calculate std for every separate epoch of mags + grads
+    - Calculate std for every separate epoch of a given list of channels
     - Find which channels in which epochs have too high/too small stds
-    - Extract all these data for the user as csc files.
+    - Create MEG_QC_derivative as dfs
 
     Args:
     channels (list of tuples): channel name + its index as list,
@@ -156,21 +146,18 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
         data variability over this setting will be concedered as too too noisy, under -std_lvl as too flat 
     epoch_numbers(list): list of event numbers, 
     df_epochs (pd.DataFrame): data frame containing stds for all epoch for each channel
-    sid (str): subject id number, like '1'
 
     Returns:
-    df_std_epoch(pd.DataFrame): data frame containing std data for each epoch, each channel 
-    + csv file of this df
+    dfs_deriv(list of 3 pd.DataFrame): 1 data frame containing std data for each epoch/each channel, 1df with too high and 1 too low stds.
+
     '''
 
-    # 1) Loop over the epochs of each channel and check for every separate magn and grad and calculate std
+    # 1) Find std for every channel for every epoch:
 
-    #Apply function from above for mags and grads:
-    df_std=std_mg(df_mg=df_epochs, mg_names=channels, epoch_numbers=epoch_numbers)
+    df_std=std_of_epochs(df_mg=df_epochs, mg_names=channels, epoch_numbers=epoch_numbers)
 
-    # 2) Check (which epochs for which channel) are over 1STD (or 2, 3, etc STDs) for this epoch for all channels
+    # 2) Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
 
-    #Find what is 1 std over all channels per 1 epoch:
     std_std_per_epoch=[]
     mean_std_per_epoch=[]
 
@@ -181,42 +168,36 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
     df_ch_ep_large_std=df_std.copy()
     df_ch_ep_small_std=df_std.copy()
 
-    #Now see which channles in epoch are over 1 std or under -1 std:
+    # Now see which channles in epoch are over std_level or under -std_level:
     for ep in epoch_numbers: #goes over each epoch   
         df_ch_ep_large_std.iloc[:,ep] = df_ch_ep_large_std.iloc[:,ep] > mean_std_per_epoch[ep]+std_lvl*std_std_per_epoch[ep] 
         df_ch_ep_small_std.iloc[:,ep] = df_ch_ep_small_std.iloc[:,ep] < mean_std_per_epoch[ep]-std_lvl*std_std_per_epoch[ep] 
 
+    # 3) Create derivatives:
+    dfs_deriv = [
+        QC_derivative(df_std,'std_per_epoch_'+ch_type, None, 'df'),
+        QC_derivative(df_ch_ep_large_std, 'Large_std_per_epoch_'+ch_type, None, 'df'),
+        QC_derivative(df_ch_ep_small_std, 'Small_std_per_epoch_'+ch_type, None, 'df')]
 
-    # Create csv files  for the user:
-
-
-    df_std_name = 'std_per_epoch_'+ch_type
-    df_ch_ep_large_std_name = 'Large_std_per_epoch_'+ch_type
-    df_ch_ep_small_std_name = 'Small_std_per_epoch_'+ch_type
-
-    file_path = None
-    dfs_with_name = [
-        QC_derivative(df_std,df_std_name,file_path, 'df'),
-        QC_derivative(df_ch_ep_large_std, df_ch_ep_large_std_name, file_path, 'df'),
-        QC_derivative(df_ch_ep_small_std, df_ch_ep_small_std_name, file_path, 'df')
-        ]
-
-
-    if sid=='001':
-        df_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/std_per_epoch_'+ch_type+'.csv')
-        df_ch_ep_large_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Large_std_per_epoch_'+ch_type+'.csv')
-        df_ch_ep_small_std.to_csv('../derivatives/sub-'+sid+'/megqc/csv files/Small_std_per_epoch_'+ch_type+'.csv')
-
-    return dfs_with_name
-
+    return dfs_deriv
 
 #%%
-def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen):
+def RMSE_meg_qc(config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
 
-    """Main RMSE function.
+    """Main RMSE function
     
-    Output:
-    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
+    Args:
+    channels (dict): channel names
+    dict_of_dfs_epoch (dict of pd.DataFrame-s): data frames with epoched data per channels
+    data(mne.io.Raw): raw non-epoched data
+    m_or_g_chosen (list): mags or grads or both are chosen for analysis
+    
+    Returns:
+    derivs_rmse: list of tuples QC_derivative objects: figures and data frames. Exact number of derivatives depends on: 
+        - was data epoched (*2 derivs) or not (*1 derivs)
+        - were both mags and grads analyzed (*2 derivs) or only one type of channels(*1 derivs)
+    big_std_with_value_all_data + small_std_with_value_all_data: 2 lists of tuples: channel+ std value of calculsted value is too high and to low"""
+
 
     m_or_g_title = {
     'grads': 'Gradiometers',
@@ -225,31 +206,31 @@ def RMSE_meg_qc(sid: str, config, channels: dict, dict_of_dfs_epoch:dict, data: 
     rmse_section = config['RMSE']
     std_lvl = rmse_section.getint('std_lvl')
 
-    big_std_with_value = {}
-    small_std_with_value = {}
+    big_std_with_value_all_data = {}
+    small_std_with_value_all_data = {}
     rmse = {}
     derivs_rmse = []
     fig_std_epoch_with_name = []
     dfs_list = []
 
-    # will run for both if mags+grads are chosen,otherwise just for one of them:
+
     for m_or_g in m_or_g_chosen:
 
-        big_std_with_value[m_or_g], small_std_with_value[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
-        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], sid=sid, what_data='stds')]
+        big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
+        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='stds')]
 
     if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
 
         epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
 
-            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g], sid=sid) 
+            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g]) 
             dfs_list += df_epoch_rmse
-            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], sid=sid, what_data='stds')]
+            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
     else:
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
     derivs_rmse += fig_std_epoch_with_name + dfs_list
     
-    return derivs_rmse
+    return derivs_rmse, big_std_with_value_all_data, small_std_with_value_all_data
