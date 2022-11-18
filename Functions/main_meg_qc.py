@@ -167,7 +167,7 @@ def make_derivative_meg_qc(config_file_name):
     for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
     #for sid in list_of_subs: 
 
-        subject_folder = derivative.create_folder(type_=schema.Subject, name='Folder_sub-'+sid)
+        subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
@@ -175,9 +175,7 @@ def make_derivative_meg_qc(config_file_name):
         dataset_ancp_loaded = ancpbids.load_dataset(dataset_path)
         list_of_sub_jsons = dataset_ancp_loaded.query(sub=sid, suffix='meg', extension='.fif')
 
-        print('HERE! 111', list_of_sub_jsons)
-
-        for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
+        for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
 
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_stuff(config, data_file)
 
@@ -189,13 +187,13 @@ def make_derivative_meg_qc(config_file_name):
             
             rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            psd_derivs = PSD_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
+            # psd_derivs = PSD_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            pp_manual_derivs = PP_manual_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
+            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
 
-            ecg_derivs, ecg_events_times = ECG_meg_qc(config, raw, m_or_g_chosen)
+            # ecg_derivs, ecg_events_times = ECG_meg_qc(config, raw, m_or_g_chosen)
 
             eog_derivs, eog_events_times = EOG_meg_qc(config, raw, m_or_g_chosen)
 
@@ -242,7 +240,7 @@ def make_derivative_meg_qc(config_file_name):
             for section in QC_derivs.values():
                 if section: #if there are any derivs calculated in this section:
                     for deriv in section:
-                        print('HERE!',list_of_sub_jsons[fif_ind])
+
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.description) #file name
                         #meg_artifact.add_entity('task', task_label)
@@ -268,4 +266,4 @@ def make_derivative_meg_qc(config_file_name):
         
     layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
 
-    return 
+    return raw

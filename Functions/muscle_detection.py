@@ -103,7 +103,7 @@ raw.plot(start=5, duration=20, order=order)
 #%% . Set annotations and view:
 order = np.arange(144, 164) #this is how we set which channels will be shown in the plot
 raw.set_annotations(annot_muscle)
-raw.plot(start=5, duration=20) #, order=order)
+raw.plot(start=5, duration=10, order=order)
 
 
 # %%
