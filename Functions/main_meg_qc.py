@@ -11,19 +11,43 @@ from ancpbids import BIDSLayout
 from ancpbids import load_dataset
 import mpld3
 
-from data_load_and_folders import load_meg_data, make_folders_meg, Epoch_meg
+from data_load_and_folders import Epoch_meg
 from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
-from universal_html_report import keep_fig_derivs, make_joined_report
+from universal_html_report import make_joined_report
 from universal_plots import QC_derivative
 
 
 #%%
-def initial_stuff(config: dict, data_file: str):
+
+def get_all_config_params(config_file_name):
+    
+    all_qc_params = {}
+
+    config = configparser.ConfigParser()
+    config.read(config_file_name)
+
+    default_section = config['DEFAULT']
+
+    m_or_g_chosen = default_section['do_for'] 
+    m_or_g_chosen = m_or_g_chosen.replace(" ", "")
+    m_or_g_chosen = m_or_g_chosen.split(",")
+
+    dataset_path = default_section['data_directory']
+
+    default_params = dict({'m_or_g_chosen': m_or_g_chosen, 'dataset_path': dataset_path})
+    all_qc_params['default'] = default_params
+
+
+
+
+    return all_qc_params
+
+def initial_processing(config: dict, data_file: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -136,17 +160,17 @@ def make_derivative_meg_qc(config_file_name):
     - Run whole analysis for every subject, every fif
     - Make and save derivatives (html figures, csvs, html reports, etc...)"""
 
-    config = configparser.ConfigParser()
-    config.read(config_file_name)
+    # config = configparser.ConfigParser()
+    # config.read(config_file_name)
 
-    default_section = config['DEFAULT']
+    # default_section = config['DEFAULT']
 
-    m_or_g_chosen = default_section['do_for'] 
-    m_or_g_chosen = m_or_g_chosen.replace(" ", "")
-    m_or_g_chosen = m_or_g_chosen.split(",")
-    #m_or_g_chosen = select_m_or_g(default_section)
+    # m_or_g_chosen = default_section['do_for'] 
+    # m_or_g_chosen = m_or_g_chosen.replace(" ", "")
+    # m_or_g_chosen = m_or_g_chosen.split(",")
+    # #m_or_g_chosen = select_m_or_g(default_section)
 
-    dataset_path = default_section['data_directory']
+    # dataset_path = default_section['data_directory']
 
     layout = BIDSLayout(dataset_path)
     schema = layout.schema
@@ -177,7 +201,7 @@ def make_derivative_meg_qc(config_file_name):
 
         for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
 
-            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_stuff(config, data_file)
+            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(config, data_file)
 
             m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
             if len(m_or_g_chosen) == 0: 
