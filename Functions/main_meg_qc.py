@@ -24,7 +24,15 @@ from universal_plots import QC_derivative
 
 #%%
 
-def get_all_config_params(config_file_name):
+def get_all_config_params(config_file_name: str):
+    '''Parse all the parameters from config and put into a python dictionary 
+    divided by sections. Parsing approach can be changed here, which 
+    will not affect working of other fucntions.
+    
+    Return:
+    all_qc_params: dictionary of dictionaries, where each one refers to 
+    a QC pipeline section and contains corresponding parameters.
+    '''
     
     all_qc_params = {}
 
@@ -38,16 +46,55 @@ def get_all_config_params(config_file_name):
     m_or_g_chosen = m_or_g_chosen.split(",")
 
     dataset_path = default_section['data_directory']
+    tmin = default_section['data_crop_tmin']
+    tmax = default_section['data_crop_tmax']
 
-    default_params = dict({'m_or_g_chosen': m_or_g_chosen, 'dataset_path': dataset_path})
+    if not tmin: 
+        tmin = 0
+    else:
+        tmin=float(tmin)
+    if not tmax: 
+        tmax = None
+    else:
+        tmax=float(tmax)
+
+    default_params = dict({
+        'm_or_g_chosen': m_or_g_chosen, 
+        'dataset_path': dataset_path,
+        'crop_tmin': tmin,
+        'crop_tmax': tmax})
     all_qc_params['default'] = default_params
 
+    filtering_section = config['Filtering']
+    if filtering_section['apply_filtering'] is True:
+        filtering_params = dict({
+            'l_freq': filtering_section.getfloat('l_freq'),
+            'h_freq': filtering_section.getfloat('h_freq'),
+            'method': filtering_section['method']})
+        all_qc_params['Filtering'] = filtering_params
+    else: 
+        all_qc_params['Filtering'] = 'Not apply'
 
 
+    epoching_section = config['Epoching']
+    stim_channel = epoching_section['stim_channel'] 
+    stim_channel = stim_channel.replace(" ", "")
+    stim_channel = stim_channel.split(",")
+    if stim_channel==['']:
+        stim_channel=None
+
+    epoching_params = dict({
+    'event_dur': epoching_section.getfloat('event_dur'),
+    'epoch_tmin': epoching_section.getfloat('epoch_tmin'),
+    'epoch_tmax': epoching_section.getfloat('epoch_tmax'),
+    'stim_channel': stim_channel})
+
+    all_qc_params['Epoching'] = epoching_params
 
     return all_qc_params
 
-def initial_processing(config: dict, data_file: str):
+
+def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
     - load fif file and convert into raw,
@@ -79,56 +126,36 @@ def initial_processing(config: dict, data_file: str):
         raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
         active_shielding_used = True
 
-
     mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
     grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
     channels = {'mags': mag_ch_names, 'grads': grad_ch_names}
 
-    default_section = config['DEFAULT']
-
     #crop the data to calculate faster:
-    tmin = default_section['data_crop_tmin']
-    tmax = default_section['data_crop_tmax']
-
-    if not tmin: 
-        tmin = 0
-    else:
-        tmin=float(tmin)
-    if not tmax: 
+    tmax=default_settings['data_crop_tmax']
+    if tmax is None: 
         tmax = raw.times[-1] 
-    else:
-        tmax=float(tmax)
-
-    raw_cropped = raw.copy()
-    raw_cropped.crop(tmin, tmax)
+    raw_cropped = raw.copy().crop(tmin=default_settings['data_crop_tmin'], tmax=tmax)
 
     #Data filtering:
-    filtering_section = config['Filter_and_resample']
-    if filtering_section['apply_filtering'] is True:
-        l_freq = filtering_section.getfloat('l_freq') 
-        h_freq = filtering_section.getfloat('h_freq') 
-        method = filtering_section['method']
-    
+    raw_filtered = raw_cropped.copy()
+    if filtering_settings['apply_filtering'] != 'Not apply':
         raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
         raw_filtered = raw_cropped.copy()
-        raw_filtered.filter(l_freq=l_freq, h_freq=h_freq, picks='meg', method=method, iir_params=None)
-
+        raw_filtered.filter(l_freq=filtering_settings['lfreq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
+        
         #And downsample:
-        raw_filtered_resampled=raw_filtered.copy()
-        raw_filtered_resampled.resample(sfreq=h_freq*5)
+        raw_filtered_resampled = raw_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
         #frequency to resample is 5 times higher than the maximum chosen frequency of the function
-
     else:
-        raw_filtered = raw_cropped.copy()
-        raw_filtered_resampled=raw_filtered.copy()
+        raw_filtered_resampled = raw_filtered.copy()
         #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
         # because they are used later. Referencing might mess up things, check that.
-
+    
 
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    dict_of_dfs_epoch, epochs_mg = Epoch_meg(config, raw_filtered)
+    dict_of_dfs_epoch, epochs_mg = Epoch_meg(epoching_params, data=raw_filtered)
 
     return dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used
 
@@ -154,24 +181,19 @@ def sanity_check(m_or_g_chosen, channels):
 #%%
 def make_derivative_meg_qc(config_file_name):
 
-    """Main function of MEG QC.
+    """Main function of MEG QC:
     - Parse parameters from config
     - Get the data .fif file for each subject
     - Run whole analysis for every subject, every fif
-    - Make and save derivatives (html figures, csvs, html reports, etc...)"""
+    - Make and save derivatives (html figures, csvs, html reports)"""
 
-    # config = configparser.ConfigParser()
-    # config.read(config_file_name)
+    all_qc_params = get_all_config_params(config_file_name)
 
-    # default_section = config['DEFAULT']
+    m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
+    if len(m_or_g_chosen) == 0: 
+        raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
 
-    # m_or_g_chosen = default_section['do_for'] 
-    # m_or_g_chosen = m_or_g_chosen.replace(" ", "")
-    # m_or_g_chosen = m_or_g_chosen.split(",")
-    # #m_or_g_chosen = select_m_or_g(default_section)
-
-    # dataset_path = default_section['data_directory']
-
+    dataset_path = all_qc_params['default']['dataset_path']
     layout = BIDSLayout(dataset_path)
     schema = layout.schema
 
@@ -183,13 +205,11 @@ def make_derivative_meg_qc(config_file_name):
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
     list_of_subs = layout.get_subjects()
-    #print(list_of_subs)
     if not list_of_subs:
         print('No subjects found. Check your data set and directory path.')
         return
 
     for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
-    #for sid in list_of_subs: 
 
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
@@ -201,11 +221,7 @@ def make_derivative_meg_qc(config_file_name):
 
         for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
 
-            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(config, data_file)
-
-            m_or_g_chosen = sanity_check(m_or_g_chosen, channels)
-            if len(m_or_g_chosen) == 0: 
-                raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
+            dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
             
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             

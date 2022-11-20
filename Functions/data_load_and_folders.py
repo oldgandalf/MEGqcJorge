@@ -94,7 +94,7 @@ def make_folders_meg(sid: str):
 #     #JOCHEM SAID: Try turning off the aliasing filter in downsampling. Not sure how?
 
 
-def Epoch_meg(config, data: mne.io.Raw):
+def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     '''Gives epoched data in 2 separated data frames: mags and grads + as epoch objects.
     
@@ -109,25 +109,17 @@ def Epoch_meg(config, data: mne.io.Raw):
     epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
     epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers '''
 
-    # picks_grad = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
-    # picks_magn = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
+    event_dur = epoching_params('event_dur') 
+    epoch_tmin = epoching_params('epoch_tmin') 
+    epoch_tmax = epoching_params('epoch_tmax') 
+    stim_channel = epoching_params('stim_channel')
 
-    epoching_section = config['Epoching']
-    event_dur = epoching_section.getfloat('event_dur') 
-    epoch_tmin = epoching_section.getfloat('epoch_tmin') 
-    epoch_tmax = epoching_section.getfloat('epoch_tmax') 
-
-    default_section = config['DEFAULT']
-    stim_channel = default_section['stim_channel'] 
-    stim_channel = stim_channel.replace(" ", "")
-    stim_channel = stim_channel.split(",")
-
-    if stim_channel==['']:
+    if stim_channel is None:
         picks_stim = mne.pick_types(data.info, stim=True)
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
-        print('Stimulus channels detected:', stim_channel)
+    print('Stimulus channels detected:', stim_channel)
 
     picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
