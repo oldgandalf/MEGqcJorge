@@ -131,14 +131,14 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     channels = {'mags': mag_ch_names, 'grads': grad_ch_names}
 
     #crop the data to calculate faster:
-    tmax=default_settings['data_crop_tmax']
+    tmax=default_settings['crop_tmax']
     if tmax is None: 
         tmax = raw.times[-1] 
-    raw_cropped = raw.copy().crop(tmin=default_settings['data_crop_tmin'], tmax=tmax)
+    raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
 
     #Data filtering:
     raw_filtered = raw_cropped.copy()
-    if filtering_settings['apply_filtering'] != 'Not apply':
+    if filtering_settings != 'Not apply':
         raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
         raw_filtered = raw_cropped.copy()
         raw_filtered.filter(l_freq=filtering_settings['lfreq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)

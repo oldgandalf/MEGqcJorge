@@ -109,10 +109,10 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
     epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers '''
 
-    event_dur = epoching_params('event_dur') 
-    epoch_tmin = epoching_params('epoch_tmin') 
-    epoch_tmax = epoching_params('epoch_tmax') 
-    stim_channel = epoching_params('stim_channel')
+    event_dur = epoching_params['event_dur']
+    epoch_tmin = epoching_params['epoch_tmin']
+    epoch_tmax = epoching_params['epoch_tmax']
+    stim_channel = epoching_params['stim_channel']
 
     if stim_channel is None:
         picks_stim = mne.pick_types(data.info, stim=True)
