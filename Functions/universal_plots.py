@@ -133,7 +133,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
 
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
 
-    fig.show()
+    #fig.show()
     #fig.write_html(fig_path)
 
     qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
@@ -206,7 +206,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    fig.show()
+    #fig.show()
 
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
 
@@ -262,7 +262,7 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list
     xaxis_title="Frequency (Hz)")
     fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
 
-    fig.show()
+    #fig.show()
     
     fig_name='PSD_all_data_'+tit
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
@@ -308,7 +308,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
     'xanchor': 'center',
     'yanchor': 'top'})
 
-    fig.show()
+    #fig.show()
 
     fig_name='PSD_Relative_power_per_band_over_all_channels_'+tit
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'

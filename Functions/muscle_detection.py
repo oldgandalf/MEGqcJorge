@@ -35,11 +35,8 @@ surrounding "BAD" annotation.
 
 import matplotlib.pyplot as plt
 import numpy as np
+import mne
 from mne.preprocessing import annotate_muscle_zscore
-
-from data_load_and_folders import load_meg_data
-duration=5 #in minutes
-#n_events, df_epochs_mags, df_epochs_grads, epochs_mags, epochs_grads, mags, grads, filtered_d, filtered_d_resamp, raw_cropped, raw=initial_stuff(duration)
 
 
 data_file = '/Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds003483/sub-009/ses-1/meg/sub-009_ses-1_task-deduction_run-1_meg.fif'
@@ -54,7 +51,7 @@ data_file = '/Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds003483/sub-009/
 #data_file = '/Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds003682/sub-001/ses-01/meg/sub-001_ses-01_task-AversiveLearningReplay_run-01_meg.fif'
 
 
-raw, channels = load_meg_data(data_file)
+raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
 
 #And resample it!
 
