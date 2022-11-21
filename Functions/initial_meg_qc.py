@@ -91,8 +91,57 @@ def get_all_config_params(config_file_name: str):
     'epoch_tmin': epoching_section.getfloat('epoch_tmin'),
     'epoch_tmax': epoching_section.getfloat('epoch_tmax'),
     'stim_channel': stim_channel})
-
     all_qc_params['Epoching'] = epoching_params
+
+
+    rmse_section = config['RMSE']
+    std_lvl = rmse_section.getint('std_lvl')
+    all_qc_params['RMSE'] = dict({'std_lvl':  std_lvl})
+    
+
+    psd_section = config['PSD']
+    psd_params = dict({
+    'freq_min': psd_section.getfloat('freq_min'),
+    'freq_max': psd_section.getfloat('freq_max'),
+    'mean_power_per_band_needed': psd_section.getboolean('mean_power_per_band_needed'),
+    'n_fft': psd_section.getint('n_fft'),
+    'n_per_seg': psd_section.getint('n_per_seg')})
+    all_qc_params['PSD'] = psd_params
+
+
+    ptp_manual_section = config['PTP_manual']
+    ptp_manual_params = dict({
+    'pair_dist_sec': ptp_manual_section.getfloat('pair_dist_sec'),
+    'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl')})
+    all_qc_params['PTP_manual'] = ptp_manual_params
+
+
+    ptp_mne_section = config['PTP_auto']
+    ptp_auto_params = dict({
+    'peak_m': ptp_mne_section.getfloat('peak_m'),
+    'flat_m': ptp_mne_section.getfloat('flat_m'),
+    'peak_g': ptp_mne_section.getfloat('peak_g'),
+    'flat_g': ptp_mne_section.getfloat('flat_g'),
+    'bad_percent': ptp_mne_section.getint('bad_percent'),
+    'min_duration': ptp_mne_section.getfloat('min_duration')})
+    all_qc_params['PTP_auto'] = ptp_auto_params
+
+
+    ecg_section = config['ECG']
+    ecg_params = dict({})
+    all_qc_params['ECG'] = ecg_params
+
+    eog_section = config['EOG']
+    eog_params = dict({})
+    all_qc_params['EOG'] = eog_params
+
+    head_section = config['Head_movement']
+    head_params = dict({})
+    all_qc_params['Head'] = head_params
+
+    muscle_section = config['Muscle']
+    muscle_params = dict({})
+    all_qc_params['Muscle'] = muscle_params
 
     return all_qc_params
 

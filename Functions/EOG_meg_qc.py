@@ -1,10 +1,8 @@
 import mne
 from universal_plots import QC_derivative
 
-def EOG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main EOG function"""
-
-    #eog_section = config['EOG']
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:

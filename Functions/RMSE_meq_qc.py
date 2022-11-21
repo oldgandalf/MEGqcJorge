@@ -181,7 +181,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
     return dfs_deriv
 
 #%%
-def RMSE_meg_qc(config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
+def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     """Main RMSE function
     
@@ -202,16 +202,12 @@ def RMSE_meg_qc(config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw
     'grads': 'Gradiometers',
     'mags': 'Magnetometers'}
 
-    rmse_section = config['RMSE']
-    std_lvl = rmse_section.getint('std_lvl')
-
     big_std_with_value_all_data = {}
     small_std_with_value_all_data = {}
     rmse = {}
     derivs_rmse = []
     fig_std_epoch_with_name = []
     dfs_list = []
-
 
     for m_or_g in m_or_g_chosen:
 
@@ -223,7 +219,7 @@ def RMSE_meg_qc(config, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw
         epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
         for m_or_g in m_or_g_chosen:
 
-            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=std_lvl, epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g]) 
+            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g]) 
             dfs_list += df_epoch_rmse
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds

@@ -254,18 +254,11 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 #%%
 
 
-def PSD_meg_qc(config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
+def PSD_meg_qc(psd_params: dict, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     """Main psd function
 
     Output:
     out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
-
-    psd_section = config['PSD']
-    freq_min = psd_section.getfloat('freq_min') 
-    freq_max = psd_section.getfloat('freq_max') 
-    mean_power_per_band_needed = psd_section.getboolean('mean_power_per_band_needed')
-    n_fft = psd_section.getint('n_fft')
-    n_per_seg = psd_section.getint('n_per_seg')
     
     # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
     freqs = {}
@@ -274,10 +267,10 @@ def PSD_meg_qc(config, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chos
 
     #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, freq_min=freq_min, freq_max=freq_max, 
-        n_fft=n_fft, n_per_seg=n_per_seg, freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
+        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, freq_min=psd_params['freq_min'], freq_max=psd_params['freq_max'], 
+        n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg'], freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
         
-        fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = mean_power_per_band_needed, plotflag = True)
+        fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
         derivs_psd += [fig_with_name] + [fig_power_with_name] + dfs_with_name
 

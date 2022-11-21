@@ -1,10 +1,9 @@
 import mne
 from universal_plots import QC_derivative
 
-def ECG_meg_qc(config, raw: mne.io.Raw, m_or_g_chosen: list):
+def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main ECG function"""
 
-    #ecg_section = config['ECG']
 
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     if picks_ECG.size == 0:

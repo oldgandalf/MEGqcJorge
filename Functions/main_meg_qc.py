@@ -25,10 +25,6 @@ def make_derivative_meg_qc(config_file_name):
 
     all_qc_params = get_all_config_params(config_file_name)
 
-    m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
-    if len(m_or_g_chosen) == 0: 
-        raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
-
     dataset_path = all_qc_params['default']['dataset_path']
     layout = BIDSLayout(dataset_path)
     schema = layout.schema
@@ -45,7 +41,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path.')
         return
 
-    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ
+    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ to save time
 
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
@@ -55,30 +51,35 @@ def make_derivative_meg_qc(config_file_name):
         dataset_ancp_loaded = ancpbids.load_dataset(dataset_path)
         list_of_sub_jsons = dataset_ancp_loaded.query(sub=sid, suffix='meg', extension='.fif')
 
-        for fif_ind,data_file in enumerate(list_of_fifs): #RUN OVER JUST 1 FIF because is not divided by tasks yet..
+        for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
             dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+                
+            m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
+            if len(m_or_g_chosen) == 0: 
+                raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
             
+            # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # psd_derivs = PSD_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
+            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
 
-            # pp_manual_derivs = PP_manual_meg_qc(config, channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(config, channels, raw_filtered_resampled, m_or_g_chosen)
+            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
 
-            # ecg_derivs, ecg_events_times = ECG_meg_qc(config, raw, m_or_g_chosen)
+            ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
 
-            eog_derivs, eog_events_times = EOG_meg_qc(config, raw, m_or_g_chosen)
+            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
             # MUSCLE_meg_qc()
 
 
-            # Make strings to add to html report:
+            # Make strings with notes for the user to add to html report:
             shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str = '', '', '', '', ''
 
             if active_shielding_used is True: 
@@ -99,6 +100,7 @@ def make_derivative_meg_qc(config_file_name):
             if eog_derivs is None:
                 no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
                 eog_derivs = []
+
 
             QC_derivs={
             'Standart deviation of the data':rmse_derivs, 
