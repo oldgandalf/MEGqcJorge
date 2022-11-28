@@ -29,10 +29,15 @@ def make_derivative_meg_qc(config_file_name):
         return
 
     dataset_path = all_qc_params['default']['dataset_path']
-    layout = BIDSLayout(dataset_path)
-    schema = layout.schema
 
-    #create derivative folder first
+    try:
+        layout = BIDSLayout(dataset_path)
+        schema = layout.schema
+    except:
+        print('No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+        return
+
+    #create derivatives folder first:
     if os.path.isdir(dataset_path+'/derivatives')==False: 
             os.mkdir(dataset_path+'/derivatives')
 
@@ -41,7 +46,7 @@ def make_derivative_meg_qc(config_file_name):
 
     list_of_subs = layout.get_subjects()
     if not list_of_subs:
-        print('No subjects found. Check your data set and directory path.')
+        print('No subjects found. Check your data set and directory path in config.')
         return
 
     for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ to save time
@@ -106,7 +111,7 @@ def make_derivative_meg_qc(config_file_name):
 
 
             QC_derivs={
-            'Standart deviation of the data':rmse_derivs, 
+            'Standard deviation of the data': rmse_derivs, 
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 
             'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
@@ -124,12 +129,10 @@ def make_derivative_meg_qc(config_file_name):
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.description) #file name
-                        #meg_artifact.add_entity('task', task_label)
                         meg_artifact.suffix = 'meg'
                         meg_artifact.extension = '.html'
 
                         if deriv.content_type == 'matplotlib':
-                            #mpld3.save_html(list_of_figures[i], list_of_fig_descriptions[i]+'.html')
                             meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
                         elif deriv.content_type == 'plotly':
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
