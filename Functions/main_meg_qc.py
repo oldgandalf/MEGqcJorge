@@ -25,11 +25,14 @@ def make_derivative_meg_qc(config_file_name):
 
     all_qc_params = get_all_config_params(config_file_name)
 
+    if all_qc_params is None:
+        return
+
     dataset_path = all_qc_params['default']['dataset_path']
     layout = BIDSLayout(dataset_path)
     schema = layout.schema
 
-    #create derivative folder first!
+    #create derivative folder first
     if os.path.isdir(dataset_path+'/derivatives')==False: 
             os.mkdir(dataset_path+'/derivatives')
 
