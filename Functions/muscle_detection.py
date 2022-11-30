@@ -79,7 +79,7 @@ threshold_muscle = 5  # z-score
 # Choose one channel type, if there are axial gradiometers and magnetometers,
 # select magnetometers as they are more sensitive to muscle activity.
 annot_muscle, scores_muscle = annotate_muscle_zscore(
-    raw, ch_type="grad", threshold=threshold_muscle, min_length_good=0.2,
+    raw, ch_type="mag", threshold=threshold_muscle, min_length_good=0.2,
     filter_freq=[110, 140])
 
 # %%
@@ -95,6 +95,10 @@ ax.set(xlabel='time, (s)', ylabel='zscore', title='Muscle activity')
 # --------------------------------------------------------------------------
 order = np.arange(144, 164)
 raw.set_annotations(annot_muscle)
+
+#%%
+print(plt.get_backend())
+ 
 raw.plot(start=5, duration=20, order=order)
 
 #%% . Set annotations and view:
@@ -104,7 +108,4 @@ raw.plot(start=5, duration=10, order=order)
 
 
 # %%
-
 print(annot_muscle)
-
-# %%
