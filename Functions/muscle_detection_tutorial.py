@@ -1,45 +1,72 @@
-# -*- coding: utf-8 -*-
-"""
-MNE TUTORIAL: changes: using open neuro data here
+#!/usr/bin/env python
+# coding: utf-8
 
-.. _ex-muscle-artifacts:
+# In[ ]:
 
-=========================
-Annotate muscle artifacts
-=========================
 
-Muscle contractions produce high frequency activity that can mask brain signal
-of interest. Muscle artifacts can be produced when clenching the jaw,
-swallowing, or twitching a cranial muscle. Muscle artifacts are most
-noticeable in the range of 110-140 Hz.
+import mne
+mne.viz.set_browser_backend('matplotlib')
+#%matplotlib qt
 
-This example uses :func:`~mne.preprocessing.annotate_muscle_zscore` to annotate
-segments where muscle activity is likely present. This is done by band-pass
-filtering the data in the 110-140 Hz range. Then, the envelope is taken using
-the hilbert analytical signal to only consider the absolute amplitude and not
-the phase of the high frequency signal. The envelope is z-scored and summed
-across channels and divided by the square root of the number of channels.
-Because muscle artifacts last several hundred milliseconds, a low-pass filter
-is applied on the averaged z-scores at 4 Hz, to remove transient peaks.
-Segments above a set threshold are annotated as ``BAD_muscle``. In addition,
-the ``min_length_good`` parameter determines the cutoff for whether short
-spans of "good data" in between muscle artifacts are included in the
-surrounding "BAD" annotation.
 
-"""
+# 
+# 
+# # Annotate muscle artifacts
+# 
+# Muscle contractions produce high frequency activity that can mask brain signal
+# of interest. Muscle artifacts can be produced when clenching the jaw,
+# swallowing, or twitching a cranial muscle. Muscle artifacts are most
+# noticeable in the range of 110-140 Hz.
+# 
+# This example uses :func:`~mne.preprocessing.annotate_muscle_zscore` to annotate
+# segments where muscle activity is likely present. This is done by band-pass
+# filtering the data in the 110-140 Hz range. Then, the envelope is taken using
+# the hilbert analytical signal to only consider the absolute amplitude and not
+# the phase of the high frequency signal. The envelope is z-scored and summed
+# across channels and divided by the square root of the number of channels.
+# Because muscle artifacts last several hundred milliseconds, a low-pass filter
+# is applied on the averaged z-scores at 4 Hz, to remove transient peaks.
+# Segments above a set threshold are annotated as ``BAD_muscle``. In addition,
+# the ``min_length_good`` parameter determines the cutoff for whether short
+# spans of "good data" in between muscle artifacts are included in the
+# surrounding "BAD" annotation.
+# 
+
+# In[ ]:
+
+
 # Authors: Adonay Nunes <adonay.s.nunes@gmail.com>
 #          Luke Bloy <luke.bloy@gmail.com>
 # License: BSD-3-Clause
 
-# %%
+
+# In[ ]:
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from mne.datasets.brainstorm import bst_auditory
+from mne.io import read_raw_ctf
+from mne.preprocessing import annotate_muscle_zscore
+
+
+# Load data
+data_path = bst_auditory.data_path()
+raw_fname = data_path / 'MEG' / 'bst_auditory' / 'S01_AEF_20131218_01.ds'
+
+raw = read_raw_ctf(raw_fname, preload=False)
+
+raw.crop(130, 160).load_data()  # just use a fraction of data for speed here
+raw.resample(300, npad="auto")
+
+
+# In[ ]:
+
 
 import matplotlib.pyplot as plt
 import numpy as np
 import mne
 from mne.preprocessing import annotate_muscle_zscore
-
-mne.viz.set_browser_backend('matplotlib')
-%matplotlib qt
 
 
 data_file = '/Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds003483/sub-009/ses-1/meg/sub-009_ses-1_task-deduction_run-1_meg.fif'
@@ -64,17 +91,23 @@ raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
 
 raw.crop(tmin=200, tmax=None).load_data() 
 
-# %%
+
 # Notch filter the data:
-#
-# .. note::
-#     If line noise is present, you should perform notch-filtering *before*
-#     detecting muscle artifacts. See :ref:`tut-section-line-noise` for an
-#     example.
+# 
+# <div class="alert alert-info"><h4>Note</h4><p>If line noise is present, you should perform notch-filtering *before*
+#     detecting muscle artifacts. See `tut-section-line-noise` for an
+#     example.</p></div>
+# 
+# 
+
+# In[ ]:
+
 
 raw.notch_filter([60, 120])
 
-# %%
+
+# In[ ]:
+
 
 # The threshold is data dependent, check the optimal threshold by plotting
 # ``scores_muscle``.
@@ -85,30 +118,38 @@ annot_muscle, scores_muscle = annotate_muscle_zscore(
     raw, ch_type="mag", threshold=threshold_muscle, min_length_good=0.2,
     filter_freq=[110, 140])
 
-# %%
-# Plot muscle z-scores across recording
-# --------------------------------------------------------------------------
+
+# ## Plot muscle z-scores across recording
+# 
+# 
+
+# In[ ]:
+
 
 fig, ax = plt.subplots()
 ax.plot(raw.times, scores_muscle)
 ax.axhline(y=threshold_muscle, color='r')
 ax.set(xlabel='time, (s)', ylabel='zscore', title='Muscle activity')
-# %%
-# View the annotations
-# --------------------------------------------------------------------------
+
+
+# ## View the annotations
+# 
+# 
+
+# In[ ]:
+
+
 order = np.arange(144, 164)
 raw.set_annotations(annot_muscle)
-
-#%%
-print(plt.get_backend())
- 
 raw.plot(start=5, duration=20, order=order)
 
-#%% . Set annotations and view:
-order = np.arange(144, 164) #this is how we set which channels will be shown in the plot
-raw.set_annotations(annot_muscle)
-raw.plot(start=5, duration=10, order=order)
+
+# In[ ]:
 
 
-# %%
-print(annot_muscle)
+import mpld3
+
+fig2=raw.plot(start=5, duration=20, order=order)
+mpld3.save_html(fig2, 'should be interactive but not.html')
+
+
