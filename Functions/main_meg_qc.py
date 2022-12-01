@@ -70,17 +70,17 @@ def make_derivative_meg_qc(config_file_name):
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
 
-            pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
 
-            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
 
             ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
 
-            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            # eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 

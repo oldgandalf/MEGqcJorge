@@ -1,6 +1,6 @@
 import plotly
 import plotly.graph_objects as go
-#import mpld3
+import mpld3
 import base64
 from io import BytesIO
 import pandas as pd
@@ -23,12 +23,12 @@ class QC_derivative:
         if self.content_type == 'plotly':
             return plotly.io.to_html(self.content, full_html=False)
         elif self.content_type == 'matplotlib':
-            tmpfile = BytesIO()
-            self.content.savefig(tmpfile, format='png', dpi=130) #writing image into a temporary file
-            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
-            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
-            return html
-            #return mpld3.fig_to_html(self.content)
+            # tmpfile = BytesIO()
+            # self.content.savefig(tmpfile, format='png', dpi=130) #writing image into a temporary file
+            # encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+            # html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+            # return html
+            return mpld3.fig_to_html(self.content)
         elif not self.content_type:
             warnings.warn("Empty content_type of this QC_derivative instance")
         else:
