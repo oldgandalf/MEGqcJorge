@@ -1,6 +1,9 @@
 import os
 import mne
 import configparser
+from Peaks_manual_meg_qc import neighbour_peak_amplitude
+import plotly.graph_objects as go
+import numpy as np
 
 def make_folders_meg(sid: str):
     '''Create folders (if they dont exist yet). 
@@ -296,3 +299,83 @@ def sanity_check(m_or_g_chosen, channels):
         print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
         m_or_g_chosen = []
     return m_or_g_chosen
+
+
+def detect_extra_channels(raw):
+    picks_ECG = mne.pick_types(raw.info, ecg=True)
+    if picks_ECG.size == 0:
+        print('No ECG channels found is this data set. Attempting to reconstruct ECG data from magnetometers...')
+        picks_ECG = None
+    else:
+        ECG_channel_name=[]
+        for i in range(0,len(picks_ECG)):
+            ECG_channel_name.append(raw.info['chs'][picks_ECG[i]]['ch_name'])
+
+    picks_EOG = mne.pick_types(raw.info, eog=True)
+    if picks_EOG.size == 0:
+        print('No EOG channels found is this data set - EOG artifacts can not be detected.')
+    else:
+        EOG_channel_name=[]
+        for i in range(0,len(picks_EOG)):
+            EOG_channel_name.append(raw.info['chs'][picks_EOG[i]]['ch_name'])
+    
+    return ECG_channel_name, EOG_channel_name #, picks_HPI, picks_stim
+
+
+def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thresh_lvl=1.4):
+
+    bad_ecg_eog = False
+    if picked_channels_ecg_or_eog is None:
+        return None, None
+
+    sfreq=raw_cropped.info['sfreq']
+    #threshold for peak detection. to whatlevel allowed the noisy peaks to be in comparison with most of other peaks
+    duration_crop = len(raw_cropped)/raw_cropped.info['sfreq']
+
+
+    if 'ecg' or 'ECG' in picked_channels_ecg_or_eog[0]:
+            max_pair_dist_sec=60/35
+            #allow the lowest pulse tobe 35/min. this is the maximal possible distance between 2 pulses.
+            # Can also then divide by ca. 3 - maximal distance from upper to lower peak belonging to the same pulse. 
+            # Or not - because this is not so important being in 1 pulse, more important is general noiseness
+    elif 'eog' or 'EOG' in picked_channels_ecg_or_eog[0]:
+            max_pair_dist_sec=60/8 #normal spontaneous blink rate is between 12 and 15/min, take 8.
+
+    count_noisy_amps=[]
+    for picked in picked_channels_ecg_or_eog:
+        ch_data=raw_cropped.get_data(picks=picked)[0] 
+        # get_data creates list inside of a list becausee expects to create a list for each channel. 
+        # but interation takes 1 ch at a time anyways. this is why [0]
+        thresh=(max(ch_data) - min(ch_data)) / thresh_lvl 
+
+        pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
+        neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+
+        _, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+        count_noisy_amps.append(len (amplitudes))
+
+        if len(amplitudes)>2*duration_crop/60: #allow 2 non-standard peaks per minute. Or 0? DISCUSS
+            bad_ecg_eog=True
+            print(picked, ' channel is too noisy. Peak-to-peak amplitudes detected over the set limit: '+str(count_noisy_amps))
+
+
+        t=np.arange(0, duration_crop, 1/sfreq) 
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'));
+        fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'));
+        fig.add_trace(go.Scatter(x=t[neg_peak_locs], y=neg_peak_magnitudes, mode='markers', name='-peak'));
+        fig.update_layout(
+            title={
+            'text': picked+": peaks detected",
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+            xaxis_title="Time in seconds",
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'))
+            
+        fig.show()
+
+    return count_noisy_amps, bad_ecg_eog

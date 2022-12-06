@@ -4,10 +4,10 @@ from universal_plots import QC_derivative
 def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main EOG function"""
 
-    picks_EOG = mne.pick_types(raw.info, eog=True)
-    if picks_EOG.size == 0:
-        print('No EOG channels found is this data set - EOG artifacts can not be detected.')
-        return None, None
+    # picks_EOG = mne.pick_types(raw.info, eog=True)
+    # if picks_EOG.size == 0:
+    #     print('No EOG channels found is this data set - EOG artifacts can not be detected.')
+    #     return None, None
 
     # else:
     #     EOG_channel_name=[]

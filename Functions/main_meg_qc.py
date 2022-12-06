@@ -4,7 +4,7 @@ from ancpbids import BIDSLayout
 from ancpbids import load_dataset
 import mpld3
 
-from initial_meg_qc import get_all_config_params, sanity_check, initial_processing
+from initial_meg_qc import get_all_config_params, sanity_check, initial_processing, detect_extra_channels, detect_noisy_ecg_eog
 from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
@@ -67,6 +67,11 @@ def make_derivative_meg_qc(config_file_name):
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
             
+            picks_ECG,  picks_EOG = detect_extra_channels(raw)
+
+            count_noisy_amps_ECG, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.4)
+            count_noisy_amps_EOG, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.4)
+
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
@@ -78,9 +83,10 @@ def make_derivative_meg_qc(config_file_name):
 
             # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
 
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
             ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
 
-            # eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
 
             # HEAD_movements_meg_qc()
 
@@ -101,11 +107,20 @@ def make_derivative_meg_qc(config_file_name):
             if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
-            if ecg_derivs is None:
+            if picks_ECG is None:
                 no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.'
                 ecg_derivs = []
+            
+            if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy
+                no_ecg_str = 'ECG channel data is too noisy, cardio artifacts can not be reliably detected. Cosider checking thequality of ECG channel on your recording device.'
+                ecg_derivs = []
+            elif bad_ecg is False and picks_ECG is not None: #ecg channel present and is good - should calculate all good
+                continue 
+            elif bad_ecg is None: #ecg channel not present -  need to reconstruct data first, then check if it created peak that makes sense.
+                continue
 
-            if eog_derivs is None:
+
+            if picks_EOG is None:
                 no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
                 eog_derivs = []
 

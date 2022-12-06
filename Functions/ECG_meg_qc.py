@@ -5,10 +5,10 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     """Main ECG function"""
 
 
-    picks_ECG = mne.pick_types(raw.info, ecg=True)
-    if picks_ECG.size == 0:
-        print('No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.')
-        return None, None
+    # picks_ECG = mne.pick_types(raw.info, ecg=True)
+    # if picks_ECG.size == 0:
+    #     print('No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.')
+    #     return None, None
     # else:
     #     ECG_channel_name=[]
     #     for i in range(0,len(picks_ECG)):
