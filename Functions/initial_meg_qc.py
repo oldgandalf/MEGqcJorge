@@ -338,10 +338,11 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
             #allow the lowest pulse tobe 35/min. this is the maximal possible distance between 2 pulses.
             # Can also then divide by ca. 3 - maximal distance from upper to lower peak belonging to the same pulse. 
             # Or not - because this is not so important being in 1 pulse, more important is general noiseness
+
     elif 'eog' or 'EOG' in picked_channels_ecg_or_eog[0]:
             max_pair_dist_sec=60/8 #normal spontaneous blink rate is between 12 and 15/min, take 8.
 
-    count_noisy_amps=[]
+    
     for picked in picked_channels_ecg_or_eog:
         ch_data=raw_cropped.get_data(picks=picked)[0] 
         # get_data creates list inside of a list becausee expects to create a list for each channel. 
@@ -351,12 +352,20 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
         neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
 
-        _, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
-        count_noisy_amps.append(len (amplitudes))
+        #find where there ischunkof data without ecg recorded:
+        normal_pos_peak_locs, _ = mne.preprocessing.peak_finder(ch_data, extrema=1, verbose=False) #all positive peaks of the data
+        ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq>max_pair_dist_sec)
 
-        if len(amplitudes)>2*duration_crop/60: #allow 2 non-standard peaks per minute. Or 0? DISCUSS
+        _, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+
+        if len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
             bad_ecg_eog=True
-            print(picked, ' channel is too noisy. Peak-to-peak amplitudes detected over the set limit: '+str(count_noisy_amps))
+            print(picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
+        
+        if len(ind_break_start[0])>3*duration_crop/60: #allow 3 breaks per minute. Or 0? DISCUSS
+            #ind_break_start[0] - here[0] because np.where created array of arrays above
+            bad_ecg_eog=True
+            print(picked, ' channel has breaks in ECG recording. Number of breaks detected: '+str(len(ind_break_start[0])))
 
 
         t=np.arange(0, duration_crop, 1/sfreq) 
@@ -364,6 +373,11 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'));
         fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'));
         fig.add_trace(go.Scatter(x=t[neg_peak_locs], y=neg_peak_magnitudes, mode='markers', name='-peak'));
+
+        for n in ind_break_start[0]:
+            fig.add_vline(x=t[normal_pos_peak_locs][n],
+              annotation_text='break', annotation_position="bottom right",line_width=0.6,annotation=dict(font_size=8))
+
         fig.update_layout(
             title={
             'text': picked+": peaks detected",
@@ -378,4 +392,4 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
             
         fig.show()
 
-    return count_noisy_amps, bad_ecg_eog
+    return bad_ecg_eog
