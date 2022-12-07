@@ -334,13 +334,10 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
 
 
     if 'ecg' or 'ECG' in picked_channels_ecg_or_eog[0]:
-            max_pair_dist_sec=60/35
-            #allow the lowest pulse tobe 35/min. this is the maximal possible distance between 2 pulses.
-            # Can also then divide by ca. 3 - maximal distance from upper to lower peak belonging to the same pulse. 
-            # Or not - because this is not so important being in 1 pulse, more important is general noiseness
+            max_peak_dist_sec=60/35 #allow the lowest pulse to be 35/min. this is the maximal possible distance between 2 pulses.
 
     elif 'eog' or 'EOG' in picked_channels_ecg_or_eog[0]:
-            max_pair_dist_sec=60/8 #normal spontaneous blink rate is between 12 and 15/min, take 8.
+            max_peak_dist_sec=60/8 #normal spontaneous blink rate is between 12 and 15/min, take 8.
 
     
     for picked in picked_channels_ecg_or_eog:
@@ -352,9 +349,9 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
         neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
 
-        #find where there ischunkof data without ecg recorded:
+        #find where places of recording without peaks at all:
         normal_pos_peak_locs, _ = mne.preprocessing.peak_finder(ch_data, extrema=1, verbose=False) #all positive peaks of the data
-        ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq>max_pair_dist_sec)
+        ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq>max_peak_dist_sec)
 
         #_, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         # if amplitudes is not None and len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
