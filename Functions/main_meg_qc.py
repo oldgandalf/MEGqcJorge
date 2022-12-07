@@ -69,8 +69,8 @@ def make_derivative_meg_qc(config_file_name):
             
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
-            count_noisy_amps_ECG, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.4)
-            count_noisy_amps_EOG, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.4)
+            bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.2, plotflag=True)
+            bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.2, plotflag=True)
 
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []

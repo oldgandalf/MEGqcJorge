@@ -45,7 +45,7 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
     # HOWEVER THIS WILL NOT CORRESPOND TO PEAK TO PEAK IDEA).
 
     if len(pairs_magnitudes)==0:
-        return 0
+        return 0, None
 
     amplitude=np.zeros(len(pairs_magnitudes),)
     for i, pair in enumerate(pairs_magnitudes):

@@ -322,7 +322,7 @@ def detect_extra_channels(raw):
     return ECG_channel_name, EOG_channel_name #, picks_HPI, picks_stim
 
 
-def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thresh_lvl=1.4):
+def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thresh_lvl:float, plotflag:bool):
 
     bad_ecg_eog = False
     if picked_channels_ecg_or_eog is None:
@@ -356,40 +356,47 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         normal_pos_peak_locs, _ = mne.preprocessing.peak_finder(ch_data, extrema=1, verbose=False) #all positive peaks of the data
         ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq>max_pair_dist_sec)
 
-        _, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+        #_, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+        # if amplitudes is not None and len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
+        #     bad_ecg_eog=True
+        #     print(picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
 
-        if len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
-            bad_ecg_eog=True
-            print(picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
-        
-        if len(ind_break_start[0])>3*duration_crop/60: #allow 3 breaks per minute. Or 0? DISCUSS
+        all_peaks=np.concatenate((pos_peak_locs,neg_peak_locs),axis=None)
+        if len(all_peaks)>3/duration_crop*60: 
+        #allow 2 non-standard peaks per minute. Or 0? DISCUSS. implies that noiseness has to be repeated regularly.  
+        # if there is only 1 little piece of time with noise and the rest is good, will not show that one. 
+        # include some time limitation of noisy times?
+            print('ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop*60)))
+            
+        if len(ind_break_start[0])>3/duration_crop*60: #allow 3 breaks per minute. Or 0? DISCUSS
             #ind_break_start[0] - here[0] because np.where created array of arrays above
             bad_ecg_eog=True
-            print(picked, ' channel has breaks in ECG recording. Number of breaks detected: '+str(len(ind_break_start[0])))
+            print(picked, ' channel has breaks in ECG recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop*60)))
 
 
-        t=np.arange(0, duration_crop, 1/sfreq) 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'));
-        fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'));
-        fig.add_trace(go.Scatter(x=t[neg_peak_locs], y=neg_peak_magnitudes, mode='markers', name='-peak'));
+        if plotflag:
+            t=np.arange(0, duration_crop, 1/sfreq) 
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'));
+            fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'));
+            fig.add_trace(go.Scatter(x=t[neg_peak_locs], y=neg_peak_magnitudes, mode='markers', name='-peak'));
 
-        for n in ind_break_start[0]:
-            fig.add_vline(x=t[normal_pos_peak_locs][n],
-              annotation_text='break', annotation_position="bottom right",line_width=0.6,annotation=dict(font_size=8))
+            for n in ind_break_start[0]:
+                fig.add_vline(x=t[normal_pos_peak_locs][n],
+                annotation_text='break', annotation_position="bottom right",line_width=0.6,annotation=dict(font_size=8))
 
-        fig.update_layout(
-            title={
-            'text': picked+": peaks detected",
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-            xaxis_title="Time in seconds",
-            yaxis = dict(
-                showexponent = 'all',
-                exponentformat = 'e'))
-            
-        fig.show()
+            fig.update_layout(
+                title={
+                'text': picked+": atypical peaks and breaks",
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'},
+                xaxis_title="Time in seconds",
+                yaxis = dict(
+                    showexponent = 'all',
+                    exponentformat = 'e'))
+                
+            fig.show()
 
     return bad_ecg_eog

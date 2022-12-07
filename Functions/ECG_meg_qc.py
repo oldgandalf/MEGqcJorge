@@ -24,6 +24,12 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     #WHAT SHOULD WE SHOW? CAN PLOT THE ECG CHANNEL. OR ECG EVENTS ON TOP OF 1 OF THE CHANNELS DATA. OR ON EVERY CHANNELS DATA?
 
     ecg_epochs = mne.preprocessing.create_ecg_epochs(raw)
+    avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
+    # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
+
+
+    for ch_ind, ch in enumerate(channels):
+        avg_ecg_epoch_data=avg_ecg_epochs.pick_channels(ch).data[ch_ind,:]
     
     ecg_deriv = []
 
