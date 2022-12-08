@@ -1,4 +1,5 @@
 import mne
+import numpy as np
 from universal_plots import QC_derivative
 
 def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
@@ -26,10 +27,6 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     ecg_epochs = mne.preprocessing.create_ecg_epochs(raw)
     avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
     # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
-
-
-    for ch_ind, ch in enumerate(channels):
-        avg_ecg_epoch_data=avg_ecg_epochs.pick_channels(ch).data[ch_ind,:]
     
     ecg_deriv = []
 
@@ -48,6 +45,60 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     # Need to output: channels contamminated with ecg artifacts. 
 
     return ecg_deriv, ecg_events_times
+
+
+def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, thresh_lvl_mean=1.3, plotflag=True):
+
+    '''Calculate average ECG epoch over al ecg epochs for each channel. Then compare amplitude of ecg peak between these channels.
+    Set some threshold which defines a high amplitude. all above this - counted as channel with ecg contamination.
+    Instead of comparing peak amplitudes could also calculate area under the curve. 
+    But peak can be better because data can be so noisy for some channels, that area will be pretty large 
+    even when the peak is not present.
+    Peak is detected is a very short area of the ecg epoch: tmin=-0.1, tmax=0.1, instead of tmin=-0.5, tmax=0.5  
+    which is default for ecg epoch detectin by mne.
+    This is done to detect the central peak more precisely and skip all the non-ecg related fluctuations.'''
+
+    import plotly.graph_objects as go
+
+    ecg_affected_channels={}
+    for m_or_g in m_or_g_chosen:
+
+        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, tmin=-0.1, tmax=0.1)
+
+        #averaging the ECG epochs together:
+        avg_ecg_epochs = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
+        #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
+        #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
+        #print(avg_ecg_epochs.data[0,:]) #data of first channel,all time points
+        t=np.arange(0, len(avg_ecg_epochs.data[0,:]), 1/raw.info['sfreq'])
+        fig = go.Figure()
+        
+        affected_channels=[]
+        for ch_ind, ch in enumerate(channels[m_or_g]):
+            avg_ecg_epoch_data=avg_ecg_epochs.data[ch_ind,:]
+            thresh_mean=(max(abs(avg_ecg_epoch_data)) - min(abs(avg_ecg_epoch_data))) / thresh_lvl_mean
+
+            #HERE INSTEAD OF RELATIVE THRESHOLD FOR EACH CHANNEL DECIDE HOW HIGH SHOULD TH ECG PEAK BE TO SAY THAT THERE IS ARTIFACT
+
+            mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_epoch_data), extrema=1, verbose=False, thresh=thresh_mean) 
+            #print(mean_peak_locs, mean_peak_magnitudes)
+            if len(mean_peak_locs)==1:
+                affected_channels.append(ch)
+
+            if ch_ind==0 or ch_ind==1 or ch_ind==2 and plotflag:
+            
+                fig.add_trace(go.Scatter(x=t, y=abs(avg_ecg_epoch_data), name=ch))
+                fig.add_trace(go.Scatter(x=t[mean_peak_locs], y=mean_peak_magnitudes, mode='markers', name='+peak'));
+        
+        ecg_affected_channels[m_or_g]=affected_channels
+
+        #not very happy with peak detecting function. detects as 1 peak even when there are the same as prominent peaks around. 
+        #there is an analog in matlab, is better. 
+        # workaround: specify later that there must be only 1 peak in the epoch. most cases will find the  right one, but not for sure
+            
+        fig.show()
+
+        return ecg_affected_channels
 
 
 

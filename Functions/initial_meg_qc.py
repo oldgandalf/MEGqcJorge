@@ -1,7 +1,6 @@
 import os
 import mne
 import configparser
-from Peaks_manual_meg_qc import neighbour_peak_amplitude
 import plotly.graph_objects as go
 import numpy as np
 
