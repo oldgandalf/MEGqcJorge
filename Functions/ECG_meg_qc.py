@@ -49,18 +49,29 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
 
 def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, thresh_lvl_mean=1.3, plotflag=True):
 
-    '''Calculate average ECG epoch over al ecg epochs for each channel. Then compare amplitude of ecg peak between these channels.
-    Set some threshold which defines a high amplitude. all above this - counted as channel with ecg contamination.
-    Instead of comparing peak amplitudes could also calculate area under the curve. 
+    '''1. Calculate average ECG epoch over all ecg epochs for each channel. 
+    Set some threshold which defines a high amplitude of ECG event. All above this - counted as potential ECG peak.
+    (Instead of comparing peak amplitudes could also calculate area under the curve. 
     But peak can be better because data can be so noisy for some channels, that area will be pretty large 
-    even when the peak is not present.
-    Peak is detected is a very short area of the ecg epoch: tmin=-0.1, tmax=0.1, instead of tmin=-0.5, tmax=0.5  
-    which is default for ecg epoch detectin by mne.
-    This is done to detect the central peak more precisely and skip all the non-ecg related fluctuations.'''
+    even when the peak is not present.)
+    If there are severalpeaks above thetreshold found - find the biggest one and detect as ecg peak.
 
+    (Peak is detected in a very short area of the ecg epoch: tmin=-0.1, tmax=0.1, instead of tmin=-0.5, tmax=0.5  
+    which is default for ecg epoch detectin by mne.
+    This is done to detect the central peak more precisely and skip all the non-ecg related fluctuations).
+
+    2. After that, found peaks will be compared across channels to decide which channels are affected the most:
+    -Average the peak magnitude over all channels. 
+    -Find all channels, where the magnitude is abover average by some (SET IT!) level.
+
+    Output:
+    ECG affected channels+their ecg peaks(location inside an average ECG epoch, average magnitude).
+
+'''
+    #1.
     import plotly.graph_objects as go
 
-    ecg_affected_channels={}
+    ecg_peaks_on_channels={}
     for m_or_g in m_or_g_chosen:
 
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, tmin=-0.1, tmax=0.1)
@@ -73,7 +84,7 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
         t=np.arange(0, len(avg_ecg_epochs.data[0,:]), 1/raw.info['sfreq'])
         fig = go.Figure()
         
-        affected_channels=[]
+        affected_channels={}
         for ch_ind, ch in enumerate(channels[m_or_g]):
             avg_ecg_epoch_data=avg_ecg_epochs.data[ch_ind,:]
             thresh_mean=(max(abs(avg_ecg_epoch_data)) - min(abs(avg_ecg_epoch_data))) / thresh_lvl_mean
@@ -81,24 +92,35 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
             #HERE INSTEAD OF RELATIVE THRESHOLD FOR EACH CHANNEL DECIDE HOW HIGH SHOULD TH ECG PEAK BE TO SAY THAT THERE IS ARTIFACT
 
             mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_epoch_data), extrema=1, verbose=False, thresh=thresh_mean) 
-            #print(mean_peak_locs, mean_peak_magnitudes)
-            if len(mean_peak_locs)==1:
-                affected_channels.append(ch)
+            biggest_peak_ind=np.argmax(mean_peak_magnitudes)
+            ecg_peaks_on_channels[ch]=[mean_peak_locs[biggest_peak_ind], mean_peak_magnitudes[biggest_peak_ind]] #[0].itemis used to extractfloat ot of arrayof arrays of 1 element.
 
-            if ch_ind==0 or ch_ind==1 or ch_ind==2 and plotflag:
-            
+            if ch_ind==0 or ch_ind==1 or ch_ind==2 or ch_ind==11 or ch_ind==18:
+    
                 fig.add_trace(go.Scatter(x=t, y=abs(avg_ecg_epoch_data), name=ch))
-                fig.add_trace(go.Scatter(x=t[mean_peak_locs], y=mean_peak_magnitudes, mode='markers', name='+peak'));
-        
-        ecg_affected_channels[m_or_g]=affected_channels
+                fig.add_trace(go.Scatter(x=[t[mean_peak_locs[biggest_peak_ind]]], y=[mean_peak_magnitudes[biggest_peak_ind]], mode='markers', name='+peak'));
 
-        #not very happy with peak detecting function. detects as 1 peak even when there are the same as prominent peaks around. 
-        #there is an analog in matlab, is better. 
-        # workaround: specify later that there must be only 1 peak in the epoch. most cases will find the  right one, but not for sure
+                fig.update_layout(
+                yaxis = dict(
+                    showexponent = 'all',
+                    exponentformat = 'e'),
+                title={
+                    'text': 'Example of an averaged ECG epoch on a few channels',
+                    'y':0.85,
+                    'x':0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'})
+        
+        ecg_peaks_on_channels[m_or_g]=affected_channels
+
             
         fig.show()
 
-        return ecg_affected_channels
+    #2.
+    
+
+
+        return ecg_peaks_on_channels
 
 
 

@@ -111,7 +111,7 @@ raw.notch_filter([60, 120])
 
 # The threshold is data dependent, check the optimal threshold by plotting
 # ``scores_muscle``.
-threshold_muscle = 5  # z-score
+threshold_muscle = 10  # z-score
 # Choose one channel type, if there are axial gradiometers and magnetometers,
 # select magnetometers as they are more sensitive to muscle activity.
 annot_muscle, scores_muscle = annotate_muscle_zscore(
