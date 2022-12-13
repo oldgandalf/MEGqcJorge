@@ -119,7 +119,10 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
     ecg_not_affected_channels={}
     for m_or_g in m_or_g_chosen:
 
-        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, tmin=tmin, tmax=tmax)
+        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
+        #HERE THINK IF THIS USE OF 'PICKS' IS OK and doesnt prevent ecg reconstruction from mags.
+        #according to function description, it should not. parameter ch_name is in charge of what will be used for reconstruction. 
+        # but still neefd to make sure! run some checks.
 
         #averaging the ECG epochs together:
         avg_ecg_epochs = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
@@ -162,6 +165,9 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
     return ecg_affected_channels, fig_affected, fig_not_affected
 
 
+def find_ecg_affected_epochs(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_mean=1.3, tmin=-0.1, tmax=0.1,plotflag=True):
 
+    ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, tmin=tmin, tmax=tmax)
 
-
+    #averaging the ECG epochs together:
+    avg_ecg_over_channels = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
