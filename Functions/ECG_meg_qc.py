@@ -92,7 +92,7 @@ def plot_affected_channels(sfreq, affected_channels, mean_ecg_magnitude, fig_tit
     return fig
 
 
-def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, affected_lvl: float, thresh_lvl_mean=1.3, tmin=-0.1, tmax=0.1,plotflag=True):
+def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_mean=1.3, tmin=-0.1, tmax=0.1,plotflag=True):
 
     '''1. Calculate average ECG epoch over all ecg epochs for each channel. 
     Set some threshold which defines a high amplitude of ECG event. All above this - counted as potential ECG peak.
@@ -146,7 +146,7 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
         affected_channels=[]
         not_affected_channels=[]
         for ch_ind, potentially_affected_channel in enumerate(ecg_peaks_on_channels):
-            if potentially_affected_channel.peak_magnitude>affected_lvl*mean_ecg_magnitude:
+            if potentially_affected_channel.peak_magnitude>mean_ecg_magnitude/norm_lvl:
                 potentially_affected_channel.artif_over_threshold=True
                 affected_channels.append(potentially_affected_channel)
             else:
