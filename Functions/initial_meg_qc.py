@@ -117,7 +117,7 @@ def get_all_config_params(config_file_name: str):
 
         ptp_manual_section = config['PTP_manual']
         ptp_manual_params = dict({
-        'pair_dist_sec': ptp_manual_section.getfloat('pair_dist_sec'),
+        'max_pair_dist_sec': ptp_manual_section.getfloat('max_pair_dist_sec'),
         'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl')})
         all_qc_params['PTP_manual'] = ptp_manual_params
 

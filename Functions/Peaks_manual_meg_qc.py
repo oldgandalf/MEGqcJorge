@@ -92,7 +92,7 @@ def peak_amplitude_all_data(data: mne.io.Raw, channels: list, sfreq: int, thresh
 
 # In[7]:
 
-def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, epoch_numbers:list, ch_type:  str):
+def peak_amplitude_per_epoch_OLD(channels: list, df_epoch: dict, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, epoch_numbers:list, ch_type:  str):
 
     '''Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
@@ -137,6 +137,56 @@ def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_
     dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
 
     return dfs_with_name
+
+
+def peak_amplitude_per_epoch(channels: list, df_epoch: dict, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, epoch_numbers:list, ch_type:  str):
+
+    '''Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
+
+    Args:
+    mg_names (list of tuples): channel name + its index
+    df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mags  or grads
+    sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
+    n_events (int): number of events in this peace of data
+    thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
+        used in: max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+    max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
+
+    Returns:
+    df_pp_ampl_mg (pd.DataFrame): contains the mean peak-to-peak aplitude for each epoch for each channel
+
+    '''
+
+    dict_ep = {}
+
+    for ep in epoch_numbers: #loop over each epoch
+
+        #rows_for_ep = [row for row in df_epoch.iloc if row.epoch == ep] #take all rows of 1 epoch, all channels.
+        df_one_ep=df_epoch.loc[df_epoch['epoch'] == ep]
+
+        peak_ampl_epoch=[]
+        for ch_name in channels: 
+            #data_ch_epoch = [row_mg[ch_name] for row_mg in rows_for_ep] #take the data for 1 epoch for 1 channel
+            data_ch_epoch=list(df_one_ep.loc[:,ch_name])
+            
+            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+            #can also change the whole thresh to a single number setting
+
+            pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
+            neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+            
+            pp_ampl,_=neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+            peak_ampl_epoch.append(pp_ampl)
+
+        dict_ep[ep] = peak_ampl_epoch
+    df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
+    df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
+
+    file_path = None
+    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
+
+    return dfs_with_name
+
 
 
 def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
