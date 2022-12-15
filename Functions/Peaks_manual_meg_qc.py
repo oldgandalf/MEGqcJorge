@@ -275,4 +275,5 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, di
         
     derivs_ptp += fig_ptp_epoch_with_name + dfs_list
     
+
     return derivs_ptp

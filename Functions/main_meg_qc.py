@@ -3,6 +3,7 @@ import ancpbids
 from ancpbids import BIDSLayout
 from ancpbids import load_dataset
 import mpld3
+import time
 
 from initial_meg_qc import get_all_config_params, sanity_check, initial_processing, detect_extra_channels, detect_noisy_ecg_eog
 from RMSE_meq_qc import RMSE_meg_qc
@@ -69,24 +70,43 @@ def make_derivative_meg_qc(config_file_name):
             
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
-            bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.2, plotflag=True)
-            bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.2, plotflag=True)
+            bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
+            bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
 
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-
+            print('Starting RMSE...')
+            start_time = time.time()
+            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+ 
+            print('Starting PSD...')
+            start_time = time.time()
             # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
+            print('Starting Peak-to-Peak manual...')
+            start_time = time.time()
             # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
+            print('Starting Peak-to-Peak auto...')
+            start_time = time.time()
             # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
+            print('Starting ECG...')
+            start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
+            # ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            print('Starting EOG...')
+            start_time = time.time()
+            # eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+
 
             # HEAD_movements_meg_qc()
 

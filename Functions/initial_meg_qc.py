@@ -329,14 +329,14 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
 
     sfreq=raw_cropped.info['sfreq']
     #threshold for peak detection. to whatlevel allowed the noisy peaks to be in comparison with most of other peaks
-    duration_crop = len(raw_cropped)/raw_cropped.info['sfreq']
+    duration_crop = len(raw_cropped)/raw_cropped.info['sfreq']/60 #duration in minutes
 
 
     if 'ecg' or 'ECG' in picked_channels_ecg_or_eog[0]:
-            max_peak_dist_sec=60/35 #allow the lowest pulse to be 35/min. this is the maximal possible distance between 2 pulses.
+            max_peak_dist=35 #allow the lowest pulse to be 35/min. this is the maximal possible distance between 2 pulses.
 
     elif 'eog' or 'EOG' in picked_channels_ecg_or_eog[0]:
-            max_peak_dist_sec=60/8 #normal spontaneous blink rate is between 12 and 15/min, take 8.
+            max_peak_dist=5 #normal spontaneous blink rate is between 12 and 15/min, allow 5 blinks a min minimum. However do we really need to limit here?
 
     
     for picked in picked_channels_ecg_or_eog:
@@ -350,7 +350,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
 
         #find where places of recording without peaks at all:
         normal_pos_peak_locs, _ = mne.preprocessing.peak_finder(ch_data, extrema=1, verbose=False) #all positive peaks of the data
-        ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq>max_peak_dist_sec)
+        ind_break_start = np.where(np.diff(normal_pos_peak_locs)/sfreq/60>max_peak_dist)#find where the distance between positive peaks is too long
 
         #_, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         # if amplitudes is not None and len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
@@ -358,20 +358,20 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         #     print(picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
 
         all_peaks=np.concatenate((pos_peak_locs,neg_peak_locs),axis=None)
-        if len(all_peaks)>3/duration_crop*60: 
-        #allow 2 non-standard peaks per minute. Or 0? DISCUSS. implies that noiseness has to be repeated regularly.  
+        if len(all_peaks)/duration_crop>3:
+        # allow 3 non-standard peaks per minute. Or 0? DISCUSS. implies that noiseness has to be repeated regularly.  
         # if there is only 1 little piece of time with noise and the rest is good, will not show that one. 
         # include some time limitation of noisy times?
-            print('ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop*60)))
+            print('ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop)))
             
-        if len(ind_break_start[0])>3/duration_crop*60: #allow 3 breaks per minute. Or 0? DISCUSS
+        if len(ind_break_start[0])/duration_crop>3: #allow 3 breaks per minute. Or 0? DISCUSS
             #ind_break_start[0] - here[0] because np.where created array of arrays above
             bad_ecg_eog=True
-            print(picked, ' channel has breaks in ECG recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop*60)))
+            print(picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
 
 
         if plotflag:
-            t=np.arange(0, duration_crop, 1/sfreq) 
+            t=np.arange(0, duration_crop, 1/60/sfreq) 
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'));
             fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'));
@@ -388,7 +388,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
                 'x':0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'},
-                xaxis_title="Time in seconds",
+                xaxis_title="Time in minutes",
                 yaxis = dict(
                     showexponent = 'all',
                     exponentformat = 'e'))
