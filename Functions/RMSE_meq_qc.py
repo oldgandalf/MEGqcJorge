@@ -96,7 +96,7 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
 
 # In[11]:
 
-def std_of_epochs_old(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
+def std_of_epochs_slow(mg_names: list, epochs_mg, df_mg: pd.DataFrame, epoch_numbers: list):
 
     '''Calculate std for multiple epochs for a list of channels.
     Used as internal function in RMSE_meg_epoch
@@ -130,7 +130,7 @@ def std_of_epochs_old(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
     return(df_std_mg)
 
 #%%
-def std_of_epochs(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
+def std_of_epochs_dfs_fast(mg_names: list, epochs_mg, df_mg: pd.DataFrame, epoch_numbers: list):
 
     '''Calculate std for multiple epochs for a list of channels.
     Used as internal function in RMSE_meg_epoch
@@ -147,17 +147,50 @@ def std_of_epochs(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
     dict_mg = {}
 
     for ep in epoch_numbers: #loop over each epoch
-        #rows_for_ep = [row for row in df_mg.iloc if row.epoch == ep] #take all rows of 1 epoch, all channels.
         df_one_ep=df_mg.loc[df_mg['epoch'] == ep]
+        
         #std_epoch = [] #list with stds
         rmse_epoch=[]
 
         for ch_name in mg_names: #loop over channel names
             data_ch_epoch=list(df_one_ep.loc[:,ch_name])
-            #data_ch_epoch = [row_mg[ch_name] for row_mg in rows_for_ep] #take the data for 1 epoch for 1 channel
             rmse_ch_ep = RMSE(data_ch_epoch)
             rmse_ch_ep=np.float64(rmse_ch_ep) #convert from ndarray to float
             rmse_epoch.append(rmse_ch_ep)
+
+            #std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
+            
+        dict_mg[ep] = rmse_epoch
+
+    df_std_mg = pd.DataFrame(dict_mg, index=mg_names)
+
+    return(df_std_mg)
+
+#%%
+
+def std_of_epochs(mg_names: list, epochs_mg, df_mg: pd.DataFrame, epoch_numbers: list):
+
+    '''Calculate std for multiple epochs for a list of channels.
+    Used as internal function in RMSE_meg_epoch
+
+    Args:
+    mg_names (list of tuples): channel name + its index, 
+    df_mg (pd.DataFrame): data frame containing data for all epochs for mags or for grads
+    epoch_numbers (list): list of epoch numbers
+
+    Returns:
+    df_std_mg (pd.DataFrame): data frame containing stds for all epoch for each channel
+    '''
+    
+    dict_mg = {}
+
+    #get 1 epoch, 1 channel and calculate rmse of its data:
+    for ep in epoch_numbers:
+        rmse_epoch=[]
+        for ch_name in mg_names: 
+            data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)
+            rmse_ch_ep = RMSE(data_ch_epoch[0][0])
+            rmse_epoch.append(np.float64(rmse_ch_ep))
 
             #std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
             
@@ -168,9 +201,10 @@ def std_of_epochs(mg_names: list, df_mg: pd.DataFrame, epoch_numbers: list):
 
     return(df_std_mg)
 
+
 #%% STD over epochs: use 2 separate data frames for mags and grads in calculations:
 
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: list, df_epochs: pd.DataFrame):
+def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: list, epochs_mg, df_epochs: pd.DataFrame):
 
     '''
     - Calculate std for every separate epoch of a given list of channels
@@ -191,7 +225,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
 
     # 1) Find std for every channel for every epoch:
 
-    df_std=std_of_epochs(df_mg=df_epochs, mg_names=channels, epoch_numbers=epoch_numbers)
+    df_std=std_of_epochs(mg_names=channels, epochs_mg=epochs_mg, df_mg=df_epochs,  epoch_numbers=epoch_numbers)
 
     # 2) Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
 
@@ -219,7 +253,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epoch_numbers: li
     return dfs_deriv
 
 #%%
-def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
+def RMSE_meg_qc(rmse_params:  dict, channels: dict, epochs_mg, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     """Main RMSE function
     
@@ -254,10 +288,11 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_of_dfs_epoch:dict, data
 
     if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
 
-        epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
+        #epoch_numbers = dict_of_dfs_epoch[m_or_g_chosen[0]]['epoch'].unique()
+        epoch_numbers = [ep for ep in range(0, len(epochs_mg))]
         for m_or_g in m_or_g_chosen:
 
-            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epoch_numbers=epoch_numbers, df_epochs=dict_of_dfs_epoch[m_or_g]) 
+            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epoch_numbers=epoch_numbers, epochs_mg=epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g]) 
             dfs_list += df_epoch_rmse
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
