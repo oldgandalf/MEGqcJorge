@@ -53,10 +53,10 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, fre
     PSD plot + saves them as html files
     '''
 
-    if m_or_g == 'mags':
+    if m_or_g == 'mag':
         picks = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
         tit = 'Magnetometers'
-    elif m_or_g == 'grads':
+    elif m_or_g == 'grad':
         picks = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
         tit = 'Gradiometers'
     else:
@@ -73,7 +73,7 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, fre
 
 def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: float):
 
-    '''Calculates the power (area under the curve) of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mags or grads.
+    '''Calculates the power (area under the curve) of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
     Adopted from: https://raphaelvallat.com/bandpower.html
 
     This function is called in Power_of_freq_meg
@@ -134,14 +134,14 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool):
 
     '''
-    - Power of frequencies calculation for all mags + grads channels separately, 
+    - Power of frequencies calculation for all mag + grad channels separately, 
     - Saving power + power/freq value into data frames.
     - If desired: creating a pie chart of mean power of every band over the entire data (all channels of 1 type together)
     
     Args:
     ch_names (list of tuples): channel names + index as list, 
-    freqs (np.ndarray): numpy array of frequencies for mags  or grads
-    psds (np.ndarray): numpy array of power spectrum dencities for mags or grads
+    freqs (np.ndarray): numpy array of frequencies for mag  or grad
+    psds (np.ndarray): numpy array of power spectrum dencities for mag or grad
     mean_power_per_band_needed (bool): need to calculate mean band power in the ENTIRE signal (averaged over all channels) or not.
         if True, results will also be printed.
     plotflag (bool): need to plot pie chart of mean_power_per_band_needed or not
@@ -168,7 +168,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         
         f_low, f_high = w[1] # Define band lower and upper limits
 
-        #loop over mags or grads:
+        #loop over mag or grad:
         power_per_band_list, power_by_Nfreq_per_band_list, rel_power_per_band_list=Power_of_band(freqs, f_low, f_high, psds)
 
         dict_power[w[0]] = power_per_band_list
@@ -205,7 +205,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
     if mean_power_per_band_needed is True: #if user wants to see average power per band over all channels - calculate and plot here:
 
-        #Calculate power per band over all mags and all grads
+        #Calculate power per band over all mag and all grad
 
         import statistics 
 
@@ -219,9 +219,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         mean_relative=[]
         mean_power_nfreq=[]
 
-        if m_or_g == 'mags':
+        if m_or_g == 'mag':
             tit='Magnetometers'
-        elif m_or_g == 'grads':
+        elif m_or_g == 'grad':
             tit='Gradiometers'
         else:
             TypeError ("Check channel type!")
@@ -233,11 +233,11 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
             for band in enumerate(bands_names): #loop over bands
                 mean_power_per_band = statistics.mean(d[1].loc[:,band[0]])
                 
-                if d[0]==0: #df_power_mags:
+                if d[0]==0: #df_power_mag:
                     mean_abs.append(mean_power_per_band) 
-                elif d[0]==1: #df_rel_power_mags:
+                elif d[0]==1: #df_rel_power_mag:
                     mean_relative.append(mean_power_per_band) 
-                elif d[0]==2: #df_power_freq_mags:
+                elif d[0]==2: #df_power_freq_mag:
                     mean_power_nfreq.append(mean_power_per_band)
 
                 print(band[1], mean_power_per_band)
@@ -260,7 +260,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, filtered_d_resamp: mne.io.Raw, m
     Output:
     out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
     
-    # these parameters will be saved into a dictionary. this allowes to calculate for mags or grads or both:
+    # these parameters will be saved into a dictionary. this allowes to calculate for mag or grad or both:
     freqs = {}
     psds = {}
     derivs_psd = []

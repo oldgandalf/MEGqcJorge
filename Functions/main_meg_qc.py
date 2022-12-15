@@ -66,7 +66,7 @@ def make_derivative_meg_qc(config_file_name):
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
             if len(m_or_g_chosen) == 0: 
-                raise ValueError('No channels to analyze. Check presence of mags and grads in your data set and parameter do_for in settings.')
+                raise ValueError('No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.')
             
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
@@ -78,33 +78,33 @@ def make_derivative_meg_qc(config_file_name):
             
             print('Starting RMSE...')
             start_time = time.time()
-            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
             print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
             print('Starting PSD...')
             start_time = time.time()
-            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
+            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
             print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting Peak-to-Peak manual...')
             start_time = time.time()
-            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
             print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting Peak-to-Peak auto...')
             start_time = time.time()
-            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting ECG...')
             start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
+            ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
             print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting EOG...')
             start_time = time.time()
-            # eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
             print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
@@ -119,12 +119,12 @@ def make_derivative_meg_qc(config_file_name):
             if active_shielding_used is True: 
                 shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
             
-            if 'mags' not in m_or_g_chosen:
+            if 'mag' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
-            elif 'grads' not in m_or_g_chosen:
+            elif 'grad' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
-            if dict_of_dfs_epoch['mags'] is None and dict_of_dfs_epoch['grads'] is None:
+            if dict_of_dfs_epoch['mag'] is None and dict_of_dfs_epoch['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
             if picks_ECG is None:

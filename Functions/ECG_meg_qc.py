@@ -32,14 +32,15 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     ecg_deriv = []
 
     for m_or_g  in m_or_g_chosen:
-        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0] #plot averageg over ecg epochs artifact
-        # [0] is to plot only 1 figure. the function by default is trying to plot both mags and grads, but here we want 
+
+        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
+        # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
         # to do them saparetely depending on what was chosen for analysis
         ecg_deriv += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
 
         #averaging the ECG epochs together:
         avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
-        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g[0:-1])
+        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g)
         #plot average artifact with topomap
         ecg_deriv += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
@@ -64,16 +65,16 @@ class Mean_artif_peak:
 
 def plot_affected_channels(sfreq, tmin, tmax, affected_channels_epochs, artifact_lvl, fig_tit, ch_type):
 
-    if ch_type=='mags':
+    if ch_type=='mag':
         fig_ch_tit='Magnetometers'
         unit='Tesla'
-    elif ch_type=='grads':
+    elif ch_type=='grad':
         fig_ch_tit='Gradiometers'
         unit='Tesla/meter'
     else:
         fig_ch_tit='?'
         unit='?unknown unit?'
-        print('Please check ch_type input. Has to be "mags" or "grads"')
+        print('Please check ch_type input. Has to be "mag" or "grad"')
 
     fig = go.Figure()
     t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
@@ -170,7 +171,7 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
 
         #1.:
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
-        #HERE THINK IF THIS USE OF 'PICKS' IS OK and doesnt prevent ecg reconstruction from mags.
+        #HERE THINK IF THIS USE OF 'PICKS' IS OK and doesnt prevent ecg reconstruction from mag.
         #according to function description, it should not. parameter ch_name is in charge of what will be used for reconstruction. 
         # but still neefd to make sure! run some checks.
 

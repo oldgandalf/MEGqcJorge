@@ -46,7 +46,7 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     
     Args:
     data (mne.raw): data in raw format
-    channels (list of tuples): list of channel names + their indexes (mags or grads)
+    channels (list of tuples): list of channel names + their indexes (mag or grad)
     std_lvl (int): how many standard deviations from the mean are acceptable. 
         data variability over this setting will be considered as too too noisy, under -std_lvl as too flat 
     
@@ -60,7 +60,7 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
 
     # Calculate STD or RMSE of each channel
 
-    #Calculate RMSE for each channel (separated mags and grads) - for the entire time duration:
+    #Calculate RMSE for each channel (separated mag and grad) - for the entire time duration:
     std_channels = RMSE(data_channels)
 
     #STD (if wanna use insted of RMSE. it will exactly replace the RMSE function above):
@@ -103,7 +103,7 @@ def std_of_epochs_slow(mg_names: list, epochs_mg: mne.Epochs, df_mg: pd.DataFram
 
     Args:
     mg_names (list of tuples): channel name + its index, 
-    df_mg (pd.DataFrame): data frame containing data for all epochs for mags or for grads
+    df_mg (pd.DataFrame): data frame containing data for all epochs for mag or for grad
     epoch_numbers (list): list of epoch numbers
 
     Returns:
@@ -137,7 +137,7 @@ def std_of_epochs_dfs_fast(mg_names: list, epochs_mg: mne.Epochs, df_mg: pd.Data
 
     Args:
     mg_names (list of tuples): channel name + its index, 
-    df_mg (pd.DataFrame): data frame containing data for all epochs for mags or for grads
+    df_mg (pd.DataFrame): data frame containing data for all epochs for mag or for grad
     epoch_numbers (list): list of epoch numbers
 
     Returns:
@@ -177,7 +177,7 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
 
     Args:
     channels (list): channel name, 
-    df_mg (pd.DataFrame): data frame containing data for all epochs for mags or for grads
+    df_mg (pd.DataFrame): data frame containing data for all epochs for mag or for grad
     epoch_numbers (list): list of epoch numbers
 
     Returns:
@@ -205,7 +205,7 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
     return(df_std_mg)
 
 
-#%% STD over epochs: use 2 separate data frames for mags and grads in calculations:
+#%% STD over epochs: use 2 separate data frames for mag and grad in calculations:
 
 def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs, df_epochs: pd.DataFrame):
 
@@ -264,18 +264,18 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
     channels (dict): channel names
     dict_of_dfs_epoch (dict of pd.DataFrame-s): data frames with epoched data per channels
     data(mne.io.Raw): raw non-epoched data
-    m_or_g_chosen (list): mags or grads or both are chosen for analysis
+    m_or_g_chosen (list): mag or grad or both are chosen for analysis
     
     Returns:
     derivs_rmse: list of tuples QC_derivative objects: figures and data frames. Exact number of derivatives depends on: 
         - was data epoched (*2 derivs) or not (*1 derivs)
-        - were both mags and grads analyzed (*2 derivs) or only one type of channels(*1 derivs)
+        - were both mag and grad analyzed (*2 derivs) or only one type of channels(*1 derivs)
     big_std_with_value_all_data + small_std_with_value_all_data: 2 lists of tuples: channel+ std value of calculsted value is too high and to low"""
 
 
     m_or_g_title = {
-    'grads': 'Gradiometers',
-    'mags': 'Magnetometers'}
+    'grad': 'Gradiometers',
+    'mag': 'Magnetometers'}
 
     big_std_with_value_all_data = {}
     small_std_with_value_all_data = {}
@@ -289,7 +289,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='stds')]
 
-    if dict_of_dfs_epoch['mags'] is not None and dict_of_dfs_epoch['grads'] is not None:
+    if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
 
         for m_or_g in m_or_g_chosen:
 

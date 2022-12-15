@@ -49,7 +49,7 @@ def get_all_config_params(config_file_name: str):
     m_or_g_chosen = m_or_g_chosen.replace(" ", "")
     m_or_g_chosen = m_or_g_chosen.split(",")
 
-    if 'mags' not in m_or_g_chosen and 'grads' not in m_or_g_chosen:
+    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         print('No channels to analyze. Check parameter do_for in config file.')
         return None
 
@@ -158,7 +158,7 @@ def get_all_config_params(config_file_name: str):
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
-    '''Gives epoched data in 2 separated data frames: mags and grads + as epoch objects.
+    '''Gives epoched data in 2 separated data frames: mag and grad + as epoch objects.
     
     Args:
     config
@@ -166,10 +166,10 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     
     Returns: 
     n_events (int): number of events(=number of epochs)
-    df_epochs_mags (pd. Dataframe): data frame containing data for all epochs for mags 
-    df_epochs_grads (pd. Dataframe): data frame containing data for all epochs for grads 
-    epochs_mags (mne. Epochs): epochs as mne data structure for magnetometers
-    epochs_grads (mne. Epochs): epochs as mne data structure for gradiometers '''
+    df_epochs_mag (pd. Dataframe): data frame containing data for all epochs for mag 
+    df_epochs_grad (pd. Dataframe): data frame containing data for all epochs for grad 
+    epochs_mag (mne. Epochs): epochs as mne data structure for magnetometers
+    epochs_grad (mne. Epochs): epochs as mne data structure for gradiometers '''
 
     event_dur = epoching_params['event_dur']
     epoch_tmin = epoching_params['epoch_tmin']
@@ -192,27 +192,27 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     if n_events == 0:
         print('No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         dict_of_dfs_epoch = {
-        'grads': None,
-        'mags': None}
+        'grad': None,
+        'mag': None}
 
         dict_epochs_mg = {
-        'grads': None,
-        'mags': None}
+        'grad': None,
+        'mag': None}
         return dict_of_dfs_epoch, epochs_mg
 
-    epochs_mags = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
-    epochs_grads = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
+    epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
+    epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
 
-    df_epochs_mags = epochs_mags.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
-    df_epochs_grads = epochs_grads.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
+    df_epochs_mag = epochs_mag.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
+    df_epochs_grad = epochs_grad.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
 
     dict_of_dfs_epoch = {
-    'grads': df_epochs_grads,
-    'mags': df_epochs_mags}
+    'grad': df_epochs_grad,
+    'mag': df_epochs_mag}
 
     dict_epochs_mg = {
-    'grads': epochs_grads,
-    'mags': epochs_mags}
+    'grad': epochs_grad,
+    'mag': epochs_mag}
 
     return dict_of_dfs_epoch, dict_epochs_mg
 
@@ -230,9 +230,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     data_file (str): path to the data file
 
     Returns: 
-    dict_of_dfs_epoch (dict with 2 pd. Dataframe): 2 data frames containing data for all epochs for mags and grads
-    epochs_mg (dict with 2 mne. Epochs): 2 epoch objects for mags and  grads
-    channels (dict): mags and grads channels names
+    dict_of_dfs_epoch (dict with 2 pd. Dataframe): 2 data frames containing data for all epochs for mag and grad
+    epochs_mg (dict with 2 mne. Epochs): 2 epoch objects for mag and  grad
+    channels (dict): mag and grad channels names
     raw_bandpass(mne.raw): data only filtered, cropped (*)
     raw_bandpass_resamp(mne.raw): data filtered and resampled, cropped (*)
     raw_cropped(mne.io.Raw): data in raw format, cropped, not filtered, not resampled (*)
@@ -250,7 +250,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
     grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
-    channels = {'mags': mag_ch_names, 'grads': grad_ch_names}
+    channels = {'mag': mag_ch_names, 'grad': grad_ch_names}
 
     #crop the data to calculate faster:
     tmax=default_settings['crop_tmax']
@@ -286,15 +286,15 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 def sanity_check(m_or_g_chosen, channels):
     '''Check if the channels which the user gave in config file to analize actually present in the data set'''
 
-    if 'mags' not in m_or_g_chosen and 'grads' not in m_or_g_chosen:
+    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
-    if channels['mags'] is None and 'mags' in m_or_g_chosen:
+    if channels['mag'] is None and 'mag' in m_or_g_chosen:
         print('There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
-        m_or_g_chosen.remove('mags')
-    elif channels['grads'] is None and 'grads' in m_or_g_chosen:
+        m_or_g_chosen.remove('mag')
+    elif channels['grad'] is None and 'grad' in m_or_g_chosen:
         print('There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
-        m_or_g_chosen.remove('grads')
-    elif channels['mags'] is None and channels['grads'] is None:
+        m_or_g_chosen.remove('grad')
+    elif channels['mag'] is None and channels['grad'] is None:
         print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
         m_or_g_chosen = []
     return m_or_g_chosen
@@ -329,7 +329,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
 
     sfreq=raw_cropped.info['sfreq']
     #threshold for peak detection. to whatlevel allowed the noisy peaks to be in comparison with most of other peaks
-    duration_crop = len(raw_cropped)/raw_cropped.info['sfreq']/60 #duration in minutes
+    duration_crop = len(raw_cropped)/raw_cropped.info['sfreq']/60  #duration in minutes
 
 
     if 'ecg' or 'ECG' in picked_channels_ecg_or_eog[0]:

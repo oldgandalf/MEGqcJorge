@@ -27,8 +27,8 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
 
 def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_g_chosen: list):
 
-    peaks = {'grads': ptp_auto_params['peak_g'], 'mags': ptp_auto_params['peak_m']}
-    flats = {'grads': ptp_auto_params['flat_g'], 'mags': ptp_auto_params['flat_m']}
+    peaks = {'grad': ptp_auto_params['peak_g'], 'mag': ptp_auto_params['peak_m']}
+    flats = {'grad': ptp_auto_params['flat_g'], 'mag': ptp_auto_params['flat_m']}
     bad_channels = {}
 
     deriv_ptp_auto= []

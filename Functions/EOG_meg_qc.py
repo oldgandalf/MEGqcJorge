@@ -29,11 +29,11 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
     eog_deriv = []
 
     for m_or_g  in m_or_g_chosen:
-        fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g[0:-1])[0]
+        fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g)[0]
         eog_deriv += [QC_derivative(fig_eog, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
 
         #averaging the ECG epochs together:
-        fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g[0:-1])
+        fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g)
         eog_deriv += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
     return eog_deriv, eog_events_times
