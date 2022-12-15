@@ -195,7 +195,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
         'grads': None,
         'mags': None}
 
-        epochs_mg = {
+        dict_epochs_mg = {
         'grads': None,
         'mags': None}
         return dict_of_dfs_epoch, epochs_mg
@@ -210,11 +210,11 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     'grads': df_epochs_grads,
     'mags': df_epochs_mags}
 
-    epochs_mg = {
+    dict_epochs_mg = {
     'grads': epochs_grads,
     'mags': epochs_mags}
 
-    return dict_of_dfs_epoch, epochs_mg
+    return dict_of_dfs_epoch, dict_epochs_mg
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
@@ -277,9 +277,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    dict_of_dfs_epoch, epochs_mg = Epoch_meg(epoching_params, data=raw_filtered)
+    dict_of_dfs_epoch, dict_epochs_mg = Epoch_meg(epoching_params, data=raw_filtered)
 
-    return dict_of_dfs_epoch, epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used
+    return dict_of_dfs_epoch, dict_epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used
 
 
 
