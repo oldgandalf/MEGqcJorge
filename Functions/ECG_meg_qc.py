@@ -299,7 +299,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
     
     sfreq=raw.info['sfreq']
     
-    ecg_deriv = []
+    ecg_derivs = []
     all_ecg_affected_channels={}
 
     for m_or_g  in m_or_g_chosen:
@@ -311,7 +311,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
         # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
         # to do them saparetely depending on what was chosen for analysis
-        ecg_deriv += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
+        ecg_derivs += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
         fig_ecg.show()
 
         #averaging the ECG epochs together:
@@ -320,14 +320,14 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
     
         fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin, tmin/2, 0, tmax/2, tmax], picks = m_or_g)
         #plot average artifact with topomap
-        ecg_deriv += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
+        ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()
 
         ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_ecg_affected_channels(ecg_epochs, channels, m_or_g, norm_lvl=1, thresh_lvl_peakfinder=5, tmin=-0.1, tmax=0.1, plotflag=True, sfreq=sfreq, use_abs_of_all_data='flip')
-        ecg_deriv += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
-        ecg_deriv += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
-        ecg_deriv += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
+        ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
+        ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
+        ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
         all_ecg_affected_channels[m_or_g]=ecg_affected_channels
 
 
-    return ecg_deriv, ecg_events_times, all_ecg_affected_channels
+    return ecg_derivs, ecg_events_times, all_ecg_affected_channels

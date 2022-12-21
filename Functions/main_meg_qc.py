@@ -103,7 +103,7 @@ def make_derivative_meg_qc(config_file_name):
             print('Starting ECG...')
             start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_deriv, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            ecg_derivs, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting EOG...')
@@ -138,10 +138,10 @@ def make_derivative_meg_qc(config_file_name):
             if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy
                 no_ecg_str = 'ECG channel data is too noisy, cardio artifacts can not be reliably detected. Cosider checking thequality of ECG channel on your recording device.'
                 ecg_derivs = []
-            elif bad_ecg is False and picks_ECG is not None: #ecg channel present and is good - should calculate all good
-                continue 
-            elif bad_ecg is None: #ecg channel not present -  need to reconstruct data first, then check if it created peak that makes sense.
-                continue
+            # elif bad_ecg is False and picks_ECG is not None: #ecg channel present and is good - should calculate all good
+            #     continue 
+            # elif bad_ecg is None: #ecg channel not present -  need to reconstruct data first, then check if it created peak that makes sense.
+            #     continue
 
 
             if picks_EOG is None:

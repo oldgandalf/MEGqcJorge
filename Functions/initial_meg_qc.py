@@ -200,7 +200,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
         dict_epochs_mg = {
         'grad': None,
         'mag': None}
-        return dict_of_dfs_epoch, epochs_mg
+        return dict_of_dfs_epoch, dict_epochs_mg
 
     epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
     epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
