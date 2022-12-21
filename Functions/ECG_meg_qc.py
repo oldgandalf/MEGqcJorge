@@ -126,6 +126,44 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     return affected_channels, not_affected_channels, artifact_lvl
 
 
+def make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type, fig_tit):
+    
+    if ch_type=='mag':
+        fig_ch_tit='Magnetometers'
+        unit='Tesla'
+    elif ch_type=='grad':
+        fig_ch_tit='Gradiometers'
+        unit='Tesla/meter'
+    else:
+        fig_ch_tit='?'
+        unit='?unknown unit?'
+        print('Please check ch_type input. Has to be "mag" or "grad"')
+
+    fig=go.Figure()
+
+    for ch in ecg_affected_channels:
+        fig=ch.plot_epoch_and_peak(fig, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=ch_type)
+    t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
+    fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+    fig.update_layout(
+        xaxis_title='Time in seconds',
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title='Mean artifact magnitude in '+unit,
+        title={
+            'text': fig_tit+fig_ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+
+
+    fig.show()
+
+    return fig
+
 def find_ecg_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, norm_lvl: float, thresh_lvl_peakfinder: float, sfreq:float, tmin=-0.1, tmax=0.1, plotflag=True, use_abs_of_all_data=False):
 
     '''
@@ -208,32 +246,15 @@ def find_ecg_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:lis
         avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=sfreq, tmin=tmin, tmax=tmax, fig_tit='Mean ECG artifact over all data: ', ch_type=m_or_g)
         fig_avg.show()
 
-
     #2. and 3.:
     ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all)
 
     if plotflag is True:
+        fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit='ECG affected channels: ')
+        fig_not_affected = make_ecg_affected_plots(ecg_not_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit='ECG not affected channels: ')
 
-        fig_affected=go.Figure()
-
-        for ch in ecg_affected_channels:
-            fig_affected=ch.plot_epoch_and_peak(fig_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=m_or_g)
-        t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
-        fig_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-        fig_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
-
-
-        fig_not_affected=go.Figure()
-        for ch in ecg_not_affected_channels:
-            fig_not_affected=ch.plot_epoch_and_peak(fig_not_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels not affected by ECG artifact: ', ch_type=m_or_g)
-        fig_not_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-        fig_not_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
-
-        fig_affected.show()
-        fig_not_affected.show()
-
-        if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
-            print('Something went wrong! The overall average ECG is  bad, but all  channels are affected by ECG artifact.')
+    if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
+        print('Something went wrong! The overall average ECG is  bad, but all  channels are affected by ECG artifact.')
 
     return ecg_affected_channels, fig_affected, fig_not_affected, fig_avg
 
