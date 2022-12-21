@@ -94,7 +94,7 @@ class Mean_artifact_with_peak:
             #self.peak_loc =np.array([peak_locs[np.argmax(peak_magnitudes)]])
             self.peak_loc =peak_locs
             self.r_wave_shape=True
-            print(self.name + ': found good peak out of several')
+            print(self.name + ': found 1 good peak out of several')
         elif len(peak_magnitudes)>=5:
             self.peak_loc =peak_locs
             self.r_wave_shape=False
@@ -175,7 +175,7 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     return affected_channels, not_affected_channels, artifact_lvl
 
 
-def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder, tmin=-0.1, tmax=0.1, plotflag=True, use_abs_of_all_data=False):
+def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder: float, tmin=-0.1, tmax=0.1, plotflag=True, use_abs_of_all_data=False):
 
     '''
     1. Calculate average ECG epoch: 
@@ -224,8 +224,15 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
 
         if use_abs_of_all_data is True:
             avg_ecg_epoch_data_all=np.abs(avg_ecg_epochs.data)
-        else:
+        elif use_abs_of_all_data is False:
             avg_ecg_epoch_data_all=avg_ecg_epochs.data
+        elif use_abs_of_all_data == 'flip':
+            avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
+            avg_ecg_epoch_data_all=np.empty_like(avg_ecg_epoch_data_nonflipped)
+            for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped):
+                if abs(min(ch_data))>abs(max(ch_data)):
+                    ch_data=-ch_data
+                avg_ecg_epoch_data_all[i,:]  = ch_data
         
         #2* Check if the detected ECG artifact makes sense: does the average have a prominent peak?
         #avg_ecg_overall=np.mean(np.abs(avg_ecg_epoch_data_all), axis=0) 
@@ -244,15 +251,15 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
             print("GOOD ECG average")
         elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is True:
             print("BAD ECG average: too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
-            print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
         elif len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is False:
             print("BAD ECG average: the found highest peak is too low compared to surrounding data")
-            print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
         elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is False:
             print("BAD ECG average: the found highest peak is too low compared to surrounding data. Too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
-            print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
         else:
-            print('Bad ECG average. Unknown reason.')
+            print('Bad ECG average. Unknown reason')
             #return None, None
   
         if plotflag is True:
@@ -298,7 +305,7 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
     return ecg_affected_channels, all_figs
 
 
-def find_ecg_affected_epochs(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder, tmin=-0.1, tmax=0.1,plotflag=True):
+def find_ecg_affected_epochs(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder: float, tmin=-0.1, tmax=0.1, plotflag=True):
 
     ecg_affected_epochs={}
     ecg_not_affected_epochs={}
