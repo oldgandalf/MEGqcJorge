@@ -3,55 +3,6 @@ import numpy as np
 from universal_plots import QC_derivative
 import plotly.graph_objects as go
 
-def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, m_or_g_chosen: list):
-    """Main ECG function"""
-
-
-    # picks_ECG = mne.pick_types(raw.info, ecg=True)
-    # if picks_ECG.size == 0:
-    #     print('No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.')
-    #     return None, None
-    # else:
-    #     ECG_channel_name=[]
-    #     for i in range(0,len(picks_ECG)):
-    #         ECG_channel_name.append(raw.info['chs'][picks_ECG[i]]['ch_name'])
-
-    ecg_events, ch_ecg, average_pulse, ecg_data=mne.preprocessing.find_ecg_events(raw, return_ecg=True, verbose=False)
-
-    if ch_ecg:
-        print('ECG channel used to identify hearbeats: ', raw.info['chs'][ch_ecg]['ch_name'])
-    else:
-        print('No ECG channel found. The signal is reconstructed based  of magnetometers data.')
-    print('Average pulse: ', round(average_pulse), ' per minute') 
-
-    ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
-
-    #WHAT SHOULD WE SHOW? CAN PLOT THE ECG CHANNEL. OR ECG EVENTS ON TOP OF 1 OF THE CHANNELS DATA. OR ON EVERY CHANNELS DATA?
-
-    ecg_epochs = mne.preprocessing.create_ecg_epochs(raw)
-    avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
-    # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
-    
-    ecg_deriv = []
-
-    for m_or_g  in m_or_g_chosen:
-
-        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
-        # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
-        # to do them saparetely depending on what was chosen for analysis
-        ecg_deriv += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
-        fig_ecg.show()
-
-        #averaging the ECG epochs together:
-        avg_ecg_epochs = ecg_epochs.average().apply_baseline((-0.5, -0.2))
-        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[-0.25, -0.025, 0, 0.025, 0.25], picks = m_or_g)
-        #plot average artifact with topomap
-        ecg_deriv += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
-        fig_ecg_sensors.show()
-
-    # Need to output: channels contamminated with ecg artifacts. 
-
-    return ecg_deriv, ecg_events_times
 
 class Mean_artifact_with_peak:
     """Contains average ecg epoch for a particular channel,
@@ -67,7 +18,7 @@ class Mean_artifact_with_peak:
         self.artif_over_threshold = artif_over_threshold
 
     def __repr__(self):
-        return 'Mean artifact peak on: ' + str(self.channel_or_epoch) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) + '\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
+        return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) + '\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
     def find_peak(self, thresh_lvl_peakfinder=None):
 
@@ -175,7 +126,7 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     return affected_channels, not_affected_channels, artifact_lvl
 
 
-def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder: float, tmin=-0.1, tmax=0.1, plotflag=True, use_abs_of_all_data=False):
+def find_ecg_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, norm_lvl: float, thresh_lvl_peakfinder: float, sfreq:float, tmin=-0.1, tmax=0.1, plotflag=True, use_abs_of_all_data=False):
 
     '''
     1. Calculate average ECG epoch: 
@@ -205,147 +156,178 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
     2  figures: ecg affected + not affected channels OR epochs.
 
 '''
+
+    #1.:
+    #averaging the ECG epochs together:
+    avg_ecg_epochs = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
+    #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
+    #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
+
+    if use_abs_of_all_data is True:
+        avg_ecg_epoch_data_all=np.abs(avg_ecg_epochs.data)
+    elif use_abs_of_all_data is False:
+        avg_ecg_epoch_data_all=avg_ecg_epochs.data
+    elif use_abs_of_all_data == 'flip':
+        avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
+        avg_ecg_epoch_data_all=np.empty_like(avg_ecg_epoch_data_nonflipped)
+        for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped):
+            if abs(min(ch_data))>abs(max(ch_data)):
+                ch_data=-ch_data
+            avg_ecg_epoch_data_all[i,:]  = ch_data
     
-    ecg_affected_channels={}
-    ecg_not_affected_channels={}
-    all_figs=[]
-    for m_or_g in m_or_g_chosen:
+    #2* Check if the detected ECG artifact makes sense: does the average have a prominent peak?
+    #avg_ecg_overall=np.mean(np.abs(avg_ecg_epoch_data_all), axis=0) 
 
-        #1.:
-        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
-        #HERE THINK IF THIS USE OF 'PICKS' IS OK and doesnt prevent ecg reconstruction from mag.
-        #according to function description, it should not. parameter ch_name is in charge of what will be used for reconstruction. 
-        # but still need to make sure! run some checks.
+    avg_ecg_overall=np.mean(avg_ecg_epoch_data_all, axis=0) 
+    # will show if there is ecg artifact present  on average. should hav ecg shape if yes. 
+    # otherwise - it was not picked up/resonctructed correctly
 
-        #averaging the ECG epochs together:
-        avg_ecg_epochs = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
-        #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
-        #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
-
-        if use_abs_of_all_data is True:
-            avg_ecg_epoch_data_all=np.abs(avg_ecg_epochs.data)
-        elif use_abs_of_all_data is False:
-            avg_ecg_epoch_data_all=avg_ecg_epochs.data
-        elif use_abs_of_all_data == 'flip':
-            avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
-            avg_ecg_epoch_data_all=np.empty_like(avg_ecg_epoch_data_nonflipped)
-            for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped):
-                if abs(min(ch_data))>abs(max(ch_data)):
-                    ch_data=-ch_data
-                avg_ecg_epoch_data_all[i,:]  = ch_data
-        
-        #2* Check if the detected ECG artifact makes sense: does the average have a prominent peak?
-        #avg_ecg_overall=np.mean(np.abs(avg_ecg_epoch_data_all), axis=0) 
-
-        avg_ecg_overall=np.mean(avg_ecg_epoch_data_all, axis=0) 
-        # will show if there is ecg artifact present  on average. should hav ecg shape if yes. 
-        # otherwise - it was not picked up/resonctructed correctly
-
-        avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_ECG_overall',mean_artifact_epoch=avg_ecg_overall)
-        avg_ecg_overall_obj.find_peak(thresh_lvl_peakfinder)
-        # thresh_avg=(max(abs(avg_ecg_overall)) - min(abs(avg_ecg_overall)))/2
-        # mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_overall), extrema=1, verbose=False, thresh=thresh_avg) 
-    
-
-        if len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is True:
-            print("GOOD ECG average")
-        elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is True:
-            print("BAD ECG average: too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
-            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-        elif len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is False:
-            print("BAD ECG average: the found highest peak is too low compared to surrounding data")
-            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-        elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is False:
-            print("BAD ECG average: the found highest peak is too low compared to surrounding data. Too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
-            #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-        else:
-            print('Bad ECG average. Unknown reason')
-            #return None, None
-  
-        if plotflag is True:
-            fig_avg = go.Figure()
-            avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=raw.info['sfreq'], tmin=tmin, tmax=tmax, fig_tit='Mean ECG artifact over all data: ', ch_type=m_or_g)
-            fig_avg.show()
+    avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_ECG_overall',mean_artifact_epoch=avg_ecg_overall)
+    avg_ecg_overall_obj.find_peak(thresh_lvl_peakfinder)
+    # thresh_avg=(max(abs(avg_ecg_overall)) - min(abs(avg_ecg_overall)))/2
+    # mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_overall), extrema=1, verbose=False, thresh=thresh_avg) 
 
 
-        #2. and 3.:
-        affected_channels, not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all)
+    if len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is True:
+        print("GOOD ECG average")
+    elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is True:
+        print("BAD ECG average: too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
+        #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+    elif len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is False:
+        print("BAD ECG average: the found highest peak is too low compared to surrounding data")
+        #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+    elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is False:
+        print("BAD ECG average: the found highest peak is too low compared to surrounding data. Too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
+        #print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
+    else:
+        print('Bad ECG average. Unknown reason')
+        #return None, None
 
-        ecg_affected_channels[m_or_g]=affected_channels
-        ecg_not_affected_channels[m_or_g]=not_affected_channels
-
-        if plotflag is True:
-
-            fig_affected=go.Figure()
-            sfreq=raw.info['sfreq']
-            # fig_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax, affected_channels, artifact_lvl, 'Channels affected by ECG artifact: ', m_or_g)
-            # fig_not_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax,not_affected_channels, artifact_lvl, 'Channels not affected by ECG artifact: ', m_or_g)
-            
-            for ch in affected_channels:
-                fig_affected=ch.plot_epoch_and_peak(fig_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=m_or_g)
-            t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
-            fig_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-            fig_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+    if plotflag is True:
+        fig_avg = go.Figure()
+        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=sfreq, tmin=tmin, tmax=tmax, fig_tit='Mean ECG artifact over all data: ', ch_type=m_or_g)
+        fig_avg.show()
 
 
-            fig_not_affected=go.Figure()
-            for ch in not_affected_channels:
-                fig_not_affected=ch.plot_epoch_and_peak(fig_not_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels not affected by ECG artifact: ', ch_type=m_or_g)
-            fig_not_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-            fig_not_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+    #2. and 3.:
+    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all)
 
-            fig_affected.show()
-            fig_not_affected.show()
+    if plotflag is True:
 
-            all_figs += [fig_affected, fig_not_affected, fig_avg]
+        fig_affected=go.Figure()
 
-        if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels[m_or_g] or len(ecg_not_affected_channels[m_or_g])/len(channels[m_or_g])<0.2):
+        for ch in ecg_affected_channels:
+            fig_affected=ch.plot_epoch_and_peak(fig_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=m_or_g)
+        t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+        fig_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
+        fig_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+
+
+        fig_not_affected=go.Figure()
+        for ch in ecg_not_affected_channels:
+            fig_not_affected=ch.plot_epoch_and_peak(fig_not_affected, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels not affected by ECG artifact: ', ch_type=m_or_g)
+        fig_not_affected.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
+        fig_not_affected.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+
+        fig_affected.show()
+        fig_not_affected.show()
+
+        if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
             print('Something went wrong! The overall average ECG is  bad, but all  channels are affected by ECG artifact.')
 
-    return ecg_affected_channels, all_figs
+    return ecg_affected_channels, fig_affected, fig_not_affected, fig_avg
 
 
-def find_ecg_affected_epochs(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder: float, tmin=-0.1, tmax=0.1, plotflag=True):
+# def find_ecg_affected_epochs(raw: mne.io.Raw, channels:dict, m_or_g_chosen:list, norm_lvl: float, thresh_lvl_peakfinder: float, tmin=-0.1, tmax=0.1, plotflag=True):
 
-    ecg_affected_epochs={}
-    ecg_not_affected_epochs={}
-    all_figs=[]
+#     ecg_affected_epochs={}
+#     ecg_not_affected_epochs={}
+#     all_figs=[]
 
-    for m_or_g in m_or_g_chosen:
+#     for m_or_g in m_or_g_chosen:
 
-        #1.:
-        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
-        df_ecg_epochs = ecg_epochs.to_data_frame()
+#         #1.:
+#         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
+#         df_ecg_epochs = ecg_epochs.to_data_frame()
 
-        #calculate mean of each time point over all channels. abs value of magnitude is taken.
-        df_ecg_epochs['mean'] = df_ecg_epochs.iloc[:, 3:-1].abs().mean(axis=1)
+#         #calculate mean of each time point over all channels. abs value of magnitude is taken.
+#         df_ecg_epochs['mean'] = df_ecg_epochs.iloc[:, 3:-1].abs().mean(axis=1)
 
-        # Plot to check:
-        # fig = go.Figure()
-        # sfreq=raw.info['sfreq']
-        # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+#         # Plot to check:
+#         # fig = go.Figure()
+#         # sfreq=raw.info['sfreq']
+#         # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
 
-        #collect the mean values of each echepoch into a list
-        all_means_of_epochs = [None] * len(ecg_epochs) #preassign
-        for ep in range(0,len(ecg_epochs)):
-            df_one_ep=df_ecg_epochs.loc[df_ecg_epochs['epoch'] == ep]
-            all_means_of_epochs[ep]=np.array(df_one_ep.loc[:,"mean"])
+#         #collect the mean values of each echepoch into a list
+#         all_means_of_epochs = [None] * len(ecg_epochs) #preassign
+#         for ep in range(0,len(ecg_epochs)):
+#             df_one_ep=df_ecg_epochs.loc[df_ecg_epochs['epoch'] == ep]
+#             all_means_of_epochs[ep]=np.array(df_one_ep.loc[:,"mean"])
 
-        #     if ep ==0:
-        #         fig.add_trace(go.Scatter(x=t, y=all_means_of_epochs[ep], name='epoch '+str(ep)))
-        # fig.show()
+#         #     if ep ==0:
+#         #         fig.add_trace(go.Scatter(x=t, y=all_means_of_epochs[ep], name='epoch '+str(ep)))
+#         # fig.show()
 
-        epoch_numbers_list=list(range(0, len(ecg_epochs)))
-        #2. and 3.:
-        strong_ecg_epochs, weak_ecg_epochs, artifact_lvl = epochs_or_channels_over_limit(loop_over=epoch_numbers_list, thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=all_means_of_epochs)
-        ecg_affected_epochs[m_or_g]=strong_ecg_epochs
-        ecg_not_affected_epochs[m_or_g]=weak_ecg_epochs
+#         epoch_numbers_list=list(range(0, len(ecg_epochs)))
+#         #2. and 3.:
+#         strong_ecg_epochs, weak_ecg_epochs, artifact_lvl = epochs_or_channels_over_limit(loop_over=epoch_numbers_list, thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=all_means_of_epochs)
+#         ecg_affected_epochs[m_or_g]=strong_ecg_epochs
+#         ecg_not_affected_epochs[m_or_g]=weak_ecg_epochs
 
-        if plotflag:
+#         if plotflag:
 
-            fig_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax, strong_ecg_epochs, artifact_lvl, 'Strong ECG epochs: ', m_or_g)
-            fig_not_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax, weak_ecg_epochs, artifact_lvl, 'Weak ECG epochs: ', m_or_g)
+#             fig_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax, strong_ecg_epochs, artifact_lvl, 'Strong ECG epochs: ', m_or_g)
+#             fig_not_affected=plot_affected_channels(raw.info['sfreq'], tmin, tmax, weak_ecg_epochs, artifact_lvl, 'Weak ECG epochs: ', m_or_g)
 
-            all_figs += [fig_affected, fig_not_affected]
+#             all_figs += [fig_affected, fig_not_affected]
     
-    return ecg_affected_epochs, all_figs
+#     return ecg_affected_epochs, all_figs
+
+
+def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
+    """Main ECG function"""
+
+    ecg_events, ch_ecg, average_pulse, ecg_data=mne.preprocessing.find_ecg_events(raw, return_ecg=True, verbose=False)
+
+    if ch_ecg:
+        print('ECG channel used to identify hearbeats: ', raw.info['chs'][ch_ecg]['ch_name'])
+    else:
+        print('No ECG channel found. The signal is reconstructed based  of magnetometers data.')
+    print('Average pulse: ', round(average_pulse), ' per minute') 
+
+    ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
+    
+    sfreq=raw.info['sfreq']
+    
+    ecg_deriv = []
+    all_ecg_affected_channels={}
+
+    for m_or_g  in m_or_g_chosen:
+
+        tmin=ecg_params['ecg_epoch_tmin']
+        tmax=ecg_params['ecg_epoch_tmax']
+        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
+
+        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
+        # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
+        # to do them saparetely depending on what was chosen for analysis
+        ecg_deriv += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, None, 'matplotlib')]
+        fig_ecg.show()
+
+        #averaging the ECG epochs together:
+        avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
+        # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
+    
+        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin, tmin/2, 0, tmax/2, tmax], picks = m_or_g)
+        #plot average artifact with topomap
+        ecg_deriv += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
+        fig_ecg_sensors.show()
+
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_ecg_affected_channels(ecg_epochs, channels, m_or_g, norm_lvl=1, thresh_lvl_peakfinder=5, tmin=-0.1, tmax=0.1, plotflag=True, sfreq=sfreq, use_abs_of_all_data='flip')
+        ecg_deriv += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
+        ecg_deriv += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
+        ecg_deriv += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
+        all_ecg_affected_channels[m_or_g]=ecg_affected_channels
+
+
+    return ecg_deriv, ecg_events_times, all_ecg_affected_channels

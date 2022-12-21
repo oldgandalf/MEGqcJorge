@@ -62,6 +62,8 @@ def make_derivative_meg_qc(config_file_name):
 
         for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
+            print('Starting initial processing...')
+            start_time = time.time()
             dict_of_dfs_epoch, dict_epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
@@ -70,42 +72,44 @@ def make_derivative_meg_qc(config_file_name):
             
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
-            bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
-            bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
+            bad_ecg=False
+            #bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
+            #bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
+            print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs = [],[],[],[],[], []
             
-            print('Starting RMSE...')
-            start_time = time.time()
-            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting RMSE...')
+            # start_time = time.time()
+            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('Starting PSD...')
-            start_time = time.time()
-            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting Peak-to-Peak manual...')
-            start_time = time.time()
-            pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting Peak-to-Peak manual...')
+            # start_time = time.time()
+            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting Peak-to-Peak auto...')
-            start_time = time.time()
-            ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting Peak-to-Peak auto...')
+            # start_time = time.time()
+            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting ECG...')
             start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, ecg_events_times = ECG_meg_qc(all_qc_params['ECG'], raw, m_or_g_chosen)
+            ecg_deriv, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting EOG...')
-            start_time = time.time()
-            eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
-            print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting EOG...')
+            # start_time = time.time()
+            # eog_derivs, eog_events_times = EOG_meg_qc(all_qc_params['EOG'], raw, m_or_g_chosen)
+            # print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # HEAD_movements_meg_qc()
@@ -128,7 +132,7 @@ def make_derivative_meg_qc(config_file_name):
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
             if picks_ECG is None:
-                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can not be detected. ECG data can be reconstructed on base of magnetometers, but this will not be accurate and is not recommended.'
+                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can be reconstructed on base of magnetometers, but this is not always reliable. See result of recontruction in the report'
                 ecg_derivs = []
             
             if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy
