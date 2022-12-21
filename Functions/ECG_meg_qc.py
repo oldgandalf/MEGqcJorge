@@ -58,59 +58,57 @@ class Mean_artifact_with_peak:
     calculates its main peak (location and magnitude),
     info if this magnitude is concidered as artifact or not."""
 
-    def __init__(self, channel_or_epoch:str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude:float=None, r_wave_shape:bool=None, artif_over_threshold:bool=None):
+    def __init__(self, channel_or_epoch:str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None):
         self.name =  channel_or_epoch
         self.mean_artifact_epoch = mean_artifact_epoch
-        if np.issubdtype(type(peak_loc), np.integer) is True or peak_loc is None:
-            self.peak_loc = [peak_loc]
-            print('CONVERTED!!!!')
-        else:
-            self.peak_loc = list(peak_loc)
-
-        if np.issubdtype(type(peak_magnitude), np.integer) is True or peak_magnitude is None:
-            self.peak_magnitude = [peak_magnitude]
-        else:
-            self.peak_magnitude = list(peak_magnitude)
+        self.peak_loc = peak_loc
+        self.peak_magnitude = peak_magnitude
         self.r_wave_shape =  r_wave_shape
         self.artif_over_threshold = artif_over_threshold
 
     def __repr__(self):
         return 'Mean artifact peak on: ' + str(self.channel_or_epoch) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) + '\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
-    def find_peak(self, use_peak_finder:bool, thresh_lvl_peakfinder=None):
+    def find_peak(self, thresh_lvl_peakfinder=None):
 
-        '''Detects the location and magnitude of the most prominent peak of the data, sets them as attributes of the instance.'''
+        '''Detects the location and magnitude of the peaks of data, sets them as attributes of the instance.
+        Checks if the peak looks like R  wave (ECG) shape: 
+        - either only 1 peak found 
+        OR:
+        - should have not more  than 4  peaks found (otherwise - too noisy) 
+        and
+        - the highest found peak should be at least a little higher than  average of all found peaks.'''
 
-        if use_peak_finder is True:
-            #use peak detection: find the locations of prominent peaks (no matter pos or negative), find the amplitude of these peaks.
-            #in this case we can set it we find just 1 peak or all the peaks above some peak threshold
-            thresh_mean=(max(self.mean_artifact_epoch) - min(self.mean_artifact_epoch)) / thresh_lvl_peakfinder
-            peak_locs, peak_magnitudes = mne.preprocessing.peak_finder(abs(self.mean_artifact_epoch), extrema=1, verbose=False, thresh=thresh_mean) 
-            
-            #if there is a peak which is significantly higher than all other peaks - use this one as top of the ECG R wave
-            #if not - keep  all peaks. In this case this is not an R wave shape.
-            if len(list(peak_magnitudes))==1:
-                self.peak_loc =peak_locs
-                self.r_wave_shape=True
-                print(self.name, 'HERE!', list(peak_magnitudes))
-            elif len(list(peak_magnitudes))>1 and np.max(peak_magnitudes)>np.mean(peak_magnitudes)*1.5:
-                self.peak_loc =peak_locs[np.argmax(peak_magnitudes)]
-                self.r_wave_shape=True
-            elif len(list(peak_magnitudes))>1 and np.max(peak_magnitudes)<=np.mean(peak_magnitudes)*1.5:
-                self.peak_loc =peak_locs
-                self.r_wave_shape=False
-            else: #if no peaks found
-                self.peak_loc = None
-                self.r_wave_shape=False
-                self.peak_magnitude=None
-                print(self.name + ': no peaks found.')
-        else:
-            #find just the location of the most prominent point in the data (pos or neg), then find it s magnitude.
-            self.peak_loc=np.argmax(abs(self.mean_artifact_epoch))
-            self.r_wave_shape=None
+        #use peak detection: find the locations of prominent peaks (no matter pos or negative), find the amplitude of these peaks.
+        #in this case we can set it we find just 1 peak or all the peaks above some peak threshold
+        thresh_mean=(max(self.mean_artifact_epoch) - min(self.mean_artifact_epoch)) / thresh_lvl_peakfinder
+        peak_locs, peak_magnitudes = mne.preprocessing.peak_finder(abs(self.mean_artifact_epoch), extrema=1, verbose=False, thresh=thresh_mean) 
         
-        if self.peak_loc is not None:
-            self.peak_magnitude=self.mean_artifact_epoch[self.peak_loc]
+        #if there is a peak which is significantly higher than all other peaks - use this one as top of the ECG R wave
+        #if not - keep  all peaks. In this case this is not an R wave shape.
+        if len(peak_magnitudes)==1:
+            self.peak_loc =peak_locs
+            self.r_wave_shape=True
+            print(self.name + ': only 1 good peak')
+        elif 1<len(peak_magnitudes)<5 and np.max(peak_magnitudes)>np.mean(peak_magnitudes)*1.1:
+            #self.peak_loc =np.array([peak_locs[np.argmax(peak_magnitudes)]])
+            self.peak_loc =peak_locs
+            self.r_wave_shape=True
+            print(self.name + ': found good peak out of several')
+        elif len(peak_magnitudes)>=5:
+            self.peak_loc =peak_locs
+            self.r_wave_shape=False
+            print(self.name + ': too many peaks, no R wave shape.')
+        elif len(peak_magnitudes)==0: #if no peaks found - simply take the max of the whole epoch
+            self.peak_loc=np.array([np.argmax(np.abs(self.mean_artifact_epoch))])
+            self.r_wave_shape=False
+            print(self.name + ': no peaks found. Just take largest value as peak.')
+        else:
+            self.peak_loc =peak_locs
+            self.r_wave_shape=False
+            print(self.name + ': not R wave shape, check the reason!.')
+
+        self.peak_magnitude=np.array(self.mean_artifact_epoch[self.peak_loc])
 
         return
 
@@ -129,10 +127,7 @@ class Mean_artifact_with_peak:
         t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
 
         fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.mean_artifact_epoch), name=self.name))
-        # for magnit, loc in zip(list(self.peak_magnitude), list(self.peak_loc)):
-        #     fig.add_trace(go.Scatter(x=list(t[loc]), y=list(magnit), mode='markers', name='peak: '+self.name))
-
-        fig.add_trace(go.Scatter(x=np.array(t[self.peak_loc]), y=np.array(self.peak_magnitude), mode='markers', name='peak: '+self.name));
+        fig.add_trace(go.Scatter(x=np.array(t[self.peak_loc]), y=self.peak_magnitude, mode='markers', name='peak: '+self.name));
 
         fig.update_layout(
             xaxis_title='Time in seconds',
@@ -157,7 +152,7 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     for ch_ind, ch in enumerate(loop_over):
         ecg_peaks_1ch=Mean_artifact_with_peak(channel_or_epoch=ch, mean_artifact_epoch=list_mean_ecg_epochs[ch_ind])
         
-        ecg_peaks_1ch.find_peak(use_peak_finder=True, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        ecg_peaks_1ch.find_peak(thresh_lvl_peakfinder)
         ecg_peaks_all_channels.append(ecg_peaks_1ch)
 
 
@@ -170,7 +165,7 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     not_affected_channels=[]
     artifact_lvl=mean_ecg_magnitude/norm_lvl #data over this level will be counted as artifact contamiunated
     for ch_ind, potentially_affected_channel in enumerate(ecg_peaks_all_channels):
-        if abs(np.max(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
+        if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
             #if peak magnitude (1 peak, not the whole data!) is higher or lower than  the artifact level  AND the peak has r wave shape.
             potentially_affected_channel.artif_over_threshold=True
             affected_channels.append(potentially_affected_channel)
@@ -240,24 +235,22 @@ def find_ecg_affected_channels(raw: mne.io.Raw, channels:dict, m_or_g_chosen:lis
         # otherwise - it was not picked up/resonctructed correctly
 
         avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_ECG_overall',mean_artifact_epoch=avg_ecg_overall)
-        avg_ecg_overall_obj.find_peak(use_peak_finder=True, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        avg_ecg_overall_obj.find_peak(thresh_lvl_peakfinder)
         # thresh_avg=(max(abs(avg_ecg_overall)) - min(abs(avg_ecg_overall)))/2
         # mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_overall), extrema=1, verbose=False, thresh=thresh_avg) 
-        
-        print('HERE!!!!!!!!!', type(avg_ecg_overall_obj.peak_loc))
+    
 
-        if len(list(avg_ecg_overall_obj.peak_loc))==1 and avg_ecg_overall_obj.r_wave_shape is True:
+        if len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is True:
             print("GOOD ECG average")
-        elif len(list(avg_ecg_overall_obj.peak_loc))!=1 and avg_ecg_overall_obj.r_wave_shape is True:
-            print("BAD ECG average: too many peaks. Peaks found: " + str(len(list(avg_ecg_overall_obj.peak_loc))))
+        elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is True:
+            print("BAD ECG average: too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
             print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-        elif len(list(avg_ecg_overall_obj.peak_loc))==1 and avg_ecg_overall_obj.r_wave_shape is False:
+        elif len(avg_ecg_overall_obj.peak_loc)==1 and avg_ecg_overall_obj.r_wave_shape is False:
             print("BAD ECG average: the found highest peak is too low compared to surrounding data")
             print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-        elif len(list(avg_ecg_overall_obj.peak_loc))!=1 and avg_ecg_overall_obj.r_wave_shape is False:
-            print("BAD ECG average: the found highest peak is too low compared to surrounding data. Too many peaks. Peaks found: " + str(len(list(avg_ecg_overall_obj.peak_loc))))
+        elif len(avg_ecg_overall_obj.peak_loc)>1 and avg_ecg_overall_obj.r_wave_shape is False:
+            print("BAD ECG average: the found highest peak is too low compared to surrounding data. Too many peaks. Peaks found: " + str(len(avg_ecg_overall_obj.peak_loc)))
             print('Can not identify ECG affected channels, because the average ECG artifact doesnt have a typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.')
-
         else:
             print('Bad ECG average. Unknown reason.')
             #return None, None
