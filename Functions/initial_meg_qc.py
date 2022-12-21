@@ -3,6 +3,7 @@ import mne
 import configparser
 import plotly.graph_objects as go
 import numpy as np
+from universal_plots import QC_derivative
 
 def make_folders_meg(sid: str):
     '''Create folders (if they dont exist yet). 
@@ -371,7 +372,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
             bad_ecg_eog=True
             print(picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
 
-
+        noisy_ch_derivs=[]
         if plotflag:
             t=np.arange(0, duration_crop, 1/60/sfreq) 
             fig = go.Figure()
@@ -396,5 +397,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
                     exponentformat = 'e'))
                 
             fig.show()
+            noisy_ch_derivs += [QC_derivative(fig, 'Noisy_ECG_channel', None, 'plotly')]
+        
 
-    return bad_ecg_eog
+    return noisy_ch_derivs, bad_ecg_eog

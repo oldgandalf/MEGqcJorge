@@ -73,8 +73,8 @@ def make_derivative_meg_qc(config_file_name):
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
             bad_ecg=False
-            #bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
-            #bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
+            noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
+            noisy_eog_derivs, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
@@ -154,10 +154,12 @@ def make_derivative_meg_qc(config_file_name):
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 
             'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
-            'ECG': ecg_derivs, 
-            'EOG': eog_derivs,
+            'ECG': noisy_ecg_derivs+ecg_derivs, 
+            'EOG': noisy_eog_derivs+eog_derivs,
             'Head movement artifacts': [],
             'Muscle artifacts': []}
+            print('HERE! noisy', noisy_ecg_derivs+ecg_derivs)
+
 
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
