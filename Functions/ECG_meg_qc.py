@@ -41,7 +41,7 @@ class Mean_artifact_with_peak:
             self.peak_loc =peak_locs
             self.r_wave_shape=True
             print(self.name + ': only 1 good peak')
-        elif 1<len(peak_magnitudes)<5 and np.max(peak_magnitudes)>np.mean(peak_magnitudes)*1.1:
+        elif 1<len(peak_magnitudes)<5 and np.max(peak_magnitudes)>np.mean(peak_magnitudes)*1.15:
             #self.peak_loc =np.array([peak_locs[np.argmax(peak_magnitudes)]])
             self.peak_loc =peak_locs
             self.r_wave_shape=True
@@ -109,7 +109,13 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
 
     #find mean ECG magnitude over all channels:
     mean_ecg_magnitude = np.mean([np.max(potentially_affected_channel.peak_magnitude) for potentially_affected_channel in ecg_peaks_all_channels])
-    #max: of the  all peaks if several we re found inside 1 channel. mean: of the peaks in between diff channels.
+    #max: of the  all peaks if several were found inside 1 channel. mean: of the peaks in between diff channels.
+    #The artifact_threshold=mean_ecg_magnitude/1  will still not be the  same as the peak of the averageoverall R wave, because R wave isthe average ofallepochs. 
+    # While  mean_ecg_magnitude is average of the PEAKS, therefore  mean_ecg_magnitude will always be more prominent then the peak of average R wave.
+    #If we  want to take artifact level using the average epoch, it will become verynarrow, because during averaging peaks  will cancell out with ...
+    
+    
+    #mean_ecg_magnitude = np.max(np.mean([potentially_affected_channel.mean_artifact_epoch for potentially_affected_channel in ecg_peaks_all_channels]), axis=1)
 
     #Find the channels which got peaks over this mean:
     affected_channels=[]
@@ -255,6 +261,12 @@ def find_ecg_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:lis
 
     if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
         print('Something went wrong! The overall average ECG is  bad, but all  channels are affected by ECG artifact.')
+
+
+    # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+    # fig_avg.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
+    # fig_avg.show()
+
 
     return ecg_affected_channels, fig_affected, fig_not_affected, fig_avg
 
