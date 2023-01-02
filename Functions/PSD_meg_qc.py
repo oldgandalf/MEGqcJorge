@@ -7,9 +7,7 @@ import numpy as np
 import pandas as pd
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
-
 from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
-from universal_html_report import make_PSD_report, make_std_peak_report
 
 # In[40]:
 
@@ -17,7 +15,7 @@ from universal_html_report import make_PSD_report, make_std_peak_report
 #UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
 
 
-def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, freq_tmin: float or None, freq_tmax: float or None, ch_names: list):
+def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, ch_names: list):
 
     '''Calculates frequency spectrum of the data and if desired - plots them.
 
@@ -40,10 +38,6 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, fre
         If n_per_seg is None, n_fft must be <= number of time points in the data. (*)
     n_per_seg (float): Length of each Welch segment (windowed with a Hamming window). Defaults to None, which sets n_per_seg equal to n_fft. (*)
     (*) These influence the bandwidth.
-    freq_tmin (float): crop a chun of data for psd calculation: start time (instead could just pass the already cropped data). 
-        If None - calculates over whole data
-    freq_tmax (float): crop a chun of data for psd calculation: end time (instead could just pass the already cropped data). 
-        If None - calculates over whole data
     ch_names (list of tuples): mag or grad channel names + their indexes
 
     Returns:
@@ -62,8 +56,11 @@ def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, fre
     else:
         TypeError('Check channel type')
 
-    psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, tmin=freq_tmin, tmax=freq_tmax, verbose=False)
+    #old mne Version:
+    #psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, verbose=False)
     
+    psds, freqs = data.compute_psd(method='welch', fmin=freq_min, fmax=freq_max, picks=picks, n_jobs=-1, n_fft=n_fft, n_per_seg=n_per_seg).get_data(return_freqs=True)
+
     psd_derivative=Plot_periodogram(tit, freqs, psds, ch_names) 
 
     return freqs, psds, psd_derivative
@@ -268,7 +265,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, filtered_d_resamp: mne.io.Raw, m
     #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
         freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, freq_min=psd_params['freq_min'], freq_max=psd_params['freq_max'], 
-        n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg'], freq_tmin=None, freq_tmax=None, ch_names=channels[m_or_g])
+        n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg'], ch_names=channels[m_or_g])
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
