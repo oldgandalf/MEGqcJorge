@@ -137,7 +137,9 @@ def get_all_config_params(config_file_name: str):
         ecg_section = config['ECG']
         ecg_params = dict({
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
-        'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax')})
+        'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
+        'norm_lvl': ecg_section.getfloat('norm_lvl'),
+        'use_abs_of_all_data': ecg_section['use_abs_of_all_data']})
         all_qc_params['ECG'] = ecg_params
 
         eog_section = config['EOG']

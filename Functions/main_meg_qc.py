@@ -103,7 +103,7 @@ def make_derivative_meg_qc(config_file_name):
             print('Starting ECG...')
             start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting EOG...')
@@ -158,7 +158,6 @@ def make_derivative_meg_qc(config_file_name):
             'EOG': noisy_eog_derivs+eog_derivs,
             'Head movement artifacts': [],
             'Muscle artifacts': []}
-            print('HERE! noisy', noisy_ecg_derivs+ecg_derivs)
 
 
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
