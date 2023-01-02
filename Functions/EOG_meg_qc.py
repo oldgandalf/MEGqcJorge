@@ -5,8 +5,6 @@ from ECG_meg_qc import find_affected_channels
 def EOG_meg_qc(picks_EOG, eog_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
     """Main EOG function"""
 
-    print('HERE!', picks_EOG)
-    
     # picks_EOG = mne.pick_types(raw.info, eog=True)
     if len(picks_EOG) == 0:
         print('No EOG channels found is this data set - EOG artifacts can not be detected.')
@@ -33,23 +31,24 @@ def EOG_meg_qc(picks_EOG, eog_params: dict, raw: mne.io.Raw, channels, m_or_g_ch
     use_abs_of_all_data=eog_params['use_abs_of_all_data']
 
 
-    eog_deriv = []
+    eog_derivs = []
     all_eog_affected_channels={}
     top_eog_magnitudes={}
     top_10_eog_magnitudes={}
 
     for m_or_g  in m_or_g_chosen:
+
         eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g)[0]
-        eog_deriv += [QC_derivative(fig_eog, 'mean_EOG_epoch_'+m_or_g, None, 'matplotlib')]
+        eog_derivs += [QC_derivative(fig_eog, 'mean_EOG_epoch_'+m_or_g, None, 'matplotlib')]
 
         #averaging the ECG epochs together:
         fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g)
-        eog_deriv += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
+        eog_derivs += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
 
 
-        eog_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(eog_epochs, channels, m_or_g, norm_lvl, ecg_or_eog='eog', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        eog_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(eog_epochs, channels, m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
         eog_derivs += [QC_derivative(fig_affected, 'EOG_affected_channels_'+m_or_g, None, 'plotly')]
         eog_derivs += [QC_derivative(fig_not_affected, 'EOG_not_affected_channels_'+m_or_g, None, 'plotly')]
         eog_derivs += [QC_derivative(fig_avg, 'overall_average_EOG_epoch_'+m_or_g, None, 'plotly')]
@@ -60,10 +59,10 @@ def EOG_meg_qc(picks_EOG, eog_params: dict, raw: mne.io.Raw, channels, m_or_g_ch
 
         top_10_eog_magnitudes[m_or_g] = [[ch_peak.name, max(ch_peak.peak_magnitude)] for ch_peak in top_eog_magnitudes[m_or_g][0:10]]
 
-        print('TOP 10 ECG magnitude peaks: ' +str(m_or_g)  + '\n', top_10_eog_magnitudes[m_or_g])
+        print('TOP 10 EOG magnitude peaks: ' +str(m_or_g)  + '\n', top_10_eog_magnitudes[m_or_g])
 
 
-    return eog_deriv, eog_events_times, all_eog_affected_channels, top_10_eog_magnitudes
+    return eog_derivs, eog_events_times, all_eog_affected_channels, top_10_eog_magnitudes
 
 
 

@@ -49,7 +49,7 @@ class Mean_artifact_with_peak:
         elif len(peak_magnitudes)>=5:
             self.peak_loc =peak_locs
             self.r_wave_shape=False
-            print(self.name + ': too many peaks, no R wave shape.')
+            print(self.name + ': too many peaks, no expected artifact wave shape.')
         elif len(peak_magnitudes)==0: #if no peaks found - simply take the max of the whole epoch
             self.peak_loc=np.array([np.argmax(np.abs(self.mean_artifact_epoch))])
             self.r_wave_shape=False
@@ -57,7 +57,7 @@ class Mean_artifact_with_peak:
         else:
             self.peak_loc =peak_locs
             self.r_wave_shape=False
-            print(self.name + ': not R wave shape, check the reason!.')
+            print(self.name + ': no expected artifact wave shape, check the reason!')
 
         self.peak_magnitude=np.array(self.mean_artifact_epoch[self.peak_loc])
 
@@ -224,11 +224,11 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, n
     # will show if there is ecg artifact present  on average. should hav ecg shape if yes. 
     # otherwise - it was not picked up/reconstructed correctly
 
-    avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_ECG_overall',mean_artifact_epoch=avg_ecg_overall)
+    avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_ecg_overall)
 
-    if  ecg_or_eog=='ecg':
+    if  ecg_or_eog=='ECG':
         max_n_peaks_allowed=4
-    elif ecg_or_eog=='eog':
+    elif ecg_or_eog=='EOG':
         max_n_peaks_allowed=2
     else:
         print('Choose ecg_or_eog input correctly!')
@@ -258,15 +258,15 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, n
 
     if plotflag is True:
         fig_avg = go.Figure()
-        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=sfreq, tmin=tmin, tmax=tmax, fig_tit='Mean ECG artifact over all data: ', ch_type=m_or_g)
+        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=sfreq, tmin=tmin, tmax=tmax, fig_tit='Mean '+ecg_or_eog+' artifact over all data: ', ch_type=m_or_g)
         fig_avg.show()
 
     #2. and 3.:
     ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, max_n_peaks_allowed=max_n_peaks_allowed)
 
     if plotflag is True:
-        fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit='ECG affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
-        fig_not_affected = make_ecg_affected_plots(ecg_not_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit='ECG not affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
+        fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
+        fig_not_affected = make_ecg_affected_plots(ecg_not_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
 
     if len(avg_ecg_overall_obj.peak_loc)!=1 and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
         print('Something went wrong! The overall average ' +ecg_or_eog+ ' is  bad, but all  channels are affected by ' +ecg_or_eog+ ' artifact.')
@@ -369,7 +369,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()
 
-        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels, m_or_g, norm_lvl, ecg_or_eog='ecg', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels, m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
