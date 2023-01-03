@@ -248,9 +248,21 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     
     return psd_pie_derivative, dfs_with_name
 
+#%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
+# 1. Calculate average psd curve over all channels
+# 2. Run peak detection on it -> get number of noise freqs
+# 3. Fit curve to the general psd
+# 4. Calculate are under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there.
+
+def find_number_of_noise_freqs(freqs, psds):
+    avg_psd=np.mean(psds)
+
+    return 
+
+
+
+
 #%%
-
-
 def PSD_meg_qc(psd_params: dict, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
     """Main psd function
 
