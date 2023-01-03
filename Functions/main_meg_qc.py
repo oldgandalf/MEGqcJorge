@@ -1,6 +1,5 @@
 import os
 import ancpbids
-from ancpbids import BIDSLayout
 from ancpbids import load_dataset
 import mpld3
 import time
@@ -32,8 +31,8 @@ def make_derivative_meg_qc(config_file_name):
     dataset_path = all_qc_params['default']['dataset_path']
 
     try:
-        layout = BIDSLayout(dataset_path)
-        schema = layout.schema
+        dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
     except:
         print('No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
         return
@@ -42,10 +41,10 @@ def make_derivative_meg_qc(config_file_name):
     if os.path.isdir(dataset_path+'/derivatives')==False: 
             os.mkdir(dataset_path+'/derivatives')
 
-    derivative = layout.dataset.create_derivative(name="Meg_QC")
+    derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    list_of_subs = layout.get_subjects()
+    list_of_subs = list(dataset.query_entities()["sub"])
     if not list_of_subs:
         print('No subjects found. Check your data set and directory path in config.')
         return
@@ -54,11 +53,10 @@ def make_derivative_meg_qc(config_file_name):
 
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
-        list_of_fifs = layout.get(suffix='meg', extension='.fif', return_type='filename', subj=sid)
+        list_of_fifs = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)
         #Devide here fifs by task, ses , run
 
-        dataset_ancp_loaded = ancpbids.load_dataset(dataset_path)
-        list_of_sub_jsons = dataset_ancp_loaded.query(sub=sid, suffix='meg', extension='.fif')
+        list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
         for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
@@ -192,6 +190,6 @@ def make_derivative_meg_qc(config_file_name):
                         #problem with lambda explained:
                         #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
-    layout.write_derivative(derivative) #maybe put inside the loop if can't have so much in memory?
+    ancpbids.write_derivative(dataset, derivative) #maybe put inside the loop if can't have so much in memory?
 
     return raw
