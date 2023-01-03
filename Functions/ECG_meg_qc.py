@@ -364,7 +364,10 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
         # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
     
-        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin, tmin/2, 0, tmax/2, tmax], picks = m_or_g)
+        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = m_or_g)
+        # tmin+tmin/10 and tmax-tmax/10 is done because mne sometimes has a plotting issue, probably connected tosamplig rate: 
+        # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
+
         #plot average artifact with topomap
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()

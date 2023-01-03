@@ -2,20 +2,8 @@ import mne
 from universal_plots import QC_derivative
 from ECG_meg_qc import find_affected_channels
 
-def EOG_meg_qc(picks_EOG, eog_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
     """Main EOG function"""
-
-    # picks_EOG = mne.pick_types(raw.info, eog=True)
-    if len(picks_EOG) == 0:
-        print('No EOG channels found is this data set - EOG artifacts can not be detected.')
-        return None, None, None, None
-
-    # else:
-    #     EOG_channel_name=[]
-    #     for i in range(0,len(picks_EOG)):
-    #         EOG_channel_name.append(raw.info['chs'][picks_EOG[i]]['ch_name'])
-    #     print('EOG channels found: ', EOG_channel_name)
-    # eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=EOG_channel_name)
 
     eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
     # ch_name: This doesn’t have to be a channel of eog type; it could, for example, also be an ordinary 

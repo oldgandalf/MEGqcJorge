@@ -313,7 +313,7 @@ def detect_extra_channels(raw):
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     if picks_ECG.size == 0:
         print('No ECG channels found is this data set. Attempting to reconstruct ECG data from magnetometers...')
-        picks_ECG = None
+        ECG_channel_name = None
     else:
         ECG_channel_name=[]
         for i in range(0,len(picks_ECG)):
@@ -322,6 +322,7 @@ def detect_extra_channels(raw):
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:
         print('No EOG channels found is this data set - EOG artifacts can not be detected.')
+        EOG_channel_name = None
     else:
         EOG_channel_name=[]
         for i in range(0,len(picks_EOG)):
@@ -334,7 +335,7 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
 
     bad_ecg_eog = False
     if picked_channels_ecg_or_eog is None:
-        return None, None
+        return [], None
 
     sfreq=raw_cropped.info['sfreq']
     #threshold for peak detection. to whatlevel allowed the noisy peaks to be in comparison with most of other peaks

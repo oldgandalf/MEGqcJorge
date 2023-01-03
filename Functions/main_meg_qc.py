@@ -50,7 +50,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in [list_of_subs[0]]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
 
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
@@ -73,8 +73,17 @@ def make_derivative_meg_qc(config_file_name):
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
             bad_ecg=False
+            bad_eog=False
             noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
             noisy_eog_derivs, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
+
+            if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy - drop it and  try to reconstruct
+                no_ecg_str = 'ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.'
+                raw.drop_channels(picks_ECG)
+                raw_filtered.drop_channels(picks_ECG)
+                raw_filtered_resampled.drop_channels(picks_ECG)
+                raw_cropped.drop_channels(picks_ECG)
+
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
@@ -100,16 +109,17 @@ def make_derivative_meg_qc(config_file_name):
             # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
-
-            print('Starting EOG...')
+            print('Starting ECG...')
             start_time = time.time()
-            eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(picks_EOG, all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+
+            if picks_EOG is not None and bad_eog is False:
+                print('Starting EOG...')
+                start_time = time.time()
+                eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # HEAD_movements_meg_qc()
@@ -130,20 +140,7 @@ def make_derivative_meg_qc(config_file_name):
 
             if dict_of_dfs_epoch['mag'] is None and dict_of_dfs_epoch['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
-
-            if picks_ECG is None:
-                no_ecg_str = 'No ECG channels found is this data set, cardio artifacts can be reconstructed on base of magnetometers, but this is not always reliable. See result of recontruction in the report'
-                ecg_derivs = []
             
-            if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy
-                no_ecg_str = 'ECG channel data is too noisy, cardio artifacts can not be reliably detected. Cosider checking thequality of ECG channel on your recording device.'
-                ecg_derivs = []
-            # elif bad_ecg is False and picks_ECG is not None: #ecg channel present and is good - should calculate all good
-            #     continue 
-            # elif bad_ecg is None: #ecg channel not present -  need to reconstruct data first, then check if it created peak that makes sense.
-            #     continue
-
-
             if picks_EOG is None:
                 no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
                 eog_derivs = []
@@ -162,6 +159,8 @@ def make_derivative_meg_qc(config_file_name):
 
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
+
+            print('HERE!',  QC_derivs)
 
             for section in QC_derivs.values():
                 if section: #if there are any derivs calculated in this section:
