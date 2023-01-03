@@ -162,9 +162,14 @@ def make_derivative_meg_qc(config_file_name):
 
             print('HERE!',  QC_derivs)
 
+            d=0
             for section in QC_derivs.values():
                 if section: #if there are any derivs calculated in this section:
                     for deriv in section:
+                        
+                        d=d+1
+                        print('writing deriv: ', d)
+                        print(deriv)
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.description) #file name
