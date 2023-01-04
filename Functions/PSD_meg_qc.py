@@ -11,7 +11,7 @@ from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
 
 # In[42]:
 
-def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: float):
+def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarray):
 
     '''Calculates the power (area under the curve) of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
     Adopted from: https://raphaelvallat.com/bandpower.html
@@ -20,32 +20,34 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
     
     Args:
     freqs (np.ndarray): numpy array of frequencies,
-    psds (np.ndarray): numpy array of power spectrum dencities,
+    psds (np.ndarray): numpy array of power spectrum dencities. Expects array of arrays: channels*psds. !
+        Will not work properly if it is 1 dimentional array give. In this case do: np.array([your_1d_array])
     f_low (float): minimal frequency of the chosend band, in Hz (For delta it would be: 0.5),
     f_high (float): maximal frequency of the chosend band, in Hz (For delta it would be: 4).
 
 
     Returns:
-    power_per_band_list (list): list of powers of each band like: [abs_power_of_delta, abs_power_of_gamma, etc...] - in absolute values
-    power_by_Nfreq_per_band_list (list): list of powers of bands divided by the  number of frequencies in the band - to compare 
+    bandpower_per_ch_list (list): list of powers of each band like: [abs_power_of_delta, abs_power_of_gamma, etc...] - in absolute values
+    power_by_Nfreq_per_ch_list (list): list of powers of bands divided by the  number of frequencies in the band - to compare 
         with RMSE later. Like: [power_of_delta/n_freqs, power_of_gamma/n_freqs, etc...]
-    rel_power_per_band_list (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
+    rel_bandpower_per_ch_list (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
         (percentage) values: what percentage of the total power does this band take.
 
     '''
     
+
     from scipy.integrate import simps
 
-    power_per_band_list=[]
-    rel_power_per_band_list=[]
-    power_by_Nfreq_per_band_list=[]
+    bandpower_per_ch_list=[]
+    rel_bandpower_per_ch_list=[]
+    power_by_Nfreq_per_ch_list=[]
 
     idx_band = np.logical_and(freqs >= f_low, freqs <= f_high) 
     # Find closest indices of band in frequency vector so idx_band is a list of indices frequencies that 
     # correspond to this band. F.e. for delta band these would be the indices of 0.5 ... 4 Hz)
 
     for ch in psds: 
-    #loop over channels. psd_ch_m is psd of partigular channel
+    #loop over channels. psd_ch is psd of partigular channel
 
         psd_ch=np.array(ch)
 
@@ -61,11 +63,11 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
         #devide the power of band by the  number of frequencies in the band, to compare with RMSE later:
         power_compare=band_power/sum(idx_band) 
 
-        power_per_band_list.append(band_power)
-        rel_power_per_band_list.append(band_rel_power)
-        power_by_Nfreq_per_band_list.append(power_compare)
+        bandpower_per_ch_list.append(band_power)
+        rel_bandpower_per_ch_list.append(band_rel_power)
+        power_by_Nfreq_per_ch_list.append(power_compare)
 
-    return(power_per_band_list, power_by_Nfreq_per_band_list, rel_power_per_band_list)
+    return(bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list)
 
 
     
@@ -109,11 +111,11 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         f_low, f_high = w[1] # Define band lower and upper limits
 
         #loop over mag or grad:
-        power_per_band_list, power_by_Nfreq_per_band_list, rel_power_per_band_list=Power_of_band(freqs, f_low, f_high, psds)
+        bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list=Power_of_band(freqs, f_low, f_high, psds)
 
-        dict_power[w[0]] = power_per_band_list
-        dict_power_freq[w[0]] = power_by_Nfreq_per_band_list
-        dict_rel_power[w[0]] = rel_power_per_band_list
+        dict_power[w[0]] = bandpower_per_ch_list
+        dict_power_freq[w[0]] = power_by_Nfreq_per_ch_list
+        dict_rel_power[w[0]] = rel_bandpower_per_ch_list
 
 
     # Save all to data frames:
@@ -201,8 +203,10 @@ def find_number_of_noise_freqs(freqs, psds):
 
     import plotly.graph_objects as go
 
+    #1.
     avg_psd=np.mean(psds,axis=0)
 
+    #2.
     thresh=(max(avg_psd) - min(avg_psd)) / 10
     pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(avg_psd, extrema=1, thresh=thresh, verbose=False) 
 
@@ -211,10 +215,14 @@ def find_number_of_noise_freqs(freqs, psds):
     fig.add_trace(go.Scatter(x=freqs[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='peak:'))
     fig.show()
 
+    #3.
+
+
+    #4.
+    avg_psd_new=np.array([avg_psd])
+    bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list = Power_of_band(freqs=freqs, f_low = 57.5, f_high= 62.5, psds=avg_psd_new)
+
     return len(pos_peak_locs)
-
-
-
 
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):

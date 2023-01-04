@@ -44,7 +44,27 @@ def make_derivative_meg_qc(config_file_name):
     derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    list_of_subs = list(dataset.query_entities()["sub"])
+
+    # schema = dataset.get_schema()
+    # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
+
+    # print(schema)
+    # print("\n")
+    # print(schema.Artifact)
+
+    # print(dataset.files)
+    # print(dataset.folders)
+    # print(dataset.derivatives)
+    # print(dataset.items())
+    # print(dataset.keys())
+    # print(dataset.code)
+    # print(dataset.name)
+
+    #return
+
+    entities = dataset.query_entities()
+    list_of_subs = list(entities["sub"])
+
     if not list_of_subs:
         print('No subjects found. Check your data set and directory path in config.')
         return
@@ -158,16 +178,16 @@ def make_derivative_meg_qc(config_file_name):
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
-            print('HERE!',  QC_derivs)
+            #print('HERE!',  QC_derivs)
 
-            d=0
+            # d=0
             for section in QC_derivs.values():
                 if section: #if there are any derivs calculated in this section:
                     for deriv in section:
                         
-                        d=d+1
-                        print('writing deriv: ', d)
-                        print(deriv)
+                        # d=d+1
+                        # print('writing deriv: ', d)
+                        # print(deriv)
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.description) #file name
