@@ -9,63 +9,6 @@ import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
 
-# In[40]:
-
-#Calculate frequency spectrum:
-#UPD: as discussed with Jochem, only calculate over whole time, no over concatenated epochs. For concatenated version see Funks_old notebook.
-
-
-def Freq_Spectrum_meg(data: mne.io.Raw, m_or_g: str, freq_min:float or None, freq_max:float or None, n_fft: int, n_per_seg: int or None, ch_names: list):
-
-    '''Calculates frequency spectrum of the data and if desired - plots them.
-
-    Freq spectrum peaks we see (visible on shorter interval, ALMOST NONE SEEN when Welch is done over all time):
-    50, 100, 150 - powerline EU
-    6 noise of shielding chambers 
-    44 meg noise
-    17 - was it the train station near by?
-    10 Secret :)
-    1hz - highpass filter.
-    flat spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
-    
-    Args:
-    data (mne.raw): data in raw format
-    m_or_g (str): which channel type to use
-    plotflag (bool): do you need plot or not
-    freq_min (float): minimal frequency of interest for frequency spectrum decomposition
-    freq_max (float): maximal frequency of interest for frequency spectrum decomposition
-    n_fft (float): The length of FFT used, must be >= n_per_seg (default: 256). The segments will be zero-padded if n_fft > n_per_seg. 
-        If n_per_seg is None, n_fft must be <= number of time points in the data. (*)
-    n_per_seg (float): Length of each Welch segment (windowed with a Hamming window). Defaults to None, which sets n_per_seg equal to n_fft. (*)
-    (*) These influence the bandwidth.
-    ch_names (list of tuples): mag or grad channel names + their indexes
-
-    Returns:
-    freqs (np.ndarray): numpy array of frequencies 
-    psds (np.ndarray): numpy array of power spectrum dencities 
-    + if plotflaf is True:
-    PSD plot + saves them as html files
-    '''
-
-    if m_or_g == 'mag':
-        picks = mne.pick_types(data.info, meg='mag', eeg=False, eog=False, stim=False)
-        tit = 'Magnetometers'
-    elif m_or_g == 'grad':
-        picks = mne.pick_types(data.info, meg='grad', eeg=False, eog=False, stim=False)
-        tit = 'Gradiometers'
-    else:
-        TypeError('Check channel type')
-
-    #old mne Version:
-    #psds, freqs = psd_welch(data, fmin=freq_min, fmax=freq_max, n_jobs=-1, picks=picks, n_fft=n_fft, n_per_seg=n_per_seg, verbose=False)
-    
-    psds, freqs = data.compute_psd(method='welch', fmin=freq_min, fmax=freq_max, picks=picks, n_jobs=-1, n_fft=n_fft, n_per_seg=n_per_seg).get_data(return_freqs=True)
-
-    psd_derivative=Plot_periodogram(tit, freqs, psds, ch_names) 
-
-    return freqs, psds, psd_derivative
-    
-
 # In[42]:
 
 def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: float):
@@ -263,25 +206,42 @@ def find_number_of_noise_freqs(freqs, psds):
 
 
 #%%
-def PSD_meg_qc(psd_params: dict, channels:dict, filtered_d_resamp: mne.io.Raw, m_or_g_chosen):
-    """Main psd function
+def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
+    """Main psd function.
+
+    Freq spectrum peaks we see (visible on shorter interval, ALMOST NONE SEEN when Welch is done over all time):
+    50, 100, 150 - powerline EU
+    6 noise of shielding chambers 
+    44 meg noise
+    17 - was it the train station near by?
+    10 Secret :)
+    1hz - highpass filter.
+    flat spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
 
     Output:
-    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
+    derivs_psd: list of tuples(figure, fig_name, fig_path, format_of_output_content)."""
     
     # these parameters will be saved into a dictionary. this allowes to calculate for mag or grad or both:
     freqs = {}
     psds = {}
     derivs_psd = []
 
-    #DO I NEED TO SEPARATE THEM BY DICTIONARIES HERE? MAYBE NEED LATER FOR REPORT
     for m_or_g in m_or_g_chosen:
-        freqs[m_or_g], psds[m_or_g], fig_with_name = Freq_Spectrum_meg(data=filtered_d_resamp, m_or_g = m_or_g, freq_min=psd_params['freq_min'], freq_max=psd_params['freq_max'], 
-        n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg'], ch_names=channels[m_or_g])
+
+        if m_or_g == 'mag':
+            tit = 'Magnetometers'
+        elif m_or_g == 'grad':
+            tit = 'Gradiometers'
+        else:
+            TypeError('Check channel type')
+
+        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method='welch', fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
+
+        psd_derivative=Plot_periodogram(tit, freqs[m_or_g], psds[m_or_g], channels[m_or_g]) 
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        derivs_psd += [fig_with_name] + [fig_power_with_name] + dfs_with_name
+        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name
 
     return derivs_psd
 

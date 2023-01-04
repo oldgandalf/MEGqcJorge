@@ -113,11 +113,11 @@ def make_derivative_meg_qc(config_file_name):
             # ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # if picks_EOG is not None and bad_eog is False:
-            #     print('Starting EOG...')
-            #     start_time = time.time()
-            #     eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            if picks_EOG is not None and bad_eog is False:
+                print('Starting EOG...')
+                start_time = time.time()
+                eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # HEAD_movements_meg_qc()
@@ -187,9 +187,19 @@ def make_derivative_meg_qc(config_file_name):
                                     file.write(deriv.content)
                                 #'with'command doesnt work in lambda
                             meg_artifact.content = html_writer # function pointer instead of lambda
+                        else:
+                            print(meg_artifact.name)
+                            meg_artifact.content = 'dummy text'
+                            meg_artifact.extension = '.txt'
                         #problem with lambda explained:
                         #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
     ancpbids.write_derivative(dataset, derivative) #maybe put inside the loop if can't have so much in memory?
 
     return raw
+
+
+#%%
+
+# config_file_name = 'settings.ini'
+# raw = make_derivative_meg_qc(config_file_name)
