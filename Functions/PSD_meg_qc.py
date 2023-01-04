@@ -21,8 +21,8 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
     Args:
     freqs (np.ndarray): numpy array of frequencies,
     psds (np.ndarray): numpy array of power spectrum dencities,
-    f_low (float): minimal frequency of the chosend band, in Hz (For dekta it would be: 0.5),
-    f_high (float): maximal frequency of the chosend band, in Hz (For dekta it would be: 4).
+    f_low (float): minimal frequency of the chosend band, in Hz (For delta it would be: 0.5),
+    f_high (float): maximal frequency of the chosend band, in Hz (For delta it would be: 4).
 
 
     Returns:
@@ -44,10 +44,10 @@ def Power_of_band(freqs: np.ndarray, f_low: np.ndarray, f_high: float, psds: flo
     # Find closest indices of band in frequency vector so idx_band is a list of indices frequencies that 
     # correspond to this band. F.e. for delta band these would be the indices of 0.5 ... 4 Hz)
 
-    for ch in enumerate(psds): 
+    for ch in psds: 
     #loop over channels. psd_ch_m is psd of partigular channel
 
-        psd_ch=np.array(ch[1])
+        psd_ch=np.array(ch)
 
         # Compute Area under the curve (power):
         # Frequency resolution
@@ -195,12 +195,23 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 # 1. Calculate average psd curve over all channels
 # 2. Run peak detection on it -> get number of noise freqs
 # 3. Fit curve to the general psd
-# 4. Calculate are under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there.
+# 4. Calculate area under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there.
 
 def find_number_of_noise_freqs(freqs, psds):
-    avg_psd=np.mean(psds)
 
-    return 
+    import plotly.graph_objects as go
+
+    avg_psd=np.mean(psds,axis=0)
+
+    thresh=(max(avg_psd) - min(avg_psd)) / 10
+    pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(avg_psd, extrema=1, thresh=thresh, verbose=False) 
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=freqs, y=avg_psd))
+    fig.add_trace(go.Scatter(x=freqs[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='peak:'))
+    fig.show()
+
+    return len(pos_peak_locs)
 
 
 
@@ -211,15 +222,16 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
     Freq spectrum peaks we see (visible on shorter interval, ALMOST NONE SEEN when Welch is done over all time):
     50, 100, 150 - powerline EU
-    6 noise of shielding chambers 
-    44 meg noise
-    17 - was it the train station near by?
-    10 Secret :)
+    60, 120, 180 - powerline US
+    6 - noise of shielding chambers 
+    44 - meg noise
+    17 - train station 
+    10 - Secret :)
     1hz - highpass filter.
     flat spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
 
     Output:
-    derivs_psd: list of tuples(figure, fig_name, fig_path, format_of_output_content)."""
+    derivs_psd: list of QC_derivative instances like figures and data frames."""
     
     # these parameters will be saved into a dictionary. this allowes to calculate for mag or grad or both:
     freqs = {}
@@ -228,16 +240,9 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
     for m_or_g in m_or_g_chosen:
 
-        if m_or_g == 'mag':
-            tit = 'Magnetometers'
-        elif m_or_g == 'grad':
-            tit = 'Gradiometers'
-        else:
-            TypeError('Check channel type')
-
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method='welch', fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
 
-        psd_derivative=Plot_periodogram(tit, freqs[m_or_g], psds[m_or_g], channels[m_or_g]) 
+        psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g]) 
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 

@@ -222,12 +222,12 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     return qc_derivative
 
 #%%
-def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list):
+def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list):
 
     '''Plotting periodogram on the data.
 
     Args:
-    tit (str): title, like "Magnetometers", or "Gradiometers", 
+    m_or_g (str): 'mag' or 'grad', 
     freqs (np.ndarray): numpy array of frequencies after performing Welch (or other method) psd decomposition
     psds (np.ndarray): numpy array of psds after performing Welch (or other method) psd decomposition
     mg_names (list of tuples): channel name + its index
@@ -237,13 +237,15 @@ def Plot_periodogram(tit:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list
     fig_path (str): path where the figure is saved as html file
     '''
 
-    unit='?'
-    if tit=='Magnetometers':
+    if m_or_g=='mag':
+        tit='Magnetometers'
         unit='T/Hz'
-    elif tit=='Gradiometers':
+    elif m_or_g=='grad':
+        tit='Gradiometers'
         unit='T/m / Hz'
     else:
-        print('Please check tit input. Has to be "Magnetometers" or "Gradiometers"')
+        tit='?'
+        unit='?'
 
     df_psds=pd.DataFrame(np.sqrt(psds.T), columns=mg_names)
 
