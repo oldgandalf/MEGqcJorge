@@ -206,7 +206,8 @@ def find_number_of_noise_freqs(freqs, psds):
     #1.
     avg_psd=np.mean(psds,axis=0)
 
-    #2.
+    #2. DETECT PEAKS TWICE? TO MAKE A BASELINE OF PSD AND TO MAKE THE ACTUAL NUMBER OF PEAKS. 
+    # BECAUSE SOME PEAKS MIGHT BLEND TOGETHER AND  PROVIDE THE WRONG BASELINE. ORUSE VERY HIGH RESULUTION TO MSKE SURE THEY DONT BLEND TOGETHER?
     thresh=(max(avg_psd) - min(avg_psd)) / 10
     pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(avg_psd, extrema=1, thresh=thresh, verbose=False) 
 
