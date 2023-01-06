@@ -62,8 +62,10 @@ def make_derivative_meg_qc(config_file_name):
 
     #return
 
-    entities = dataset.query_entities()
-    list_of_subs = list(entities["sub"])
+    # entities = dataset.query_entities()
+    # list_of_subs = list(entities["sub"])
+    list_of_subs = sorted(list(dataset.query_entities()["sub"]))
+    print('list_of_subs', list_of_subs)
 
     if not list_of_subs:
         print('No subjects found. Check your data set and directory path in config.')
@@ -71,6 +73,8 @@ def make_derivative_meg_qc(config_file_name):
 
     for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
 
+        print('Take SID: ', sid)
+        
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)
@@ -112,10 +116,10 @@ def make_derivative_meg_qc(config_file_name):
             # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting PSD...')
-            # start_time = time.time()
-            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered_resampled, m_or_g_chosen)
-            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting PSD...')
+            start_time = time.time()
+            psd_derivs, all_bp_noise, bp_noise_relative_to_signal = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
+            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -133,11 +137,11 @@ def make_derivative_meg_qc(config_file_name):
             # ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            if picks_EOG is not None and bad_eog is False:
-                print('Starting EOG...')
-                start_time = time.time()
-                eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # if picks_EOG is not None and bad_eog is False:
+            #     print('Starting EOG...')
+            #     start_time = time.time()
+            #     eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # HEAD_movements_meg_qc()

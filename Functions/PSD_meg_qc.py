@@ -7,7 +7,9 @@ import numpy as np
 import pandas as pd
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
+from scipy.integrate import simps
 from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
+from scipy.signal import find_peaks, peak_widths
 
 # In[42]:
 
@@ -34,9 +36,6 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
         (percentage) values: what percentage of the total power does this band take.
 
     '''
-    
-
-    from scipy.integrate import simps
 
     bandpower_per_ch_list=[]
     rel_bandpower_per_ch_list=[]
@@ -186,9 +185,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit)
+            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, bands_names=bands_names)
         else:
-            psd_pie_derivative = QC_derivative(None, 'skipped_psd_pie', None, 'skipped')
+            psd_pie_derivative = []
 
     
     return psd_pie_derivative, dfs_with_name
@@ -196,34 +195,113 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 #%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
 # 1. Calculate average psd curve over all channels
 # 2. Run peak detection on it -> get number of noise freqs
-# 3. Fit curve to the general psd
+# 3. Fit curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0.
 # 4. Calculate area under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there.
 
-def find_number_of_noise_freqs(freqs, psds):
+def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g):
 
-    import plotly.graph_objects as go
+    if m_or_g=='mag':
+        m_or_g_tit="Magnetometers"
+    elif m_or_g=='grad':
+        m_or_g_tit='Gradiometers'
+    else:
+        m_or_g_tit='?'
 
     #1.
     avg_psd=np.mean(psds,axis=0)
 
     #2. DETECT PEAKS TWICE? TO MAKE A BASELINE OF PSD AND TO MAKE THE ACTUAL NUMBER OF PEAKS. 
     # BECAUSE SOME PEAKS MIGHT BLEND TOGETHER AND  PROVIDE THE WRONG BASELINE. ORUSE VERY HIGH RESULUTION TO MSKE SURE THEY DONT BLEND TOGETHER?
-    thresh=(max(avg_psd) - min(avg_psd)) / 10
-    pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(avg_psd, extrema=1, thresh=thresh, verbose=False) 
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=freqs, y=avg_psd))
-    fig.add_trace(go.Scatter(x=freqs[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='peak:'))
-    fig.show()
+    
+    prominence=(max(avg_psd) - min(avg_psd)) / 10
+    peaks, _ = find_peaks(avg_psd, prominence=prominence)
 
     #3.
+    widths, width_heights, left_ips, right_ips = peak_widths(avg_psd, peaks, rel_height=1)
 
 
-    #4.
-    avg_psd_new=np.array([avg_psd])
-    bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list = Power_of_band(freqs=freqs, f_low = 57.5, f_high= 62.5, psds=avg_psd_new)
+    for fr in freqs[peaks]:
+        noisy_freqs[fr] = None
 
-    return len(pos_peak_locs)
+    print('Central noise Freqs: ', freqs[peaks])
+    print('Central noise Amplitudes: ', avg_psd[peaks])
+    print('Width_heights: ', width_heights)
+
+    ips_l=[]
+    ips_r=[]
+    avg_psd_only_signal=avg_psd.copy()
+    avg_psd_only_peaks=avg_psd.copy()
+    avg_psd_only_peaks[:]=None
+    avg_psd_only_peaks_baselined=avg_psd.copy()
+    avg_psd_only_peaks_baselined[:]=0
+
+
+    for ip_n, _ in enumerate(left_ips):
+        ips_l.append(freqs[int(left_ips[ip_n])])
+        ips_r.append(freqs[int(right_ips[ip_n]+1)])
+
+        ind_noisy_freqs=range(int(left_ips[ip_n]), int(right_ips[ip_n])+1)
+        #+1 here because Iwilluse these values as range,and range in pythonis usually "up to the value but not including", this should fix it to the right range
+        
+        avg_psd_only_signal[ind_noisy_freqs]=None #keep only main psd, remove noise bands, just for visual
+        avg_psd_only_peaks[ind_noisy_freqs]=avg_psd[ind_noisy_freqs].copy() #keep only noise bands, remove psd, again for visual
+        avg_psd_only_peaks_baselined[ind_noisy_freqs]=avg_psd[ind_noisy_freqs].copy()-[width_heights[ip_n]]*len(avg_psd_only_peaks[ind_noisy_freqs])
+        #keep only noise bands and baseline them to 0 (remove the signal which is under the noise line)
+
+
+    freq_res = freqs[1] - freqs[0]
+    total_power = simps(avg_psd, dx=freq_res) # power of all signal
+
+    all_bp_noise=[]
+    all_bp_relative=[]
+    bp_noise_relative_to_signal=[]
+
+    avg_psd_only_peaks_baselined_array=np.array([avg_psd_only_peaks_baselined]) 
+    for ip_n, _ in enumerate(left_ips):
+
+        bp_noise, _, bp_relative = Power_of_band(freqs=freqs, f_low = freqs[int(left_ips[ip_n])], f_high= freqs[int(right_ips[ip_n]+1)], psds=avg_psd_only_peaks_baselined_array)
+
+        all_bp_noise+=bp_noise
+        all_bp_relative+=bp_relative #amount of noise of particular frequency in relation to all noisy frequencies. In case it s of interest?
+
+        bp_noise_relative_to_signal.append(bp_noise / total_power) # relative power of this noise band in the total power of signal.
+
+    bp_noise_relative_to_signal=[r[0] for r in bp_noise_relative_to_signal]
+
+    print('Absolute power of noise: ', all_bp_noise)
+    print('Amount of noisy freq in total signal', bp_noise_relative_to_signal)
+
+    if helper_plots is True:
+        import matplotlib.pyplot as plt
+
+        plt.plot(freqs,avg_psd)
+        plt.plot(freqs[peaks], avg_psd[peaks], 'x')
+        plt.hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3")
+        plt.show()
+
+        plt.plot(freqs,avg_psd_only_signal)
+        plt.plot(freqs[peaks], avg_psd_only_signal[peaks], "x")
+        plt.hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3")
+        plt.show()
+
+        plt.plot(freqs,avg_psd_only_peaks)
+        plt.plot(freqs[peaks], avg_psd_only_peaks[peaks], "x")
+        plt.hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3")
+        plt.show()
+
+        plt.plot(freqs,avg_psd_only_peaks_baselined)
+        plt.plot(freqs[peaks], avg_psd_only_peaks_baselined[peaks], "x")
+        plt.show()
+
+
+    #plot the relation of Signal to noise as pie chart.
+    bands_names=[str(fr)+' Hz noise' for fr in freqs[peaks]]+['Main signal']
+    Snr=bp_noise_relative_to_signal+[1-sum(bp_noise_relative_to_signal)]
+    noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_names)
+    noise_pie_derivative.content.show()
+
+
+    return noise_pie_derivative, all_bp_noise, bp_noise_relative_to_signal
 
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
@@ -255,9 +333,11 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name
+        noise_pie_derivative, all_bp_noise, bp_noise_relative_to_signal = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
 
-    return derivs_psd
+        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative]
+
+    return derivs_psd, all_bp_noise, bp_noise_relative_to_signal
 
 # In[56]:
 # This command was used to convert notebook to this .py file:

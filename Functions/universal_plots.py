@@ -283,7 +283,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
     return qc_derivative
 
 
-def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
+def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     
     ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
     signal of mags or of grads, not separated by individual channels.
@@ -292,7 +292,6 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
     mean_relative_freq (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
         (percentage) values: what percentage of the total power does this band take,
     tit (str): title, like "Magnetometers", or "Gradiometers", 
-    sid (str): subject id number, like '1'.
     
     Returns:
     fig (go.Figure): plottly piechart figure
@@ -304,9 +303,8 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
     power_unknown_m=100-(sum(mean_relative_freq))*100
     if power_unknown_m>0:
         mean_relative_unknown.append(power_unknown_m)
-        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma', 'unknown']
-    else:
-        bands_names=['delta', 'theta', 'alpha', 'beta', 'gamma']
+        bands_names=bands_names+['unknown']
+
 
     fig = go.Figure(data=[go.Pie(labels=bands_names, values=mean_relative_unknown)])
     fig.update_layout(
@@ -319,7 +317,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str):
 
     #fig.show()
 
-    fig_name='PSD_Relative_power_per_band_over_all_channels_'+tit
+    fig_name='PSD_Relative_bandpower_all_channels_'+tit
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
     
     #fig.write_html(fig_path)
