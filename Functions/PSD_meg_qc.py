@@ -193,12 +193,48 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     return psd_pie_derivative, dfs_with_name
 
 #%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
-# 1. Calculate average psd curve over all channels
-# 2. Run peak detection on it -> get number of noise freqs
-# 3. Fit curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0.
-# 4. Calculate area under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there.
+
+def split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs):
+    band = 0
+    while band < len(noisy_freq_bands_idx):
+
+        # Checking if the last element of every band is contained in the current band
+        last = 0
+        while last < len(noisy_freq_bands_idx):
+
+            if (noisy_freq_bands_idx[last] != noisy_freq_bands_idx[band]) and (noisy_freq_bands_idx[last][-1] in noisy_freq_bands_idx[band]):
+                
+                print('split freq', noisy_freq_bands_idx[last][-1])
+                split_index = noisy_freq_bands_idx[band].index(noisy_freq_bands_idx[last][-1])
+
+                split_band_left = noisy_freq_bands_idx[band][:split_index]
+                split_band_right = noisy_freq_bands_idx[band][split_index:]
+
+                noisy_freq_bands_idx[last] = split_band_left
+                noisy_freq_bands_idx[band] = split_band_right
+
+                min_width_heights = min(width_heights[last],width_heights[band])
+                width_heights[band] = min_width_heights
+                width_heights[last] = min_width_heights
+
+                band = 0
+                last = 0
+
+            last += 1
+        band += 1
+
+
+    return noisy_freq_bands_idx, width_heights
+
 
 def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g):
+
+    """
+    # 1. Calculate average psd curve over all channels
+    # 2. Run peak detection on it -> get number of noise freqs
+    # 2*. Split blended freqs
+    # 3. Fit curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0.
+    # 4. Calculate area under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there."""
 
     if m_or_g=='mag':
         m_or_g_tit="Magnetometers"
@@ -210,23 +246,23 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     #1.
     avg_psd=np.mean(psds,axis=0)
 
-    #2. DETECT PEAKS TWICE? TO MAKE A BASELINE OF PSD AND TO MAKE THE ACTUAL NUMBER OF PEAKS. 
-    # BECAUSE SOME PEAKS MIGHT BLEND TOGETHER AND  PROVIDE THE WRONG BASELINE. ORUSE VERY HIGH RESULUTION TO MSKE SURE THEY DONT BLEND TOGETHER?
-    
-    prominence=(max(avg_psd) - min(avg_psd)) / 10
+    #2. 
+     
+    prominence=(max(avg_psd) - min(avg_psd)) / 20
     peaks, _ = find_peaks(avg_psd, prominence=prominence)
 
-    #3.
     widths, width_heights, left_ips, right_ips = peak_widths(avg_psd, peaks, rel_height=1)
 
+    #Plot signal, peaks and contour lines at which the widths where calculated
+    from PSD_meg_qc import Power_of_band
+    from universal_plots import plot_pie_chart_freq
+    from scipy.integrate import simps
 
-    for fr in freqs[peaks]:
-        noisy_freqs[fr] = None
+    print('Central Freqs: ', freqs[peaks])
+    print('Central Amplitudes: ', avg_psd[peaks])
+    print('width_heights: ', width_heights)
 
-    print('Central noise Freqs: ', freqs[peaks])
-    print('Central noise Amplitudes: ', avg_psd[peaks])
-    print('Width_heights: ', width_heights)
-
+    #ips_pair=[]
     ips_l=[]
     ips_r=[]
     avg_psd_only_signal=avg_psd.copy()
@@ -235,40 +271,51 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     avg_psd_only_peaks_baselined=avg_psd.copy()
     avg_psd_only_peaks_baselined[:]=0
 
+    noisy_freq_bands_idx=[]
+    for ip_n, _ in enumerate(peaks):
+        #+1 here because I  will use these values as range,and range in pythonis usually "up to the value but not including", this should fix it to the right rang
+        noisy_freq_bands_idx.append([fr for fr in np.arange((round(left_ips[ip_n])), round(right_ips[ip_n])+1)])
 
-    for ip_n, _ in enumerate(left_ips):
-        ips_l.append(freqs[int(left_ips[ip_n])])
-        ips_r.append(freqs[int(right_ips[ip_n]+1)])
+    #2*
+    noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs)
 
-        ind_noisy_freqs=range(int(left_ips[ip_n]), int(right_ips[ip_n])+1)
-        #+1 here because Iwilluse these values as range,and range in pythonis usually "up to the value but not including", this should fix it to the right range
+    #3.
+    ips_l, ips_r = [], []
+    for fr_n, fr_b in enumerate(noisy_freq_bands_idx_split):
+        ips_l.append(freqs[fr_b][0])
+        ips_r.append(freqs[fr_b][-1])
         
-        avg_psd_only_signal[ind_noisy_freqs]=None #keep only main psd, remove noise bands, just for visual
-        avg_psd_only_peaks[ind_noisy_freqs]=avg_psd[ind_noisy_freqs].copy() #keep only noise bands, remove psd, again for visual
-        avg_psd_only_peaks_baselined[ind_noisy_freqs]=avg_psd[ind_noisy_freqs].copy()-[width_heights[ip_n]]*len(avg_psd_only_peaks[ind_noisy_freqs])
+        avg_psd_only_signal[fr_b]=None #keep only main psd, remove noise bands, just for visual
+        avg_psd_only_peaks[fr_b]=avg_psd[fr_b].copy() #keep only noise bands, remove psd, again for visual
+        avg_psd_only_peaks_baselined[fr_b]=avg_psd[fr_b].copy()-[width_heights[fr_n]]*len(avg_psd_only_peaks[fr_b])
         #keep only noise bands and baseline them to 0 (remove the signal which is under the noise line)
 
-
+    #4.
     freq_res = freqs[1] - freqs[0]
     total_power = simps(avg_psd, dx=freq_res) # power of all signal
+    print('Total power: ', total_power)
 
     all_bp_noise=[]
     all_bp_relative=[]
     bp_noise_relative_to_signal=[]
 
-    avg_psd_only_peaks_baselined_array=np.array([avg_psd_only_peaks_baselined]) 
-    for ip_n, _ in enumerate(left_ips):
+    avg_psd_only_peaks_baselined_new=np.array([avg_psd_only_peaks_baselined]) 
+    for fr_n, fr_b in enumerate(noisy_freq_bands_idx_split):
 
-        bp_noise, _, bp_relative = Power_of_band(freqs=freqs, f_low = freqs[int(left_ips[ip_n])], f_high= freqs[int(right_ips[ip_n]+1)], psds=avg_psd_only_peaks_baselined_array)
+        #print('band',  freqs[fr_b][0], freqs[fr_b][-1])
+        bp_noise, _, bp_relative = Power_of_band(freqs=freqs, f_low = freqs[fr_b][0], f_high= freqs[fr_b][-1], psds=avg_psd_only_peaks_baselined_new)
 
         all_bp_noise+=bp_noise
-        all_bp_relative+=bp_relative #amount of noise of particular frequency in relation to all noisy frequencies. In case it s of interest?
+        all_bp_relative+=bp_relative
 
-        bp_noise_relative_to_signal.append(bp_noise / total_power) # relative power of this noise band in the total power of signal.
+        #Calculate how much of the total power of the average signal goes into each of the noise freqs:
+        bp_noise_relative_to_signal.append(bp_noise / total_power) # relative power: % of this band in the total bands power for this channel:
 
     bp_noise_relative_to_signal=[r[0] for r in bp_noise_relative_to_signal]
 
-    print('Absolute power of noise: ', all_bp_noise)
+    #print('Freq band for each peak:', ips_pair)
+    print('BP', all_bp_noise)
+    print('relative BP', all_bp_relative)
     print('Amount of noisy freq in total signal', bp_noise_relative_to_signal)
 
     if helper_plots is True:
@@ -293,12 +340,11 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
         plt.plot(freqs[peaks], avg_psd_only_peaks_baselined[peaks], "x")
         plt.show()
 
-
-    #plot the relation of Signal to noise as pie chart.
     bands_names=[str(fr)+' Hz noise' for fr in freqs[peaks]]+['Main signal']
     Snr=bp_noise_relative_to_signal+[1-sum(bp_noise_relative_to_signal)]
     noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_names)
     noise_pie_derivative.content.show()
+
 
 
     return noise_pie_derivative, all_bp_noise, bp_noise_relative_to_signal
