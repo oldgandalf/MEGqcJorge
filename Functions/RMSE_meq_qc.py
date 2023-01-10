@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, get_tit_and_unit
 
 # In[2]:
 
@@ -255,6 +255,46 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
 
     return dfs_deriv
 
+def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, m_or_g):
+
+    """Make simple metric for rmse.
+
+    # % of noisy channels with std above some std_threshold. (Jochem: 4 std +/- mean).
+    # Dict: with 2 std - % of noisy ch.
+    # with 4 std. - %. 
+    # (their names)
+    # If same with several - very bad channel.
+    
+    
+    # %of noisy epochs.
+    # Next dict lvl: which epochs (their numbers).
+    # BUT WE DONT HAVE NOISY EPOCHS AS THE WHOLE EPOCH - WE GOT ONLY SOME EPOCJS IN SOME CHANNELS (SEE PLOT) - CANT GIVE JUST A  NUMBER.
+    # MAYBE SKIP THE EPOCH METRIC?
+
+    Parameters
+    ----------
+"""
+
+    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
+
+    simple_metric={
+        'Metric name': 'RMSE '+m_or_g_tit, 
+        'Number of noisy channels with std above '+str(std_lvl)+' std_threshold': len(big_rmse_with_value_all_data),
+        'Percent of noisy channels with std above '+str(std_lvl)+' std_threshold': len(big_rmse_with_value_all_data)/len(channels)*100, 
+        'Noisy channels and  theirs std values in '+unit+' ': big_rmse_with_value_all_data,
+        'Number of noisy channels with std below -'+str(std_lvl)+' std_threshold': len(small_rmse_with_value_all_data),
+        'Percent of noisy channels with std below -'+str(std_lvl)+' std_threshold': len(small_rmse_with_value_all_data)/len(channels)*100, 
+        'Flat channels and theirs std values in '+unit+' ': small_rmse_with_value_all_data,
+        }
+
+        #'Percent of noisy epochs with std above '+str(std_lvl)+' std_threshold': len(),
+        #'Noisy epochs': []
+
+    simple_metric_deriv=QC_derivative(simple_metric,'RMSE_'+m_or_g_tit, None, 'json')
+
+    return simple_metric_deriv
+
+
 #%%
 def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
 
@@ -270,15 +310,15 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
     derivs_rmse: list of tuples QC_derivative objects: figures and data frames. Exact number of derivatives depends on: 
         - was data epoched (*2 derivs) or not (*1 derivs)
         - were both mag and grad analyzed (*2 derivs) or only one type of channels(*1 derivs)
-    big_std_with_value_all_data + small_std_with_value_all_data: 2 lists of tuples: channel+ std value of calculsted value is too high and to low"""
+    big_rmse_with_value_all_data + small_rmse_with_value_all_data: 2 lists of tuples: channel+ std value of calculsted value is too high and to low"""
 
 
     m_or_g_title = {
     'grad': 'Gradiometers',
     'mag': 'Magnetometers'}
 
-    big_std_with_value_all_data = {}
-    small_std_with_value_all_data = {}
+    big_rmse_with_value_all_data = {}
+    small_rmse_with_value_all_data = {}
     rmse = {}
     derivs_rmse = []
     fig_std_epoch_with_name = []
@@ -286,7 +326,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
 
     for m_or_g in m_or_g_chosen:
 
-        big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=1)
+        big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'])
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='stds')]
 
     if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
@@ -300,6 +340,12 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
     else:
         print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
         
-    derivs_rmse += fig_std_epoch_with_name + dfs_list
+
+    simple_metrics_rmse=[]
+    for m_or_g in m_or_g_chosen:
+        simple_metric_deriv = make_simple_metric_rmse(rmse_params['std_lvl'], big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], m_or_g)
+        simple_metrics_rmse+=[simple_metric_deriv]
     
-    return derivs_rmse, big_std_with_value_all_data, small_std_with_value_all_data
+    derivs_rmse += fig_std_epoch_with_name + dfs_list + simple_metrics_rmse
+
+    return derivs_rmse, big_rmse_with_value_all_data, small_rmse_with_value_all_data

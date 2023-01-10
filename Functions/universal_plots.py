@@ -7,6 +7,19 @@ import pandas as pd
 import numpy as np
 import warnings
 
+def get_tit_and_unit(m_or_g):
+    if m_or_g=='mag':
+        m_or_g_tit="Magnetometers"
+        unit='T/Hz'
+    elif m_or_g=='grad':
+        m_or_g_tit='Gradiometers'
+        unit='T/m / Hz'
+    else:
+        m_or_g_tit='?'
+        unit='?'
+
+    return m_or_g_tit, unit
+
 class QC_derivative:
 
     def __init__(self, content, description, filepath, content_type) -> None:

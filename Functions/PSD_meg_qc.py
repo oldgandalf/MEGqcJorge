@@ -8,7 +8,7 @@ import pandas as pd
 import mne
 from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 from scipy.integrate import simps
-from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative
+from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
 from scipy.signal import find_peaks, peak_widths
 
 # In[42]:
@@ -226,6 +226,31 @@ def split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs):
 
     return noisy_freq_bands_idx, width_heights
 
+def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks):
+    """Make simple metric for psd.
+
+    Parameters
+    ----------
+    all_bp_noise : list
+        noise in each band.
+    bp_noise_relative_to_signal : list
+        relative noise in each band."""
+
+    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
+    
+    noisy_freqs_dict={}
+    for fr_n, fr in enumerate(freqs[peaks]):
+        noisy_freqs_dict[fr]=['Power of noise: '+str(all_bp_noise[fr_n])+' '+unit, 'Power  of noise relative to signal power in percent: '+ str(bp_noise_relative_to_signal[fr_n]*100)]
+
+    simple_metric={
+        'Metric name': 'PSD '+m_or_g_tit, 
+        'Number of noisy frequencies': len(peaks), 
+        'Details': noisy_freqs_dict}
+
+    simple_metric_deriv=QC_derivative(simple_metric,'PSD_'+m_or_g_tit, None, 'json')
+
+    return simple_metric_deriv
+
 
 def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g):
 
@@ -236,15 +261,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     # 3. Fit curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0.
     # 4. Calculate area under the curve for each noisy peak: area is limited to where amplitude crosses the fitted curve. - count from there."""
 
-    if m_or_g=='mag':
-        m_or_g_tit="Magnetometers"
-        unit='T/Hz'
-    elif m_or_g=='grad':
-        m_or_g_tit='Gradiometers'
-        unit='T/m / Hz'
-    else:
-        m_or_g_tit='?'
-        unit='?'
+    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
 
     #1.
     avg_psd=np.mean(psds,axis=0)
@@ -359,14 +376,10 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_names)
     noise_pie_derivative.content.show()
 
-    noisy_freqs_dict={}
-    for fr_n, fr in enumerate(freqs[peaks]):
-        noisy_freqs_dict[fr]=['Power of noise: '+str(all_bp_noise[fr_n])+unit, 'Power  of noise relative to signal power in percent: '+ str(bp_noise_relative_to_signal[fr_n]*100)]
 
-    simple_metric=[{'Name': 'PSD '+m_or_g_tit, 'Number of noisy frequencies': len(peaks), 'Details': noisy_freqs_dict}]
+    simple_metric_deriv=make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks)
 
-
-    return noise_pie_derivative, all_bp_noise, bp_noise_relative_to_signal, simple_metric
+    return noise_pie_derivative, simple_metric_deriv
 
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
@@ -389,9 +402,6 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
     freqs = {}
     psds = {}
     derivs_psd = []
-    all_bp_noise={}
-    bp_noise_relative_to_signal={}
-    simple_metrics_psd=[]
 
     for m_or_g in m_or_g_chosen:
 
@@ -401,12 +411,11 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        noise_pie_derivative, all_bp_noise[m_or_g], bp_noise_relative_to_signal[m_or_g], simple_metric = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
-        simple_metrics_psd+=simple_metric
+        noise_pie_derivative, simple_metric_deriv = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
 
-        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative]
+        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative]+[simple_metric_deriv]
 
-    return derivs_psd, all_bp_noise, bp_noise_relative_to_signal, simple_metrics_psd
+    return derivs_psd
 
 # In[56]:
 # This command was used to convert notebook to this .py file:

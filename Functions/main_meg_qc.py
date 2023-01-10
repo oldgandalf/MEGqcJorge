@@ -115,15 +115,15 @@ def make_derivative_meg_qc(config_file_name):
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting RMSE...')
-            # start_time = time.time()
-            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
- 
-            print('Starting PSD...')
+            print('Starting RMSE...')
             start_time = time.time()
-            psd_derivs, all_bp_noise, bp_noise_relative_to_signal, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
-            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+ 
+            # print('Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
+            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -183,12 +183,13 @@ def make_derivative_meg_qc(config_file_name):
             'Muscle artifacts': []}
 
             #Collect all simple metrics into a list of jsons:
-            
-            all_simple_metrics=simple_metrics_psd+simple_metrics_rmse+simple_metrics_pp_manual+simple_metrics_pp_auto+simple_metrics_ecg+simple_metrics_eog
-            
-            all_metrics_jsons = []
-            for metric in all_simple_metrics:
-                all_metrics_jsons.append(json.dumps(metric, indent=4))
+            # all_simple_metrics=simple_metrics_psd+simple_metrics_rmse+simple_metrics_pp_manual+simple_metrics_pp_auto+simple_metrics_ecg+simple_metrics_eog
+            # all_metrics_jsons = []
+            # for metric in all_simple_metrics:
+            #     all_metrics_jsons.append(json.dumps(metric, indent=4))
+            #     with open('derivs.json', 'w') as file_wrapper:
+            #         json.dump(metric, file_wrapper, indent=4)
+
 
             #Make report:
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
@@ -218,11 +219,21 @@ def make_derivative_meg_qc(config_file_name):
                             meg_artifact.extension = '.csv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
                         elif deriv.content_type == 'report':
-                            def html_writer(file_path):
+                            def html_writer(file_path, cont=deriv.content):
                                 with open(file_path, "w") as file:
-                                    file.write(deriv.content)
+                                    file.write(cont)
                                 #'with'command doesnt work in lambda
                             meg_artifact.content = html_writer # function pointer instead of lambda
+                        elif deriv.content_type == 'json':
+                            meg_artifact.extension = '.json'
+                            def json_writer(file_path, cont=deriv.content):
+                                with open(file_path, "w") as file_wrapper:
+                                    json.dump(cont, file_wrapper, indent=4)
+                            meg_artifact.content = json_writer 
+
+                            # with open('derivs.json', 'w') as file_wrapper:
+                            #     json.dump(metric, file_wrapper, indent=4)
+
                         else:
                             print(meg_artifact.name)
                             meg_artifact.content = 'dummy text'
@@ -232,7 +243,7 @@ def make_derivative_meg_qc(config_file_name):
         
     ancpbids.write_derivative(dataset, derivative) #maybe put inside the loop if can't have so much in memory?
 
-    return raw, all_metrics_jsons
+    return raw #, all_metrics_jsons
 
 
 #%%
