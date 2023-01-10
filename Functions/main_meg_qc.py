@@ -3,6 +3,7 @@ import ancpbids
 from ancpbids import load_dataset
 import mpld3
 import time
+import json
 
 from initial_meg_qc import get_all_config_params, sanity_check, initial_processing, detect_extra_channels, detect_noisy_ecg_eog
 from RMSE_meq_qc import RMSE_meg_qc
@@ -71,15 +72,14 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    #for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
-    for sid in list_of_subs[1:5]: 
+    for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
+    #for sid in list_of_subs[1:5]: 
 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
         list_of_fifs = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)
-        #Devide here fifs by task, ses , run
 
         list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
@@ -96,8 +96,11 @@ def make_derivative_meg_qc(config_file_name):
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
             # QC measurements:
-            rmse_derivs, psd_derivs, pp_manual_derivs, ptp_auto_derivs, ecg_derivs, eog_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], []
-           
+            rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], []
+            
+            simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog = [],[],[],[],[],[]
+
+
             bad_ecg=False
             bad_eog=False
             # noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
@@ -119,7 +122,7 @@ def make_derivative_meg_qc(config_file_name):
  
             print('Starting PSD...')
             start_time = time.time()
-            psd_derivs, all_bp_noise, bp_noise_relative_to_signal = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
+            psd_derivs, all_bp_noise, bp_noise_relative_to_signal, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
             print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
@@ -129,7 +132,7 @@ def make_derivative_meg_qc(config_file_name):
 
             # print('Starting Peak-to-Peak auto...')
             # start_time = time.time()
-            # ptp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting ECG...')
@@ -173,13 +176,21 @@ def make_derivative_meg_qc(config_file_name):
             'Standard deviation of the data': rmse_derivs, 
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 
-            'Peak-to-Peak auto from MNE': ptp_auto_derivs, 
+            'Peak-to-Peak auto from MNE': pp_auto_derivs, 
             'ECG': noisy_ecg_derivs+ecg_derivs, 
             'EOG': noisy_eog_derivs+eog_derivs,
             'Head movement artifacts': [],
             'Muscle artifacts': []}
 
+            #Collect all simple metrics into a list of jsons:
+            
+            all_simple_metrics=simple_metrics_psd+simple_metrics_rmse+simple_metrics_pp_manual+simple_metrics_pp_auto+simple_metrics_ecg+simple_metrics_eog
+            
+            all_metrics_jsons = []
+            for metric in all_simple_metrics:
+                all_metrics_jsons.append(json.dumps(metric, indent=4))
 
+            #Make report:
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
@@ -221,7 +232,7 @@ def make_derivative_meg_qc(config_file_name):
         
     ancpbids.write_derivative(dataset, derivative) #maybe put inside the loop if can't have so much in memory?
 
-    return raw
+    return raw, all_metrics_jsons
 
 
 #%%
