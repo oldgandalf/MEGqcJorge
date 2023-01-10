@@ -71,7 +71,8 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
+    #for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in list_of_subs[1:5]: 
 
         print('Take SID: ', sid)
         

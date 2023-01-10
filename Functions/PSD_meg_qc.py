@@ -248,7 +248,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
 
     #2. 
      
-    prominence=(max(avg_psd) - min(avg_psd)) / 20
+    prominence=(max(avg_psd) - min(avg_psd)) / 50
     peaks, _ = find_peaks(avg_psd, prominence=prominence)
 
     widths, width_heights, left_ips, right_ips = peak_widths(avg_psd, peaks, rel_height=1)
@@ -290,6 +290,12 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
         avg_psd_only_peaks_baselined[fr_b]=avg_psd[fr_b].copy()-[width_heights[fr_n]]*len(avg_psd_only_peaks[fr_b])
         #keep only noise bands and baseline them to 0 (remove the signal which is under the noise line)
 
+        # clip the values to 0 if they are negative, they might appear in the beginning of psd curve, 
+        # because the first peak might be above even the higher part of psd. should look intp it? 
+        # maybe that pesk shoukld not be seen as peak at all?
+        avg_psd_only_peaks_baselined=np.array(avg_psd_only_peaks_baselined) 
+        avg_psd_only_peaks_baselined = np.clip(avg_psd_only_peaks_baselined, 0, None) 
+
     #4.
     freq_res = freqs[1] - freqs[0]
     total_power = simps(avg_psd, dx=freq_res) # power of all signal
@@ -300,6 +306,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     bp_noise_relative_to_signal=[]
 
     avg_psd_only_peaks_baselined_new=np.array([avg_psd_only_peaks_baselined]) 
+
     for fr_n, fr_b in enumerate(noisy_freq_bands_idx_split):
 
         #print('band',  freqs[fr_b][0], freqs[fr_b][-1])
