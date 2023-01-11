@@ -107,9 +107,20 @@ def get_all_config_params(config_file_name: str):
         
 
         psd_section = config['PSD']
+        freq_min = psd_section['freq_min']
+        freq_max = psd_section['freq_max']
+        if not freq_min: 
+            freq_min = 0
+        else:
+            freq_min=float(freq_min)
+        if not freq_max: 
+            freq_max = np.inf
+        else:
+            freq_max=float(freq_max)
+
         psd_params = dict({
-        'freq_min': psd_section.getfloat('freq_min'),
-        'freq_max': psd_section.getfloat('freq_max'),
+        'freq_min': freq_min,
+        'freq_max': freq_max,
         'mean_power_per_band_needed': psd_section.getboolean('mean_power_per_band_needed'),
         'n_fft': psd_section.getint('n_fft'),
         'n_per_seg': psd_section.getint('n_per_seg')})
@@ -159,7 +170,7 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['Muscle'] = muscle_params
 
     except:
-        print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- parameters of Filtering section if apply_filtering is set to False.')
+        print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
         return None
 
     return all_qc_params

@@ -72,8 +72,8 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
-    #for sid in list_of_subs[1:5]: 
+    #for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in list_of_subs[3:4]: 
 
         print('Take SID: ', sid)
         
@@ -115,15 +115,15 @@ def make_derivative_meg_qc(config_file_name):
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('Starting RMSE...')
-            start_time = time.time()
-            rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
- 
-            # print('Starting PSD...')
+            # print('Starting RMSE...')
             # start_time = time.time()
-            # psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw, m_or_g_chosen)
-            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+ 
+            print('Starting PSD...')
+            start_time = time.time()
+            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
+            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
