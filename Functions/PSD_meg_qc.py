@@ -194,46 +194,8 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     
     return psd_pie_derivative, dfs_with_name
 
-#%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
 
-def split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs):
-
-    band = 0
-    while band < len(noisy_freq_bands_idx):
-
-        # Checking if the last element of every band is contained in the current band
-        last = 0
-        while last < len(noisy_freq_bands_idx):
-
-            if (noisy_freq_bands_idx[last] != noisy_freq_bands_idx[band]) and (noisy_freq_bands_idx[last][-1] in noisy_freq_bands_idx[band]):
-                
-                #if yes - split the biggest band at the split point and also assign the same heights of peaks to both parts.
-
-                split_index = noisy_freq_bands_idx[band].index(noisy_freq_bands_idx[last][-1])
-                #split_index = noisy_freq_bands_idx[last][-1] ???
-
-                split_band_left = noisy_freq_bands_idx[band][:split_index+1]
-                split_band_right = noisy_freq_bands_idx[band][split_index+1:]
-
-
-                noisy_freq_bands_idx[last] = split_band_left
-                noisy_freq_bands_idx[band] = split_band_right
-
-                min_width_heights = min(width_heights[last],width_heights[band])
-                width_heights[band] = min_width_heights
-                width_heights[last] = min_width_heights
-
-
-                #set both bands to 0, so next time  the check will be done for all the bands from the beginning, 
-                # concedering new state of noisy_freq_bands_idx:
-                band = 0
-                last = 0
-
-            last += 1
-        band += 1
-
-    return noisy_freq_bands_idx, width_heights
-
+#%%
 def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks):
     """Make simple metric for psd.
 
@@ -259,6 +221,88 @@ def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, fr
 
     return simple_metric_deriv
 
+#%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
+
+def split_blended_freqs_old(noisy_freq_bands_idx, width_heights, freqs):
+
+    band = 0
+    while band < len(noisy_freq_bands_idx):
+
+        # Checking if the last element of every band is contained in the current band
+        last = 0
+        while last < len(noisy_freq_bands_idx):
+
+            if (noisy_freq_bands_idx[last] != noisy_freq_bands_idx[band]) and (noisy_freq_bands_idx[last][-1] in noisy_freq_bands_idx[band]):
+                
+                #if yes - split the biggest band at the split point and also assign the same heights of peaks to both parts.
+
+                split_index = noisy_freq_bands_idx[band].index(noisy_freq_bands_idx[last][-1])
+
+                split_band_left = noisy_freq_bands_idx[band][:split_index+1]
+                split_band_right = noisy_freq_bands_idx[band][split_index+1:]
+
+
+                noisy_freq_bands_idx[last] = split_band_left
+                noisy_freq_bands_idx[band] = split_band_right
+
+                min_width_heights = min(width_heights[last],width_heights[band])
+                width_heights[band] = min_width_heights
+                width_heights[last] = min_width_heights
+
+
+                #set both bands to 0, so next time  the check will be done for all the bands from the beginning, 
+                # concedering new state of noisy_freq_bands_idx:
+                band = 0
+                last = 0
+
+            last += 1
+        band += 1
+
+    return noisy_freq_bands_idx, width_heights
+
+
+def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs):
+
+    # print('peaks_neg', peaks_neg)
+    # print('width_weights:', width_heights)
+
+    for n_peak, _ in enumerate(peaks):
+
+        #find negative peaks before and after closest to the found positive noise peak.
+  
+        neg_peak_before=peaks_neg[np.argwhere(peaks_neg<peaks[n_peak])[-1][0]]
+        neg_peak_after=peaks_neg[np.argwhere(peaks_neg>peaks[n_peak])[0][0]]
+
+        #print('target peak', peaks[n_peak])
+        #print('before and after', neg_peak_before, neg_peak_after)
+     
+        if noisy_freq_bands_idx[n_peak][0] < neg_peak_before:
+            noisy_freq_bands_idx[n_peak] = [i for i in range(neg_peak_before, noisy_freq_bands_idx[n_peak][-1])]
+            #print('new band', noisy_freq_bands_idx[n_peak])
+
+            #if true, then this peak was blended with another one, 
+            # so the bottom of both peaks (this and previous) needs to be brought 
+            # to the same value.
+            # (except the case when there were no peaks before)
+            if n_peak>0:
+                min_width_heights = min(width_heights[n_peak-1],width_heights[[n_peak]])
+                width_heights[n_peak-1] = min_width_heights
+                width_heights[n_peak] = min_width_heights
+
+        if noisy_freq_bands_idx[n_peak][-1] > neg_peak_after:
+            noisy_freq_bands_idx[n_peak] = [i for i in range(noisy_freq_bands_idx[n_peak][0], neg_peak_after)]
+
+            #if true, then this peak was blended with another one, 
+            # so the bottom of both peaks (this and next) needs to be brought 
+            # to the same value.
+            # (except the case when there are no peaks after)
+            if n_peak<len(peaks)-1:
+                min_width_heights = min(width_heights[n_peak],width_heights[[n_peak+1]])
+                width_heights[n_peak] = min_width_heights
+                width_heights[n_peak+1] = min_width_heights
+
+    return noisy_freq_bands_idx, width_heights
+
 
 def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g):
 
@@ -279,6 +323,10 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     prominence=(max(avg_psd) - min(avg_psd)) / 50
     peaks, _ = find_peaks(avg_psd, prominence=prominence)
     peaks_neg, _ = find_peaks(-avg_psd, prominence=prominence)
+    peaks_neg = np.insert(peaks_neg, 0, 0, axis=0)
+    peaks_neg = np.append(peaks_neg, len(freqs)-1)
+    #insert 0 as index of first negative peak and last index as ind of lastr negative peak.
+
 
     widths, width_heights, left_ips, right_ips = peak_widths(avg_psd, peaks, rel_height=1)
 
@@ -309,11 +357,13 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
         #in case the las  element of one band is the same as first of another band, remove the last  elemnt of previos.So bands dont cross.
 
     #2*
-    print('HERE! BEFORE SPLIT')
-    print(noisy_freq_bands_idx)
-    noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs)
-    print('HERE! AFTER SPLIT')
-    print(noisy_freq_bands_idx_split)
+    #print('HERE! BEFORE SPLIT')
+    #print(noisy_freq_bands_idx)
+    #noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs)
+
+    noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs)
+    #print('HERE! AFTER SPLIT')
+    #print(noisy_freq_bands_idx_split)
 
 
     #3.
