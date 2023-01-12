@@ -72,9 +72,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    #for sid in [list_of_subs[1]]: #RUN OVER JUST 1 SUBJ to save time
-    for sid in list_of_subs[1:8]: 
-
+    for sid in list_of_subs[1:6]: #RUN OVER JUST 1 SUBJ to save time
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)

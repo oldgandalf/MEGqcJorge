@@ -266,6 +266,7 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
     # print('peaks_neg', peaks_neg)
     # print('width_weights:', width_heights)
 
+    split_points = []
     for n_peak, _ in enumerate(peaks):
 
         #find negative peaks before and after closest to the found positive noise peak.
@@ -280,6 +281,7 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
             noisy_freq_bands_idx[n_peak] = [i for i in range(neg_peak_before, noisy_freq_bands_idx[n_peak][-1])]
             #print('new band', noisy_freq_bands_idx[n_peak])
 
+            split_points += [neg_peak_before]
             #if true, then this peak was blended with another one, 
             # so the bottom of both peaks (this and previous) needs to be brought 
             # to the same value.
@@ -292,6 +294,8 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
         if noisy_freq_bands_idx[n_peak][-1] > neg_peak_after:
             noisy_freq_bands_idx[n_peak] = [i for i in range(noisy_freq_bands_idx[n_peak][0], neg_peak_after)]
 
+            split_points += [neg_peak_after]
+
             #if true, then this peak was blended with another one, 
             # so the bottom of both peaks (this and next) needs to be brought 
             # to the same value.
@@ -301,7 +305,7 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
                 width_heights[n_peak] = min_width_heights
                 width_heights[n_peak+1] = min_width_heights
 
-    return noisy_freq_bands_idx, width_heights
+    return noisy_freq_bands_idx, width_heights, split_points
 
 
 def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g):
@@ -361,7 +365,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     #print(noisy_freq_bands_idx)
     #noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs)
 
-    noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs)
+    noisy_freq_bands_idx_split, width_heights_split, split_points = split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs)
     #print('HERE! AFTER SPLIT')
     #print(noisy_freq_bands_idx_split)
 
@@ -390,39 +394,48 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
         fig, axs = plt.subplots(2, 2, figsize=(13, 8))
 
         axs[0, 0].plot(freqs,avg_psd)
-        axs[0, 0].plot(freqs[peaks], avg_psd[peaks], 'x')
-        axs[0, 0].plot(freqs[peaks_neg], avg_psd[peaks_neg], 'o')
+        axs[0, 0].plot(freqs[peaks], avg_psd[peaks], 'x', label='central noise frequencies')
+        axs[0, 0].plot(freqs[peaks_neg], avg_psd[peaks_neg], '*',label='split points')
         xmin_f=[round(l) for l in left_ips]
         xmax_f=[round(r) for r in right_ips]
         xmin=[freqs[i] for i in xmin_f]
         xmax=[freqs[i] for i in xmax_f]
-        axs[0, 0].hlines(y=width_heights, xmin=xmin, xmax=xmax, color="C3")
+        axs[0, 0].hlines(y=width_heights, xmin=xmin, xmax=xmax, color="C3", label='detected peak bottom')
         axs[0, 0].set_title('1. PSD Welch with peaks, blended freqs not split yet. \n Shown as detected by peak_widths')
         axs[0, 0].set_xlim(freqs[0], freqs[-1])
         axs[0, 0].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
+        axs[0, 0].legend()
 
         axs[0, 1].plot(freqs,avg_psd_only_signal)
-        axs[0, 1].plot(freqs[peaks], avg_psd_only_signal[peaks], "x")
-        axs[0, 1].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3")
+        axs[0, 1].plot(freqs[peaks], avg_psd_only_signal[peaks], "x", label='central noise frequencies')
+        axs[0, 1].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3", label='detected peak bottom')
         axs[0, 1].set_title('2. PSD without noise, split blended freqs')
+        axs[0, 1].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5, label='split peaks')
         axs[0, 1].set_xlim(freqs[0], freqs[-1])
         axs[0, 1].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
+        axs[0, 1].legend()
 
         axs[1, 0].plot(freqs,avg_psd_only_peaks)
-        axs[1, 0].plot(freqs[peaks], avg_psd_only_peaks[peaks], "x")
-        axs[1, 0].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3")
+        axs[1, 0].plot(freqs[peaks], avg_psd_only_peaks[peaks], "x", label='central noise frequencies')
+        axs[1, 0].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3",label='detected peak bottom')
         axs[1, 0].set_title('3. Only noise peaks, split blended freqs')
+        axs[1, 0].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5, label='split peaks')
         axs[1, 0].set_xlim(freqs[0], freqs[-1])
         axs[1, 0].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
+        axs[1, 0].legend()
 
         axs[1, 1].plot(freqs,avg_psd_only_peaks_baselined)
-        axs[1, 1].plot(freqs[peaks], avg_psd_only_peaks_baselined[peaks], "x")
-        axs[1, 1].hlines(y=[0]*len(freqs[peaks]), xmin=ips_l, xmax=ips_r, color="C3")
+        axs[1, 1].plot(freqs[peaks], avg_psd_only_peaks_baselined[peaks], "x", label='central noise frequencies')
+        axs[1, 1].hlines(y=[0]*len(freqs[peaks]), xmin=ips_l, xmax=ips_r, color="C3",label='baselined peak bottom')
         axs[1, 1].set_title('4. Noise peaks brought to basline, split blended freqs')
+        axs[1, 1].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5,label='split peaks')
         axs[1, 1].set_xlim(freqs[0], freqs[-1])
         axs[1, 1].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
+        axs[1, 1].legend()
 
-        plt.tight_layout()
+        #plt.tight_layout()
+
+        fig.suptitle('PSD: detecting noise peaks, splitting blended freqs, defining area under the curve.')
         fig.show()
 
 
