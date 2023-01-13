@@ -113,15 +113,15 @@ def make_derivative_meg_qc(config_file_name):
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('Starting RMSE...')
-            start_time = time.time()
-            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting RMSE...')
+            # start_time = time.time()
+            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('Starting PSD...')
-            start_time = time.time()
-            psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
-            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
+            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -133,17 +133,17 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, ecg_events_times, all_ecg_affected_channels,  top_10_ecg_magnitudes = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # if picks_EOG is not None and bad_eog is False:
-            #     print('Starting EOG...')
-            #     start_time = time.time()
-            #     eog_derivs, eog_events_times, all_eog_affected_channels,  top_10_eog_magnitudes = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            if picks_EOG is not None and bad_eog is False:
+                print('Starting EOG...')
+                start_time = time.time()
+                eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # head_derivs = HEAD_movements_meg_qc()
@@ -247,7 +247,7 @@ def make_derivative_meg_qc(config_file_name):
         
     ancpbids.write_derivative(dataset, derivative) 
 
-    return raw, QC_derivs, QC_simple
+    return raw, QC_derivs, QC_simple, all_ecg_affected_channels
 
 
 #%%

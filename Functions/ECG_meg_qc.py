@@ -1,6 +1,6 @@
 import mne
 import numpy as np
-from universal_plots import QC_derivative
+from universal_plots import QC_derivative, get_tit_and_unit
 import plotly.graph_objects as go
 
 
@@ -170,7 +170,7 @@ def make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfr
 
     return fig
 
-def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, use_abs_of_all_data=False):
+def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, use_abs_of_all_data=False):
 
     '''
     1. Calculate average ECG epoch: 
@@ -199,7 +199,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, n
 
     #1.:
     #averaging the ECG epochs together:
-    avg_ecg_epochs = ecg_epochs.average(picks=channels[m_or_g])#.apply_baseline((-0.5, -0.2))
+    avg_ecg_epochs = ecg_epochs.average(picks=channels)#.apply_baseline((-0.5, -0.2))
     #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
     #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
 
@@ -262,7 +262,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, n
         fig_avg.show()
 
     #2. and 3.:
-    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, max_n_peaks_allowed=max_n_peaks_allowed)
+    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels, thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, max_n_peaks_allowed=max_n_peaks_allowed)
 
     if plotflag is True:
         fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
@@ -326,6 +326,37 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels:dict, m_or_g:list, n
 #     return ecg_affected_epochs, all_figs
 
 
+#%%
+def make_simple_metric_ECG_EOG(all_affected_channels, m_or_g, ecg_or_eog, channels):
+    """
+    Make simple metric for ECG/EOG artifacts.
+    """
+
+    title, unit = get_tit_and_unit(m_or_g)
+
+    affected_chs={}
+    for ch in all_affected_channels:
+        affected_chs[ch.name]=max(ch.peak_magnitude)
+
+    simple_metric={}
+
+    if not all_affected_channels:
+        simple_metric[title+'. Number of '+ecg_or_eog+' affected channels'] = 0
+        simple_metric[title+'. Percentage of '+ecg_or_eog+' affected channels'] = 0
+        return simple_metric
+
+    simple_metric[title+'. Number of '+ecg_or_eog+' affected channels'] = len(all_affected_channels)
+    simple_metric[title+'. Percentage of '+ecg_or_eog+' affected channels'] = round(len(all_affected_channels)/len(channels)*100, 1)
+    simple_metric['Details'] = [{'Average ' +ecg_or_eog+' peak magnitude in '+unit:  affected_chs}]
+
+    #sort list of channels with peaks  based on the hight of the main peak,  then output the highest 10:
+    top_magnitudes = sorted(all_affected_channels, key=lambda x: max(x.peak_magnitude), reverse=True)
+    top_10_magnitudes = [[ch_peak.name, max(ch_peak.peak_magnitude)] for ch_peak in top_magnitudes[0:10]]
+    simple_metric['Details'].append({title+'. Top 10 '+ecg_or_eog+' channels with highest peak magnitude in '+unit: top_10_magnitudes})
+
+    return simple_metric
+
+#%%
 def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
     """Main ECG function"""
 
@@ -349,6 +380,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
     all_ecg_affected_channels={}
     top_ecg_magnitudes={}
     top_10_ecg_magnitudes={}
+    simple_metric_ECG={}
 
     for m_or_g  in m_or_g_chosen:
 
@@ -372,17 +404,12 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()
 
-        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels, m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
         all_ecg_affected_channels[m_or_g]=ecg_affected_channels
 
-        #sort list of channels with peaks  based on the hight of themain peak,  then output the highest 10:
-        top_ecg_magnitudes[m_or_g] = sorted(all_ecg_affected_channels[m_or_g], key=lambda x: max(x.peak_magnitude), reverse=True)
+        simple_metric_ECG[m_or_g]=make_simple_metric_ECG_EOG(all_ecg_affected_channels[m_or_g], m_or_g, 'ECG', channels[m_or_g])
 
-        top_10_ecg_magnitudes[m_or_g] = [[ch_peak.name, max(ch_peak.peak_magnitude)] for ch_peak in top_ecg_magnitudes[m_or_g][0:10]]
-
-        print('TOP 10 ECG magnitude peaks: ' +str(m_or_g)  + '\n', top_10_ecg_magnitudes[m_or_g])
-
-    return ecg_derivs, ecg_events_times, all_ecg_affected_channels, top_10_ecg_magnitudes
+    return ecg_derivs, simple_metric_ECG, ecg_events_times, all_ecg_affected_channels
