@@ -72,7 +72,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:6]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in list_of_subs[1:2]: #RUN OVER JUST 1 SUBJ to save time
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -94,9 +94,9 @@ def make_derivative_meg_qc(config_file_name):
             picks_ECG,  picks_EOG = detect_extra_channels(raw)
 
             # QC measurements:
-            rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], []
+            rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], [], [], []
             
-            simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog = [],[],[],[],[],[]
+            simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
 
 
             bad_ecg=False
@@ -113,15 +113,15 @@ def make_derivative_meg_qc(config_file_name):
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting RMSE...')
-            # start_time = time.time()
-            # rmse_derivs, big_rmse_with_value_all_data, small_rmse_with_value_all_data = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
-            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
- 
-            print('Starting PSD...')
+            print('Starting RMSE...')
             start_time = time.time()
-            psd_derivs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
-            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+ 
+            # print('Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
+            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -146,9 +146,9 @@ def make_derivative_meg_qc(config_file_name):
             #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
-            # HEAD_movements_meg_qc()
+            # head_derivs = HEAD_movements_meg_qc()
 
-            # MUSCLE_meg_qc()
+            # muscle_derivs = MUSCLE_meg_qc()
 
 
             # Make strings with notes for the user to add to html report:
@@ -177,21 +177,27 @@ def make_derivative_meg_qc(config_file_name):
             'Peak-to-Peak auto from MNE': pp_auto_derivs, 
             'ECG': noisy_ecg_derivs+ecg_derivs, 
             'EOG': noisy_eog_derivs+eog_derivs,
-            'Head movement artifacts': [],
-            'Muscle artifacts': []}
+            'Head movement artifacts': head_derivs,
+            'Muscle artifacts': muscle_derivs}
 
-            #Collect all simple metrics into a list of jsons:
-            # all_simple_metrics=simple_metrics_psd+simple_metrics_rmse+simple_metrics_pp_manual+simple_metrics_pp_auto+simple_metrics_ecg+simple_metrics_eog
-            # all_metrics_jsons = []
-            # for metric in all_simple_metrics:
-            #     all_metrics_jsons.append(json.dumps(metric, indent=4))
-            #     with open('derivs.json', 'w') as file_wrapper:
-            #         json.dump(metric, file_wrapper, indent=4)
+            QC_simple={
+            'Standard deviation of the data': simple_metrics_rmse, 
+            'Frequency spectrum': simple_metrics_psd,
+            'Peak-to-Peak manual': simple_metrics_pp_manual, 
+            'Peak-to-Peak auto from MNE': simple_metrics_pp_auto,
+            'ECG': simple_metrics_ecg, 
+            'EOG': simple_metrics_eog,
+            'Head movement artifacts': simple_metrics_head,
+            'Muscle artifacts': simple_metrics_muscle}  
 
 
-            #Make report:
+            #Make report and add to QC_derivs:
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
+
+            #Collect all simple metrics into a dictionary and add to QC_derivs:
+            #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
+            QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', None, 'json')]
 
             #print('HERE!',  QC_derivs)
 
@@ -239,9 +245,9 @@ def make_derivative_meg_qc(config_file_name):
                         #problem with lambda explained:
                         #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
         
-    ancpbids.write_derivative(dataset, derivative) #maybe put inside the loop if can't have so much in memory?
+    ancpbids.write_derivative(dataset, derivative) 
 
-    return raw #, all_metrics_jsons
+    return raw, QC_derivs, QC_simple
 
 
 #%%

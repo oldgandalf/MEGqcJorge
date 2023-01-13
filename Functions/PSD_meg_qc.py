@@ -217,9 +217,9 @@ def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, fr
         'Number of noisy frequencies': len(peaks), 
         'Details': noisy_freqs_dict}
 
-    simple_metric_deriv=QC_derivative(simple_metric,'PSD_'+m_or_g_tit, None, 'json')
+    #simple_metric_deriv=QC_derivative(simple_metric,'PSD_'+m_or_g_tit, None, 'json')
 
-    return simple_metric_deriv
+    return simple_metric
 
 #%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
 
@@ -506,6 +506,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
     freqs = {}
     psds = {}
     derivs_psd = []
+    simple_metrics_psd = []
 
     for m_or_g in m_or_g_chosen:
 
@@ -517,9 +518,13 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
         noise_pie_derivative, simple_metric_deriv = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
 
-        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative]+[simple_metric_deriv]
+        simple_metrics_psd += [simple_metric_deriv]
 
-    return derivs_psd
+        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] #+[simple_metric_deriv]
+
+
+
+    return derivs_psd, simple_metrics_psd
 
 # In[56]:
 # This command was used to convert notebook to this .py file:

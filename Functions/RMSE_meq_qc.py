@@ -290,9 +290,9 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
         #'Percent of noisy epochs with std above '+str(std_lvl)+' std_threshold': len(),
         #'Noisy epochs': []
 
-    simple_metric_deriv=QC_derivative(simple_metric,'RMSE_'+m_or_g_tit, None, 'json')
+    #simple_metric_deriv=QC_derivative(simple_metric,'RMSE_'+m_or_g_tit, None, 'json')
 
-    return simple_metric_deriv
+    return simple_metric
 
 
 #%%
@@ -334,6 +334,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         for m_or_g in m_or_g_chosen:
 
             df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g]) 
+
             dfs_list += df_epoch_rmse
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
             #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
@@ -346,6 +347,6 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         simple_metric_deriv = make_simple_metric_rmse(rmse_params['std_lvl'], big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], m_or_g)
         simple_metrics_rmse+=[simple_metric_deriv]
     
-    derivs_rmse += fig_std_epoch_with_name + dfs_list + simple_metrics_rmse
+    derivs_rmse += fig_std_epoch_with_name + dfs_list #+ simple_metrics_rmse
 
-    return derivs_rmse, big_rmse_with_value_all_data, small_rmse_with_value_all_data
+    return derivs_rmse, simple_metrics_rmse
