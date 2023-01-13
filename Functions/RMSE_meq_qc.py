@@ -205,9 +205,36 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
     return(df_std_mg)
 
 
-#%% STD over epochs: use 2 separate data frames for mag and grad in calculations:
+#%% 
 
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs, df_epochs: pd.DataFrame):
+def make_simple_metric_rmse_noisy_or_flat_epochs(df_std: pd.DataFrame, epochs_mg, ch_type: str, allow_percent_noisy: float=70, high_or_flat: str='high'):
+
+    tit, _ = get_tit_and_unit(ch_type)
+
+    eps=[ep for ep in range(0, len(epochs_mg))] #list of epoch numbers
+
+    num_epochs_with_nonstandart_std={}
+    for ep in eps:
+        number_noisy=int(df_std.loc[:,ep].sum()) 
+        #count the number of TRUE in data frame. meaning the number of channels with high std for give epoch
+        #converted to int becuse json doesnt undertand numpy.int64
+        perc_noisy=round(number_noisy/len(df_std)*100, 1)
+        if perc_noisy>allow_percent_noisy:
+            ep_too_noisy=True
+        else:
+            ep_too_noisy=False
+
+        num_epochs_with_nonstandart_std['Epoch ' + str(ep)] = {'Number of channels with '+high_or_flat+' std': number_noisy, 'Percent of channels with '+high_or_flat+' std': perc_noisy, 'Epoch has too '+high_or_flat+' std': ep_too_noisy}
+        
+    total_num_noisy=sum([num_epochs_with_nonstandart_std['Epoch ' + str(ep)]['Epoch has too '+high_or_flat+' std'] for ep in eps])
+    total_perc_noisy=round(total_num_noisy/len(eps)*100)
+
+    nonstandart_std_epochs_dict={tit+'. Number of epochs with '+high_or_flat+' std (over '+str(allow_percent_noisy)+' percent of channels)': total_num_noisy, 'Percent of epochs with '+high_or_flat+' std': total_perc_noisy, 'Details': num_epochs_with_nonstandart_std}
+
+    return nonstandart_std_epochs_dict
+
+
+def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs, df_epochs: pd.DataFrame, allow_percent_noisy: float=70):
 
     '''
     - Calculate std for every separate epoch of a given list of channels
@@ -253,9 +280,10 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
         QC_derivative(df_ch_ep_large_std, 'Large_std_per_epoch_'+ch_type, None, 'df'),
         QC_derivative(df_ch_ep_small_std, 'Small_std_per_epoch_'+ch_type, None, 'df')]
 
+
     return dfs_deriv
 
-def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, m_or_g):
+def make_simple_metric_rmse_all_data(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, m_or_g):
 
     """Make simple metric for rmse.
 
@@ -278,13 +306,13 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     m_or_g_tit, unit = get_tit_and_unit(m_or_g)
 
     simple_metric={
-        'Metric name': 'RMSE '+m_or_g_tit, 
+        'Metric name': 'RMSE over all data for '+m_or_g_tit, 
         'Number of noisy channels with std above '+str(std_lvl)+' std_threshold': len(big_rmse_with_value_all_data),
-        'Percent of noisy channels with std above '+str(std_lvl)+' std_threshold': len(big_rmse_with_value_all_data)/len(channels)*100, 
+        'Percent of noisy channels with std above '+str(std_lvl)+' std_threshold': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
         'Noisy channels and  theirs std values in '+unit+' ': big_rmse_with_value_all_data,
         'Number of noisy channels with std below -'+str(std_lvl)+' std_threshold': len(small_rmse_with_value_all_data),
-        'Percent of noisy channels with std below -'+str(std_lvl)+' std_threshold': len(small_rmse_with_value_all_data)/len(channels)*100, 
-        'Flat channels and theirs std values in '+unit+' ': small_rmse_with_value_all_data,
+        'Percent of noisy channels with std below -'+str(std_lvl)+' std_threshold': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
+        'Flat channels and their std values in '+unit+' ': small_rmse_with_value_all_data,
         }
 
         #'Percent of noisy epochs with std above '+str(std_lvl)+' std_threshold': len(),
@@ -329,24 +357,36 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'])
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='stds')]
 
+    metrics_rmse_all_data={}
+    for m_or_g in m_or_g_chosen:
+        metrics_rmse_all_data[m_or_g] = [make_simple_metric_rmse_all_data(rmse_params['std_lvl'], big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], m_or_g)]
+
     if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
 
+        metrics_rmse_epochs = {}
         for m_or_g in m_or_g_chosen:
 
-            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g]) 
+            df_epoch_rmse = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g], allow_percent_noisy=rmse_params['allow_percent_noisy']) 
+            dfs_list += df_epoch_rmse # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
-            dfs_list += df_epoch_rmse
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
-            #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with stds
-    else:
-        print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
-        
+            #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
 
-    simple_metrics_rmse=[]
-    for m_or_g in m_or_g_chosen:
-        simple_metric_deriv = make_simple_metric_rmse(rmse_params['std_lvl'], big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], m_or_g)
-        simple_metrics_rmse+=[simple_metric_deriv]
+            high_std_epochs_metric = make_simple_metric_rmse_noisy_or_flat_epochs(df_std=df_epoch_rmse[1].content, epochs_mg=dict_epochs_mg[m_or_g], ch_type=m_or_g, allow_percent_noisy=70, high_or_flat='high')
+            flat_std_epochs_metric = make_simple_metric_rmse_noisy_or_flat_epochs(df_std=df_epoch_rmse[2].content, epochs_mg=dict_epochs_mg[m_or_g], ch_type=m_or_g, allow_percent_noisy=70, high_or_flat='flat')
+            metrics_rmse_epochs[m_or_g]=[high_std_epochs_metric, flat_std_epochs_metric]
+            #metrics_rmse_epochs[m_or_g]=[]
+    else:
+        metrics_rmse_epochs=['Metrics per epochs not calculated']
+        print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
+
+
+    all_metrics_rmse={}
+    all_metrics_rmse['STD over all data']=metrics_rmse_all_data
+    all_metrics_rmse['STD per epoch']=metrics_rmse_epochs 
+        
+    #print ('HERE!', metrics_rmse_epochs, type(metrics_rmse_epochs)) 
     
     derivs_rmse += fig_std_epoch_with_name + dfs_list #+ simple_metrics_rmse
 
-    return derivs_rmse, simple_metrics_rmse
+    return derivs_rmse, all_metrics_rmse

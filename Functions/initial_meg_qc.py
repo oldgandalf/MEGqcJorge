@@ -103,7 +103,10 @@ def get_all_config_params(config_file_name: str):
 
         rmse_section = config['RMSE']
         std_lvl = rmse_section.getint('std_lvl')
-        all_qc_params['RMSE'] = dict({'std_lvl':  std_lvl})
+        allow_percent_noisy = rmse_section.getfloat('allow_percent_noisy_epochs')
+        all_qc_params['RMSE'] = dict({
+            'std_lvl':  std_lvl, 
+            'allow_percent_noisy': allow_percent_noisy})
         
 
         psd_section = config['PSD']
@@ -118,56 +121,49 @@ def get_all_config_params(config_file_name: str):
         else:
             freq_max=float(freq_max)
 
-        psd_params = dict({
+        all_qc_params['PSD'] = dict({
         'freq_min': freq_min,
         'freq_max': freq_max,
         'mean_power_per_band_needed': psd_section.getboolean('mean_power_per_band_needed'),
         'n_fft': psd_section.getint('n_fft'),
         'n_per_seg': psd_section.getint('n_per_seg')})
-        all_qc_params['PSD'] = psd_params
 
 
         ptp_manual_section = config['PTP_manual']
-        ptp_manual_params = dict({
+        all_qc_params['PTP_manual'] = dict({
         'max_pair_dist_sec': ptp_manual_section.getfloat('max_pair_dist_sec'),
         'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl')})
-        all_qc_params['PTP_manual'] = ptp_manual_params
 
 
         ptp_mne_section = config['PTP_auto']
-        ptp_auto_params = dict({
+        all_qc_params['PTP_auto'] = dict({
         'peak_m': ptp_mne_section.getfloat('peak_m'),
         'flat_m': ptp_mne_section.getfloat('flat_m'),
         'peak_g': ptp_mne_section.getfloat('peak_g'),
         'flat_g': ptp_mne_section.getfloat('flat_g'),
         'bad_percent': ptp_mne_section.getint('bad_percent'),
         'min_duration': ptp_mne_section.getfloat('min_duration')})
-        all_qc_params['PTP_auto'] = ptp_auto_params
 
 
         ecg_section = config['ECG']
-        ecg_params = dict({
+        all_qc_params['ECG'] = dict({
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
         'use_abs_of_all_data': ecg_section['use_abs_of_all_data']})
-        all_qc_params['ECG'] = ecg_params
 
         eog_section = config['EOG']
-        eog_params = dict({
+        all_qc_params['EOG'] = dict({
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),
         'use_abs_of_all_data': eog_section['use_abs_of_all_data']})
-        all_qc_params['EOG'] = eog_params
 
         head_section = config['Head_movement']
-        head_params = dict({})
-        all_qc_params['Head'] = head_params
+        all_qc_params['Head'] = dict({})
 
         muscle_section = config['Muscle']
-        muscle_params = dict({})
-        all_qc_params['Muscle'] = muscle_params
+        all_qc_params['Muscle'] = dict({})
 
     except:
         print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')

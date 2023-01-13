@@ -118,10 +118,10 @@ def make_derivative_meg_qc(config_file_name):
             rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
             print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting PSD...')
-            # start_time = time.time()
-            # psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
-            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting PSD...')
+            start_time = time.time()
+            psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
+            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
