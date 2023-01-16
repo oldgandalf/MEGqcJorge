@@ -1,4 +1,5 @@
 from universal_plots import QC_derivative
+import mne
 
 # def add_fig_to_html_section(figure_report):
 
@@ -58,10 +59,12 @@ def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str):
 
     html_section_str='''
         <!-- *** Section *** --->
+        <center>
         <h2>'''+section_title+'''</h2>
         ''' + all_section_content+'''
         <br></br>
-        <br></br>'''
+        <br></br>
+        </center>'''
 
     # The way to get figures if need to open them from saved files:
     # figures = {}
@@ -129,6 +132,32 @@ def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoch
 
     return html_string
 
+
+def make_joined_report_for_mne(raw, sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str):
+
+    report = mne.Report(title='& MEG QC Report')
+    # This method also accepts a path, e.g., raw=raw_path
+    report.add_raw(raw=raw, title='Raw', psd=False)  # omit PSD plot
+
+    header_html_string = '''
+    <!doctype html>
+        <body style="font-family: Arial">
+            <center>
+            <h1>MEG data quality analysis report</h1>
+            <br></br>
+            '''+shielding_str+channels_skipped_str+epoching_skipped_str+'''
+            </center>
+        </body>'''
+
+    report.add_html(header_html_string, title='MEG QC report')
+
+    
+    for key in sections:
+        if key != 'Report':
+            html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
+            report.add_html(html_section_str, title=key)
+
+    return report
 
 
 def make_std_peak_report(sid: str, what_data: str, list_of_figure_paths: list, config):

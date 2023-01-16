@@ -12,7 +12,7 @@ from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
-from universal_html_report import make_joined_report
+from universal_html_report import make_joined_report, make_joined_report_for_mne
 from universal_plots import QC_derivative
 
 
@@ -195,6 +195,9 @@ def make_derivative_meg_qc(config_file_name):
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
+            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
+            QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', None, 'report mne')]
+
             #Collect all simple metrics into a dictionary and add to QC_derivs:
             #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
             QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', None, 'json')]
@@ -228,6 +231,9 @@ def make_derivative_meg_qc(config_file_name):
                                     file.write(cont)
                                 #'with'command doesnt work in lambda
                             meg_artifact.content = html_writer # function pointer instead of lambda
+                        elif deriv.content_type == 'report mne':
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
+                            #report.save('report_raw.html', overwrite=True, open_browser=False)
                         elif deriv.content_type == 'json':
                             meg_artifact.extension = '.json'
                             def json_writer(file_path, cont=deriv.content):
