@@ -12,6 +12,7 @@ from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
+from Head_meg_qc import HEAD_movement_meg_qc
 from universal_html_report import make_joined_report, make_joined_report_for_mne
 from universal_plots import QC_derivative
 
@@ -133,26 +134,29 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting ECG...')
-            start_time = time.time()
-            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting ECG...')
+            # start_time = time.time()
+            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            if picks_EOG is not None and bad_eog is False:
-                print('Starting EOG...')
-                start_time = time.time()
-                eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # if picks_EOG is not None and bad_eog is False:
+            #     print('Starting EOG...')
+            #     start_time = time.time()
+            #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
+            print('Starting Head movement calculation...')
+            head_derivs, head_not_calculated = HEAD_movement_meg_qc(raw_cropped, extra_visual=True)
+            print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # head_derivs = HEAD_movements_meg_qc()
-
-            # muscle_derivs = MUSCLE_meg_qc()
+            # print('Starting Muscle artifacts calculation...')
+            # muscle_derivs, muscle_not_calculated = MUSCLE_meg_qc(raw)
+            # print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # Make strings with notes for the user to add to html report:
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str = '', '', '', '', ''
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str = '', '', '', '', '', '', ''
 
             if active_shielding_used is True: 
                 shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
@@ -168,6 +172,10 @@ def make_derivative_meg_qc(config_file_name):
             if picks_EOG is None:
                 no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
                 eog_derivs = []
+
+            if head_not_calculated is True:
+                no_head_pos_str = 'Head positions can not be computed.'
+                head_derivs = []
 
 
             QC_derivs={
@@ -192,10 +200,10 @@ def make_derivative_meg_qc(config_file_name):
 
 
             #Make report and add to QC_derivs:
-            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
+            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
 
-            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str)
+            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
             QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', None, 'report mne')]
 
             #Collect all simple metrics into a dictionary and add to QC_derivs:
@@ -253,7 +261,7 @@ def make_derivative_meg_qc(config_file_name):
         
     ancpbids.write_derivative(dataset, derivative) 
 
-    return raw, QC_derivs, QC_simple, all_ecg_affected_channels
+    return raw, QC_derivs, QC_simple
 
 
 #%%
