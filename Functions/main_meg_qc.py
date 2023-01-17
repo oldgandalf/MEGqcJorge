@@ -147,7 +147,7 @@ def make_derivative_meg_qc(config_file_name):
             #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting Head movement calculation...')
-            head_derivs, head_not_calculated = HEAD_movement_meg_qc(raw_cropped, extra_visual=True)
+            head_derivs, simple_metrics_head, head_not_calculated = HEAD_movement_meg_qc(raw_cropped, extra_visual=True)
             print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Muscle artifacts calculation...')
