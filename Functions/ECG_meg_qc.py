@@ -398,7 +398,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels, m_or_g, ecg_or_eog, channe
 
     simple_metric[title+'. Number of '+ecg_or_eog+' affected channels'] = len(all_affected_channels)
     simple_metric[title+'. Percentage of '+ecg_or_eog+' affected channels'] = round(len(all_affected_channels)/len(channels)*100, 1)
-    simple_metric['Details'] = [{'Average ' +ecg_or_eog+' peak magnitude in '+unit:  affected_chs}]
+    simple_metric['Details: affected channels'] = [{'Average ' +ecg_or_eog+' peak magnitude in '+unit:  affected_chs}]
 
     #sort list of channels with peaks  based on the hight of the main peak,  then output the highest 10:
     top_magnitudes = sorted(all_affected_channels, key=lambda x: max(x.peak_magnitude), reverse=True)
