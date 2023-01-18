@@ -64,7 +64,7 @@ def make_simple_metric_head(std_head_pos, max_movement_xyz, max_rotation_q):
     
     return simple_metric
 
-def HEAD_movement_meg_qc(raw, extra_visual=True):
+def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
     # 1. Main part:
     head_derivs = []
@@ -116,7 +116,7 @@ def HEAD_movement_meg_qc(raw, extra_visual=True):
     head_derivs += [QC_derivative(fig0, 'Head_position_rotation', None, 'matplotlib')]
 
     # 2. Optional visual part:
-    if extra_visual is True:
+    if plot_with_lines is True:
         original_head_dev_t = mne.transforms.invert_transform(
             raw.info['dev_head_t'])
         average_head_dev_t = mne.transforms.invert_transform(
@@ -124,14 +124,15 @@ def HEAD_movement_meg_qc(raw, extra_visual=True):
         fig1 = mne.viz.plot_head_positions(head_pos)
         for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
                             original_head_dev_t['trans'][:3, 3]):
-            ax.axhline(1000 * val, color='r')
-            ax.axhline(1000 * val_ori, color='g')
+            ax.axhline(1000*val, color='r')
+            ax.axhline(1000*val_ori, color='g')
+            #print('val', val, 'val_ori', val_ori)
         # The green horizontal lines represent the original head position, whereas the
-        # red lines are the new head position averaged over all the time points.
+        # Red lines are the new head position averaged over all the time points.
 
-        fig1.show()
-        head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', None, 'matplotlib')]
-
+        head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', None, 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+    
+    if plot_annotations is True:
         # 3. Plot raw data with annotated head movement:
         mean_distance_limit = 0.0015  # in meters
         annotation_movement, hpi_disp = annotate_movement(
@@ -152,6 +153,6 @@ def HEAD_movement_meg_qc(raw, extra_visual=True):
     # 5. Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, head_not_calculated
+    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos
 
 

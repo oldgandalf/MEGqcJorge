@@ -73,7 +73,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:2]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in list_of_subs[0:1]: #RUN OVER JUST 1 SUBJ to save time
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -99,7 +99,8 @@ def make_derivative_meg_qc(config_file_name):
             
             simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
 
-
+            df_head_pos = []
+            head_not_calculated = False
             bad_ecg=False
             bad_eog=False
             # noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
@@ -134,11 +135,11 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # if picks_EOG is not None and bad_eog is False:
             #     print('Starting EOG...')
@@ -146,9 +147,9 @@ def make_derivative_meg_qc(config_file_name):
             #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
             #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting Head movement calculation...')
-            head_derivs, simple_metrics_head, head_not_calculated = HEAD_movement_meg_qc(raw_cropped, extra_visual=True)
-            print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting Head movement calculation...')
+            # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Muscle artifacts calculation...')
             # muscle_derivs, muscle_not_calculated = MUSCLE_meg_qc(raw)
@@ -222,26 +223,30 @@ def make_derivative_meg_qc(config_file_name):
                         # print(deriv)
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
-                        meg_artifact.add_entity('desc', deriv.description) #file name
+                        meg_artifact.add_entity('desc', deriv.name) #file name
                         meg_artifact.suffix = 'meg'
                         meg_artifact.extension = '.html'
 
-                        if deriv.content_type == 'matplotlib':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
-                        elif deriv.content_type == 'plotly':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
-                        elif deriv.content_type == 'df':
+                        if deriv.content_type == 'df':
                             meg_artifact.extension = '.csv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
-                        elif deriv.content_type == 'report':
-                            def html_writer(file_path, cont=deriv.content):
-                                with open(file_path, "w") as file:
-                                    file.write(cont)
-                                #'with'command doesnt work in lambda
-                            meg_artifact.content = html_writer # function pointer instead of lambda
+
+                        # elif deriv.content_type == 'matplotlib':
+                        #     meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
+
+                        # elif deriv.content_type == 'plotly':
+                        #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
+  
+                        # elif deriv.content_type == 'report':
+                        #     def html_writer(file_path, cont=deriv.content):
+                        #         with open(file_path, "w") as file:
+                        #             file.write(cont)
+                        #         #'with'command doesnt work in lambda
+                        #     meg_artifact.content = html_writer # function pointer instead of lambda
+
                         elif deriv.content_type == 'report mne':
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
-                            #report.save('report_raw.html', overwrite=True, open_browser=False)
+
                         elif deriv.content_type == 'json':
                             meg_artifact.extension = '.json'
                             def json_writer(file_path, cont=deriv.content):
@@ -256,12 +261,14 @@ def make_derivative_meg_qc(config_file_name):
                             print(meg_artifact.name)
                             meg_artifact.content = 'dummy text'
                             meg_artifact.extension = '.txt'
-                        #problem with lambda explained:
-                        #https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+                        # problem with lambda explained:
+                        # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+
+
         
     ancpbids.write_derivative(dataset, derivative) 
 
-    return raw, QC_derivs, QC_simple
+    return raw, QC_derivs, QC_simple, df_head_pos
 
 
 #%%

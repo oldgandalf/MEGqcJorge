@@ -22,15 +22,15 @@ def get_tit_and_unit(m_or_g):
 
 class QC_derivative:
 
-    def __init__(self, content, description, filepath, content_type) -> None:
+    def __init__(self, content, name, filepath, content_type, description_for_user = 'Add measurement description for a user...'):
         self.content =  content
-        self.description = description
+        self.name = name
         self.filepath = filepath
         self.content_type = content_type
-        self.description_for_user = 'Add measurement description for a user here...'
+        self.description_for_user = description_for_user
 
     def __repr__(self):
-        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n description: ' + self.description + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
+        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
 
     def convert_fig_to_html(self):
         if self.content_type == 'plotly':
@@ -55,24 +55,24 @@ class QC_derivative:
 
 
     def get_section(self):
-        if 'std' in self.description or 'rmse' in self.description or 'STD' in self.description or 'RMSE' in self.description:
+        if 'std' in self.name or 'rmse' in self.name or 'STD' in self.name or 'RMSE' in self.name:
             return 'std'
-        elif 'ptp_manual' in self.description or 'pp_manual' in self.description or 'PTP_manual' in self.description or 'PP_manual'in self.description:
+        elif 'ptp_manual' in self.name or 'pp_manual' in self.name or 'PTP_manual' in self.name or 'PP_manual'in self.name:
             return 'ptp_manual'
-        elif 'ptp_auto' in self.description or 'pp_auto' in self.description or 'PTP_auto' in self.description or 'PP_auto' in self.description:
+        elif 'ptp_auto' in self.name or 'pp_auto' in self.name or 'PTP_auto' in self.name or 'PP_auto' in self.name:
             return 'ptp_auto'
-        elif 'psd' in self.description or 'PSD' in self.description:
+        elif 'psd' in self.name or 'PSD' in self.name:
             return 'psd'
-        elif 'eog' in self.description or 'EOG' in self.description:
+        elif 'eog' in self.name or 'EOG' in self.name:
             return 'eog'
-        elif 'ecg' in self.description or 'ECG' in self.description:
+        elif 'ecg' in self.name or 'ECG' in self.name:
             return 'ecg'
-        elif 'head' in self.description or 'HEAD' in self.description:
+        elif 'head' in self.name or 'HEAD' in self.name:
             return 'head'
-        elif 'muscle' in self.description or 'MUSCLE' in self.description:
+        elif 'muscle' in self.name or 'MUSCLE' in self.name:
             return 'muscle'
         else:  
-            warnings.warn("Check description of this QC_derivative instance: " + self.description)
+            warnings.warn("Check description of this QC_derivative instance: " + self.name)
         
 
 def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
