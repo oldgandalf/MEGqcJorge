@@ -230,9 +230,10 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
             
             print(str(channels[i]), 'min(ch_data)=', min(ch_data), ', max(ch_data)=', max(ch_data), ', np.argmin(ch_data)=', np.argmin(ch_data), ', np.argmax(ch_data)=', np.argmax(ch_data))
             
-            #flip if the negative peak is larger than positive and comes before the positive peak:
-            #(Problem here: since not the actual peak detection is used, but just min/max, 
-            # it might take as peak just the start/end of the data)
+            #flip if 
+            # 1) the negative peak is at least 0.5 of hight of positive or larger than positive and 
+            # 2) it comes before the positive peak:
+
 
             thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
             peak_locs_pos, _ = find_peaks(ch_data, prominence=thresh_mean)
@@ -256,7 +257,10 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
                 min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
                 min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
 
-                if min_peak_magnitude_neg<0 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos) and min_peak_loc_neg<max_peak_loc_pos: 
+                t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+
+                if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<abs(t[max_peak_loc_pos]): #if down peak is negative and it is closer to time0 of the event then the positive peak - flip:
+                # other conditions were before: min_peak_loc_neg<max_peak_loc_pos: #and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos)/2 
                     ch_data=-ch_data
                     print(str(channels[i])+' was flipped')
                 avg_ecg_epoch_data_all[i,:]  = ch_data 
@@ -403,7 +407,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels, m_or_g, ecg_or_eog, channe
     #sort list of channels with peaks  based on the hight of the main peak,  then output the highest 10:
     top_magnitudes = sorted(all_affected_channels, key=lambda x: max(x.peak_magnitude), reverse=True)
     top_10_magnitudes = [[ch_peak.name, max(ch_peak.peak_magnitude)] for ch_peak in top_magnitudes[0:10]]
-    simple_metric['Details'].append({title+'. Top 10 '+ecg_or_eog+' channels with highest peak magnitude in '+unit: top_10_magnitudes})
+    simple_metric['Details: affected channels'].append({title+'. Top 10 '+ecg_or_eog+' channels with highest peak magnitude in '+unit: top_10_magnitudes})
 
     return simple_metric
 
@@ -453,7 +457,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()
 
-        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=4, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]
