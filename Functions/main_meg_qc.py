@@ -73,7 +73,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[0:31]: #RUN OVER JUST 1 SUBJ to save time
+    for sid in list_of_subs[1:8]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -231,18 +231,18 @@ def make_derivative_meg_qc(config_file_name):
                             meg_artifact.extension = '.csv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
 
-                        # elif deriv.content_type == 'matplotlib':
-                        #     meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
+                        elif deriv.content_type == 'matplotlib':
+                            meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
 
-                        # elif deriv.content_type == 'plotly':
-                        #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
+                        elif deriv.content_type == 'plotly':
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
   
-                        # elif deriv.content_type == 'report':
-                        #     def html_writer(file_path, cont=deriv.content):
-                        #         with open(file_path, "w") as file:
-                        #             file.write(cont)
-                        #         #'with'command doesnt work in lambda
-                        #     meg_artifact.content = html_writer # function pointer instead of lambda
+                        elif deriv.content_type == 'report':
+                            def html_writer(file_path, cont=deriv.content):
+                                with open(file_path, "w") as file:
+                                    file.write(cont)
+                                #'with'command doesnt work in lambda
+                            meg_artifact.content = html_writer # function pointer instead of lambda
 
                         elif deriv.content_type == 'report mne':
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
@@ -265,7 +265,6 @@ def make_derivative_meg_qc(config_file_name):
                         # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
 
 
-        
     ancpbids.write_derivative(dataset, derivative) 
 
     return raw, QC_derivs, QC_simple, df_head_pos

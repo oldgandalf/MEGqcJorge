@@ -10,8 +10,8 @@ class Mean_artifact_with_peak:
     calculates its main peak (location and magnitude),
     info if this magnitude is concidered as artifact or not."""
 
-    def __init__(self, channel_or_epoch:str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None):
-        self.name =  channel_or_epoch
+    def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None):
+        self.name =  name
         self.mean_artifact_epoch = mean_artifact_epoch
         self.peak_loc = peak_loc
         self.peak_magnitude = peak_magnitude
@@ -21,7 +21,29 @@ class Mean_artifact_with_peak:
     def __repr__(self):
         return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) + '\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
-    def find_peak(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
+    def find_peak_and_detect_Rwave(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
+        
+        peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = find_epoch_peaks(ch_data=self.mean_artifact_epoch, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        
+        self.peak_loc=np.concatenate((peak_locs_pos, peak_locs_neg), axis=None)
+
+        if np.size(self.peak_loc)==0: #no peaks found - set peaks as just max of the whole epoch
+            self.peak_loc=np.array([np.argmax(np.abs(self.mean_artifact_epoch))])
+            self.r_wave_shape=False
+        elif 1<=len(self.peak_loc)<=max_n_peaks_allowed:
+            self.r_wave_shape=True
+        elif len(self.peak_loc)>max_n_peaks_allowed:
+            self.r_wave_shape=False
+        else:
+            self.r_wave_shape=False
+            print(self.name + ': no expected artifact wave shape, check the reason!')
+
+        self.peak_magnitude=np.array(self.mean_artifact_epoch[self.peak_loc])
+
+        return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
+
+
+    def find_peak_old(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
 
         '''Detects the location and magnitude of the peaks of data, sets them as attributes of the instance.
         Checks if the peak looks like R  wave (ECG) shape or like EOG artifact shape: 
@@ -65,10 +87,6 @@ class Mean_artifact_with_peak:
             self.peak_loc=np.array([np.argmax(np.abs(self.mean_artifact_epoch))])
             self.r_wave_shape=False
             print(self.name + ': no peaks found. Just take largest value as peak.')
-        # elif 1<len(peak_locs)<=max_n_peaks_allowed and np.max(np.abs(peak_magnitudes))<peak_magnitudes[np.argmax(np.abs(peak_magnitudes))-1]*1.1:
-        #     self.peak_loc =peak_locs
-        #     self.r_wave_shape=False
-        #     print(self.name + ': found several peaks but none is much higher than others!')
         else:
             self.peak_loc =peak_locs
             self.r_wave_shape=False
@@ -78,19 +96,9 @@ class Mean_artifact_with_peak:
 
         return
 
-    def plot_epoch_and_peak(self, fig, sfreq, tmin, tmax, fig_tit, ch_type):
-        if ch_type=='mag':
-            fig_ch_tit='Magnetometers'
-            unit='Tesla'
-        elif ch_type=='grad':
-            fig_ch_tit='Gradiometers'
-            unit='Tesla/meter'
-        else:
-            fig_ch_tit='?'
-            unit='?unknown unit?'
-            print('Please check ch_type input. Has to be "mag" or "grad"')
+    def plot_epoch_and_peak(self, fig, t, fig_tit, ch_type):
 
-        t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+        fig_ch_tit, unit = get_tit_and_unit(ch_type)
 
         fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.mean_artifact_epoch), name=self.name))
         fig.add_trace(go.Scatter(x=np.array(t[self.peak_loc]), y=self.peak_magnitude, mode='markers', name='peak: '+self.name));
@@ -111,31 +119,20 @@ class Mean_artifact_with_peak:
         return fig
 
 
-def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, list_mean_ecg_epochs, mean_ecg_magnitude_peak, max_n_peaks_allowed):
-
-    #calculate peaks of each mean ecg epoch ():
-    ecg_peaks_all_channels=[]
-    for ch_ind, ch in enumerate(loop_over):
-        ecg_peaks_1ch=Mean_artifact_with_peak(channel_or_epoch=ch, mean_artifact_epoch=list_mean_ecg_epochs[ch_ind])
-        
-        ecg_peaks_1ch.find_peak(max_n_peaks_allowed, thresh_lvl_peakfinder)
-        ecg_peaks_all_channels.append(ecg_peaks_1ch)
-
-
-    #ANOTHER WAY to  find mean:
-    #mean_ecg_magnitude_peak = np.mean([np.max(potentially_affected_channel.peak_magnitude) for potentially_affected_channel in ecg_peaks_all_channels])
-    #max: of the  all peaks if several were found inside 1 channel. mean: of the peaks in between diff channels.
-    #The artifact_threshold=mean_ecg_magnitude_peak/1  will still not be the  same as the peak of the averageoverall R wave, because R wave is the average of all epochs. 
-    # While  mean_ecg_magnitude_peak is average of the PEAKS, therefore  mean_ecg_magnitude_peak will always be more prominent then the peak of average R wave.
-    
+def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magnitude_peak, t):
 
     #Find the channels which got peaks over this mean:
     affected_channels=[]
     not_affected_channels=[]
     artifact_lvl=mean_ecg_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
-    for ch_ind, potentially_affected_channel in enumerate(ecg_peaks_all_channels):
+    for potentially_affected_channel in list_mean_ecg_epochs:
         #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
-        if np.max(potentially_affected_channel.peak_magnitude)>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
+        
+        max_peak_magn_ind=np.argmax(potentially_affected_channel.peak_magnitude)
+        print(t[potentially_affected_channel.peak_loc[max_peak_magn_ind]])
+
+        if potentially_affected_channel.peak_magnitude[max_peak_magn_ind]>abs(artifact_lvl) and -0.02<t[potentially_affected_channel.peak_loc[max_peak_magn_ind]]<0.01 and potentially_affected_channel.r_wave_shape is True:
+
             #if peak magnitude (1 peak, not the whole data!) is higher or lower than  the artifact level  AND the peak has r wave shape.
             potentially_affected_channel.artif_over_threshold=True
             affected_channels.append(potentially_affected_channel)
@@ -145,24 +142,15 @@ def epochs_or_channels_over_limit(loop_over, thresh_lvl_peakfinder, norm_lvl, li
     return affected_channels, not_affected_channels, artifact_lvl
 
 
-def make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type, fig_tit, use_abs_of_all_data):
-    
-    if ch_type=='mag':
-        fig_ch_tit='Magnetometers'
-        unit='Tesla'
-    elif ch_type=='grad':
-        fig_ch_tit='Gradiometers'
-        unit='Tesla/meter'
-    else:
-        fig_ch_tit='?'
-        unit='?unknown unit?'
-        print('Please check ch_type input. Has to be "mag" or "grad"')
+def make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, t, ch_type: str, fig_tit, use_abs_of_all_data):
+
+    fig_ch_tit, unit = get_tit_and_unit(ch_type)
 
     fig=go.Figure()
 
     for ch in ecg_affected_channels:
-        fig=ch.plot_epoch_and_peak(fig, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=ch_type)
-    t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+        fig=ch.plot_epoch_and_peak(fig, t, 'Channels affected by ECG artifact: ', ch_type)
+
     fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
 
     if use_abs_of_all_data == 'False':
@@ -186,7 +174,88 @@ def make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfr
 
     return fig
 
-def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, use_abs_of_all_data=False):
+
+def find_epoch_peaks(ch_data, thresh_lvl_peakfinder):
+
+    thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
+    peak_locs_pos, _ = find_peaks(ch_data, prominence=thresh_mean)
+    peak_locs_neg, _ = find_peaks(-ch_data, prominence=thresh_mean)
+
+    try:
+        peak_magnitudes_pos=ch_data[peak_locs_pos]
+    except:
+        peak_magnitudes_pos=np.empty(0)
+
+    try:
+        peak_magnitudes_neg=ch_data[peak_locs_neg]
+    except:
+        peak_magnitudes_neg=np.empty(0)
+
+    return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
+    
+
+def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg):
+
+    peak_locs=np.concatenate((peak_locs_pos, peak_locs_neg), axis=None)
+    peak_magnitudes=np.concatenate((peak_magnitudes_pos, peak_magnitudes_neg), axis=None)
+
+    if np.size(peak_locs_pos)+np.size(peak_locs_neg)>max_n_peaks_allowed: #if too many peaks were detected - do not flip - bad ecg.
+        print(ch_name+' has too many peaks - not R wave shape.')
+        return ch_data, peak_magnitudes, peak_locs
+    elif np.size(peak_locs_pos)>0 and np.size(peak_locs_neg)==0: #if only positive peaks were detected
+        # max_peak_loc_pos=peak_locs_pos[np.argmax(peak_magnitudes_pos)]
+        # if -0.02<t[max_peak_loc_pos]<0.01: 
+        #     ch_data_new  = ch_data
+        #     peak_magnitudes_new = peak_magnitudes
+        #     print(ch_name+' was NOT flipped. -0.02<t[max_peak_loc_pos]<0.01')
+        # else: 
+        #     ch_data_new  = -ch_data
+        #     peak_magnitudes_new=-peak_magnitudes
+        #     print(ch_name+' was flipped. Positive peak is far from time 0 - not the R wave peak - flip')
+        ch_data_new  = ch_data
+        peak_magnitudes_new = peak_magnitudes
+        print(ch_name+' was NOT flipped. Only positive peaks.')
+        
+    elif np.size(peak_locs_pos)==0 and np.size(peak_locs_neg)>0: #if only negative peaks were detected
+        ch_data_new  = -ch_data
+        peak_magnitudes_new=-peak_magnitudes
+        print(ch_name+' was flipped. Only negative peaks were detected.')
+    elif np.size(peak_locs_pos)==0 and np.size(peak_locs_neg)==0: #if no peaks were detected
+        ch_data_new  = ch_data 
+        peak_magnitudes_new = np.array([np.max(ch_data)]) #if no peaks were detected, the max peak magnitude is the max of the whole data. Can be not a peak at all
+        peak_locs = np.array([np.argmax(ch_data)])
+        print(ch_name+' was NOT flipped. No peaks were detected.')
+    else: #if both positive and negative peaks were detected
+        max_peak_magnitude_pos=peak_magnitudes_pos[np.argmax(peak_magnitudes_pos)]
+        max_peak_loc_pos=peak_locs_pos[np.argmax(peak_magnitudes_pos)]
+        min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
+        min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
+
+        if -0.02<t[max_peak_loc_pos]<0.01: #if the positive peak is close to time 0 - it is the R wave peak - still need to check if the negative peak is closer to time 0
+            if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]) and min_peak_loc_neg<max_peak_loc_pos: 
+                ch_data_new  = -ch_data 
+                peak_magnitudes_new=-peak_magnitudes
+                print(ch_name+' was flipped. Both peaks were detected. Upper peak close to time0. Down peak is closer to time0 of the event then the positive peak. And it also comes before the positive peak.')
+            else:
+                ch_data_new  = ch_data 
+                peak_magnitudes_new = peak_magnitudes
+                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak close to time0. Down peak may be not close enough to time0 or comes after the positive one.')
+        else: #if the positive peak is NOT close to time 0 - check if the negative peak is close to time 0 and is higher than the positive peak
+ 
+            if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
+                #min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
+                ch_data_new  = -ch_data 
+                peak_magnitudes_new=-peak_magnitudes
+                print(ch_name+' was flipped. Both peaks were detected. Upper peak far from time0. Down peak is higher than positive and AND is close enough to time0- flip.')
+            else:
+                ch_data_new  = ch_data 
+                peak_magnitudes_new = peak_magnitudes
+                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak may be not close enough to time0 or not higher than positive one.')
+
+    return ch_data_new, peak_magnitudes_new, peak_locs
+
+
+def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, use_abs_of_all_data=False):
 
     '''
     1. Calculate average ECG epoch: 
@@ -213,68 +282,54 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
 
 '''
 
+    if  ecg_or_eog=='ECG':
+        max_n_peaks_allowed=3
+    elif ecg_or_eog=='EOG':
+        max_n_peaks_allowed=3
+    else:
+        print('Choose ecg_or_eog input correctly!')
+
+    t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+
     #1.:
     #averaging the ECG epochs together:
     avg_ecg_epochs = ecg_epochs.average(picks=channels)#.apply_baseline((-0.5, -0.2))
     #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
     #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
 
+    ecg_epoch_per_ch=[]
     if use_abs_of_all_data == 'True':
         avg_ecg_epoch_data_all=np.abs(avg_ecg_epochs.data)
+        for i, ch_data in enumerate(avg_ecg_epoch_data_all):
+            ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data))
+            ecg_epoch_per_ch[i].find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+
     elif use_abs_of_all_data == 'False':
         avg_ecg_epoch_data_all=avg_ecg_epochs.data
+        for i, ch_data in enumerate(avg_ecg_epoch_data_all):
+            ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data))
+            ecg_epoch_per_ch[i].find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+
     elif use_abs_of_all_data == 'flip':
+
         avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
         avg_ecg_epoch_data_all=np.empty_like(avg_ecg_epoch_data_nonflipped)
+
         for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
-            
-            print(str(channels[i]), 'min(ch_data)=', min(ch_data), ', max(ch_data)=', max(ch_data), ', np.argmin(ch_data)=', np.argmin(ch_data), ', np.argmax(ch_data)=', np.argmax(ch_data))
-            
-            #flip if 
-            # 1) the negative peak is at least 0.5 of hight of positive or larger than positive and 
-            # 2) it comes before the positive peak:
-
-
-            thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
-            peak_locs_pos, _ = find_peaks(ch_data, prominence=thresh_mean)
-            peak_locs_neg, _ = find_peaks(-ch_data, prominence=thresh_mean)
-
-            if np.size(peak_locs_pos)>=0 and np.size(peak_locs_neg)==0:
-                avg_ecg_epoch_data_all[i,:]  = ch_data
-                continue
-            elif np.size(peak_locs_pos)==0 and np.size(peak_locs_neg)>0:
-                ch_data=-ch_data
-                print(str(channels[i])+' was flipped')
-                avg_ecg_epoch_data_all[i,:]  = ch_data
-                continue
-
-            else: #if both positive and negative peaks were detected
-                peak_magnitudes_pos=ch_data[peak_locs_pos]
-                max_peak_magnitude_pos=peak_magnitudes_pos[np.argmax(peak_magnitudes_pos)]
-                max_peak_loc_pos=peak_locs_pos[np.argmax(peak_magnitudes_pos)]
-
-                peak_magnitudes_neg=ch_data[peak_locs_neg]
-                min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
-                min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
-
-                t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
-
-                if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<abs(t[max_peak_loc_pos]): #if down peak is negative and it is closer to time0 of the event then the positive peak - flip:
-                # other conditions were before: min_peak_loc_neg<max_peak_loc_pos: #and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos)/2 
-                    ch_data=-ch_data
-                    print(str(channels[i])+' was flipped')
-                avg_ecg_epoch_data_all[i,:]  = ch_data 
+            ecg_epoch_nonflipped = Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data)
+            peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = ecg_epoch_nonflipped.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+            ch_data_new, peak_magnitudes_new, peak_locs = flip_condition_ECG(ch_data, channels[i], t, max_n_peaks_allowed, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg)
+            avg_ecg_epoch_data_all[i]=ch_data_new
+            ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data_new, peak_loc=peak_locs, peak_magnitude=peak_magnitudes_new, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
             
     else:
         print('Wrong set variable: use_abs_of_all_data=', use_abs_of_all_data)
 
     
     # fig=go.Figure()
-    # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
     # for i, ch in enumerate(avg_ecg_epoch_data_all):
     #     fig.add_trace(go.Scatter(x=t, y=ch, name=str(channels[i])))
-    #     fig=ch.plot_epoch_and_peak(fig, sfreq, tmin=tmin, tmax=tmax, fig_tit='Channels affected by ECG artifact: ', ch_type=ch_type)
-    # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+    #     fig=ch.plot_epoch_and_peak(fig, t, fig_tit='Channels affected by ECG artifact: ', ch_type=ch_type)
     # fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
     # fig.show()
     
@@ -283,54 +338,34 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
     #avg_ecg_overall=np.mean(np.abs(avg_ecg_epoch_data_all), axis=0) 
 
     avg_ecg_overall=np.mean(avg_ecg_epoch_data_all, axis=0) 
-    # will show if there is ecg artifact present  on average. should hav ecg shape if yes. 
+    # will show if there is ecg artifact present  on average. should have ecg shape if yes. 
     # otherwise - it was not picked up/reconstructed correctly
 
-    avg_ecg_overall_obj=Mean_artifact_with_peak(channel_or_epoch='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_ecg_overall)
-
-    if  ecg_or_eog=='ECG':
-        max_n_peaks_allowed=5
-    elif ecg_or_eog=='EOG':
-        max_n_peaks_allowed=3
-    else:
-        print('Choose ecg_or_eog input correctly!')
-
-    avg_ecg_overall_obj.find_peak(max_n_peaks_allowed, thresh_lvl_peakfinder)
-    # thresh_avg=(max(abs(avg_ecg_overall)) - min(abs(avg_ecg_overall)))/2
-    # mean_peak_locs, mean_peak_magnitudes = mne.preprocessing.peak_finder(abs(avg_ecg_overall), extrema=1, verbose=False, thresh=thresh_avg) 
-
-    # mean_ecg_peak_loc=np.argmax(avg_ecg_overall)
-    # mean_ecg_magnitude_peak=avg_ecg_overall[mean_ecg_peak_loc]
-    mean_ecg_magnitude_peak=np.max(np.abs(avg_ecg_overall))
-
+    avg_ecg_overall_obj=Mean_artifact_with_peak(name='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_ecg_overall)
+    avg_ecg_overall_obj.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+    mean_ecg_magnitude_peak=np.max(avg_ecg_overall_obj.peak_magnitude)
 
 
     if avg_ecg_overall_obj.r_wave_shape is True:
         print("GOOD " +ecg_or_eog+ " average.")
     else:
-        print("BAD " +ecg_or_eog+ " average - no typical ECG peak. \n  See if the recorded or reconstructed ECG signal has issues.")
+        print("BAD " +ecg_or_eog+ " average - no typical ECG peak.")
 
 
     if plotflag is True:
         fig_avg = go.Figure()
-        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, sfreq=sfreq, tmin=tmin, tmax=tmax, fig_tit='Mean '+ecg_or_eog+' artifact over all data: ', ch_type=m_or_g)
+        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
         fig_avg.show()
 
     #2. and 3.:
-    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(loop_over=channels, thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=avg_ecg_epoch_data_all, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, max_n_peaks_allowed=max_n_peaks_allowed)
+    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(norm_lvl=norm_lvl, list_mean_ecg_epochs=ecg_epoch_per_ch, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, t=t)
 
     if plotflag is True:
-        fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
-        fig_not_affected = make_ecg_affected_plots(ecg_not_affected_channels, artifact_lvl, tmin, tmax, sfreq, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
+        fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
+        fig_not_affected = make_ecg_affected_plots(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
 
     if avg_ecg_overall_obj.r_wave_shape is False and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
         print('Something went wrong! The overall average ' +ecg_or_eog+ ' is  bad, but all  channels are affected by ' +ecg_or_eog+ ' artifact.')
-
-
-    # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
-    # fig_avg.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-    # fig_avg.show()
-
 
     return ecg_affected_channels, fig_affected, fig_not_affected, fig_avg
 
@@ -353,7 +388,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
 #         # Plot to check:
 #         # fig = go.Figure()
 #         # sfreq=raw.info['sfreq']
-#         # t = np.arange(tmin, tmax+1/sfreq, 1/sfreq)
+
 
 #         #collect the mean values of each echepoch into a list
 #         all_means_of_epochs = [None] * len(ecg_epochs) #preassign
@@ -367,7 +402,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g:list, 
 
 #         epoch_numbers_list=list(range(0, len(ecg_epochs)))
 #         #2. and 3.:
-#         strong_ecg_epochs, weak_ecg_epochs, artifact_lvl = epochs_or_channels_over_limit(loop_over=epoch_numbers_list, thresh_lvl_peakfinder=thresh_lvl_peakfinder, norm_lvl=norm_lvl, list_mean_ecg_epochs=all_means_of_epochs)
+#         strong_ecg_epochs, weak_ecg_epochs, artifact_lvl = epochs_or_channels_over_limit(norm_lvl=norm_lvl, list_mean_ecg_epochs=all_means_of_epochs, t=t)
 #         ecg_affected_epochs[m_or_g]=strong_ecg_epochs
 #         ecg_not_affected_epochs[m_or_g]=weak_ecg_epochs
 
@@ -457,7 +492,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
         fig_ecg_sensors.show()
 
-        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=4, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, None, 'plotly')]
         ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, None, 'plotly')]

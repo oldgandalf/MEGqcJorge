@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import warnings
 
-def get_tit_and_unit(m_or_g):
+def get_tit_and_unit(m_or_g: str):
     if m_or_g=='mag':
         m_or_g_tit="Magnetometers"
         unit='T/Hz'
