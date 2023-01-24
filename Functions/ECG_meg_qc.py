@@ -129,7 +129,6 @@ def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magni
         #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
         
         max_peak_magn_ind=np.argmax(potentially_affected_channel.peak_magnitude)
-        print(t[potentially_affected_channel.peak_loc[max_peak_magn_ind]])
 
         if potentially_affected_channel.peak_magnitude[max_peak_magn_ind]>abs(artifact_lvl) and -0.02<t[potentially_affected_channel.peak_loc[max_peak_magn_ind]]<0.01 and potentially_affected_channel.r_wave_shape is True:
 
@@ -231,26 +230,26 @@ def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, 
         min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
         min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
 
-        if -0.02<t[max_peak_loc_pos]<0.01: #if the positive peak is close to time 0 - it is the R wave peak - still need to check if the negative peak is closer to time 0
-            if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]) and min_peak_loc_neg<max_peak_loc_pos: 
+        if -0.02<t[max_peak_loc_pos]<0.01: #if the positive peak is close to time 0 - it can be the R wave peak - still need to check if the negative peak is closer to time 0
+            if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]) and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):#min_peak_loc_neg<max_peak_loc_pos: 
                 ch_data_new  = -ch_data 
                 peak_magnitudes_new=-peak_magnitudes
-                print(ch_name+' was flipped. Both peaks were detected. Upper peak close to time0. Down peak is closer to time0 of the event then the positive peak. And it also comes before the positive peak.')
+                print(ch_name+' was flipped. Both peaks were detected. Upper peak close to time0. Down peak is closer to time0 of the event then the positive peak. And it also is higher than the positive peak.')
             else:
                 ch_data_new  = ch_data 
                 peak_magnitudes_new = peak_magnitudes
                 print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak close to time0. Down peak may be not close enough to time0 or comes after the positive one.')
         else: #if the positive peak is NOT close to time 0 - check if the negative peak is close to time 0 and is higher than the positive peak
  
-            if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
+            if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01: #and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
                 #min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
                 ch_data_new  = -ch_data 
                 peak_magnitudes_new=-peak_magnitudes
-                print(ch_name+' was flipped. Both peaks were detected. Upper peak far from time0. Down peak is higher than positive and AND is close enough to time0- flip.')
+                print(ch_name+' was flipped. Both peaks were detected. Upper peak far from time0 is close enough to time0- flip.')
             else:
                 ch_data_new  = ch_data 
                 peak_magnitudes_new = peak_magnitudes
-                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak may be not close enough to time0 or not higher than positive one.')
+                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak also far.')
 
     return ch_data_new, peak_magnitudes_new, peak_locs
 
