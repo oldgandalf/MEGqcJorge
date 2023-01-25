@@ -230,7 +230,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
 
     fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
 
-    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
@@ -291,7 +291,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
     
     #fig.write_html(fig_path)
 
-    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 
@@ -335,7 +335,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     
     #fig.write_html(fig_path)
 
-    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
 
     return qc_derivative
 

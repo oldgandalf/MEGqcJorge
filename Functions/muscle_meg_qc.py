@@ -27,63 +27,91 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
-from universal_plots import QC_derivative
+from universal_plots import QC_derivative, get_tit_and_unit
 
-def MUSCLE_meg_qc(raw, interactive_matplot=False):
+def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
 
-    #ADD checks:
-    # Are there mags?
-    # Do we even wanan try with grads?
-    # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq.
-    # add several z-score options. or make it as input param??
-    # add legend for threshold line
+    # ADD checks:
+    # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads?
+    # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq. ADDED
+    # add several z-score options. or make it as input param?
+    # if we ll use both m and g - chnge simple metric. otherwise leave as is. 
+    # also! it now takes power noise freqs only from mag or grad? check it and add all.
+
+
+    # if 'mag' in m_or_g_chosen:
+    #     m_or_g_chosen='mag'
+    #     print('Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
+    # elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
+    #     m_or_g_chosen='grad'
+    #     print('Muscle artifact detection performed on gradiometers, they are less sensitive to muscle activity than magnetometers. Results may be not realiable.')
+    # else:
+    #     print('No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
+    #     return [], []
+
 
     muscle_derivs=[]
 
     # Notch filter the data:
-    # 
     # If line noise is present, you should perform notch-filtering *before*
     #     detecting muscle artifacts. See `tut-section-line-noise` for an example.
 
-    raw.load_data() 
-    raw.notch_filter([60, 120])
+    raw.load_data() #need to preloaf data for filtering both in notch filter and in annotate_muscle_zscore
+    if (len(powerline_freqs))>0:
+        print('Powerline noise found in data. Notch filtering at: ', powerline_freqs)
+        powerline_freqs+=[x*2 for x in powerline_freqs]
+        raw.notch_filter(powerline_freqs)
+    else:
+        print('No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+
 
     # The threshold is data dependent, check the optimal threshold by plotting
     # ``scores_muscle``.
-    threshold_muscle = 10  # z-score
+    threshold_muscle = muscle_params['threshold_muscle']  # z-score
     # Choose one channel type, if there are axial gradiometers and magnetometers,
     # select magnetometers as they are more sensitive to muscle activity.
-    annot_muscle, scores_muscle = annotate_muscle_zscore(
-        raw, ch_type="mag", threshold=threshold_muscle, min_length_good=0.2,
-        filter_freq=[110, 140])
+    
+    for m_or_g in m_or_g_chosen:
+
+        tit, _ = get_tit_and_unit(m_or_g)
+
+        annot_muscle, scores_muscle = annotate_muscle_zscore(
+            raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=0.2,
+            filter_freq=[110, 140])
 
 
-    # ## Plot muscle z-scores across recording
-    # 
-    peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*5)
+        # ## Plot muscle z-scores across recording
+        # 
+        peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*5)
 
-    muscle_times = raw.times[peak_locs_pos]
-    muscle_magnitudes=scores_muscle[peak_locs_pos]
+        muscle_times = raw.times[peak_locs_pos]
+        muscle_magnitudes=scores_muscle[peak_locs_pos]
 
-    fig=go.Figure()
-    fig.add_trace(go.Scatter(x=raw.times, y=scores_muscle, mode='lines', name='muscle scores'))
-    fig.add_trace(go.Scatter(x=muscle_times, y=muscle_magnitudes, mode='markers', name='muscle events'))
-    fig.update_layout(title='Muscle activity', xaxis_title='time, (s)', yaxis_title='zscore')
-    fig.add_shape(type="line", x0=0, y0=threshold_muscle, x1=raw.times[-1], y1=threshold_muscle, line=dict(color="Red", width=2), name='threshold')
-    fig.show()
+        fig=go.Figure()
+        fig.add_trace(go.Scatter(x=raw.times, y=scores_muscle, mode='lines', name='muscle scores'))
+        fig.add_trace(go.Scatter(x=muscle_times, y=muscle_magnitudes, mode='markers', name='muscle events'))
+        fig.add_trace(go.Scatter(x=raw.times, y=[threshold_muscle]*len(raw.times), mode='lines', name='z score threshold'))
+        fig.update_layout(xaxis_title='time, (s)', yaxis_title='zscore', title={
+        'text': "Muscle z scores over time based on "+tit,
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+        fig.show()
 
-    muscle_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time', None, 'plotly')]
+        muscle_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_'+tit, None, 'plotly')]
 
-    # ## View the annotations (interactive_matplot)
-    if interactive_matplot is True:
-        order = np.arange(144, 164)
-        raw.set_annotations(annot_muscle)
-        fig2=raw.plot(start=5, duration=20, order=order)
-        #Change settings to show all channels!
+        # ## View the annotations (interactive_matplot)
+        if interactive_matplot is True:
+            order = np.arange(144, 164)
+            raw.set_annotations(annot_muscle)
+            fig2=raw.plot(start=5, duration=20, order=order)
+            #Change settings to show all channels!
 
     simple_metric=make_simple_metric_muscle(muscle_times, muscle_magnitudes, threshold_muscle)
 
     return muscle_derivs, simple_metric
+
 
 def make_simple_metric_muscle(muscle_times, muscle_magnitudes, threshold_muscle):
 

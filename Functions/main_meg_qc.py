@@ -74,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:2]: 
+    for sid in list_of_subs[2:3]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -104,6 +104,10 @@ def make_derivative_meg_qc(config_file_name):
             head_not_calculated = False
             bad_ecg=False
             bad_eog=False
+            powerline_freqs = None #predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
+            # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
+            # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
+
             # noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
             # noisy_eog_derivs, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
 
@@ -116,15 +120,16 @@ def make_derivative_meg_qc(config_file_name):
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
+
             # print('Starting RMSE...')
             # start_time = time.time()
             # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting PSD...')
-            # start_time = time.time()
-            # psd_derivs, simple_metrics_psd = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
-            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting PSD...')
+            start_time = time.time()
+            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
+            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -153,7 +158,7 @@ def make_derivative_meg_qc(config_file_name):
             # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting Muscle artifacts calculation...')
-            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(raw, interactive_matplot=False)
+            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw, powerline_freqs, m_or_g_chosen, interactive_matplot=False)
             print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 

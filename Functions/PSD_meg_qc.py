@@ -477,13 +477,18 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     bands_legend.append(main_signal_legend)
     #bands_legend=[str(fr)+' Hz noise' for fr in freqs[peaks]]+['Main signal'] #legend version without showing the abs power
 
+
     Snr=bp_noise_relative_to_signal+[1-sum(bp_noise_relative_to_signal)]
     noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_legend)
     noise_pie_derivative.content.show()
 
     simple_metric_deriv=make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks)
 
-    return noise_pie_derivative, simple_metric_deriv
+    #find out if the data contains powerline noise freqs - sed later to notch filter them before muscle artofact detection:
+    powerline=[50, 60]
+    powerline_freqs = [x for x in powerline if x in np.round(freqs[peaks])]
+
+    return noise_pie_derivative, simple_metric_deriv, powerline_freqs
 
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
@@ -516,18 +521,12 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        noise_pie_derivative, simple_metric_deriv = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
+        noise_pie_derivative, simple_metric_deriv, powerline_freqs = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
 
         simple_metrics_psd += [simple_metric_deriv]
 
         derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] #+[simple_metric_deriv]
 
 
-
-    return derivs_psd, simple_metrics_psd
-
-# In[56]:
-# This command was used to convert notebook to this .py file:
-
-# !jupyter nbconvert PSD_meg_qc.ipynb --to python
+    return derivs_psd, simple_metrics_psd, powerline_freqs
 
