@@ -13,6 +13,7 @@ from Peaks_auto_meg_qc import PP_auto_meg_qc
 from ECG_meg_qc import ECG_meg_qc
 from EOG_meg_qc import EOG_meg_qc
 from Head_meg_qc import HEAD_movement_meg_qc
+from muscle_meg_qc import MUSCLE_meg_qc
 from universal_html_report import make_joined_report, make_joined_report_for_mne
 from universal_plots import QC_derivative
 
@@ -73,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:8]: 
+    for sid in list_of_subs[1:2]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -135,11 +136,11 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting ECG...')
-            start_time = time.time()
-            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting ECG...')
+            # start_time = time.time()
+            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # if picks_EOG is not None and bad_eog is False:
             #     print('Starting EOG...')
@@ -151,9 +152,9 @@ def make_derivative_meg_qc(config_file_name):
             # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
             # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting Muscle artifacts calculation...')
-            # muscle_derivs, muscle_not_calculated = MUSCLE_meg_qc(raw)
-            # print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting Muscle artifacts calculation...')
+            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(raw, interactive_matplot=False)
+            print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # Make strings with notes for the user to add to html report:

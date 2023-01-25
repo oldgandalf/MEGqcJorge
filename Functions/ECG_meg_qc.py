@@ -130,7 +130,7 @@ def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magni
         
         max_peak_magn_ind=np.argmax(potentially_affected_channel.peak_magnitude)
 
-        if potentially_affected_channel.peak_magnitude[max_peak_magn_ind]>abs(artifact_lvl) and -0.02<t[potentially_affected_channel.peak_loc[max_peak_magn_ind]]<0.01 and potentially_affected_channel.r_wave_shape is True:
+        if potentially_affected_channel.peak_magnitude[max_peak_magn_ind]>abs(artifact_lvl) and -0.02<t[potentially_affected_channel.peak_loc[max_peak_magn_ind]]<0.012 and potentially_affected_channel.r_wave_shape is True:
 
             #if peak magnitude (1 peak, not the whole data!) is higher or lower than  the artifact level  AND the peak has r wave shape.
             potentially_affected_channel.artif_over_threshold=True
@@ -203,10 +203,10 @@ def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, 
         return ch_data, peak_magnitudes, peak_locs
     elif np.size(peak_locs_pos)>0 and np.size(peak_locs_neg)==0: #if only positive peaks were detected
         # max_peak_loc_pos=peak_locs_pos[np.argmax(peak_magnitudes_pos)]
-        # if -0.02<t[max_peak_loc_pos]<0.01: 
+        # if -0.02<t[max_peak_loc_pos]<0.012: 
         #     ch_data_new  = ch_data
         #     peak_magnitudes_new = peak_magnitudes
-        #     print(ch_name+' was NOT flipped. -0.02<t[max_peak_loc_pos]<0.01')
+        #     print(ch_name+' was NOT flipped. -0.02<t[max_peak_loc_pos]<0.012')
         # else: 
         #     ch_data_new  = -ch_data
         #     peak_magnitudes_new=-peak_magnitudes
@@ -230,26 +230,36 @@ def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, 
         min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
         min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
 
-        if -0.02<t[max_peak_loc_pos]<0.01: #if the positive peak is close to time 0 - it can be the R wave peak - still need to check if the negative peak is closer to time 0
-            if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]) and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):#min_peak_loc_neg<max_peak_loc_pos: 
-                ch_data_new  = -ch_data 
-                peak_magnitudes_new=-peak_magnitudes
-                print(ch_name+' was flipped. Both peaks were detected. Upper peak close to time0. Down peak is closer to time0 of the event then the positive peak. And it also is higher than the positive peak.')
-            else:
-                ch_data_new  = ch_data 
-                peak_magnitudes_new = peak_magnitudes
-                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak close to time0. Down peak may be not close enough to time0 or comes after the positive one.')
-        else: #if the positive peak is NOT close to time 0 - check if the negative peak is close to time 0 and is higher than the positive peak
+        # if -0.02<t[max_peak_loc_pos]<0.012: #if the positive peak is close to time 0 - it can be the R wave peak - still need to check if the negative peak is closer to time 0
+        #     if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]): # and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):#min_peak_loc_neg<max_peak_loc_pos: 
+        #         ch_data_new  = -ch_data 
+        #         peak_magnitudes_new=-peak_magnitudes
+        #         print(ch_name+' was flipped. Both peaks were detected. Upper peak close to time0. Down peak is closer to time0 of the event then the positive peak. And it also is higher than the positive peak.')
+        #     else:
+        #         ch_data_new  = ch_data 
+        #         peak_magnitudes_new = peak_magnitudes
+        #         print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak close to time0. Down peak may be not close enough to time0 or is smaller than positive.')
+        # else: #if the positive peak is NOT close to time 0 - check if the negative peak is close to time 0 and is higher than the positive peak
  
-            if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01: #and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
-                #min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.01 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
-                ch_data_new  = -ch_data 
-                peak_magnitudes_new=-peak_magnitudes
-                print(ch_name+' was flipped. Both peaks were detected. Upper peak far from time0 is close enough to time0- flip.')
-            else:
-                ch_data_new  = ch_data 
-                peak_magnitudes_new = peak_magnitudes
-                print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak also far.')
+        #     if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.012: #and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
+        #         #min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.012 and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):
+        #         ch_data_new  = -ch_data 
+        #         peak_magnitudes_new=-peak_magnitudes
+        #         print(ch_name+' was flipped. Both peaks were detected. Upper peak far from time0 is close enough to time0- flip.')
+        #     else:
+        #         ch_data_new  = ch_data 
+        #         peak_magnitudes_new = peak_magnitudes
+        #         print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak also far.')
+
+        # if peak is negative and close to time 0 and is closer than positive - flip:
+        if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.012 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]): 
+            ch_data_new  = -ch_data 
+            peak_magnitudes_new=-peak_magnitudes
+            print(ch_name+' was flipped. Both peaks were detected. Peak is negative and close to time 0 and is closer than positive - flip.')
+        else:
+            ch_data_new  = ch_data 
+            peak_magnitudes_new = peak_magnitudes
+            print(ch_name+' was NOT flipped.')
 
     return ch_data_new, peak_magnitudes_new, peak_locs
 

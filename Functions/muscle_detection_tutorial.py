@@ -50,16 +50,6 @@ from mne.io import read_raw_ctf
 from mne.preprocessing import annotate_muscle_zscore
 
 
-# Load data
-data_path = bst_auditory.data_path()
-raw_fname = data_path / 'MEG' / 'bst_auditory' / 'S01_AEF_20131218_01.ds'
-
-raw = read_raw_ctf(raw_fname, preload=False)
-
-raw.crop(130, 160).load_data()  # just use a fraction of data for speed here
-raw.resample(300, npad="auto")
-
-
 # In[ ]:
 
 
@@ -130,11 +120,26 @@ fig, ax = plt.subplots()
 ax.plot(raw.times, scores_muscle)
 ax.axhline(y=threshold_muscle, color='r')
 ax.set(xlabel='time, (s)', ylabel='zscore', title='Muscle activity')
+from scipy.signal import find_peaks
 
+peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*5)
+
+muscle_times = raw.times[peak_locs_pos]
+muscle_magnitudes=scores_muscle[peak_locs_pos]
+ax.plot(muscle_times, muscle_magnitudes, '*', color='red') 
+
+import plotly.graph_objects as go
+fig=go.Figure()
+fig.add_trace(go.Scatter(x=raw.times, y=scores_muscle, mode='lines', name='muscle scores'))
+fig.add_trace(go.Scatter(x=muscle_times, y=muscle_magnitudes, mode='markers', name='muscle events'))
+fig.update_layout(title='Muscle activity', xaxis_title='time, (s)', yaxis_title='zscore')
+fig.add_shape(type="line", x0=0, y0=threshold_muscle, x1=raw.times[-1], y1=threshold_muscle, line=dict(color="Red", width=2), name='threshold')
+fig.show()
 
 # ## View the annotations
 # 
 # 
+
 
 # In[ ]:
 
@@ -153,3 +158,10 @@ fig2=raw.plot(start=5, duration=20, order=order)
 mpld3.save_html(fig2, 'should be interactive but not.html')
 
 
+#%%
+# Dict: z score 5
+# zscore 10.
+# num of events.
+# in brackets time of the events. (or in nested dict).
+
+# %%
