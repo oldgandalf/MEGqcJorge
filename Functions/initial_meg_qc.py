@@ -168,7 +168,8 @@ def get_all_config_params(config_file_name: str):
         list_thresholds = [float(i) for i in list_thresholds.split(',')]
 
         all_qc_params['Muscle'] = dict({
-        'threshold_muscle': list_thresholds})
+        'threshold_muscle': list_thresholds,
+        'min_distance_between_different_muscle_events': muscle_section.getfloat('min_distance_between_different_muscle_events')})
 
     except:
         print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')

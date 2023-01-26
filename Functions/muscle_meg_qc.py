@@ -34,19 +34,18 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
     # ADD checks:
     # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads? DONE use grads in case no mags
     # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq. ADDED
-    # add several z-score options. or make it as input param? DONE
-    # if we ll use only m or g - change simple metric. otherwise leave as is. 
+    # add several z-score options. or make it as input param? DONE 
 
 
-    # if 'mag' in m_or_g_chosen:
-    #     m_or_g_chosen='mag'
-    #     print('Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
-    # elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
-    #     m_or_g_chosen='grad'
-    #     print('Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
-    # else:
-    #     print('No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
-    #     return [], []
+    if 'mag' in m_or_g_chosen:
+        m_or_g_chosen=['mag']
+        print('Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
+    elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
+        m_or_g_chosen=['grad']
+        print('Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
+    else:
+        print('No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
+        return [], []
 
     muscle_derivs=[]
 
@@ -66,8 +65,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
     # The threshold is data dependent, check the optimal threshold by plotting
     # ``scores_muscle``.
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
-    # Choose one channel type, if there are axial gradiometers and magnetometers,
-    # select magnetometers as they are more sensitive to muscle activity.
+    min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
     simple_metric={}
     for m_or_g in m_or_g_chosen:
@@ -86,8 +84,9 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
             filter_freq=[110, 140])
 
             # ## Plot muscle z-scores across recording
-            # 
-            peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*5)
+            peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
+
+            print('HERE!', peak_locs_pos)
 
             muscle_times = raw.times[peak_locs_pos]
             muscle_magnitudes=scores_muscle[peak_locs_pos]
