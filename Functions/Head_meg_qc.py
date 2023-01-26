@@ -103,7 +103,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
                 chpi_locs = mne.chpi.extract_chpi_locs_kit(raw)
             except:
                 print('Also KIT appriach to compute Head positions failed. Head positions can not be computed')
-                return head_derivs, True
+                return head_derivs, {}, True, []
 
     # Next steps - for all systems:
     print('Start computing head positions...')
