@@ -151,7 +151,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
         
     #fig.show()
 
-    qc_derivative = QC_derivative(content=fig, description=fig_name, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 

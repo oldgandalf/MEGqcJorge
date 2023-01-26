@@ -74,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:4]: 
+    for sid in list_of_subs[0:21]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -111,14 +111,14 @@ def make_derivative_meg_qc(config_file_name):
             # noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
             # noisy_eog_derivs, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
 
-            if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy - drop it and  try to reconstruct
-                no_ecg_str = 'ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.'
-                raw.drop_channels(picks_ECG)
-                raw_cropped_filtered.drop_channels(picks_ECG)
-                raw_cropped_filtered_resampled.drop_channels(picks_ECG)
-                raw_cropped.drop_channels(picks_ECG)
+            # if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy - drop it and  try to reconstruct
+            #     no_ecg_str = 'ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.'
+            #     raw.drop_channels(picks_ECG)
+            #     raw_cropped_filtered.drop_channels(picks_ECG)
+            #     raw_cropped_filtered_resampled.drop_channels(picks_ECG)
+            #     raw_cropped.drop_channels(picks_ECG)
 
-            print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
 
             # print('Starting RMSE...')
@@ -141,17 +141,17 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            if picks_EOG is not None and bad_eog is False:
-                print('Starting EOG...')
-                start_time = time.time()
-                eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-                print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # if picks_EOG is not None and bad_eog is False:
+            #     print('Starting EOG...')
+            #     start_time = time.time()
+            #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Head movement calculation...')
             # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)

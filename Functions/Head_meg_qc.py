@@ -110,8 +110,14 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     start_time = time.time()
     head_pos = mne.chpi.compute_head_pos(raw.info, chpi_locs)
     print("Finished. --- Execution %s seconds ---" % (time.time() - start_time))
+    print('Head positions:', head_pos)
 
-    fig0 = mne.viz.plot_head_positions(head_pos, mode='traces')
+
+    try:
+        fig0 = mne.viz.plot_head_positions(head_pos, mode='traces')
+    except:
+        print('Plotting head positions failed. Positions were not computed successfully.')
+        return head_derivs, {}, True, []
 
     head_derivs += [QC_derivative(fig0, 'Head_position_rotation', 'matplotlib')]
 
