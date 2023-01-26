@@ -133,8 +133,7 @@ def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoc
     df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
     df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
-    file_path = None
-    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
+    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, 'df')]
 
     return dfs_with_name
 
@@ -182,8 +181,7 @@ def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_
     df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
     df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
-    file_path = None
-    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
+    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, 'df')]
 
     return dfs_with_name
 
@@ -230,8 +228,8 @@ def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, df_epoch: pd
     df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
     df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
-    file_path = None
-    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, file_path, 'df')]
+
+    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, 'df')]
 
     return dfs_with_name
 

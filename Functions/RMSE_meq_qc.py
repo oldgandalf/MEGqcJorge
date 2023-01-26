@@ -276,9 +276,9 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
 
     # 3) Create derivatives:
     dfs_deriv = [
-        QC_derivative(df_std,'std_per_epoch_'+ch_type, None, 'df'),
-        QC_derivative(df_ch_ep_large_std, 'Large_std_per_epoch_'+ch_type, None, 'df'),
-        QC_derivative(df_ch_ep_small_std, 'Small_std_per_epoch_'+ch_type, None, 'df')]
+        QC_derivative(df_std,'std_per_epoch_'+ch_type, 'df'),
+        QC_derivative(df_ch_ep_large_std, 'Large_std_per_epoch_'+ch_type, 'df'),
+        QC_derivative(df_ch_ep_small_std, 'Small_std_per_epoch_'+ch_type, 'df')]
 
 
     return dfs_deriv
@@ -318,7 +318,6 @@ def make_simple_metric_rmse_all_data(std_lvl, big_rmse_with_value_all_data, smal
         #'Percent of noisy epochs with std above '+str(std_lvl)+' std_threshold': len(),
         #'Noisy epochs': []
 
-    #simple_metric_deriv=QC_derivative(simple_metric,'RMSE_'+m_or_g_tit, None, 'json')
 
     return simple_metric
 

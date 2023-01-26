@@ -34,6 +34,6 @@ def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_
     deriv_ptp_auto= []
     for  m_or_g in m_or_g_chosen:
         dfs_ptp_amlitude_annot, bad_channels[m_or_g] = get_amplitude_annots_per_channel(data, peaks[m_or_g], flats[m_or_g], channels[m_or_g], bad_percent=ptp_auto_params['bad_percent'], min_duration= ptp_auto_params['min_duration'])
-        deriv_ptp_auto += [QC_derivative(dfs_ptp_amlitude_annot,'ptp_amplitude_annots_'+m_or_g, None, 'df')]
+        deriv_ptp_auto += [QC_derivative(dfs_ptp_amlitude_annot,'ptp_amplitude_annots_'+m_or_g, 'df')]
 
     return deriv_ptp_auto, bad_channels

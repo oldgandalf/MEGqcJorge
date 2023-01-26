@@ -22,15 +22,14 @@ def get_tit_and_unit(m_or_g: str):
 
 class QC_derivative:
 
-    def __init__(self, content, name, filepath, content_type, description_for_user = 'Add measurement description for a user...'):
+    def __init__(self, content, name, content_type, description_for_user = 'Add measurement description for a user...'):
         self.content =  content
         self.name = name
-        self.filepath = filepath
         self.content_type = content_type
         self.description_for_user = description_for_user
 
     def __repr__(self):
-        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n filepath: ' + str(self.filepath) + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
+        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
 
     def convert_fig_to_html(self):
         if self.content_type == 'plotly':
@@ -91,7 +90,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
 
     Returns:
     fig (go.Figure): plottly figure
-    fig_path (str): path where the figure is saved as html file
+
     '''
 
     if ch_type=='Magnetometers':
@@ -150,13 +149,9 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
             'xanchor': 'center',
             'yanchor': 'top'})
         
-
-    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
-
     #fig.show()
-    #fig.write_html(fig_path)
 
-    qc_derivative = QC_derivative(content=fig, description=fig_name, filepath=fig_path, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, description=fig_name, content_type='plotly')
 
     return qc_derivative
 
@@ -176,7 +171,6 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
 
     Returns:
     fig (go.Figure): plottly figure
-    fig_path (str): path where the figure is saved as html file
     fig_name (str): figure name
     '''
 
@@ -228,9 +222,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         
     #fig.show()
 
-    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
@@ -247,7 +239,6 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
 
     Returns:
     fig (go.Figure): plottly figure
-    fig_path (str): path where the figure is saved as html file
     '''
 
     if m_or_g=='mag':
@@ -287,11 +278,9 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
     #fig.show()
     
     fig_name='PSD_all_data_'+tit
-    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
-    
-    #fig.write_html(fig_path)
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
@@ -308,7 +297,6 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     
     Returns:
     fig (go.Figure): plottly piechart figure
-    fig_path (str): path where the figure is saved as html file
     '''
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
@@ -331,11 +319,9 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     #fig.show()
 
     fig_name='PSD_Relative_bandpower_all_channels_'+tit
-    fig_path='../derivatives/megqc/figures/'+fig_name+'.html'
-    
-    #fig.write_html(fig_path)
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, filepath=fig_path, content_type='plotly')
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 

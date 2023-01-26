@@ -35,8 +35,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
     # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads?
     # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq. ADDED
     # add several z-score options. or make it as input param?
-    # if we ll use both m and g - chnge simple metric. otherwise leave as is. 
-    # also! it now takes power noise freqs only from mag or grad? check it and add all.
+    # if we ll use both m and g - change simple metric. otherwise leave as is. 
 
 
     # if 'mag' in m_or_g_chosen:
@@ -99,7 +98,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
         'yanchor': 'top'})
         fig.show()
 
-        muscle_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_'+tit, None, 'plotly')]
+        muscle_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_'+tit, 'plotly')]
 
         # ## View the annotations (interactive_matplot)
         if interactive_matplot is True:

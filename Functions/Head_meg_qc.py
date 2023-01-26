@@ -113,7 +113,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
     fig0 = mne.viz.plot_head_positions(head_pos, mode='traces')
 
-    head_derivs += [QC_derivative(fig0, 'Head_position_rotation', None, 'matplotlib')]
+    head_derivs += [QC_derivative(fig0, 'Head_position_rotation', matplotlib')]
 
     # 2. Optional visual part:
     if plot_with_lines is True:
@@ -130,7 +130,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
         # The green horizontal lines represent the original head position, whereas the
         # Red lines are the new head position averaged over all the time points.
 
-        head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', None, 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+        head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
     
     if plot_annotations is True:
         # 3. Plot raw data with annotated head movement:
@@ -139,7 +139,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
             raw, head_pos, mean_distance_limit=mean_distance_limit)
         raw.set_annotations(annotation_movement)
         fig2=raw.plot(n_channels=100, duration=20)
-        head_derivs += [QC_derivative(fig2, 'Head_position_annot', None, 'matplotlib')]
+        head_derivs += [QC_derivative(fig2, 'Head_position_annot', 'matplotlib')]
 
 
     # 4. Calculate the standard deviation of the movement of the head over time:

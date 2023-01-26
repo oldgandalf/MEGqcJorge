@@ -133,11 +133,11 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     renamed_df_rel_power = df_rel_power.rename(columns={0: "delta (0.5-4 Hz)", 1: "theta (4-8 Hz)", 2: "alpha (8-12 Hz)", 3: "beta (12-30 Hz)", 4: "gamma (30-100 Hz)"})
     renamed_df_rel_power_name = 'relative_power_'+m_or_g
 
-    file_path = None
+
     dfs_with_name = [
-        QC_derivative(renamed_df_power,renamed_df_power_name,file_path, 'df'),
-        QC_derivative(renamed_df_power_freq, renamed_df_power_freq_name, file_path, 'df'),
-        QC_derivative(renamed_df_rel_power, renamed_df_rel_power_name, file_path, 'df')
+        QC_derivative(renamed_df_power,renamed_df_power_name, 'df'),
+        QC_derivative(renamed_df_power_freq, renamed_df_power_freq_name, 'df'),
+        QC_derivative(renamed_df_rel_power, renamed_df_rel_power_name, 'df')
         ]
 
 
@@ -217,7 +217,6 @@ def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, fr
         'Number of noisy frequencies': len(peaks), 
         'Details': noisy_freqs_dict}
 
-    #simple_metric_deriv=QC_derivative(simple_metric,'PSD_'+m_or_g_tit, None, 'json')
 
     return simple_metric
 
@@ -513,6 +512,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
     derivs_psd = []
     simple_metrics_psd = []
 
+    powerline_freqs = []
     for m_or_g in m_or_g_chosen:
 
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method='welch', fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
@@ -521,8 +521,9 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        noise_pie_derivative, simple_metric_deriv, powerline_freqs = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
-
+        noise_pie_derivative, simple_metric_deriv, pf = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
+        powerline_freqs += pf
+        
         simple_metrics_psd += [simple_metric_deriv]
 
         derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] #+[simple_metric_deriv]

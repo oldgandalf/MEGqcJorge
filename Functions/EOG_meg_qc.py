@@ -30,17 +30,17 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
         eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g)[0]
-        eog_derivs += [QC_derivative(fig_eog, 'mean_EOG_epoch_'+m_or_g, None, 'matplotlib')]
+        eog_derivs += [QC_derivative(fig_eog, 'mean_EOG_epoch_'+m_or_g, 'matplotlib')]
 
         #averaging the ECG epochs together:
         fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g)
-        eog_derivs += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, None, 'matplotlib')]
+        eog_derivs += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
 
 
         eog_affected_channels, fig_affected, fig_not_affected, fig_avg=find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=5, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
-        eog_derivs += [QC_derivative(fig_affected, 'EOG_affected_channels_'+m_or_g, None, 'plotly')]
-        eog_derivs += [QC_derivative(fig_not_affected, 'EOG_not_affected_channels_'+m_or_g, None, 'plotly')]
-        eog_derivs += [QC_derivative(fig_avg, 'overall_average_EOG_epoch_'+m_or_g, None, 'plotly')]
+        eog_derivs += [QC_derivative(fig_affected, 'EOG_affected_channels_'+m_or_g, 'plotly')]
+        eog_derivs += [QC_derivative(fig_not_affected, 'EOG_not_affected_channels_'+m_or_g, 'plotly')]
+        eog_derivs += [QC_derivative(fig_avg, 'overall_average_EOG_epoch_'+m_or_g, 'plotly')]
         all_eog_affected_channels[m_or_g]=eog_affected_channels
 
         simple_metric_EOG[m_or_g]=make_simple_metric_ECG_EOG(all_eog_affected_channels[m_or_g], m_or_g, 'EOG', channels[m_or_g])

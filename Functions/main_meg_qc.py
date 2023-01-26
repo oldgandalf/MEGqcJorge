@@ -74,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[2:3]: 
+    for sid in list_of_subs[1:5]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -208,14 +208,14 @@ def make_derivative_meg_qc(config_file_name):
 
             #Make report and add to QC_derivs:
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
-            QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', None, 'report')]
+            QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
 
             report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
-            QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', None, 'report mne')]
+            QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', 'report mne')]
 
             #Collect all simple metrics into a dictionary and add to QC_derivs:
             #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
-            QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', None, 'json')]
+            QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', 'json')]
 
             #print('HERE!',  QC_derivs)
 
