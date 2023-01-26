@@ -523,11 +523,10 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
         noise_pie_derivative, simple_metric_deriv, pf = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g)
         powerline_freqs += pf
-        
+
         simple_metrics_psd += [simple_metric_deriv]
 
         derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] #+[simple_metric_deriv]
 
-
-    return derivs_psd, simple_metrics_psd, powerline_freqs
+    return derivs_psd, simple_metrics_psd, list(set(powerline_freqs)) #take only unique freqs if they are repeted for mags, grads
 

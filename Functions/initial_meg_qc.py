@@ -163,8 +163,12 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['Head'] = dict({})
 
         muscle_section = config['Muscle']
+        list_thresholds = muscle_section['threshold_muscle']
+        #separate values in list_thresholds based on coma, remove spaces and convert them to floats:
+        list_thresholds = [float(i) for i in list_thresholds.split(',')]
+
         all_qc_params['Muscle'] = dict({
-        'threshold_muscle': muscle_section.getfloat('threshold_muscle')})
+        'threshold_muscle': list_thresholds})
 
     except:
         print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
@@ -276,17 +280,17 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
 
     #Data filtering:
-    raw_filtered = raw_cropped.copy()
+    raw_cropped_filtered = raw_cropped.copy()
     if filtering_settings != 'Not apply':
         raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
-        raw_filtered = raw_cropped.copy()
-        raw_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
+        raw_cropped_filtered = raw_cropped.copy()
+        raw_cropped_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
         
         #And downsample:
-        raw_filtered_resampled = raw_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
+        raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
         #frequency to resample is 5 times higher than the maximum chosen frequency of the function
     else:
-        raw_filtered_resampled = raw_filtered.copy()
+        raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
         #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
         # because they are used later. Referencing might mess up things, check that.
     
@@ -294,9 +298,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    dict_of_dfs_epoch, dict_epochs_mg = Epoch_meg(epoching_params, data=raw_filtered)
+    dict_of_dfs_epoch, dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
 
-    return dict_of_dfs_epoch, dict_epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used
+    return dict_of_dfs_epoch, dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used
 
 
 

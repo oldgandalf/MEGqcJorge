@@ -113,7 +113,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
     fig0 = mne.viz.plot_head_positions(head_pos, mode='traces')
 
-    head_derivs += [QC_derivative(fig0, 'Head_position_rotation', matplotlib')]
+    head_derivs += [QC_derivative(fig0, 'Head_position_rotation', 'matplotlib')]
 
     # 2. Optional visual part:
     if plot_with_lines is True:

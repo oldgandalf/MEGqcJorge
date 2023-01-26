@@ -74,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:5]: 
+    for sid in list_of_subs[2:3]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -87,7 +87,7 @@ def make_derivative_meg_qc(config_file_name):
 
             print('Starting initial processing...')
             start_time = time.time()
-            dict_of_dfs_epoch, dict_epochs_mg, channels, raw_filtered, raw_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+            dict_of_dfs_epoch, dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
             if len(m_or_g_chosen) == 0: 
@@ -114,8 +114,8 @@ def make_derivative_meg_qc(config_file_name):
             if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy - drop it and  try to reconstruct
                 no_ecg_str = 'ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.'
                 raw.drop_channels(picks_ECG)
-                raw_filtered.drop_channels(picks_ECG)
-                raw_filtered_resampled.drop_channels(picks_ECG)
+                raw_cropped_filtered.drop_channels(picks_ECG)
+                raw_cropped_filtered_resampled.drop_channels(picks_ECG)
                 raw_cropped.drop_channels(picks_ECG)
 
             print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
@@ -123,22 +123,22 @@ def make_derivative_meg_qc(config_file_name):
 
             # print('Starting RMSE...')
             # start_time = time.time()
-            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('Starting PSD...')
-            start_time = time.time()
-            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_filtered, m_or_g_chosen)
-            print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen)
+            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak manual...')
             # start_time = time.time()
-            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_filtered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Peak-to-Peak auto...')
             # start_time = time.time()
-            # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_filtered_resampled, m_or_g_chosen)
+            # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting ECG...')
@@ -158,7 +158,8 @@ def make_derivative_meg_qc(config_file_name):
             # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('Starting Muscle artifacts calculation...')
-            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw, powerline_freqs, m_or_g_chosen, interactive_matplot=False)
+            #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, [60], m_or_g_chosen, interactive_matplot=False)
             print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
