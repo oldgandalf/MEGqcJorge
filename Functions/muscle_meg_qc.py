@@ -32,11 +32,10 @@ from universal_plots import QC_derivative, get_tit_and_unit
 def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
 
     # ADD checks:
-    # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads?
+    # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads? DONE use grads in case no mags
     # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq. ADDED
-    # add several z-score options. or make it as input param?
-    # if we ll use both m and g - change simple metric. otherwise leave as is. 
-    # should z score be float or int?
+    # add several z-score options. or make it as input param? DONE
+    # if we ll use only m or g - change simple metric. otherwise leave as is. 
 
 
     # if 'mag' in m_or_g_chosen:
@@ -44,7 +43,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
     #     print('Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
     # elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
     #     m_or_g_chosen='grad'
-    #     print('Muscle artifact detection performed on gradiometers, they are less sensitive to muscle activity than magnetometers. Results may be not realiable.')
+    #     print('Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
     # else:
     #     print('No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
     #     return [], []

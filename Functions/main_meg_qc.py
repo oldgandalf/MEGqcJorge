@@ -74,7 +74,7 @@ def make_derivative_meg_qc(config_file_name):
         print('No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[2:3]: 
+    for sid in list_of_subs[3:5]: 
         print('Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -164,13 +164,14 @@ def make_derivative_meg_qc(config_file_name):
 
 
             # Make strings with notes for the user to add to html report:
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str = '', '', '', '', '', '', ''
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
 
             if active_shielding_used is True: 
                 shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
             
             if 'mag' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+                muscle_grad_str = '''<p>Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.</p><br></br>'''
             elif 'grad' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
@@ -208,10 +209,10 @@ def make_derivative_meg_qc(config_file_name):
 
 
             #Make report and add to QC_derivs:
-            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
+            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
 
-            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str)
+            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
             QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', 'report mne')]
 
             #Collect all simple metrics into a dictionary and add to QC_derivs:

@@ -35,7 +35,7 @@ import mne
 
 
 
-def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str):
+def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
 
     """
     - Add section title
@@ -52,7 +52,7 @@ def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str, no_
     elif not fig_derivs_section and 'Head' in section_title:
         all_section_content='''<p>'''+no_head_pos_str+'''</p>'''
     elif not fig_derivs_section and 'Muscle' in section_title:
-        all_section_content='''<p>'''+no_muscle_str+'''</p>'''
+        all_section_content='''<p>'''+muscle_grad_str+'''</p>'''
     elif derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
         all_section_content='''<p>This measurement has no figures. Please see csv files.</p>'''
     elif not derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
@@ -90,7 +90,7 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     return fig_derivs_section
 
 
-def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str):
+def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
 
     header_html_string = '''
     <!doctype html>
@@ -110,7 +110,7 @@ def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoch
     main_html_string = ''
     for key in sections:
 
-        html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, no_muscle_str=no_muscle_str)
+        html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, muscle_grad_str=muscle_grad_str)
 
         # if sections[key]:
         #     html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
@@ -137,7 +137,7 @@ def make_joined_report(sections:dict, shielding_str, channels_skipped_str, epoch
     return html_string
 
 
-def make_joined_report_for_mne(raw, sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, no_muscle_str):
+def make_joined_report_for_mne(raw, sections:dict, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
 
     report = mne.Report(title='& MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
@@ -158,7 +158,7 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str, channels_skipp
     
     for key in sections:
         if key != 'Report':
-            html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, no_muscle_str=no_muscle_str)
+            html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, muscle_grad_str=muscle_grad_str)
             report.add_html(html_section_str, title=key)
 
     return report
