@@ -169,10 +169,13 @@ def make_derivative_meg_qc(config_file_name):
             if active_shielding_used is True: 
                 shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
             
-            if 'mag' not in m_or_g_chosen:
+            if 'mag' in m_or_g_chosen:
+                muscle_grad_str = '''<p>Magnetometers were used for muscle artifact detection as a more sensitive type of channel to this type of noise.</p><br></br>'''
+            else:
                 channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
                 muscle_grad_str = '''<p>Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.</p><br></br>'''
-            elif 'grad' not in m_or_g_chosen:
+            
+            if 'grad' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
             if dict_of_dfs_epoch['mag'] is None and dict_of_dfs_epoch['grad'] is None:
