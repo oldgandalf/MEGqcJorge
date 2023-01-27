@@ -239,6 +239,7 @@ def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, 
         min_peak_magnitude_neg=peak_magnitudes_neg[np.argmin(peak_magnitudes_neg)]
         min_peak_loc_neg=peak_locs_neg[np.argmin(peak_magnitudes_neg)]
 
+        # COMPLEX APPROACH
         # if -0.02<t[max_peak_loc_pos]<0.012: #if the positive peak is close to time 0 - it can be the R wave peak - still need to check if the negative peak is closer to time 0
         #     if min_peak_magnitude_neg<0 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]): # and abs(min_peak_magnitude_neg)>abs(max_peak_magnitude_pos):#min_peak_loc_neg<max_peak_loc_pos: 
         #         ch_data_new  = -ch_data 
@@ -260,6 +261,7 @@ def flip_condition_ECG(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, 
         #         peak_magnitudes_new = peak_magnitudes
         #         print(ch_name+' was NOT flipped. Both peaks were detected. Upper peak far from time0. But down peak also far.')
 
+        #SIMPLE APPROACH
         # if peak is negative and close to time 0 and is closer than positive - flip:
         if min_peak_magnitude_neg<0 and -0.02<t[min_peak_loc_neg]<0.012 and abs(t[min_peak_loc_neg])<=abs(t[max_peak_loc_pos]): 
             ch_data_new  = -ch_data 

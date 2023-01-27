@@ -18,6 +18,10 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos):
     #get the head position in xyz coordinates:
     head_pos_transposed=head_pos.transpose()
     xyz_coords=np.array([[x, y, z] for x, y, z in zip(head_pos_transposed[4], head_pos_transposed[5], head_pos_transposed[6])])
+    q1q2q3_coords_quads=np.array([[q1, q2, q3] for q1, q2, q3 in zip(head_pos_transposed[1], head_pos_transposed[2], head_pos_transposed[3])])
+
+    #Translate rotations into degrees: (360/2pi)*value 
+    q1q2q3_coords=360/(2*np.pi)*q1q2q3_coords_quads
 
     # Calculate the maximum movement in 3 directions:
     max_movement_x = (np.max(xyz_coords[:,0])-np.min(xyz_coords[:,0]))
@@ -39,14 +43,17 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos):
     # 2. Then calculate the standard deviation of the distances: σ = √(Σ(x_i - mean)^2 / n)
 
     # 1. Calculate the distances between each consecutive pair of coordinates
-    distances = np.sqrt(np.sum((xyz_coords[1:] - xyz_coords[:-1])**2, axis=1))
+    distances_xyz = np.sqrt(np.sum((xyz_coords[1:] - xyz_coords[:-1])**2, axis=1))
+    distances_q = np.sqrt(np.sum((q1q2q3_coords[1:] - q1q2q3_coords[:-1])**2, axis=1))
 
     # 2. Calculate the standard deviation
-    std_head_pos = np.std(distances)
+    std_head_pos = np.std(distances_xyz)
+    std_head_rotations = np.std(distances_q)
 
-    return std_head_pos, (max_movement_x, max_movement_y, max_movement_z), (max_rotation_q1, max_rotation_q2, max_rotation_q3), df_head_pos
+    return std_head_pos, std_head_rotations, (max_movement_x, max_movement_y, max_movement_z), (max_rotation_q1, max_rotation_q2, max_rotation_q3), df_head_pos, head_pos
 
-def make_simple_metric_head(std_head_pos, max_movement_xyz, max_rotation_q):
+
+def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, max_rotation_q):
     '''Make simple metric for head positions'''
 
     simple_metric={}
@@ -59,10 +66,12 @@ def make_simple_metric_head(std_head_pos, max_movement_xyz, max_rotation_q):
     simple_metric_details['Maximum rotation in q2 direction in quat'] = max_rotation_q[1]
     simple_metric_details['Maximum rotation in q3 direction in quat'] = max_rotation_q[2]
 
-    simple_metric['STD of the movement of the head over time'] = std_head_pos
+    simple_metric['STD of the movement of the head over time: '] = std_head_pos
+    simple_metric['STD of the rotation of the head over time'] = std_head_rotations
     simple_metric['Details']=simple_metric_details
     
     return simple_metric
+
 
 def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
@@ -149,7 +158,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
 
     # 4. Calculate the standard deviation of the movement of the head over time:
-    std_head_pos, max_movement_xyz, max_rotation_q, df_head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
+    std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos, head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
 
 
     print('Std of head positions in mm: ', std_head_pos*1000)
@@ -157,8 +166,8 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     print('Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
 
     # 5. Make a simple metric:
-    simple_metrics_head = make_simple_metric_head(std_head_pos, max_movement_xyz, max_rotation_q)
+    simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos
+    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos
 
 
