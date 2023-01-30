@@ -141,11 +141,11 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # if picks_EOG is not None and bad_eog is False:
             #     print('Starting EOG...')
@@ -153,9 +153,9 @@ def make_derivative_meg_qc(config_file_name):
             #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
             #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting Head movement calculation...')
-            head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('Starting Head movement calculation...')
+            # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('Starting Muscle artifacts calculation...')
             # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
@@ -278,7 +278,7 @@ def make_derivative_meg_qc(config_file_name):
 
     ancpbids.write_derivative(dataset, derivative) 
 
-    return raw, QC_derivs, QC_simple, df_head_pos, head_pos
+    return raw, QC_derivs, QC_simple, df_head_pos
 
 
 #%%
