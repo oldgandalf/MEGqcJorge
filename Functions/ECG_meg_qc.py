@@ -199,7 +199,7 @@ def find_epoch_peaks(ch_data, thresh_lvl_peakfinder):
     return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
 
 
-def flip_condition_ECG(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder):
+def flip_condition(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder):
     
     ''' trying another ecg flip approach:
 
@@ -245,11 +245,21 @@ def flip_condition_ECG(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped, channels,
     t0_estimated_ind=t_event_ind[0][0]+t0_estimated_ind_limited_to_event #sum because time window was cut from the beginning of the epoch
     t0_estimated=t[t0_estimated_ind]
 
+    print(t0_estimated_ind, 't0_estimated_ind')
+    print(t0_estimated, 't0_estimated')
+
+    print(t)
+
+    print(np.argwhere(t==t0_estimated-0.01), 't0_estimated_ind_start....', t0_estimated-0.01)
+    print(np.argwhere(t==t0_estimated+0.01), 't0_estimated_ind_end....', t0_estimated-0.01)
+
     # window of 0.01s around t0_estimated where the peak on different channels should be detected:
-    t0_estimated_ind_start=np.argwhere(t==t0_estimated-0.01)[0][0]
-    t0_estimated_ind_end=np.argwhere(t==t0_estimated+0.01)[0][0]
+    t0_estimated_ind_start=np.argwhere(t==round(t0_estimated-0.01, 3))[0][0] 
+    t0_estimated_ind_end=np.argwhere(t==round(t0_estimated+0.01, 3))[0][0]
+    #yes you have to round it here because the numbers stored in in memery like 0.010000003 even when it looks like 0.01, hence np.where cant find the target float in t vector
 
 
+    #another way without round:
     #t0_estimated_ind_start=np.argwhere(t==np.min(t[t<t0_estimated-0.01]))[0][0]
     # find the closest index of t to t0_estimated+0.01:
     #t0_estimated_ind_end=np.argwhere(t==np.min(t[t>t0_estimated+0.01]))[0][0]
@@ -484,9 +494,9 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
         avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
 
-        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_condition_ECG(ecg_or_eog, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder)
+        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_condition(ecg_or_eog, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder)
 
-        make_ecg_affected_plots(ecg_epoch_per_ch, 0, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' after flip!: ', use_abs_of_all_data=use_abs_of_all_data)
+        #make_ecg_affected_plots(ecg_epoch_per_ch, 0, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' after flip!: ', use_abs_of_all_data=use_abs_of_all_data)
 
         # Old version:
         # ecg_epoch_per_ch_only_data=np.empty_like(avg_ecg_epoch_data_nonflipped)
