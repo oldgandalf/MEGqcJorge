@@ -51,7 +51,7 @@ def get_all_config_params(config_file_name: str):
     m_or_g_chosen = m_or_g_chosen.split(",")
 
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('No channels to analyze. Check parameter do_for in config file.')
+        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
     try:
@@ -172,7 +172,7 @@ def get_all_config_params(config_file_name: str):
         'min_distance_between_different_muscle_events': muscle_section.getfloat('min_distance_between_different_muscle_events')})
 
     except:
-        print('Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
+        print('___MEG QC___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
         return None
 
     return all_qc_params
@@ -203,7 +203,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
-    print('Stimulus channels detected:', stim_channel)
+    print('___MEG QC___: ', 'Stimulus channels detected:', stim_channel)
 
     picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
@@ -212,7 +212,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     n_events=len(events)
 
     if n_events == 0:
-        print('No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
+        print('___MEG QC___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         dict_of_dfs_epoch = {
         'grad': None,
         'mag': None}
@@ -311,10 +311,10 @@ def sanity_check(m_or_g_chosen, channels):
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
     if channels['mag'] is None and 'mag' in m_or_g_chosen:
-        print('There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
+        print('___MEG QC___: ', 'There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
         m_or_g_chosen.remove('mag')
     elif channels['grad'] is None and 'grad' in m_or_g_chosen:
-        print('There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
+        print('___MEG QC___: ', 'There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
         m_or_g_chosen.remove('grad')
     elif channels['mag'] is None and channels['grad'] is None:
         print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
@@ -325,7 +325,7 @@ def sanity_check(m_or_g_chosen, channels):
 def detect_extra_channels(raw):
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     if picks_ECG.size == 0:
-        print('No ECG channels found is this data set. Attempting to reconstruct ECG data from magnetometers...')
+        print('___MEG QC___: ', 'No ECG channels found is this data set. Attempting to reconstruct ECG data from magnetometers...')
         ECG_channel_name = None
     else:
         ECG_channel_name=[]
@@ -334,7 +334,7 @@ def detect_extra_channels(raw):
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     if picks_EOG.size == 0:
-        print('No EOG channels found is this data set - EOG artifacts can not be detected.')
+        print('___MEG QC___: ', 'No EOG channels found is this data set - EOG artifacts can not be detected.')
         EOG_channel_name = None
     else:
         EOG_channel_name=[]
@@ -378,19 +378,19 @@ def detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog:list[str],  thr
         #_, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         # if amplitudes is not None and len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
         #     bad_ecg_eog=True
-        #     print(picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
+        #     print('___MEG QC___: ', picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
 
         all_peaks=np.concatenate((pos_peak_locs,neg_peak_locs),axis=None)
         if len(all_peaks)/duration_crop>3:
         # allow 3 non-standard peaks per minute. Or 0? DISCUSS. implies that noiseness has to be repeated regularly.  
         # if there is only 1 little piece of time with noise and the rest is good, will not show that one. 
         # include some time limitation of noisy times?
-            print('ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop)))
+            print('___MEG QC___: ', 'ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop)))
             
         if len(ind_break_start[0])/duration_crop>3: #allow 3 breaks per minute. Or 0? DISCUSS
             #ind_break_start[0] - here[0] because np.where created array of arrays above
             bad_ecg_eog=True
-            print(picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
+            print('___MEG QC___: ', picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
 
         noisy_ch_derivs=[]
         if plotflag:

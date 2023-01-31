@@ -37,7 +37,7 @@ def make_derivative_meg_qc(config_file_name):
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
     except:
-        print('No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+        print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
         return
 
     #create derivatives folder first:
@@ -51,31 +51,31 @@ def make_derivative_meg_qc(config_file_name):
     # schema = dataset.get_schema()
     # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
-    # print(schema)
-    # print("\n")
-    # print(schema.Artifact)
+    # print('___MEG QC___: ', schema)
+    # print('___MEG QC___: ', "\n")
+    # print('___MEG QC___: ', schema.Artifact)
 
-    # print(dataset.files)
-    # print(dataset.folders)
-    # print(dataset.derivatives)
-    # print(dataset.items())
-    # print(dataset.keys())
-    # print(dataset.code)
-    # print(dataset.name)
+    # print('___MEG QC___: ', dataset.files)
+    # print('___MEG QC___: ', dataset.folders)
+    # print('___MEG QC___: ', dataset.derivatives)
+    # print('___MEG QC___: ', dataset.items())
+    # print('___MEG QC___: ', dataset.keys())
+    # print('___MEG QC___: ', dataset.code)
+    # print('___MEG QC___: ', dataset.name)
 
     #return
 
     # entities = dataset.query_entities()
     # list_of_subs = list(entities["sub"])
     list_of_subs = sorted(list(dataset.query_entities()["sub"]))
-    print('list_of_subs', list_of_subs)
+    print('___MEG QC___: ', 'list_of_subs', list_of_subs)
 
     if not list_of_subs:
-        print('No subjects found. Check your data set and directory path in config.')
+        print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[0:21]: 
-        print('Take SID: ', sid)
+    for sid in list_of_subs[3:4]: 
+        print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
 
@@ -85,7 +85,7 @@ def make_derivative_meg_qc(config_file_name):
 
         for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
-            print('Starting initial processing...')
+            print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
             dict_of_dfs_epoch, dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
@@ -118,49 +118,49 @@ def make_derivative_meg_qc(config_file_name):
             #     raw_cropped_filtered_resampled.drop_channels(picks_ECG)
             #     raw_cropped.drop_channels(picks_ECG)
 
-            # print("Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
 
-            # print('Starting RMSE...')
+            # print('___MEG QC___: ', 'Starting RMSE...')
             # start_time = time.time()
             # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print("Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('Starting PSD...')
+            # print('___MEG QC___: ', 'Starting PSD...')
             # start_time = time.time()
             # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen)
-            # print("Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting Peak-to-Peak manual...')
+            # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             # start_time = time.time()
             # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print("Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting Peak-to-Peak auto...')
+            # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
             # start_time = time.time()
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print("Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('Starting ECG...')
+            print('___MEG QC___: ', 'Starting ECG...')
             start_time = time.time()
             # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
             ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            print("Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # if picks_EOG is not None and bad_eog is False:
-            #     print('Starting EOG...')
+            #     print('___MEG QC___: ', 'Starting EOG...')
             #     start_time = time.time()
             #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            #     print("Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            #     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting Head movement calculation...')
+            # print('___MEG QC___: ', 'Starting Head movement calculation...')
             # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            # print("Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('Starting Muscle artifacts calculation...')
+            # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
             # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
             # muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, [60], m_or_g_chosen, interactive_matplot=False)
-            # print("Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
             # Make strings with notes for the user to add to html report:
@@ -222,7 +222,7 @@ def make_derivative_meg_qc(config_file_name):
             #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
             QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', 'json')]
 
-            #print('HERE!',  QC_derivs)
+            #print('___MEG QC___: ', 'HERE!',  QC_derivs)
 
             # d=0
             for section in QC_derivs.values():
@@ -230,8 +230,8 @@ def make_derivative_meg_qc(config_file_name):
                     for deriv in section:
                         
                         # d=d+1
-                        # print('writing deriv: ', d)
-                        # print(deriv)
+                        # print('___MEG QC___: ', 'writing deriv: ', d)
+                        # print('___MEG QC___: ', deriv)
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
                         meg_artifact.add_entity('desc', deriv.name) #file name
@@ -269,7 +269,7 @@ def make_derivative_meg_qc(config_file_name):
                             #     json.dump(metric, file_wrapper, indent=4)
 
                         else:
-                            print(meg_artifact.name)
+                            print('___MEG QC___: ', meg_artifact.name)
                             meg_artifact.content = 'dummy text'
                             meg_artifact.extension = '.txt'
                         # problem with lambda explained:

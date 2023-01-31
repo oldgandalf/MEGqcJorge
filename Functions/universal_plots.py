@@ -99,7 +99,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
         unit='Tesla/meter'
     else:
         unit='?unknown unit?'
-        print('Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
+        print('___MEG QC___: ', 'Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
 
     if what_data=='peaks':
         hover_tit='Amplitude'
@@ -180,7 +180,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         unit='Tesla/meter'
     else:
         unit='?unknown unit?'
-        print('Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
+        print('___MEG QC___: ', 'Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
 
 
     if what_data=='peaks':

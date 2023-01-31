@@ -39,12 +39,12 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
 
     if 'mag' in m_or_g_chosen:
         m_or_g_chosen=['mag']
-        print('Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
+        print('___MEG QC___: ', 'Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
     elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
         m_or_g_chosen=['grad']
-        print('Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
+        print('___MEG QC___: ', 'Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
     else:
-        print('No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
+        print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
         return [], []
 
     muscle_derivs=[]
@@ -56,10 +56,10 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
     raw.load_data() #need to preloaf data for filtering both in notch filter and in annotate_muscle_zscore
     if (len(powerline_freqs))>0:
         powerline_freqs+=[x*2 for x in powerline_freqs]
-        print('Powerline noise found in data. Notch filtering at: ', powerline_freqs, ' Hz')
+        print('___MEG QC___: ', 'Powerline noise found in data. Notch filtering at: ', powerline_freqs, ' Hz')
         raw.notch_filter(powerline_freqs)
     else:
-        print('No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
 
 
     # The threshold is data dependent, check the optimal threshold by plotting
@@ -86,7 +86,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen
             # ## Plot muscle z-scores across recording
             peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
 
-            print('HERE!', peak_locs_pos)
+            print('___MEG QC___: ', 'HERE!', peak_locs_pos)
 
             muscle_times = raw.times[peak_locs_pos]
             muscle_magnitudes=scores_muscle[peak_locs_pos]

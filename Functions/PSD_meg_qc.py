@@ -169,9 +169,9 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         else:
             TypeError ("Check channel type!")
 
-        print(tit)
+        print('___MEG QC___: ', tit)
         for d in enumerate(power_dfs):
-            print('  \n'+measure_title[d[0]])
+            print('___MEG QC___: ', '  \n'+measure_title[d[0]])
 
             for band in enumerate(bands_names): #loop over bands
                 mean_power_per_band = statistics.mean(d[1].loc[:,band[0]])
@@ -183,7 +183,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
                 elif d[0]==2: #df_power_freq_mag:
                     mean_power_nfreq.append(mean_power_per_band)
 
-                print(band[1], mean_power_per_band)
+                print('___MEG QC___: ', band[1], mean_power_per_band)
 
 
         if plotflag is True: 
@@ -262,8 +262,8 @@ def split_blended_freqs_old(noisy_freq_bands_idx, width_heights, freqs):
 
 def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs):
 
-    # print('peaks_neg', peaks_neg)
-    # print('width_weights:', width_heights)
+    # print('___MEG QC___: ', 'peaks_neg', peaks_neg)
+    # print('___MEG QC___: ', 'width_weights:', width_heights)
 
     split_points = []
     for n_peak, _ in enumerate(peaks):
@@ -273,12 +273,12 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
         neg_peak_before=peaks_neg[np.argwhere(peaks_neg<peaks[n_peak])[-1][0]]
         neg_peak_after=peaks_neg[np.argwhere(peaks_neg>peaks[n_peak])[0][0]]
 
-        #print('target peak', peaks[n_peak])
-        #print('before and after', neg_peak_before, neg_peak_after)
+        #print('___MEG QC___: ', 'target peak', peaks[n_peak])
+        #print('___MEG QC___: ', 'before and after', neg_peak_before, neg_peak_after)
      
         if noisy_freq_bands_idx[n_peak][0] < neg_peak_before:
             noisy_freq_bands_idx[n_peak] = [i for i in range(neg_peak_before, noisy_freq_bands_idx[n_peak][-1])]
-            #print('new band', noisy_freq_bands_idx[n_peak])
+            #print('___MEG QC___: ', 'new band', noisy_freq_bands_idx[n_peak])
 
             split_points += [neg_peak_before]
             #if true, then this peak was blended with another one, 
@@ -338,9 +338,9 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     from universal_plots import plot_pie_chart_freq
     from scipy.integrate import simps
 
-    print('Central Freqs: ', freqs[peaks])
-    print('Central Amplitudes: ', avg_psd[peaks])
-    print('width_heights: ', width_heights)
+    print('___MEG QC___: ', 'Central Freqs: ', freqs[peaks])
+    print('___MEG QC___: ', 'Central Amplitudes: ', avg_psd[peaks])
+    print('___MEG QC___: ', 'width_heights: ', width_heights)
 
 
     avg_psd_only_signal=avg_psd.copy()
@@ -360,13 +360,13 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
         #in case the las  element of one band is the same as first of another band, remove the last  elemnt of previos.So bands dont cross.
 
     #2*
-    #print('HERE! BEFORE SPLIT')
-    #print(noisy_freq_bands_idx)
+    #print('___MEG QC___: ', 'HERE! BEFORE SPLIT')
+    #print('___MEG QC___: ', noisy_freq_bands_idx)
     #noisy_freq_bands_idx_split, width_heights_split = split_blended_freqs(noisy_freq_bands_idx, width_heights, freqs)
 
     noisy_freq_bands_idx_split, width_heights_split, split_points = split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs)
-    #print('HERE! AFTER SPLIT')
-    #print(noisy_freq_bands_idx_split)
+    #print('___MEG QC___: ', 'HERE! AFTER SPLIT')
+    #print('___MEG QC___: ', noisy_freq_bands_idx_split)
 
 
     #3.
@@ -441,7 +441,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     #4.
     freq_res = freqs[1] - freqs[0]
     total_power = simps(avg_psd, dx=freq_res) # power of all signal
-    print('Total power: ', total_power)
+    print('___MEG QC___: ', 'Total power: ', total_power)
 
     all_bp_noise=[]
     all_bp_relative=[]
@@ -451,7 +451,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
 
     for fr_n, fr_b in enumerate(noisy_freq_bands_idx_split):
 
-        #print('band',  freqs[fr_b][0], freqs[fr_b][-1])
+        #print('___MEG QC___: ', 'band',  freqs[fr_b][0], freqs[fr_b][-1])
         bp_noise, _, bp_relative = Power_of_band(freqs=freqs, f_low = freqs[fr_b][0], f_high= freqs[fr_b][-1], psds=avg_psd_only_peaks_baselined_new)
 
         all_bp_noise+=bp_noise
@@ -462,10 +462,10 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
 
     bp_noise_relative_to_signal=[r[0] for r in bp_noise_relative_to_signal]
 
-    #print('Freq band for each peak:', ips_pair)
-    print('BP', all_bp_noise)
-    print('relative BP', all_bp_relative)
-    print('Amount of noisy freq in total signal', bp_noise_relative_to_signal)
+    #print('___MEG QC___: ', 'Freq band for each peak:', ips_pair)
+    print('___MEG QC___: ', 'BP', all_bp_noise)
+    print('___MEG QC___: ', 'relative BP', all_bp_relative)
+    print('___MEG QC___: ', 'Amount of noisy freq in total signal', bp_noise_relative_to_signal)
 
 
     #Legend for the pie chart:

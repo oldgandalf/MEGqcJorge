@@ -32,7 +32,7 @@ def RMSE(data_m_or_g: np.array or list):
         rmse_data=np.sqrt(((y_pred - y_actual) ** 2).mean())
         rmse_list.append(rmse_data)
     else:
-        print('Only 1 or 2 dimentional data is accepted, not more!')
+        print('___MEG QC___: ', 'Only 1 or 2 dimentional data is accepted, not more!')
         return
 
     rmse_np=np.array(rmse_list) #conver to numpy array
@@ -377,7 +377,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
             #metrics_rmse_epochs[m_or_g]=[]
     else:
         metrics_rmse_epochs=['Metrics per epochs not calculated']
-        print('RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
+        print('___MEG QC___: ', 'RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
 
 
     all_metrics_rmse={}

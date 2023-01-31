@@ -90,42 +90,42 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
         # - The index of the STIM channel containing information about when which cHPI coils were switched on.
         # - The values coding for the “on” state of each individual cHPI coil.
 
-        print(f'cHPI coil frequencies extracted from raw: {chpi_freqs} Hz')
+        print('___MEG QC___: ', f'cHPI coil frequencies extracted from raw: {chpi_freqs} Hz')
 
 
         #Estimating continuous head position
-        print('Start Computing HPI amplitudes and locations...')
+        print('___MEG QC___: ', 'Start Computing HPI amplitudes and locations...')
         start_time = time.time()
         chpi_amplitudes = mne.chpi.compute_chpi_amplitudes(raw)
         chpi_locs = mne.chpi.compute_chpi_locs(raw.info, chpi_amplitudes)
-        print("Finished. --- Execution %s seconds ---" % (time.time() - start_time))
+        print('___MEG QC___: ', "Finished. --- Execution %s seconds ---" % (time.time() - start_time))
 
     except:
-        print('Neuromag appriach to compute Head positions failed. Trying CTF approach...')
+        print('___MEG QC___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
         try:
             #for CTF use:
             chpi_locs = mne.chpi.extract_chpi_locs_ctf(raw)
         except:
-            print('Also CTF appriach to compute Head positions failed. Trying KIT approach...')
+            print('___MEG QC___: ', 'Also CTF appriach to compute Head positions failed. Trying KIT approach...')
             try:
                 #for KIT use:
                 chpi_locs = mne.chpi.extract_chpi_locs_kit(raw)
             except:
-                print('Also KIT appriach to compute Head positions failed. Head positions can not be computed')
+                print('___MEG QC___: ', 'Also KIT appriach to compute Head positions failed. Head positions can not be computed')
                 return head_derivs, {}, True, []
 
     # Next steps - for all systems:
-    print('Start computing head positions...')
+    print('___MEG QC___: ', 'Start computing head positions...')
     start_time = time.time()
     head_pos = mne.chpi.compute_head_pos(raw.info, chpi_locs)
-    print("Finished. --- Execution %s seconds ---" % (time.time() - start_time))
-    print('Head positions:', head_pos)
+    print('___MEG QC___: ', "Finished. --- Execution %s seconds ---" % (time.time() - start_time))
+    print('___MEG QC___: ', 'Head positions:', head_pos)
 
 
     try:
         fig0 = mne.viz.plot_head_positions(head_pos, mode='traces')
     except:
-        print('Plotting head positions failed. Positions were not computed successfully.')
+        print('___MEG QC___: ', 'Plotting head positions failed. Positions were not computed successfully.')
         return head_derivs, {}, True, []
 
     head_derivs += [QC_derivative(fig0, 'Head_position_rotation', 'matplotlib')]
@@ -141,7 +141,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
                             original_head_dev_t['trans'][:3, 3]):
             ax.axhline(1000*val, color='r')
             ax.axhline(1000*val_ori, color='g')
-            #print('val', val, 'val_ori', val_ori)
+            #print('___MEG QC___: ', 'val', val, 'val_ori', val_ori)
         # The green horizontal lines represent the original head position, whereas the
         # Red lines are the new head position averaged over all the time points.
 
@@ -161,9 +161,9 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos, head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
 
 
-    print('Std of head positions in mm: ', std_head_pos*1000)
-    print('Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
-    print('Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
+    print('___MEG QC___: ', 'Std of head positions in mm: ', std_head_pos*1000)
+    print('___MEG QC___: ', 'Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
+    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
 
     # 5. Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
