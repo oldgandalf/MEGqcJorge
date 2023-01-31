@@ -40,7 +40,10 @@ class Mean_artifact_with_peak:
 
         self.peak_magnitude=np.array(self.mean_artifact_epoch[self.peak_loc])
 
-        return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
+        peak_locs=np.concatenate((peak_locs_pos, peak_locs_neg), axis=None)
+        peak_magnitudes=np.concatenate((peak_magnitudes_pos, peak_magnitudes_neg), axis=None)
+
+        return peak_locs, peak_magnitudes, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
 
 
     def find_peak_old(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
@@ -208,7 +211,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, 
 
     for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
         ecg_epoch_nonflipped = Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data)
-        peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = ecg_epoch_nonflipped.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+        peak_locs, peak_magnitudes, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = ecg_epoch_nonflipped.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
         
 
         #find peak_locs_neg which is located betwenn -0.01<t0_estimated_ind<0.01:
@@ -256,6 +259,34 @@ def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, 
 
         peak_locs=np.concatenate((peak_locs_pos, peak_locs_neg), axis=None)
         peak_magnitudes=np.concatenate((peak_magnitudes_pos, peak_magnitudes_neg), axis=None)
+
+        ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
+
+    return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
+
+
+def flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind):
+
+    '''4. flip all channels with negative peak around estimated t0.'''
+
+    ecg_epoch_per_ch_only_data=np.empty_like(avg_ecg_epoch_data_nonflipped)
+    ecg_epoch_per_ch=[]
+
+    for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
+        ecg_epoch_nonflipped = Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data)
+        peak_locs, peak_magnitudes, _, _, _, _ = ecg_epoch_nonflipped.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+
+        #find peak_locs which is located the closest to t0_estimated_ind:
+        peak_loc_near_t0=peak_locs[np.argmin(np.abs(peak_locs-t0_estimated_ind))]
+
+        #if peak_loc_near_t0 exists, is negative and is located betwenn -0.01<t0_estimated_ind<0.01 - flip the data:
+        if (peak_loc_near_t0.size>0) & (ch_data[peak_loc_near_t0]<0) & (peak_loc_near_t0>t0_estimated_ind_start) & (peak_loc_near_t0<t0_estimated_ind_end):
+            ecg_epoch_per_ch_only_data[i]=-ch_data
+            peak_magnitudes=-peak_magnitudes
+            print('___MEG QC___: ', channels[i]+' was flipped.')
+        else:
+            ecg_epoch_per_ch_only_data[i]=ch_data
+            print('___MEG QC___: ', channels[i]+' was not flipped: peak_loc_near_t0: ', peak_loc_near_t0, ', t0_estimated_ind_start: ', t0_estimated_ind_start, 't0_estimated_ind_end: ', t0_estimated_ind_end)
 
         ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
 
@@ -496,8 +527,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
 
         t0_estimated, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end = estimate_t0(ecg_or_eog, avg_ecg_epoch_data_nonflipped, t)
-        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
-        #ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels_new(avg_ecg_epoch_data_nonflipped, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end)
+        #ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
+        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
 
 
         #make_ecg_affected_plots(ecg_epoch_per_ch, 0, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' after flip!: ', use_abs_of_all_data=use_abs_of_all_data)
