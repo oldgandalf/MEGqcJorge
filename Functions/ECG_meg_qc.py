@@ -122,11 +122,18 @@ class Mean_artifact_with_peak:
         return fig
 
 
-def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magnitude_peak, t, t0_actual):
+def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magnitude_peak, t, t0_actual, ecg_or_eog):
 
 
-    timelimit_min=-0.01+t0_actual
-    timelimit_max=0.01+t0_actual
+    if ecg_or_eog=='ECG':
+        window_size=0.05
+    elif ecg_or_eog=='EOG':
+        window_size=0.015
+    else:
+        print('___MEG QC___: ', 'ecg_or_eog should be either ECG or EOG')
+
+    timelimit_min=-window_size+t0_actual
+    timelimit_max=window_size+t0_actual
 
 
     #Find the channels which got peaks over this mean:
@@ -214,7 +221,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, 
         peak_locs, peak_magnitudes, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = ecg_epoch_nonflipped.find_peak_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
         
 
-        #find peak_locs_neg which is located betwenn -0.01<t0_estimated_ind<0.01:
+        #find peak_locs_neg which is located betwenn -0.015<t0_estimated_ind<0.015:
         peak_locs_neg_near_t0=peak_locs_neg[np.argwhere((peak_locs_neg>t0_estimated_ind_start) & (peak_locs_neg<t0_estimated_ind_end))]
         peak_locs_pos_near_t0=peak_locs_pos[np.argwhere((peak_locs_pos>t0_estimated_ind_start) & (peak_locs_pos<t0_estimated_ind_end))]
 
@@ -265,7 +272,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
 
 
-def flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind):
+def flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind, t):
 
     '''4. flip all channels with negative peak around estimated t0.'''
 
@@ -279,14 +286,14 @@ def flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allow
         #find peak_locs which is located the closest to t0_estimated_ind:
         peak_loc_near_t0=peak_locs[np.argmin(np.abs(peak_locs-t0_estimated_ind))]
 
-        #if peak_loc_near_t0 exists, is negative and is located betwenn -0.01<t0_estimated_ind<0.01 - flip the data:
+        #if peak_loc_near_t0 exists, is negative and is located betwenn -0.015<t0_estimated_ind<0.015 - flip the data:
         if (peak_loc_near_t0.size>0) & (ch_data[peak_loc_near_t0]<0) & (peak_loc_near_t0>t0_estimated_ind_start) & (peak_loc_near_t0<t0_estimated_ind_end):
             ecg_epoch_per_ch_only_data[i]=-ch_data
             peak_magnitudes=-peak_magnitudes
             print('___MEG QC___: ', channels[i]+' was flipped.')
         else:
             ecg_epoch_per_ch_only_data[i]=ch_data
-            print('___MEG QC___: ', channels[i]+' was not flipped: peak_loc_near_t0: ', peak_loc_near_t0, ', t0_estimated_ind_start: ', t0_estimated_ind_start, 't0_estimated_ind_end: ', t0_estimated_ind_end)
+            print('___MEG QC___: ', channels[i]+' was not flipped: peak_loc_near_t0: ', peak_loc_near_t0, t[peak_loc_near_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
 
         ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
 
@@ -304,11 +311,19 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
     if ecg_or_eog=='ECG':
         timelimit_min=-0.02
         timelimit_max=0.012
+        window_size=0.015
     elif ecg_or_eog=='EOG':
         timelimit_min=-0.1
         timelimit_max=0.2
+        window_size=0.05
+
+        #these define different windows: 
+        # - timelimit is where the peak of the wave is normally located counted from event time defined by mne. 
+        #       It is a larger window, it is used to estimate t0, more accurately than mne does (based on 5 most promiment channels).
+        # - window_size - where the peak of the wave must be located, counted from already estimated t0. It is a smaller window.
     else:
         print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
+
 
     #find indexes of t where t is between timelimit_min and timelimit_max (limits where R wave typically is detected by mne):
     t_event_ind=np.argwhere((t>timelimit_min) & (t<timelimit_max))
@@ -333,16 +348,16 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
     t0_estimated_ind=t_event_ind[0][0]+t0_estimated_average #sum because time window was cut from the beginning of the epoch previously
     t0_estimated=t[t0_estimated_ind]
 
-    # window of 0.01s around t0_estimated where the peak on different channels should be detected:
-    t0_estimated_ind_start=np.argwhere(t==round(t0_estimated-0.01, 3))[0][0] 
-    t0_estimated_ind_end=np.argwhere(t==round(t0_estimated+0.01, 3))[0][0]
+    # window of 0.015 or 0.05s around t0_estimated where the peak on different channels should be detected:
+    t0_estimated_ind_start=np.argwhere(t==round(t0_estimated-window_size, 3))[0][0] 
+    t0_estimated_ind_end=np.argwhere(t==round(t0_estimated+window_size, 3))[0][0]
     #yes you have to round it here because the numbers stored in in memery like 0.010000003 even when it looks like 0.01, hence np.where cant find the target float in t vector
 
 
-    #another way without round would be to find the closest index of t to t0_estimated-0.01:
-    #t0_estimated_ind_start=np.argwhere(t==np.min(t[t<t0_estimated-0.01]))[0][0]
-    # find the closest index of t to t0_estimated+0.01:
-    #t0_estimated_ind_end=np.argwhere(t==np.min(t[t>t0_estimated+0.01]))[0][0]
+    #another way without round would be to find the closest index of t to t0_estimated-0.015:
+    #t0_estimated_ind_start=np.argwhere(t==np.min(t[t<t0_estimated-window_size]))[0][0]
+    # find the closest index of t to t0_estimated+0.015:
+    #t0_estimated_ind_end=np.argwhere(t==np.min(t[t>t0_estimated+window_size]))[0][0]
 
     print('___MEG QC___: ', t0_estimated_ind, '-t0_estimated_ind, ', t0_estimated, '-t0_estimated,     ', t0_estimated_ind_start, '-t0_estimated_ind_start, ', t0_estimated_ind_end, '-t0_estimated_ind_end')
 
@@ -528,7 +543,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
         t0_estimated, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end = estimate_t0(ecg_or_eog, avg_ecg_epoch_data_nonflipped, t)
         #ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
-        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
+        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels_new(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind, t)
 
 
         #make_ecg_affected_plots(ecg_epoch_per_ch, 0, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' after flip!: ', use_abs_of_all_data=use_abs_of_all_data)
@@ -580,7 +595,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         fig_avg.show()
 
     #2. and 3.:
-    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(norm_lvl=norm_lvl, list_mean_ecg_epochs=ecg_epoch_per_ch, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual)
+    ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = epochs_or_channels_over_limit(norm_lvl=norm_lvl, list_mean_ecg_epochs=ecg_epoch_per_ch, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog)
 
     if plotflag is True:
         fig_affected = make_ecg_affected_plots(ecg_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
