@@ -199,67 +199,10 @@ def find_epoch_peaks(ch_data, thresh_lvl_peakfinder):
     return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
 
 
-def flip_condition(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder):
-    
-    ''' trying another ecg flip approach:
+def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind):
 
-    1. find peaks on all channels it time frame around -0.02<t[peak_loc]<0.012 (here R wave is typica;ly dettected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
-    2. take 5 channels with most prominent peak 
-    3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate
-    4. flip all channels with negative peak around estimated t0 
+    '''4. flip all channels with negative peak around estimated t0.'''
 
-    Then (after this function is done):
-    5. calculate average of all channels
-    6. find peak on average channel and set it as actual t0
-    7. affected channels will be the ones which have peak amplitude over average in limits of -0.05:0.05s from actual t0 '''
-
-    if ecg_or_eog=='ECG':
-        timelimit_min=-0.02
-        timelimit_max=0.012
-    elif ecg_or_eog=='EOG':
-        timelimit_min=-0.1
-        timelimit_max=0.2
-    else:
-        print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
-
-    #find indexes of t where t is between timelimit_min and timelimit_max (limits where R wave typically is detected by mne):
-    t_event_ind=np.argwhere((t>timelimit_min) & (t<timelimit_max))
-
-    # cut the data of each channel to the time interval where R wave is expected to be:
-    avg_ecg_epoch_data_nonflipped_limited_to_event=avg_ecg_epoch_data_nonflipped[:,t_event_ind[0][0]:t_event_ind[-1][0]]
-
-    #find 5 channels with max values in the time interval where R wave is expected to be:
-    max_values=np.max(np.abs(avg_ecg_epoch_data_nonflipped_limited_to_event), axis=1)
-    max_values_ind=np.argsort(max_values)[::-1]
-    max_values_ind=max_values_ind[:5]
-
-    # find the index of max value for each of these 5 channels:
-    max_values_ind_in_avg_ecg_epoch_data_nonflipped=np.argmax(np.abs(avg_ecg_epoch_data_nonflipped_limited_to_event[max_values_ind]), axis=1)
-    
-    #find average index of max value for these 5 channels th then derive t0_estimated:
-    t0_estimated_average=int(np.round(np.mean(max_values_ind_in_avg_ecg_epoch_data_nonflipped)))
-    #limited to event means that the index is limited to the time interval where R wave is expected to be.
-    #Now need to get back to actual time interval of the whole epoch:
-
-    #find t0_estimated to use as the point where peak of each ch data should be:
-    t0_estimated_ind=t_event_ind[0][0]+t0_estimated_average #sum because time window was cut from the beginning of the epoch previously
-    t0_estimated=t[t0_estimated_ind]
-
-    # window of 0.01s around t0_estimated where the peak on different channels should be detected:
-    t0_estimated_ind_start=np.argwhere(t==round(t0_estimated-0.01, 3))[0][0] 
-    t0_estimated_ind_end=np.argwhere(t==round(t0_estimated+0.01, 3))[0][0]
-    #yes you have to round it here because the numbers stored in in memery like 0.010000003 even when it looks like 0.01, hence np.where cant find the target float in t vector
-
-
-    #another way without round would be to find the closest index of t to t0_estimated-0.01:
-    #t0_estimated_ind_start=np.argwhere(t==np.min(t[t<t0_estimated-0.01]))[0][0]
-    # find the closest index of t to t0_estimated+0.01:
-    #t0_estimated_ind_end=np.argwhere(t==np.min(t[t>t0_estimated+0.01]))[0][0]
-
-    print('___MEG QC___: ', t0_estimated_ind, '-t0_estimated_ind, ', t0_estimated, '-t0_estimated,     ', t0_estimated_ind_start, '-t0_estimated_ind_start, ', t0_estimated_ind_end, '-t0_estimated_ind_end')
-
-    
-    #find which channels to flip:
     ecg_epoch_per_ch_only_data=np.empty_like(avg_ecg_epoch_data_nonflipped)
     ecg_epoch_per_ch=[]
 
@@ -317,6 +260,63 @@ def flip_condition(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped, channels, t, 
         ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
+
+
+def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndarray):
+    
+    ''' 
+    1. find peaks on all channels it time frame around -0.02<t[peak_loc]<0.012 (here R wave is typica;ly dettected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
+    2. take 5 channels with most prominent peak 
+    3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate.'''
+    
+
+    if ecg_or_eog=='ECG':
+        timelimit_min=-0.02
+        timelimit_max=0.012
+    elif ecg_or_eog=='EOG':
+        timelimit_min=-0.1
+        timelimit_max=0.2
+    else:
+        print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
+
+    #find indexes of t where t is between timelimit_min and timelimit_max (limits where R wave typically is detected by mne):
+    t_event_ind=np.argwhere((t>timelimit_min) & (t<timelimit_max))
+
+    # cut the data of each channel to the time interval where R wave is expected to be:
+    avg_ecg_epoch_data_nonflipped_limited_to_event=avg_ecg_epoch_data_nonflipped[:,t_event_ind[0][0]:t_event_ind[-1][0]]
+
+    #find 5 channels with max values in the time interval where R wave is expected to be:
+    max_values=np.max(np.abs(avg_ecg_epoch_data_nonflipped_limited_to_event), axis=1)
+    max_values_ind=np.argsort(max_values)[::-1]
+    max_values_ind=max_values_ind[:5]
+
+    # find the index of max value for each of these 5 channels:
+    max_values_ind_in_avg_ecg_epoch_data_nonflipped=np.argmax(np.abs(avg_ecg_epoch_data_nonflipped_limited_to_event[max_values_ind]), axis=1)
+    
+    #find average index of max value for these 5 channels th then derive t0_estimated:
+    t0_estimated_average=int(np.round(np.mean(max_values_ind_in_avg_ecg_epoch_data_nonflipped)))
+    #limited to event means that the index is limited to the time interval where R wave is expected to be.
+    #Now need to get back to actual time interval of the whole epoch:
+
+    #find t0_estimated to use as the point where peak of each ch data should be:
+    t0_estimated_ind=t_event_ind[0][0]+t0_estimated_average #sum because time window was cut from the beginning of the epoch previously
+    t0_estimated=t[t0_estimated_ind]
+
+    # window of 0.01s around t0_estimated where the peak on different channels should be detected:
+    t0_estimated_ind_start=np.argwhere(t==round(t0_estimated-0.01, 3))[0][0] 
+    t0_estimated_ind_end=np.argwhere(t==round(t0_estimated+0.01, 3))[0][0]
+    #yes you have to round it here because the numbers stored in in memery like 0.010000003 even when it looks like 0.01, hence np.where cant find the target float in t vector
+
+
+    #another way without round would be to find the closest index of t to t0_estimated-0.01:
+    #t0_estimated_ind_start=np.argwhere(t==np.min(t[t<t0_estimated-0.01]))[0][0]
+    # find the closest index of t to t0_estimated+0.01:
+    #t0_estimated_ind_end=np.argwhere(t==np.min(t[t>t0_estimated+0.01]))[0][0]
+
+    print('___MEG QC___: ', t0_estimated_ind, '-t0_estimated_ind, ', t0_estimated, '-t0_estimated,     ', t0_estimated_ind_start, '-t0_estimated_ind_start, ', t0_estimated_ind_end, '-t0_estimated_ind_end')
+
+    
+    return t0_estimated, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end
 
 
 def flip_condition_ECG_old(ch_data, ch_name, t, max_n_peaks_allowed, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg):
@@ -456,9 +456,9 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     elif ecg_or_eog=='EOG':
         max_n_peaks_allowed_per_ms=5
     else:
-        print('___MEG QC___: ', '___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
+        print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
 
-    max_n_peaks_allowed=((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_per_ms
+    max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_per_ms)
     print('___MEG QC___: ', 'max_n_peaks_allowed: '+str(max_n_peaks_allowed))
 
     t = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
@@ -485,9 +485,20 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
     elif use_abs_of_all_data == 'flip':
 
+        # New ecg flip approach:
+
+        # 1. find peaks on all channels it time frame around -0.02<t[peak_loc]<0.012 (here R wave is typica;ly dettected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
+        # 2. take 5 channels with most prominent peak 
+        # 3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate
+        # 4. flip all channels with negative peak around estimated t0 
+
+
         avg_ecg_epoch_data_nonflipped=avg_ecg_epochs.data
 
-        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_condition(ecg_or_eog, avg_ecg_epoch_data_nonflipped, channels, t, max_n_peaks_allowed, thresh_lvl_peakfinder)
+        t0_estimated, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end = estimate_t0(ecg_or_eog, avg_ecg_epoch_data_nonflipped, t)
+        ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
+        #ecg_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels_new(avg_ecg_epoch_data_nonflipped, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end)
+
 
         #make_ecg_affected_plots(ecg_epoch_per_ch, 0, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' after flip!: ', use_abs_of_all_data=use_abs_of_all_data)
 
@@ -506,6 +517,12 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
             
     else:
         print('___MEG QC___: ', 'Wrong set variable: use_abs_of_all_data=', use_abs_of_all_data)
+
+
+    # Find affected channels after flipping:
+    # 5. calculate average of all channels
+    # 6. find peak on average channel and set it as actual t0
+    # 7. affected channels will be the ones which have peak amplitude over average in limits of -0.05:0.05s from actual t0 '''
 
 
     avg_ecg_overall=np.mean(ecg_epoch_per_ch_only_data, axis=0) 
