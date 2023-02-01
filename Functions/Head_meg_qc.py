@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
@@ -62,9 +62,9 @@ def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, m
     simple_metric_details['Maximum movement in x direction in mm'] = max_movement_xyz[0]*1000
     simple_metric_details['Maximum movement in y direction in mm'] = max_movement_xyz[1]*1000
     simple_metric_details['Maximum movement in z direction in mm'] = max_movement_xyz[2]*1000
-    simple_metric_details['Maximum rotation in q1 direction in quat'] = max_rotation_q[0]
-    simple_metric_details['Maximum rotation in q2 direction in quat'] = max_rotation_q[1]
-    simple_metric_details['Maximum rotation in q3 direction in quat'] = max_rotation_q[2]
+    simple_metric_details['Maximum rotation in q1 direction in degrees'] = max_rotation_q[0]
+    simple_metric_details['Maximum rotation in q2 direction in degrees'] = max_rotation_q[1]
+    simple_metric_details['Maximum rotation in q3 direction in degrees'] = max_rotation_q[2]
 
     simple_metric['STD of the movement of the head over time: '] = std_head_pos
     simple_metric['STD of the rotation of the head over time'] = std_head_rotations
@@ -136,6 +136,8 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
             raw.info['dev_head_t'])
         average_head_dev_t = mne.transforms.invert_transform(
             compute_average_dev_head_t(raw, head_pos))
+
+        #plot using mne:
         fig1 = mne.viz.plot_head_positions(head_pos)
         for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
                             original_head_dev_t['trans'][:3, 3]):
@@ -147,6 +149,37 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
         head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
     
+        # print(head_pos)
+
+        #plot head_pos using plotly
+
+        # First, for each head position subtract the first point from all the other points:
+        head_pos_new=head_pos.copy()
+        for i, pos in enumerate(head_pos_new.T[0:7]):
+            pos -= pos[0]
+            head_pos_new.T[i]=pos
+
+        t = t=head_pos_new.T[0]
+        fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (degrees)"))
+
+        pos=[6, 5, 4, 3, 2, 1]
+        names=['q1', 'q2', 'q3', 'x', 'y', 'z']
+
+        for p, val, val_ori in zip(pos, average_head_dev_t['trans'][:3, 3], original_head_dev_t['trans'][:3, 3]):
+            fig1p.add_trace(go.Scatter(x=t, y=1000*-head_pos_new.T[p], mode='lines', name=names[p-1]), row=p-3, col=1)
+            fig1p.update_yaxes(title_text=names[p-1], row=p-3, col=1)
+            fig1p.add_trace(go.Scatter(x=t, y=-head_pos_new.T[p-3], mode='lines', name=names[p-4]), row=p-3, col=2)
+            fig1p.update_yaxes(title_text=names[p-4], row=p-3, col=2)
+
+            # fig1p.add_hline(y=100*val, line_dash="dash", line_color="red", row=p-3, col=1)
+            # fig1p.add_hline(y=100*val_ori, line_dash="dash", line_color="green", row=p-3, col=1)
+
+        fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
+        fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
+        fig1p.show()
+        head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+
     if plot_annotations is True:
         # 3. Plot raw data with annotated head movement:
         mean_distance_limit = 0.0015  # in meters
@@ -162,8 +195,9 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
 
     print('___MEG QC___: ', 'Std of head positions in mm: ', std_head_pos*1000)
+    print('___MEG QC___: ', 'Std of head rotations in quat: ', std_head_rotations)
     print('___MEG QC___: ', 'Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
-    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
+    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in degrees: ', max_rotation_q)
 
     # 5. Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
