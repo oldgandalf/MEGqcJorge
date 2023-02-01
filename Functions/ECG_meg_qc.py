@@ -126,9 +126,9 @@ def epochs_or_channels_over_limit(norm_lvl, list_mean_ecg_epochs, mean_ecg_magni
 
 
     if ecg_or_eog=='ECG':
-        window_size=0.05
+        window_size=0.02
     elif ecg_or_eog=='EOG':
-        window_size=0.015
+        window_size=0.1
     else:
         print('___MEG QC___: ', 'ecg_or_eog should be either ECG or EOG')
 
@@ -311,11 +311,11 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
     if ecg_or_eog=='ECG':
         timelimit_min=-0.02
         timelimit_max=0.012
-        window_size=0.015
+        window_size=0.02
     elif ecg_or_eog=='EOG':
         timelimit_min=-0.1
         timelimit_max=0.2
-        window_size=0.05
+        window_size=0.1
 
         #these define different windows: 
         # - timelimit is where the peak of the wave is normally located counted from event time defined by mne. 

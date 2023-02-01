@@ -6,7 +6,6 @@
 import numpy as np
 import pandas as pd
 import mne
-from mne.time_frequency import psd_welch #tfr_morlet, psd_multitaper
 from scipy.integrate import simps
 from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
 from scipy.signal import find_peaks, peak_widths
