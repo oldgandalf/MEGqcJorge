@@ -10,8 +10,7 @@ from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
 from Peaks_auto_meg_qc import PP_auto_meg_qc
-from ECG_meg_qc import ECG_meg_qc
-from EOG_meg_qc import EOG_meg_qc
+from ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from Head_meg_qc import HEAD_movement_meg_qc
 from muscle_meg_qc import MUSCLE_meg_qc
 from universal_html_report import make_joined_report, make_joined_report_for_mne
@@ -74,7 +73,7 @@ def make_derivative_meg_qc(config_file_name):
         print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[0:21]: 
+    for sid in list_of_subs[3:5]: 
         print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -147,11 +146,11 @@ def make_derivative_meg_qc(config_file_name):
             ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # if picks_EOG is not None and bad_eog is False:
-            #     print('___MEG QC___: ', 'Starting EOG...')
-            #     start_time = time.time()
-            #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            #     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            if picks_EOG is not None and bad_eog is False:
+                print('___MEG QC___: ', 'Starting EOG...')
+                start_time = time.time()
+                eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Head movement calculation...')
             # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
