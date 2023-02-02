@@ -1,7 +1,5 @@
 import os
 import ancpbids
-from ancpbids import load_dataset
-import mpld3
 import time
 import json
 
@@ -99,11 +97,10 @@ def make_derivative_meg_qc(config_file_name):
             
             simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
 
-            df_head_pos = []
-            head_not_calculated = False
-            bad_ecg=False
-            bad_eog=False
-            powerline_freqs = None #predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
+            df_head_pos, head_pos = [], []
+            head_not_calculated, bad_ecg, bad_eog = False, False, False
+            powerline_freqs = None 
+            # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
             # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
@@ -125,10 +122,10 @@ def make_derivative_meg_qc(config_file_name):
             # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            # print('___MEG QC___: ', 'Starting PSD...')
-            # start_time = time.time()
-            # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting PSD...')
+            start_time = time.time()
+            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -140,11 +137,11 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # if picks_EOG is not None and bad_eog is False:
             #     print('___MEG QC___: ', 'Starting EOG...')
@@ -152,9 +149,9 @@ def make_derivative_meg_qc(config_file_name):
             #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
             #     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting Head movement calculation...')
-            head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting Head movement calculation...')
+            # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
             # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
@@ -210,6 +207,7 @@ def make_derivative_meg_qc(config_file_name):
             'Muscle artifacts': simple_metrics_muscle}  
 
 
+
             #Make report and add to QC_derivs:
             report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
@@ -221,7 +219,6 @@ def make_derivative_meg_qc(config_file_name):
             #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
             QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', 'json')]
 
-            #print('___MEG QC___: ', 'HERE!',  QC_derivs)
 
             # d=0
             for section in QC_derivs.values():
@@ -242,7 +239,8 @@ def make_derivative_meg_qc(config_file_name):
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
 
                         elif deriv.content_type == 'matplotlib':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: mpld3.save_html(cont, file_path)
+                            meg_artifact.extension = '.png'
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.savefig(file_path) 
 
                         elif deriv.content_type == 'plotly':
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)

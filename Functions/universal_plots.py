@@ -227,7 +227,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     return qc_derivative
 
 #%%
-def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list):
+def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: list, method: str):
 
     '''Plotting periodogram on the data.
 
@@ -259,11 +259,11 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
         fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
 
     #fig.update_xaxes(type="log")
-    #fig.update_yaxes(type="log")
+    fig.update_yaxes(type="log")
     
     fig.update_layout(
     title={
-    'text': "Welch's periodogram for all "+tit,
+    'text': method[0].upper()+method[1:]+" periodogram for all "+tit,
     'y':0.85,
     'x':0.5,
     'xanchor': 'center',
@@ -275,7 +275,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
     xaxis_title="Frequency (Hz)")
     fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
 
-    #fig.show()
+    fig.show()
     
     fig_name='PSD_all_data_'+tit
 

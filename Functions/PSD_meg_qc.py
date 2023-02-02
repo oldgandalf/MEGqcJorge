@@ -514,9 +514,10 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
     powerline_freqs = []
     for m_or_g in m_or_g_chosen:
 
-        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method='welch', fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
+        method = 'welch'
+        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
 
-        psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g]) 
+        psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
