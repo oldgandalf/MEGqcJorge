@@ -67,7 +67,7 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
         rel_bandpower_per_ch_list.append(band_rel_power)
         power_by_Nfreq_per_ch_list.append(power_compare)
 
-    return(bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list)
+    return(bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, total_power)
 
 
     
@@ -111,7 +111,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         f_low, f_high = w[1] # Define band lower and upper limits
 
         #loop over mag or grad:
-        bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list=Power_of_band(freqs, f_low, f_high, psds)
+        bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, _ =Power_of_band(freqs, f_low, f_high, psds)
 
         dict_power[w[0]] = bandpower_per_ch_list
         dict_power_freq[w[0]] = power_by_Nfreq_per_ch_list
@@ -209,7 +209,7 @@ def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, fr
     
     noisy_freqs_dict={}
     for fr_n, fr in enumerate(freqs[peaks]):
-        noisy_freqs_dict[fr]=['Power of noise: '+str(all_bp_noise[fr_n])+' '+unit, 'Power  of noise relative to signal power in percent: '+ str(bp_noise_relative_to_signal[fr_n]*100)]
+        noisy_freqs_dict[fr]=['Amplitude of noise: '+str(all_bp_noise[fr_n])+' '+unit, 'Amplitude  of noise relative to signal amplitude in percent: '+ str(bp_noise_relative_to_signal[fr_n]*100)]
 
     simple_metric={
         'Metric name': 'PSD '+m_or_g_tit, 
@@ -439,8 +439,9 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
 
     #4.
     freq_res = freqs[1] - freqs[0]
-    total_power = simps(avg_psd, dx=freq_res) # power of all signal
-    print('___MEG QC___: ', 'Total power: ', total_power)
+    total_amplitude = simps(avg_psd, dx=freq_res) 
+    print('___MEG QC___: ', 'Total amplitude: ', total_amplitude)
+
 
     all_bp_noise=[]
     all_bp_relative=[]
@@ -451,30 +452,30 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     for fr_n, fr_b in enumerate(noisy_freq_bands_idx_split):
 
         #print('___MEG QC___: ', 'band',  freqs[fr_b][0], freqs[fr_b][-1])
-        bp_noise, _, bp_relative = Power_of_band(freqs=freqs, f_low = freqs[fr_b][0], f_high= freqs[fr_b][-1], psds=avg_psd_only_peaks_baselined_new)
+        bp_noise, _, bp_relative, _ = Power_of_band(freqs=freqs, f_low = freqs[fr_b][0], f_high= freqs[fr_b][-1], psds=avg_psd_only_peaks_baselined_new)
 
         all_bp_noise+=bp_noise
         all_bp_relative+=bp_relative
 
         #Calculate how much of the total power of the average signal goes into each of the noise freqs:
-        bp_noise_relative_to_signal.append(bp_noise / total_power) # relative power: % of this band in the total bands power for this channel:
+        bp_noise_relative_to_signal.append(bp_noise / total_amplitude) # relative power: % of this band in the total bands power for this channel:
 
     bp_noise_relative_to_signal=[r[0] for r in bp_noise_relative_to_signal]
 
     #print('___MEG QC___: ', 'Freq band for each peak:', ips_pair)
     print('___MEG QC___: ', 'BP', all_bp_noise)
     print('___MEG QC___: ', 'relative BP', all_bp_relative)
-    print('___MEG QC___: ', 'Amount of noisy freq in total signal', bp_noise_relative_to_signal)
+    print('___MEG QC___: ', 'Amount of noisy freq in total signal in percent', [b*100 for b in bp_noise_relative_to_signal])
 
 
     #Legend for the pie chart:
     bands_legend=[]
     for fr_n, fr in enumerate(freqs[peaks]):
-        bands_legend.append(str(fr)+' Hz noise: '+str(all_bp_noise[fr_n])+' '+unit)
-    main_signal_legend='Main signal: '+str(total_power-sum(all_bp_noise))+' '+unit
+        bands_legend.append(str(fr)+' Hz noise: '+str("%.2e" % all_bp_noise[fr_n])+' '+unit) # "%.2e" % removes too many digits after coma
+    main_signal_ampl = total_amplitude-sum(all_bp_noise)
+    print('___MEG QC___: ', 'Main signal amplitude: ', main_signal_ampl, unit)
+    main_signal_legend='Main signal: '+str("%.2e" % (total_amplitude-sum(all_bp_noise)))+' '+unit
     bands_legend.append(main_signal_legend)
-    #bands_legend=[str(fr)+' Hz noise' for fr in freqs[peaks]]+['Main signal'] #legend version without showing the abs power
-
 
     Snr=bp_noise_relative_to_signal+[1-sum(bp_noise_relative_to_signal)]
     noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_legend)
@@ -482,7 +483,7 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
 
     simple_metric_deriv=make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks)
 
-    #find out if the data contains powerline noise freqs - sed later to notch filter them before muscle artofact detection:
+    #find out if the data contains powerline noise freqs - later to notch filter them before muscle artofact detection:
     powerline=[50, 60]
     powerline_freqs = [x for x in powerline if x in np.round(freqs[peaks])]
 
@@ -516,6 +517,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
         method = 'welch'
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
+        psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
         psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 
         

@@ -251,7 +251,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
         tit='?'
         unit='?'
 
-    df_psds=pd.DataFrame(np.sqrt(psds.T), columns=mg_names)
+    df_psds=pd.DataFrame(psds.T, columns=mg_names)
 
     fig = go.Figure()
 
@@ -287,6 +287,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
 
 def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     
+   
     ''''Pie chart representation of relative power of each frequency band in given data - in the entire 
     signal of mags or of grads, not separated by individual channels.
 
@@ -300,17 +301,17 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
     '''
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    mean_relative_unknown=[v * 100 for v in mean_relative_freq]  #in percentage
+    mean_relative_values=[v * 100 for v in mean_relative_freq]  #in percentage
     power_unknown_m=100-(sum(mean_relative_freq))*100
     if power_unknown_m>0:
-        mean_relative_unknown.append(power_unknown_m)
+        mean_relative_values.append(power_unknown_m)
         bands_names=bands_names+['unknown']
 
 
-    fig = go.Figure(data=[go.Pie(labels=bands_names, values=mean_relative_unknown)])
+    fig = go.Figure(data=[go.Pie(labels=bands_names, values=mean_relative_values)])
     fig.update_layout(
     title={
-    'text': "Relative power of each band: "+tit,
+    'text': "Relative amplitude of each band: "+tit,
     'y':0.85,
     'x':0.5,
     'xanchor': 'center',
@@ -318,7 +319,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, tit: str, bands_names:str):
 
     #fig.show()
 
-    fig_name='PSD_Relative_bandpower_all_channels_'+tit
+    fig_name='PSD_Relative_band_amplitude_all_channels_'+tit
 
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
