@@ -182,11 +182,11 @@ def make_derivative_meg_qc(config_file_name):
             
             if picks_EOG is None:
                 no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-                eog_derivs = []
+            else:
+                no_eog_str = 'Only blinks can be calculated using MNE, not saccades.'
 
             if head_not_calculated is True:
-                no_head_pos_str = 'Head positions can not be computed.'
-                head_derivs = []
+                no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
 
 
             QC_derivs={
