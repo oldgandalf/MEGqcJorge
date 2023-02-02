@@ -74,6 +74,7 @@ def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, m
     
     return simple_metric
 
+
 def make_head_pos_plot(raw, head_pos):
 
     ''' Plot positions and rotations of the head'''
@@ -85,7 +86,7 @@ def make_head_pos_plot(raw, head_pos):
     average_head_dev_t = mne.transforms.invert_transform(
         compute_average_dev_head_t(raw, head_pos))
 
-    #plot using mne:
+    #plot using MNE:
     fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
     #fig1 = mne.viz.plot_head_positions(head_pos_degrees)
     for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
@@ -98,38 +99,51 @@ def make_head_pos_plot(raw, head_pos):
 
     head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
-    # print(head_pos)
 
-    #plot head_pos using plotly
+    #plot head_pos using PLOTLY:
 
     # First, for each head position subtract the first point from all the other points to make it always deviate from 0:
     head_pos_baselined=head_pos.copy()
     #head_pos_baselined=head_pos_degrees.copy()
-    for i, pos in enumerate(head_pos_baselined.T[0:7]):
+    for i, pos in enumerate(head_pos_baselined.T[1:7]):
         pos -= pos[0]
         head_pos_baselined.T[i]=pos
 
-    t = head_pos_baselined.T[0]
+    t = head_pos.T[0]
+
+    average_head_pos=average_head_dev_t['trans'][:3, 3]
+    original_head_pos=original_head_dev_t['trans'][:3, 3]
+
     fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quats)"))
 
-    pos=[6, 5, 4, 3, 2, 1]
-    names=['q1', 'q2', 'q3', 'x', 'y', 'z']
+    # head_pos ndarray of shape (n_pos, 10): [t, q1, q2, q3, x, y, z, gof, err, v]
+    # https://mne.tools/stable/generated/mne.chpi.compute_head_pos.html
+    indexes=[4, 5, 6, 1, 2,3]
+    names=['x', 'y', 'z', 'q1', 'q2', 'q3']
+    for counter in [0, 1, 2]:
+        position=1000*-head_pos.T[indexes][counter]
+        #position=1000*-head_pos_baselined.T[indexes][counter]
+        name_pos=names[counter]
+        fig1p.add_trace(go.Scatter(x=t, y=position, mode='lines', name=name_pos), row=counter+1, col=1)
+        fig1p.update_yaxes(title_text=name_pos, row=counter+1, col=1)
+        #print('name', name_pos, 'position', position)
+        rotation=head_pos.T[indexes][counter+3]
+        #rotation=head_pos_baselined.T[indexes][counter+3]
+        name_rot=names[counter+3]
+        fig1p.add_trace(go.Scatter(x=t, y=rotation, mode='lines', name=name_rot), row=counter+1, col=2)
+        fig1p.update_yaxes(title_text=name_rot, row=counter+1, col=2)
+        #print('name', name_rot, 'rotation', rotation)
 
-    for p, val, val_ori in zip(pos, average_head_dev_t['trans'][:3, 3], original_head_dev_t['trans'][:3, 3]):
-        fig1p.add_trace(go.Scatter(x=t, y=1000*-head_pos_baselined.T[p], mode='lines', name=names[p-1]), row=p-3, col=1)
-        fig1p.update_yaxes(title_text=names[p-1], row=p-3, col=1)
-        fig1p.add_trace(go.Scatter(x=t, y=-head_pos_baselined.T[p-3], mode='lines', name=names[p-4]), row=p-3, col=2)
-        fig1p.update_yaxes(title_text=names[p-4], row=p-3, col=2)
-
-        # fig1p.add_hline(y=100*val, line_dash="dash", line_color="red", row=p-3, col=1)
-        # fig1p.add_hline(y=100*val_ori, line_dash="dash", line_color="green", row=p-3, col=1)
+        # fig1p.add_hline(y=1000*average_head_pos[counter], line_dash="dash", line_color="red", row=counter+1, col=1)
+        # fig1p.add_hline(y=1000*original_head_pos[counter], line_dash="dash", line_color="green", row=counter+1, col=1)
 
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
     fig1p.show()
     head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
-    return head_derivs, head_pos_baselined, average_head_dev_t
+    return head_derivs, head_pos_baselined
+
 
 def make_head_annots_plot(raw, head_pos):
     '''Plot raw data with annotated head movement:'''
@@ -171,7 +185,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
         chpi_amplitudes = mne.chpi.compute_chpi_amplitudes(raw)
         chpi_locs = mne.chpi.compute_chpi_locs(raw.info, chpi_amplitudes)
         print('___MEG QC___: ', "Finished. --- Execution %s seconds ---" % (time.time() - start_time))
-        print('___MEG QC___: ', 'chpi_locs:', chpi_locs)
+        #print('___MEG QC___: ', 'chpi_locs:', chpi_locs)
 
     except:
         print('___MEG QC___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
@@ -192,7 +206,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     start_time = time.time()
     head_pos = mne.chpi.compute_head_pos(raw.info, chpi_locs)
     print('___MEG QC___: ', "Finished computing head positions. --- Execution %s seconds ---" % (time.time() - start_time))
-    print('___MEG QC___: ', 'Head positions:', head_pos)
+    #print('___MEG QC___: ', 'Head positions:', head_pos)
 
 
     # check if head positions are computed successfully:
@@ -212,7 +226,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
 
     # 2. Optional visual part:
     if plot_with_lines is True:
-        head_pos_derivs, head_pos_baselined, average_head_dev_t = make_head_pos_plot(raw, head_pos)
+        head_pos_derivs, head_pos_baselined = make_head_pos_plot(raw, head_pos)
     else:
         head_pos_derivs = []
 
@@ -230,11 +244,11 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     print('___MEG QC___: ', 'Std of head positions in mm: ', std_head_pos*1000)
     print('___MEG QC___: ', 'Std of head rotations in quat: ', std_head_rotations)
     print('___MEG QC___: ', 'Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
-    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in degrees: ', max_rotation_q)
+    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
 
     # 5. Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos, head_pos_degrees, average_head_dev_t
+    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos
 
 

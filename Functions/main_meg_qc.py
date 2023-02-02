@@ -153,7 +153,7 @@ def make_derivative_meg_qc(config_file_name):
             #     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('___MEG QC___: ', 'Starting Head movement calculation...')
-            head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos, head_pos_rescaled = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
             print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
@@ -277,7 +277,7 @@ def make_derivative_meg_qc(config_file_name):
 
     ancpbids.write_derivative(dataset, derivative) 
 
-    return raw, QC_derivs, QC_simple, df_head_pos, head_pos, head_pos_rescaled
+    return raw, QC_derivs, QC_simple, df_head_pos, head_pos
 
 
 #%%
