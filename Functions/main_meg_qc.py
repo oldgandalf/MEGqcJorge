@@ -197,14 +197,14 @@ def make_derivative_meg_qc(config_file_name):
             'Muscle artifacts': muscle_derivs}
 
             QC_simple={
-            'Standard deviation of the data': simple_metrics_rmse, 
-            'Frequency spectrum': simple_metrics_psd,
-            'Peak-to-Peak manual': simple_metrics_pp_manual, 
-            'Peak-to-Peak auto from MNE': simple_metrics_pp_auto,
+            'STD': simple_metrics_rmse, 
+            'PSD': simple_metrics_psd,
+            'PTP_MANUAL': simple_metrics_pp_manual, 
+            'PTP_AUTO': simple_metrics_pp_auto,
             'ECG': simple_metrics_ecg, 
             'EOG': simple_metrics_eog,
-            'Head movement artifacts': simple_metrics_head,
-            'Muscle artifacts': simple_metrics_muscle}  
+            'HEAD': simple_metrics_head,
+            'MUSCLE': simple_metrics_muscle}  
 
 
 
