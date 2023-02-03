@@ -192,7 +192,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
 #%%
-def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks):
+def make_simple_metric_psd(all_bp_noise:dict, bp_noise_relative_to_signal:dict, m_or_g_chosen:list, freqs:dict, peaks:dict):
     """Make simple metric for psd.
 
     Parameters
@@ -202,17 +202,20 @@ def make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, fr
     bp_noise_relative_to_signal : list
         relative noise in each band."""
 
-    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
+    simple_metric={'Metric name': 'PSD'}
     
-    noisy_freqs_dict={}
-    for fr_n, fr in enumerate(freqs[peaks]):
-        noisy_freqs_dict[fr]=['Amplitude of noise: '+str(all_bp_noise[fr_n])+' '+unit, 'Amplitude  of noise relative to signal amplitude in percent: '+ str(bp_noise_relative_to_signal[fr_n]*100)]
+    for m_or_g in m_or_g_chosen:
 
-    simple_metric={
-        'Metric name': 'PSD '+m_or_g_tit, 
-        'Number of noisy frequencies': len(peaks), 
-        'Details': noisy_freqs_dict}
+        m_or_g_tit, unit = get_tit_and_unit(m_or_g)
+        
+        noisy_freqs_dict={}
+        central_freqs=freqs[m_or_g][peaks[m_or_g]]
+        print('___MEG QC___: ', central_freqs, 'central_freqs in simple metric loop')
+        for fr_n, fr in enumerate(central_freqs):
+            noisy_freqs_dict[str(fr) + ' Hz']=['Amplitude of noise: '+str(all_bp_noise[m_or_g][fr_n])+' '+unit, 'Amplitude  of noise relative to signal amplitude in percent: '+ str(round(bp_noise_relative_to_signal[m_or_g][fr_n]*100, 2))]
 
+        simple_metric[m_or_g] = {m_or_g_tit+'. Number of noisy frequencies: ': len(peaks[m_or_g]), 'Details': noisy_freqs_dict}
+    
 
     return simple_metric
 
@@ -502,14 +505,11 @@ def find_number_and_power_of_noise_freqs(freqs, psds, helper_plots: bool, m_or_g
     noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_legend)
     noise_pie_derivative.content.show()
 
-    # Make a simple metric for SNR:
-    simple_metric_deriv=make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g, freqs, peaks)
-
     #find out if the data contains powerline noise freqs - later to notch filter them before muscle artifact detection:
     powerline=[50, 60]
     powerline_freqs = [x for x in powerline if x in np.round(freqs[peaks])]
 
-    return noise_pie_derivative, simple_metric_deriv, powerline_freqs
+    return noise_pie_derivative, powerline_freqs, all_bp_noise, bp_noise_relative_to_signal, peaks
 
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
@@ -532,7 +532,9 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
     freqs = {}
     psds = {}
     derivs_psd = []
-    simple_metrics_psd = []
+    all_bp_noise={}
+    bp_noise_relative_to_signal={}
+    peaks={}
 
     powerline_freqs = []
     for m_or_g in m_or_g_chosen:
@@ -545,12 +547,13 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
-        noise_pie_derivative, simple_metric_deriv, pf = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g, cut_noise_from_psd=False)
-        powerline_freqs += pf
+        noise_pie_derivative, powerline_freqs, all_bp_noise[m_or_g], bp_noise_relative_to_signal[m_or_g], peaks[m_or_g] = find_number_and_power_of_noise_freqs(freqs[m_or_g], psds[m_or_g], True, m_or_g, cut_noise_from_psd=False)
+        powerline_freqs += powerline_freqs
 
-        simple_metrics_psd += [simple_metric_deriv]
+        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] 
 
-        derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] #+[simple_metric_deriv]
+    # Make a simple metric for SNR:
+    simple_metric=make_simple_metric_psd(all_bp_noise, bp_noise_relative_to_signal, m_or_g_chosen, freqs, peaks)
 
-    return derivs_psd, simple_metrics_psd, list(set(powerline_freqs)) #take only unique freqs if they are repeted for mags, grads
+    return derivs_psd, simple_metric, list(set(powerline_freqs)) #take only unique freqs if they are repeated for mags, grads
 
