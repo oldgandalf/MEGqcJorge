@@ -287,7 +287,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
 
 #%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
 
-def split_blended_freqs_old(noisy_freq_bands_idx, width_heights, freqs):
+def split_blended_freqs_old(noisy_freq_bands_idx, width_heights):
 
     band = 0
     while band < len(noisy_freq_bands_idx):
@@ -325,10 +325,12 @@ def split_blended_freqs_old(noisy_freq_bands_idx, width_heights, freqs):
     return noisy_freq_bands_idx, width_heights
 
 
-def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, freqs):
+def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights):
 
-    # print('___MEG QC___: ', 'peaks_neg', peaks_neg)
-    # print('___MEG QC___: ', 'width_weights:', width_heights)
+    '''Here should not use width_heights any more, but rather peaks and peaks_neg.
+    Width heights should instead be calculated for each band as average between 
+    the height of the limits of this bend after split is done.
+    Probaly afer this fuction.'''
 
     split_points = []
     for n_peak, _ in enumerate(peaks):
@@ -337,13 +339,9 @@ def split_blended_freqs(noisy_freq_bands_idx, peaks, peaks_neg, width_heights, f
   
         neg_peak_before=peaks_neg[np.argwhere(peaks_neg<peaks[n_peak])[-1][0]]
         neg_peak_after=peaks_neg[np.argwhere(peaks_neg>peaks[n_peak])[0][0]]
-
-        #print('___MEG QC___: ', 'target peak', peaks[n_peak])
-        #print('___MEG QC___: ', 'before and after', neg_peak_before, neg_peak_after)
      
         if noisy_freq_bands_idx[n_peak][0] < neg_peak_before:
             noisy_freq_bands_idx[n_peak] = [i for i in range(neg_peak_before, noisy_freq_bands_idx[n_peak][-1])]
-            #print('___MEG QC___: ', 'new band', noisy_freq_bands_idx[n_peak])
 
             split_points += [neg_peak_before]
             #if true, then this peak was blended with another one, 
@@ -464,7 +462,7 @@ def plot_one_psd(ch_name, freqs, avg_psd, peaks, peaks_neg, noisy_freq_bands_idx
     
     return fig
 
-def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool, helper_plots: bool, m_or_g, cut_noise_from_psd: bool, prominence_lvl_pos: int, prominence_lvl_neg):
+def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool, helper_plots: bool, m_or_g, cut_noise_from_psd: bool, prominence_lvl_pos: int, prominence_lvl_neg: int = 60):
 
     """
     1. Calculate average psd curve over all channels
@@ -476,10 +474,9 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
     
     prominence_lvl will be different for average psd and psd of 1 channel, because average has small peaks smoothed.
     higher prominence_lvl means more peaks will be detected.
-    prominence_lvl_pos is used to detect positive peaks - central frequencies of noise bands (recommended: 50 for average, 10 for 1 channel)
+    prominence_lvl_pos is used to detect positive peaks - central frequencies of noise bands (recommended: 50 for average, 15 for 1 channel)
     prominence_lvl_neg is used only to find the beginnning of the noise band. it should always be a large numbe,\r, for both cases average or individual channel
-        small number will make it collect smaller peaks into the same band.
-        (recommended 50-100 for both cases)
+        small number will make it collect smaller peaks into the same band. (recommended 60 for both cases)
     """
 
     m_or_g_tit, unit = get_tit_and_unit(m_or_g)
@@ -498,9 +495,9 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
     _, width_heights, left_ips, right_ips = peak_widths(one_psd, noise_peaks, rel_height=1)
 
 
-    print('___MEG QC___: ', 'Central Freqs: ', freqs[noise_peaks])
-    print('___MEG QC___: ', 'Central Amplitudes: ', one_psd[noise_peaks])
-    print('___MEG QC___: ', 'width_heights: ', width_heights)
+    # print('___MEG QC___: ', 'Central Freqs: ', freqs[noise_peaks])
+    # print('___MEG QC___: ', 'Central Amplitudes: ', one_psd[noise_peaks])
+    # print('___MEG QC___: ', 'width_heights: ', width_heights)
 
     #turn found noisy segments into frequency bands around the central noise frequency:
     noisy_freq_bands_idx=[]
@@ -513,7 +510,7 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
 
     #2* Split the blended frequency bands into separate bands:
 
-    noisy_freq_bands_idx_split, width_heights_split, split_points = split_blended_freqs(noisy_freq_bands_idx, noise_peaks, peaks_neg, width_heights, freqs)
+    noisy_freq_bands_idx_split, width_heights_split, split_points = split_blended_freqs(noisy_freq_bands_idx, noise_peaks, peaks_neg, width_heights)
 
     if helper_plots is True: #visual of the split
         fig = plot_one_psd(ch_name, freqs, one_psd, noise_peaks, peaks_neg, noisy_freq_bands_idx_split, unit)
@@ -531,7 +528,7 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
         #Total amplitude of the signal together with noise:
         freq_res = freqs[1] - freqs[0]
         total_amplitude = simpson(one_psd, dx=freq_res) 
-        print('___MEG QC___: ', 'Total amplitude: ', total_amplitude)
+        #print('___MEG QC___: ', 'Total amplitude: ', total_amplitude)
 
 
     #4. Calculate area under the curve for each noisy peak: 
@@ -549,7 +546,7 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
         else: #if dont cut out peaks, calculate amplitude of noise from 0, not above the main psd curve:
             bp_noise, _, _, total_amplitude = Power_of_band(freqs=freqs, f_low = freqs[fr_b][0], f_high= freqs[fr_b][-1], psds=np.array([one_psd]))
 
-        print('___MEG QC___: ', 'Band: ', freqs[fr_b][0], freqs[fr_b][-1], ' ,total amplitude:', total_amplitude)
+        #print('___MEG QC___: ', 'Band: ', freqs[fr_b][0], freqs[fr_b][-1], ' ,total amplitude:', total_amplitude)
 
         noise_ampl+=bp_noise
 
@@ -558,18 +555,18 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
 
     noise_ampl_relative_to_signal=[r[0] for r in noise_ampl_relative_to_signal]
 
-    print('___MEG QC___: ', 'BP', noise_ampl)
-    print('___MEG QC___: ', 'Amount of noisy freq in total signal in percent', [b*100 for b in noise_ampl_relative_to_signal])
+    #print('___MEG QC___: ', 'BP', noise_ampl)
+    #print('___MEG QC___: ', 'Amount of noisy freq in total signal in percent', [b*100 for b in noise_ampl_relative_to_signal])
 
 
     if plotflag is True: # Plot pie chart of SNR:
         #Legend for the pie chart:
         bands_legend=[]
         for fr_n, fr in enumerate(freqs[noise_peaks]):
-            bands_legend.append(str(fr)+' Hz noise: '+str("%.2e" % noise_ampl[fr_n])+' '+unit) # "%.2e" % removes too many digits after coma
+            bands_legend.append(str(round(fr,1))+' Hz noise: '+str("%.2e" % noise_ampl[fr_n])+' '+unit) # "%.2e" % removes too many digits after coma
         main_signal_ampl = total_amplitude-sum(noise_ampl)
-        print('___MEG QC___: ', 'Main signal amplitude: ', main_signal_ampl, unit)
-        main_signal_legend='Main signal: '+str("%.2e" % (total_amplitude-sum(noise_ampl)))+' '+unit
+        #print('___MEG QC___: ', 'Main signal amplitude: ', main_signal_ampl, unit)
+        main_signal_legend='Main signal: '+str("%.2e" % main_signal_ampl)+' '+unit
         bands_legend.append(main_signal_legend)
 
         Snr=noise_ampl_relative_to_signal+[1-sum(noise_ampl_relative_to_signal)]
@@ -585,7 +582,7 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
     return noise_pie_derivative, powerline_freqs, noise_ampl, noise_ampl_relative_to_signal, noise_peaks
 
 #%%
-def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
+def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, helperplots: bool):
     """Main psd function.
 
     Freq spectrum peaks we see (visible on shorter interval, ALMOST NONE SEEN when Welch is done over all time):
@@ -627,7 +624,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         avg_psd=np.mean(psds[m_or_g],axis=0) 
-        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noise_peaks_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, prominence_lvl_neg=60)
+        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noise_peaks_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, prominence_lvl_neg=100)
 
         powerline_freqs += powerline_freqs
 
@@ -640,17 +637,15 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen):
 
         for ch_n, ch in enumerate(channels[m_or_g]): #plot only for some channels
 
-            if ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92:
-                plotflag=True
+            if (ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92) and helperplots is True:
+                helper_plotflag=True
             else:
-                plotflag=False
-            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noise_peaks_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=10, prominence_lvl_neg=60)
+                helper_plotflag=False
+            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noise_peaks_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, prominence_lvl_neg=150)
         
         noise_peaks_local[m_or_g]=noise_peaks_local_all_ch
         noise_ampl_local[m_or_g]=noise_ampl_local_all_ch
         noise_ampl_relative_to_all_signal_local[m_or_g]=noise_ampl_relative_to_all_signal_local_all_ch
-        
-        print('noise_peaks_local', noise_peaks_local[m_or_g])
 
         #collect all noise freqs from each channel, then find which freqs there are in total. Make a list for each freq: affected cannels, power of this freq in this channel, power of this freq relative to the main signal power in this channel
 
