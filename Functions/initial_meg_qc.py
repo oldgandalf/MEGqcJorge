@@ -77,15 +77,11 @@ def get_all_config_params(config_file_name: str):
         'stim_channel': stim_channel})
         all_qc_params['Epoching'] = epoching_params
 
-
         rmse_section = config['RMSE']
-        std_lvl = rmse_section.getint('std_lvl')
-        allow_percent_noisy = rmse_section.getfloat('allow_percent_noisy_epochs')
-        allow_percent_flat = rmse_section.getfloat('allow_percent_flat_epochs')
         all_qc_params['RMSE'] = dict({
-            'std_lvl':  std_lvl, 
-            'allow_percent_noisy': allow_percent_noisy,
-            'allow_percent_flat': allow_percent_flat})
+            'std_lvl':  rmse_section.getint('std_lvl'), 
+            'allow_percent_noisy': rmse_section.getfloat('allow_percent_noisy_epochs'),
+            'allow_percent_flat': rmse_section.getfloat('allow_percent_flat_epochs')})
         
 
         psd_section = config['PSD']
@@ -111,7 +107,11 @@ def get_all_config_params(config_file_name: str):
         ptp_manual_section = config['PTP_manual']
         all_qc_params['PTP_manual'] = dict({
         'max_pair_dist_sec': ptp_manual_section.getfloat('max_pair_dist_sec'),
-        'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl')})
+        'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl'),
+        'allow_percent_noisy': ptp_manual_section.getfloat('allow_percent_noisy_epochs'),
+        'allow_percent_flat': ptp_manual_section.getfloat('allow_percent_flat_epochs'),
+        'ptp_top_limit': ptp_manual_section.getfloat('ptp_top_limit'),
+        'ptp_bottom_limit': ptp_manual_section.getfloat('ptp_bottom_limit')})
 
 
         ptp_mne_section = config['PTP_auto']
