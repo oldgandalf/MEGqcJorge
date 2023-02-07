@@ -208,33 +208,6 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
 
 #%% 
 
-def make_simple_metric_rmse_noisy_or_flat_epochs(df_std: pd.DataFrame, epochs_mg, ch_type: str, allow_percent_noisy: float=70, high_or_flat: str='high'):
-
-    tit, _ = get_tit_and_unit(ch_type)
-
-    eps=[ep for ep in range(0, len(epochs_mg))] #list of epoch numbers
-
-    num_epochs_with_nonstandart_std={}
-    for ep in eps:
-        number_noisy=int(df_std.loc[:,ep].sum()) 
-        #count the number of TRUE in data frame. meaning the number of channels with high std for give epoch
-        #converted to int becuse json doesnt undertand numpy.int64
-        perc_noisy=round(number_noisy/len(df_std)*100, 1)
-        if perc_noisy>allow_percent_noisy:
-            ep_too_noisy=True
-        else:
-            ep_too_noisy=False
-
-        num_epochs_with_nonstandart_std['Epoch ' + str(ep)] = {'Number of channels with '+high_or_flat+' std': number_noisy, 'Percent of channels with '+high_or_flat+' std': perc_noisy, 'Epoch has too '+high_or_flat+' std': ep_too_noisy}
-        
-    total_num_noisy=sum([num_epochs_with_nonstandart_std['Epoch ' + str(ep)]['Epoch has too '+high_or_flat+' std'] for ep in eps])
-    total_perc_noisy=round(total_num_noisy/len(eps)*100)
-
-    nonstandart_std_epochs_dict={tit+'. Number of epochs with '+high_or_flat+' std (over '+str(allow_percent_noisy)+' percent of channels)': total_num_noisy, 'Percent of epochs with '+high_or_flat+' std': total_perc_noisy, 'Details': num_epochs_with_nonstandart_std}
-
-    return nonstandart_std_epochs_dict
-
-
 def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs, df_epochs: pd.DataFrame, allow_percent_noisy: float=70):
 
     '''
@@ -284,46 +257,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
 
     return dfs_deriv
 
-
-def make_simple_metric_rmse_all_data(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, m_or_g):
-
-    """Make simple metric for rmse.
-
-    # % of noisy channels with std above some std_threshold. (Jochem: 4 std +/- mean).
-    # Dict: with 2 std - % of noisy ch.
-    # with 4 std. - %. 
-    # (their names)
-    # If same with several - very bad channel.
-    
-    
-    # %of noisy epochs.
-    # Next dict lvl: which epochs (their numbers).
-    # BUT WE DONT HAVE NOISY EPOCHS AS THE WHOLE EPOCH - WE GOT ONLY SOME EPOCHS IN SOME CHANNELS (SEE PLOT) - CANT GIVE JUST A  NUMBER.
-    # MAYBE SKIP THE EPOCH METRIC?
-
-    Parameters
-    ----------
-"""
-
-    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
-
-    simple_metric={
-        'RMSE_all': {
-        'description': 'RMSE over all data for '+m_or_g_tit, 
-        'Number of noisy channels with std above '+str(std_lvl)+' std_threshold': len(big_rmse_with_value_all_data),
-        'Percent of noisy channels with std above '+str(std_lvl)+' std_threshold': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
-        'Noisy channels and  theirs std values in '+unit+' ': big_rmse_with_value_all_data,
-        'Number of noisy channels with std below -'+str(std_lvl)+' std_threshold': len(small_rmse_with_value_all_data),
-        'Percent of noisy channels with std below -'+str(std_lvl)+' std_threshold': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
-        'Flat channels and their std values in '+unit+' ': small_rmse_with_value_all_data,
-        }}
-
-        #'Percent of noisy epochs with std above '+str(std_lvl)+' std_threshold': len(),
-        #'Noisy epochs': []
-
-
-    return simple_metric
-
+#%% All about simple metrc jsons:
 
 def make_dict_global_rmse(std_lvl, unit, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels):
 
@@ -390,7 +324,7 @@ def make_dict_local_rmse(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_flat:
 
 def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, df_epoch_rmse, dict_epochs_mg, allow_percent_noisy, allow_percent_flat, metric_local):
 
-    """Make simple metric for psd.
+    """Make simple metric for RMSE.
 
     Parameters
     ----------
