@@ -104,9 +104,11 @@ def get_all_config_params(config_file_name: str):
         rmse_section = config['RMSE']
         std_lvl = rmse_section.getint('std_lvl')
         allow_percent_noisy = rmse_section.getfloat('allow_percent_noisy_epochs')
+        allow_percent_flat = rmse_section.getfloat('allow_percent_flat_epochs')
         all_qc_params['RMSE'] = dict({
             'std_lvl':  std_lvl, 
-            'allow_percent_noisy': allow_percent_noisy})
+            'allow_percent_noisy': allow_percent_noisy,
+            'allow_percent_flat': allow_percent_flat})
         
 
         psd_section = config['PSD']

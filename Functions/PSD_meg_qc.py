@@ -191,99 +191,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     return psd_pie_derivative, dfs_with_name
 
 
-#%%
-def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noise_peaks_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noise_peaks_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
-    """Make simple metric for psd.
 
-    Parameters
-    ----------
-    noise_ampl_global : dict
-        DESCRIPTION.
-    noise_ampl_relative_to_all_signal_global : dict
-        DESCRIPTION.
-    noise_peaks_global : dict
-        DESCRIPTION.
-    noise_ampl_local : dict
-        DESCRIPTION.
-    noise_ampl_relative_to_all_signal_local : dict
-        DESCRIPTION.
-    noise_peaks_local : dict
-        DESCRIPTION.
-    m_or_g_chosen : list
-        DESCRIPTION.
-    freqs : dict
-        DESCRIPTION.
-
-    Returns
-    -------
-    simple_metric: dict
-        DESCRIPTION.
-    
-
-"""
-
-    simple_metric_global={'mag':{}, 'grad':{}}
-    for m_or_g in m_or_g_chosen:
-        
-        noisy_freqs_dict={}
-        central_freqs=freqs[m_or_g][noise_peaks_global[m_or_g]]
-        for fr_n, fr in enumerate(central_freqs):
-            noisy_freqs_dict[fr]={'noise_ampl_global': float(noise_ampl_global[m_or_g][fr_n]), 'noise_ampl_relative_to_all_signal_global': round(float(noise_ampl_relative_to_all_signal_global[m_or_g][fr_n]*100), 2)}
-
-        #need to convert to float, cos json doesnt understand numpy floats
-        simple_metric_global[m_or_g] = noisy_freqs_dict
-
-
-    simple_metric_local={'mag':{}, 'grad':{}}
-    for m_or_g in m_or_g_chosen:
-
-        noisy_freqs_dict_all_ch={}
-        for ch in channels[m_or_g]:
-            central_freqs=freqs[m_or_g][noise_peaks_local[m_or_g][ch]]
-            noisy_freqs_dict={}     
-            for fr_n, fr in enumerate(central_freqs):
-                noisy_freqs_dict[fr]={'noise_ampl_local': float(noise_ampl_local[m_or_g][ch][fr_n]), 'noise_ampl_relative_to_all_signal_local':  round(float(noise_ampl_relative_to_all_signal_local[m_or_g][ch][fr_n]*100), 2)}
-            noisy_freqs_dict_all_ch[ch]=noisy_freqs_dict
-
-        simple_metric_local[m_or_g] = noisy_freqs_dict_all_ch
-
-
-    _, unit_mag = get_tit_and_unit('mag')
-    _, unit_grad = get_tit_and_unit('grad')
-
-    simple_metric={
-        "PSD_global": {
-            "description": "Noise frequencies detected globally (based on average over all channels in this data file)",
-            "mag": {
-                "noisy_frequencies_count: ": len(noise_peaks_global['mag']),
-                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
-                "noise_ampl_global_unit": unit_mag,
-                "noise_ampl_relative_to_all_signal_global_unit": "%",
-                "Details": simple_metric_global['mag']},
-            "grad": {
-                "noisy_frequencies_count: ": len(noise_peaks_global['grad']),
-                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
-                "noise_ampl_global_unit": unit_grad,
-                "noise_ampl_relative_to_all_signal_global_unit": "%",
-                "Details": simple_metric_global['grad']}
-            },  
-
-        "PSD_local": {
-            "description": "Noise frequencies detected locally (present only on individual channels)",
-            "mag": {
-                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
-                "noise_ampl_local_unit": unit_mag,
-                "noise_ampl_relative_to_all_signal_local_unit": "%",
-                "Details": simple_metric_local['mag']},
-            "grad": {
-                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
-                "noise_ampl_local_unit": unit_grad,
-                "noise_ampl_relative_to_all_signal_local_unit": "%",
-                "Details": simple_metric_local['grad']}
-            }
-        }
-
-    return simple_metric
 
 #%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
 
@@ -581,6 +489,100 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
 
     return noise_pie_derivative, powerline_freqs, noise_ampl, noise_ampl_relative_to_signal, noise_peaks
 
+#%%
+def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noise_peaks_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noise_peaks_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
+    """Make simple metric for psd.
+
+    Parameters
+    ----------
+    noise_ampl_global : dict
+        DESCRIPTION.
+    noise_ampl_relative_to_all_signal_global : dict
+        DESCRIPTION.
+    noise_peaks_global : dict
+        DESCRIPTION.
+    noise_ampl_local : dict
+        DESCRIPTION.
+    noise_ampl_relative_to_all_signal_local : dict
+        DESCRIPTION.
+    noise_peaks_local : dict
+        DESCRIPTION.
+    m_or_g_chosen : list
+        DESCRIPTION.
+    freqs : dict
+        DESCRIPTION.
+
+    Returns
+    -------
+    simple_metric: dict
+        DESCRIPTION.
+    
+
+"""
+
+    simple_metric_global={'mag':{}, 'grad':{}}
+    for m_or_g in m_or_g_chosen:
+        
+        noisy_freqs_dict={}
+        central_freqs=freqs[m_or_g][noise_peaks_global[m_or_g]]
+        for fr_n, fr in enumerate(central_freqs):
+            noisy_freqs_dict[fr]={'noise_ampl_global': float(noise_ampl_global[m_or_g][fr_n]), 'noise_ampl_relative_to_all_signal_global': round(float(noise_ampl_relative_to_all_signal_global[m_or_g][fr_n]*100), 2)}
+
+        #need to convert to float, cos json doesnt understand numpy floats
+        simple_metric_global[m_or_g] = noisy_freqs_dict
+
+
+    simple_metric_local={'mag':{}, 'grad':{}}
+    for m_or_g in m_or_g_chosen:
+
+        noisy_freqs_dict_all_ch={}
+        for ch in channels[m_or_g]:
+            central_freqs=freqs[m_or_g][noise_peaks_local[m_or_g][ch]]
+            noisy_freqs_dict={}     
+            for fr_n, fr in enumerate(central_freqs):
+                noisy_freqs_dict[fr]={'noise_ampl_local': float(noise_ampl_local[m_or_g][ch][fr_n]), 'noise_ampl_relative_to_all_signal_local':  round(float(noise_ampl_relative_to_all_signal_local[m_or_g][ch][fr_n]*100), 2)}
+            noisy_freqs_dict_all_ch[ch]=noisy_freqs_dict
+
+        simple_metric_local[m_or_g] = noisy_freqs_dict_all_ch
+
+
+    _, unit_mag = get_tit_and_unit('mag')
+    _, unit_grad = get_tit_and_unit('grad')
+
+    simple_metric={
+        "PSD_global": {
+            "description": "Noise frequencies detected globally (based on average over all channels in this data file)",
+            "mag": {
+                "noisy_frequencies_count: ": len(noise_peaks_global['mag']),
+                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
+                "noise_ampl_global_unit": unit_mag,
+                "noise_ampl_relative_to_all_signal_global_unit": "%",
+                "Details": simple_metric_global['mag']},
+            "grad": {
+                "noisy_frequencies_count: ": len(noise_peaks_global['grad']),
+                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
+                "noise_ampl_global_unit": unit_grad,
+                "noise_ampl_relative_to_all_signal_global_unit": "%",
+                "Details": simple_metric_global['grad']}
+            },  
+
+        "PSD_local": {
+            "description": "Noise frequencies detected locally (present only on individual channels)",
+            "mag": {
+                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
+                "noise_ampl_local_unit": unit_mag,
+                "noise_ampl_relative_to_all_signal_local_unit": "%",
+                "Details": simple_metric_local['mag']},
+            "grad": {
+                "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
+                "noise_ampl_local_unit": unit_grad,
+                "noise_ampl_relative_to_all_signal_local_unit": "%",
+                "Details": simple_metric_local['grad']}
+            }
+        }
+
+    return simple_metric
+    
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, helperplots: bool):
     """Main psd function.

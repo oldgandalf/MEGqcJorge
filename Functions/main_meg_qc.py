@@ -117,15 +117,15 @@ def make_derivative_meg_qc(config_file_name):
             # print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
 
-            # print('___MEG QC___: ', 'Starting RMSE...')
-            # start_time = time.time()
-            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
- 
-            print('___MEG QC___: ', 'Starting PSD...')
+            print('___MEG QC___: ', 'Starting RMSE...')
             start_time = time.time()
-            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=False)
-            print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+ 
+            # print('___MEG QC___: ', 'Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=False)
+            # print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -197,7 +197,7 @@ def make_derivative_meg_qc(config_file_name):
             'Muscle artifacts': muscle_derivs}
 
             QC_simple={
-            'STD': simple_metrics_rmse, 
+            'RMSE': simple_metrics_rmse, 
             'PSD': simple_metrics_psd,
             'PTP_MANUAL': simple_metrics_pp_manual, 
             'PTP_AUTO': simple_metrics_pp_auto,
@@ -205,7 +205,6 @@ def make_derivative_meg_qc(config_file_name):
             'EOG': simple_metrics_eog,
             'HEAD': simple_metrics_head,
             'MUSCLE': simple_metrics_muscle}  
-
 
 
             #Make report and add to QC_derivs:

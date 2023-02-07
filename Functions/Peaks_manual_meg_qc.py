@@ -229,7 +229,7 @@ def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, df_epoch: pd
     df_pp_name = 'Peak_to_Peak_per_epoch_'+ch_type
 
 
-    dfs_with_name = [QC_derivative(df_pp_ampl_mg, df_pp_name, 'df')]
+    dfs_with_name = QC_derivative(df_pp_ampl_mg, df_pp_name, 'df')
 
     return dfs_with_name
 
@@ -264,10 +264,11 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, di
 
         for m_or_g in m_or_g_chosen:
             df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_epochs_mg[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'], ch_type=m_or_g)
-            dfs_list += df_ptp
+            dfs_list += [df_ptp]
 
-            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp[0].content, ch_type=m_or_g_title[m_or_g], what_data='peaks')]
-            #df_epoch_rmse[0].content - take from list the first obj, from there the content which is the df with ptp
+            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp.content, ch_type=m_or_g_title[m_or_g], what_data='peaks')]
+
+
     else:
         print('___MEG QC___: ', 'Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         

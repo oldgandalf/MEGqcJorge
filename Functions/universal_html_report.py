@@ -292,3 +292,19 @@ def make_PSD_report(sid: str, list_of_figure_paths: list):
 
     with open('../derivatives/sub-'+sid+'/megqc/reports/report_PSD.html', 'w', encoding = 'utf8') as f:
         f.write(html_string)
+
+
+def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name, metric_local_description, metric_local_content_mag, metric_local_content_grad):
+    '''Basic structure of simple metric for all measurements'''
+    
+    simple_metric={
+        metric_global_name: {
+            'description': metric_global_description,
+            "mag": metric_global_content_mag,
+            "grad": metric_global_content_grad},  
+
+        metric_local_name: {
+            "description": metric_local_description,
+            "mag": metric_local_content_mag,
+            "grad": metric_local_content_grad}}
+    return simple_metric
