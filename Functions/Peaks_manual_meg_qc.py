@@ -186,7 +186,7 @@ def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_
     return dfs_with_name
 
 
-def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, df_epoch: pd.DataFrame, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
+def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
 
     ''' --fastest  and cleanest version, no need to use data frames--
 
@@ -234,7 +234,7 @@ def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, df_epoch: pd
     return dfs_with_name
 
 
-def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, dict_of_dfs_epoch: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
 
     """Main Peak to peak amplitude function.
@@ -260,10 +260,9 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, di
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_tit=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='peaks')]
 
-    if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
-
+    if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
-            df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_epochs_mg[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'], ch_type=m_or_g)
+            df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'], ch_type=m_or_g)
             dfs_list += [df_ptp]
 
             fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp.content, ch_tit=m_or_g_title[m_or_g], what_data='peaks')]

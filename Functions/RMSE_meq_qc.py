@@ -169,7 +169,7 @@ def std_of_epochs_dfs_fast(mg_names: list, epochs_mg: mne.Epochs, df_mg: pd.Data
 
 #%%
 
-def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
+def std_of_epochs(channels: list, epochs_mg: mne.Epochs):
 
     ''' --fastest  and cleanest version, no need to use data frames--
 
@@ -208,7 +208,7 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs, df_mg: pd.DataFrame):
 
 #%% 
 
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs, df_epochs: pd.DataFrame, allow_percent_noisy: float=70):
+def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs):
 
     '''
     - Calculate std for every separate epoch of a given list of channels
@@ -229,7 +229,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
 
     # 1) Find std for every channel for every epoch:
 
-    df_std=std_of_epochs(channels=channels, epochs_mg=epochs_mg, df_mg=df_epochs)
+    df_std=std_of_epochs(channels=channels, epochs_mg=epochs_mg)
 
     # 2) Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
 
@@ -376,7 +376,7 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     return simple_metric
 
 #%%
-def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_of_dfs_epoch:dict, data: mne.io.Raw, m_or_g_chosen: list):
+def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     """Main RMSE function
     
@@ -405,10 +405,11 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
 
     df_epoch_rmse={}
-    if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
+
+    if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
 
-            df_epoch_rmse[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g], allow_percent_noisy=rmse_params['allow_percent_noisy']) 
+            df_epoch_rmse[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g]) 
             dfs_list += df_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[m_or_g][0].content, ch_type=m_or_g, what_data='stds')]

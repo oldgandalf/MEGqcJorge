@@ -84,7 +84,7 @@ def make_derivative_meg_qc(config_file_name):
 
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
-            dict_of_dfs_epoch, dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+            dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
             if len(m_or_g_chosen) == 0: 
@@ -119,7 +119,7 @@ def make_derivative_meg_qc(config_file_name):
 
             print('___MEG QC___: ', 'Starting RMSE...')
             start_time = time.time()
-            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
+            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
             print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
             # print('___MEG QC___: ', 'Starting PSD...')
@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_name):
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             # start_time = time.time()
-            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, dict_of_dfs_epoch, raw_cropped_filtered_resampled, m_or_g_chosen)
+            # pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
@@ -174,7 +174,7 @@ def make_derivative_meg_qc(config_file_name):
             if 'grad' not in m_or_g_chosen:
                 channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
-            if dict_of_dfs_epoch['mag'] is None and dict_of_dfs_epoch['grad'] is None:
+            if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
             if picks_EOG is None:

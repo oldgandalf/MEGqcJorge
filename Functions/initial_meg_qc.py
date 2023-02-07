@@ -5,29 +5,6 @@ import plotly.graph_objects as go
 import numpy as np
 from universal_plots import QC_derivative
 
-def make_folders_meg(sid: str):
-    '''Create folders (if they dont exist yet). 
-    NOT USED ANY MORE, LEFT IN CASE NEEDED LATER
-
-    Folders are created in BIDS-compliant directory order: 
-    Working directory - Subject - derivtaives - megQC - csvs and figures
-
-    Args:
-    sid (int): subject Id, must be a string, like '1'. '''
-
-
-    #Make sure to add subfolders on the list here AFTER the parent folder.
-    path_list = [f'../derivatives', 
-    f'../derivatives/sub-{sid}',
-    f'../derivatives/sub-{sid}/megqc',
-    f'../derivatives/sub-{sid}/megqc/csv files',
-    f'../derivatives/sub-{sid}/megqc/figures',
-    f'../derivatives/sub-{sid}/megqc/reports']
-
-    for path in path_list:
-        if os.path.isdir(path)==False: #if directory doesnt exist yet - create
-            os.mkdir(path)
-
 
 def get_all_config_params(config_file_name: str):
     '''Parse all the parameters from config and put into a python dictionary 
@@ -215,30 +192,17 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     if n_events == 0:
         print('___MEG QC___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
-        dict_of_dfs_epoch = {
-        'grad': None,
-        'mag': None}
-
-        dict_epochs_mg = {
-        'grad': None,
-        'mag': None}
-        return dict_of_dfs_epoch, dict_epochs_mg
-
-    epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
-    epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
-
-    df_epochs_mag = epochs_mag.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
-    df_epochs_grad = epochs_grad.to_data_frame(time_format=None, scalings=dict(mag=1, grad=1))
-
-    dict_of_dfs_epoch = {
-    'grad': df_epochs_grad,
-    'mag': df_epochs_mag}
+        epochs_grad, epochs_mag = None, None
+    else:
+        epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
+        epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
 
     dict_epochs_mg = {
-    'grad': epochs_grad,
-    'mag': epochs_mag}
+    'mag': epochs_mag,
+    'grad': epochs_grad}
 
-    return dict_of_dfs_epoch, dict_epochs_mg
+    return dict_epochs_mg
+
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
@@ -301,10 +265,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
-    dict_of_dfs_epoch, dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
+    dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
 
-    return dict_of_dfs_epoch, dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used
-
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used
 
 
 def sanity_check(m_or_g_chosen, channels):
