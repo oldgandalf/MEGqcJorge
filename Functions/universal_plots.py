@@ -1,6 +1,5 @@
 import plotly
 import plotly.graph_objects as go
-import mpld3
 import base64
 from io import BytesIO
 import pandas as pd
@@ -93,22 +92,16 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
 
     '''
 
-    if ch_type=='Magnetometers':
-        unit='Tesla'
-    elif ch_type=='Gradiometers':
-        unit='Tesla/meter'
-    else:
-        unit='?unknown unit?'
-        print('___MEG QC___: ', 'Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
+    ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
         hover_tit='Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_'+ch_type
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_'+ch_type
+        fig_name='STD_epoch_per_channel_'+ch_tit
 
     #transpose the data to plot the boxplots on x axes
     df_mg_transposed = df_mg.T 
@@ -143,7 +136,7 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
             exponentformat = 'e'),
         yaxis_title=y_ax_and_fig_title+' in '+unit,
         title={
-            'text': y_ax_and_fig_title+' over epochs for '+ch_type,
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
@@ -174,23 +167,16 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     fig_name (str): figure name
     '''
 
-    if ch_type=='Magnetometers':
-        unit='Tesla'
-    elif ch_type=='Gradiometers':
-        unit='Tesla/meter'
-    else:
-        unit='?unknown unit?'
-        print('___MEG QC___: ', 'Please check ch_type input. Has to be "Magnetometers" or "Gradiometers"')
-
+    ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
         hover_tit='PP_Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_all_data_'+ch_type
+        fig_name='PP_manual_all_data_'+ch_tit
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_all_data_'+ch_type
+        fig_name='STD_epoch_all_data_'+ch_tit
 
     df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
@@ -214,7 +200,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         exponentformat = 'e'),
         xaxis_title=y_ax_and_fig_title+" in "+unit,
         title={
-        'text': y_ax_and_fig_title+' of the data for '+ch_type+' over the entire time series',
+        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
         'y':0.85,
         'x':0.5,
         'xanchor': 'center',
@@ -240,16 +226,7 @@ def Plot_periodogram(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, mg_names: l
     Returns:
     fig (go.Figure): plottly figure
     '''
-
-    if m_or_g=='mag':
-        tit='Magnetometers'
-        unit='T/Hz'
-    elif m_or_g=='grad':
-        tit='Gradiometers'
-        unit='T/m / Hz'
-    else:
-        tit='?'
-        unit='?'
+    tit, unit = get_tit_and_unit(m_or_g)
 
     df_psds=pd.DataFrame(psds.T, columns=mg_names)
 

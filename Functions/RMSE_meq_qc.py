@@ -40,7 +40,7 @@ def RMSE(data_m_or_g: np.array or list):
 
     return rmse_np
 
-# In[6]:
+#%%
 def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int): 
 
     '''Root mean squared error calculated over ALL data (not epoched)
@@ -392,11 +392,6 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
         - were both mag and grad analyzed (*2 derivs) or only one type of channels(*1 derivs)
     big_rmse_with_value_all_data + small_rmse_with_value_all_data: 2 lists of tuples: channel+ std value of calculsted value is too high and to low"""
 
-
-    m_or_g_title = {
-    'grad': 'Gradiometers',
-    'mag': 'Magnetometers'}
-
     big_rmse_with_value_all_data = {}
     small_rmse_with_value_all_data = {}
     rmse = {}
@@ -407,7 +402,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
     for m_or_g in m_or_g_chosen:
 
         big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'])
-        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='stds')]
+        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
 
     df_epoch_rmse={}
     if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
@@ -416,7 +411,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, dict_o
             df_epoch_rmse[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g], df_epochs=dict_of_dfs_epoch[m_or_g], allow_percent_noisy=rmse_params['allow_percent_noisy']) 
             dfs_list += df_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
-            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[m_or_g][0].content, ch_type=m_or_g_title[m_or_g], what_data='stds')]
+            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_epoch_rmse[m_or_g][0].content, ch_type=m_or_g, what_data='stds')]
             #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
 

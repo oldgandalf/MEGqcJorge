@@ -178,7 +178,7 @@ def MEG_QC_rmse(sid: str, config, channels: dict, df_epochs:pd.DataFrame, filter
         
         df_std[channel_type] = RMSE_meg_epoch(ch_type=channel_type, channels=channels[channel_type], std_lvl=std_lvl, n_events=n_events, df_epochs=df_epochs[channel_type], sid=sid) 
 
-        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_type=channel_type, sid=sid, what_data='stds')
+        fig_std_epoch[channel_type], fig_path_std_epoch[channel_type] = boxplot_channel_epoch_hovering_plotly(df_mg=df_std[channel_type], ch_tit=channel_type, sid=sid, what_data='stds')
         
         list_of_figure_paths.append(fig_path[channel_type])
         list_of_figure_paths_std_epoch.append(fig_path_std_epoch[channel_type])
@@ -259,8 +259,8 @@ def MEG_peaks_manual(sid:str, config, channels:list, filtered_d_resamp: mne.io.R
     df_pp_ampl_grads=peak_amplitude_per_epoch(mg_names=grads, df_epoch_mg=df_epochs_grads, sfreq=sfreq, n_events=n_events, thresh_lvl=thresh_lvl, pair_dist_sec=pair_dist_sec)
 
     from universal_plots import boxplot_channel_epoch_hovering_plotly
-    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_type='Magnetometers', sid='1', what_data='peaks')
-    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_type='Gradiometers', sid='1', what_data='peaks')
+    _, fig_path_m_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_mags, ch_tit='Magnetometers', sid='1', what_data='peaks')
+    _, fig_path_g_pp_ampl_epoch=boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl_grads, ch_tit='Gradiometers', sid='1', what_data='peaks')
 
     from universal_html_report import make_peak_html_report
     list_of_figure_paths=[fig_path_m_pp_ampl_epoch, fig_path_g_pp_ampl_epoch]

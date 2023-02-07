@@ -258,7 +258,7 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, di
     for m_or_g in m_or_g_chosen:
 
         peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
-        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='peaks')]
+        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_tit=m_or_g_title[m_or_g], channels=channels[m_or_g], what_data='peaks')]
 
     if dict_of_dfs_epoch['mag'] is not None and dict_of_dfs_epoch['grad'] is not None:
 
@@ -266,7 +266,7 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, di
             df_ptp=peak_amplitude_per_epoch(channels[m_or_g], dict_epochs_mg[m_or_g], dict_of_dfs_epoch[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'], ch_type=m_or_g)
             dfs_list += [df_ptp]
 
-            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp.content, ch_type=m_or_g_title[m_or_g], what_data='peaks')]
+            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_ptp.content, ch_tit=m_or_g_title[m_or_g], what_data='peaks')]
 
 
     else:
