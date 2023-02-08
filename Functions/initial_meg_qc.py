@@ -107,11 +107,12 @@ def get_all_config_params(config_file_name: str):
         ptp_manual_section = config['PTP_manual']
         all_qc_params['PTP_manual'] = dict({
         'max_pair_dist_sec': ptp_manual_section.getfloat('max_pair_dist_sec'),
-        'thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl'),
+        'ptp_thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl'),
         'allow_percent_noisy': ptp_manual_section.getfloat('allow_percent_noisy_epochs'),
         'allow_percent_flat': ptp_manual_section.getfloat('allow_percent_flat_epochs'),
         'ptp_top_limit': ptp_manual_section.getfloat('ptp_top_limit'),
-        'ptp_bottom_limit': ptp_manual_section.getfloat('ptp_bottom_limit')})
+        'ptp_bottom_limit': ptp_manual_section.getfloat('ptp_bottom_limit'),
+        'std_ptp_lvl': ptp_manual_section.getfloat('std_ptp_lvl')})
 
 
         ptp_mne_section = config['PTP_auto']

@@ -71,7 +71,7 @@ def make_derivative_meg_qc(config_file_name):
         print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[0:5]: 
+    for sid in list_of_subs[1:2]: 
         print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -117,10 +117,10 @@ def make_derivative_meg_qc(config_file_name):
             # print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
  
 
-            # print('___MEG QC___: ', 'Starting RMSE...')
-            # start_time = time.time()
-            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting RMSE...')
+            start_time = time.time()
+            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
             # print('___MEG QC___: ', 'Starting PSD...')
             # start_time = time.time()
@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_name):
 
             print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             start_time = time.time()
-            pp_manual_derivs = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            pp_manual_derivs, simple_metrics_pp_manual = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
             print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')

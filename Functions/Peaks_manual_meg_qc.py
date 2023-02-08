@@ -7,6 +7,7 @@ import pandas as pd
 import mne
 from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, get_tit_and_unit
 from universal_html_report import simple_metric_basic
+from RMSE_meq_qc import get_large_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data
 
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:
@@ -32,13 +33,23 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
     pairs_magnitudes=[]
     pairs_locs=[]
 
+    # Looping over all positive peaks
     for posit_peak_ind, posit_peak_loc in enumerate(pos_peak_locs):
-        neg_peak_ind=np.where(np.logical_and(neg_peak_locs>=posit_peak_loc-pair_dist/2, neg_peak_locs<=posit_peak_loc+pair_dist/2))
-        if neg_peak_ind[0].size != 0:
+        
+        # Finding the value in neg_peak_locs which is closest to posit_peak_loc
+        closest_negative_peak_index = np.abs(neg_peak_locs - posit_peak_loc).argmin()
 
-            #find the negative peak  which is located at a half of pair_dist from positive peak -> they will for a pair
-            pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[neg_peak_ind[0][0]]])
-            pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[neg_peak_ind[0][0]]])
+        # Check if the closest negative peak is within the given distance
+        if np.abs(neg_peak_locs[closest_negative_peak_index] - posit_peak_loc) <= pair_dist / 2:
+            pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[closest_negative_peak_index]])
+            pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[closest_negative_peak_index]])
+        
+        # print("||:", neg_peak_ind)
+        # if neg_peak_ind[0].size != 0:
+        #     print("||: A")
+        #     #find the negative peak  which is located at a half of pair_dist from positive peak -> they will for a pair
+        #     pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[neg_peak_ind[0][0]]])
+        #     pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[neg_peak_ind[0][0]]])
 
     # if no positive+negative pairs were fould (no corresponding peaks at given distamce to each other) -> 
     # peak amplitude will be given as 0 (THINK MAYBE GIVE SOMETHING DIFFERENT INSTEAD? 
@@ -54,51 +65,28 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
 
     return np.mean(amplitude), amplitude
 
-#%%
-def peak_amplitude_all_data(data: mne.io.Raw, channels: list, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float):
-
-    '''Function calculates peak-to-peak amplitude over the entire data set for every channel (mag or grad).
-
-    Args:
-    mg_names (list of tuples): channel name + its index
-    df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
-    sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
-    n_events (int): number of events in this peace of data
-    thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
-        used in: max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
-    max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
-
-    Returns:
-    peak_ampl (list): contains the mean peak-to-peak amplitude for all time for each channel
-
-    '''
-    
+def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
+        
     data_channels=data.get_data(picks = channels)
 
-    peak_ampl=[]
+    peak_ampl_channels=[]
     for one_ch_data in data_channels: 
 
-        thresh=(max(one_ch_data) - min(one_ch_data)) / thresh_lvl 
+        thresh=(max(one_ch_data) - min(one_ch_data)) / ptp_thresh_lvl 
         #can also change the whole thresh to a single number setting
 
         pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
         neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
 
-        pp_ampl,_=neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
-        peak_ampl.append(pp_ampl)
+        pp_ampl, _ = neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
+        peak_ampl_channels.append(pp_ampl)
+        
+    return peak_ampl_channels
 
-    #df_pp_ampl_all = pd.DataFrame(peak_ampl, index=channels)
-
-
-    #FINISH THESE HERE:
-
-    big_ptp_with_value_all_data, small_ptp_with_value_all_data = [], []
-
-    return big_ptp_with_value_all_data, small_ptp_with_value_all_data, peak_ampl
 
 # In[7]:
 
-def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoch: pd.DataFrame, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
+def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoch: pd.DataFrame, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
 
     '''Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
@@ -107,8 +95,8 @@ def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoc
     df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
     sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
     n_events (int): number of events in this peace of data
-    thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
-        used in: max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+    ptp_thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
+        used in: max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
     max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
 
     Returns:
@@ -126,7 +114,7 @@ def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoc
         for ch_name in channels: 
             data_ch_epoch = [row_mg[ch_name] for row_mg in rows_for_ep] #take the data for 1 epoch for 1 channel
             
-            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
             #can also change the whole thresh to a single number setting
 
             pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
@@ -144,7 +132,7 @@ def peak_amplitude_per_epoch_slow(channels: list, epochs_mg: mne.Epochs, df_epoc
     return dfs_with_name
 
 
-def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_epoch: pd.DataFrame, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
+def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_epoch: pd.DataFrame, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str):
 
     '''Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
@@ -153,8 +141,8 @@ def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_
     df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
     sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
     n_events (int): number of events in this peace of data
-    thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
-        used in: max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+    ptp_thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
+        used in: max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
     max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
 
     Returns:
@@ -174,7 +162,7 @@ def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_
             #data_ch_epoch = [row_mg[ch_name] for row_mg in rows_for_ep] #take the data for 1 epoch for 1 channel
             data_ch_epoch=list(df_one_ep.loc[:,ch_name])
             
-            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
             #can also change the whole thresh to a single number setting
 
             pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
@@ -192,7 +180,7 @@ def peak_amplitude_per_epoch_dfs_fast(channels: list, epochs_mg: mne.Epochs, df_
     return dfs_with_name
 
 
-def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, sfreq: int, thresh_lvl: float, max_pair_dist_sec: float, ch_type:  str, ptp_top_limit, ptp_bottom_limit):
+def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
     ''' --fastest  and cleanest version, no need to use data frames--
 
@@ -203,15 +191,14 @@ def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, sfreq: int, 
     df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
     sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
     n_events (int): number of events in this peace of data
-    thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
-        used in: max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+    ptp_thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
+        used in: max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
     max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
 
     Returns:
     df_pp_ampl_mg (pd.DataFrame): contains the mean peak-to-peak aplitude for each epoch for each channel
 
     '''
-
     dict_ep = {}
 
     #get 1 epoch, 1 channel and calculate PtP on its data:
@@ -221,38 +208,21 @@ def peak_amplitude_per_epoch(channels: list, epochs_mg: mne.Epochs, sfreq: int, 
             data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)[0][0]
             #[0][0] is because get_data creats array in array in array, it expects several epochs, several channels, but we only need  one.
             
-            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / thresh_lvl 
+            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
             #can also change the whole thresh to a single number setting
 
             pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
             neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=-1, thresh=thresh, verbose=False) #negative peaks
-            
             pp_ampl,_=neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
             peak_ampl_epoch.append(pp_ampl)
 
         dict_ep[ep] = peak_ampl_epoch
-    df_pp_ampl_mg = pd.DataFrame(dict_ep, index=channels)
 
-    #HERE SET SOME THRESHOLD AND CALCULATE LARGE AND SMALL PTP DFS
-
-    df_ch_ep_large_ptp=df_pp_ampl_mg.copy()
-    df_ch_ep_small_ptp=df_pp_ampl_mg.copy()
-
-    # Now see which channles in epoch are over std_level or under -std_level:
-    for ep in range(0, len(epochs_mg)):  
-        df_ch_ep_large_ptp.iloc[:,ep] = df_ch_ep_large_ptp.iloc[:,ep] > ptp_top_limit 
-        df_ch_ep_small_ptp.iloc[:,ep] = df_ch_ep_small_ptp.iloc[:,ep] < ptp_bottom_limit
-
-    dfs_with_name = [QC_derivative(df_pp_ampl_mg, 'Peak_to_Peak_per_epoch_'+ch_type, 'df'),
-                    QC_derivative([df_ch_ep_large_ptp], 'Large_Peak_to_Peak_per_epoch_'+ch_type, 'df'),
-                    QC_derivative([df_ch_ep_small_ptp], 'Small_Peak_to_Peak_per_epoch_'+ch_type, 'df')]
-
-    return dfs_with_name
+    return pd.DataFrame(dict_ep, index=channels)
 
 
-def make_simple_metric_ptp_manual(thresh_lvl, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, allow_percent_noisy, allow_percent_flat, metric_local, m_or_g_chosen):
 
-    from RMSE_meq_qc import make_dict_global_rmse, make_dict_local_rmse
+def make_simple_metric_ptp_manual(std_ptp_lvl, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, allow_percent_noisy, allow_percent_flat, metric_local, m_or_g_chosen):
 
     metric_global_name = 'PtP_manual_all'
     metric_global_description = 'Peak-to-peak deviation of the data over the entire time series (not epoched): ... The ptp_lvl is the peak-to-peak threshold level set by the user. Threshold = ... The channel where data is higher than this threshod is considered as noisy. Same: if the std of some channel is lower than -threshold, this channel is considered as flat. In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
@@ -266,10 +236,10 @@ def make_simple_metric_ptp_manual(thresh_lvl, big_ptp_with_value_all_data, small
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
         _, unit = get_tit_and_unit(m_or_g)
-        metric_global_content[m_or_g]=make_dict_global_rmse(thresh_lvl, unit, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_ptp_lvl, unit, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse(thresh_lvl, unit, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, dict_epochs_mg[m_or_g], 'ptp',  allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_ptp_lvl, unit, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, dict_epochs_mg[m_or_g], 'ptp',  allow_percent_noisy, allow_percent_flat)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None
@@ -299,14 +269,15 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
 
     # will run for both if mag+grad are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
-
-        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], peak_ampl[m_or_g] = peak_amplitude_all_data(data, channels[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
+        peak_ampl[m_or_g] = get_ptp_all_data(data, channels[m_or_g], sfreq, ptp_thresh_lvl=ptp_manual_params['ptp_thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
+        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_ptp_lvl'])
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='peaks')]
 
     deriv_epoch_ptp={}
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
-            deriv_epoch_ptp[m_or_g]=peak_amplitude_per_epoch(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, thresh_lvl=ptp_manual_params['thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'], ch_type=m_or_g, ptp_top_limit=ptp_manual_params['ptp_top_limit'], ptp_bottom_limit=ptp_manual_params['ptp_bottom_limit'])
+            df_pp_ampl=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
+            deriv_epoch_ptp[m_or_g] = get_large_small_RMSE_PtP_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_ptp_lvl'], dict_epochs_mg[m_or_g], 'ptp') 
             derivs_list += deriv_epoch_ptp[m_or_g]
 
             fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_ptp[m_or_g][0].content, ch_type=m_or_g, what_data='peaks')]
@@ -317,6 +288,6 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
         
     derivs_ptp += fig_ptp_epoch_with_name + derivs_list
 
-    simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params['thresh_lvl'], big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, ptp_manual_params['allow_percent_noisy'], ptp_manual_params['allow_percent_flat'], metric_local, m_or_g_chosen)
-    
+    simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params['std_ptp_lvl'], big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, ptp_manual_params['allow_percent_noisy'], ptp_manual_params['allow_percent_flat'], metric_local, m_or_g_chosen)
+
     return derivs_ptp, simple_metric_ptp_manual

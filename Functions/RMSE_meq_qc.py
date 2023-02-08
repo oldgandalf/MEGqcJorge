@@ -40,6 +40,57 @@ def RMSE(data_m_or_g: np.array or list):
 
     return rmse_np
 
+def get_rmse_all_data(data: mne.io.Raw, channels: list):
+
+    '''Calculate RMSE for each channel - for the entire time duration'''
+    data_channels=data.get_data(picks = channels)
+
+    std_channels = RMSE(data_channels)
+
+    return std_channels
+
+def get_big_small_std_ptp_all_data(peak_ampl_channels, channels: list, std_ptp_lvl: float):
+
+    '''Function calculates peak-to-peak amplitude over the entire data set for every channel (mag or grad).
+
+    Args:
+    mg_names (list of tuples): channel name + its index
+    df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
+    sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
+    n_events (int): number of events in this peace of data
+    ptp_thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
+        used in: max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
+    max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
+
+    Returns:
+    peak_ampl (list): contains the mean peak-to-peak amplitude for all time for each channel
+
+    '''
+    
+    
+    ## Check if channel data is within std level of PtP amplitudes.
+    std_of_ptp_channels=np.std(peak_ampl_channels)
+    mean_ptp_channels=np.mean(peak_ampl_channels)
+
+    # Find the index of channels with largest and smallest std:
+    ch_ind_large_std = [index for (index, item) in enumerate(peak_ampl_channels) if item > mean_ptp_channels + std_ptp_lvl*std_of_ptp_channels] #find index with largest std
+    ch_ind_small_std = [index for (index, item) in enumerate(peak_ampl_channels) if item < mean_ptp_channels - std_ptp_lvl*std_of_ptp_channels] #find index with smallest std
+
+    #make dictionaries with channel names and std values:
+    big_ptp_with_value = {}
+    for index in ch_ind_large_std:
+        ch_name = np.array(channels)[index] #find the names of the channels with large std 
+        ch_std = peak_ampl_channels[index]
+        big_ptp_with_value[ch_name] = ch_std
+
+    small_ptp_with_value = {}
+    for index in ch_ind_small_std:
+        ch_name = np.array(channels)[index]
+        ch_std = peak_ampl_channels[index]
+        small_ptp_with_value[ch_name] = ch_std
+
+    return big_ptp_with_value, small_ptp_with_value
+
 #%%
 def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int): 
 
@@ -61,7 +112,7 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
 
     # Calculate STD or RMSE of each channel
 
-    #Calculate RMSE for each channel (separated mag and grad) - for the entire time duration:
+    #Calculate RMSE for each channel - for the entire time duration:
     std_channels = RMSE(data_channels)
 
     #STD (if wanna use insted of RMSE. it will exactly replace the RMSE function above):
@@ -71,24 +122,22 @@ def RMSE_meg_all(data: mne.io.Raw, channels: list, std_lvl: int):
     std_std_channels=np.std(std_channels)
     mean_std_channels=np.mean(std_channels)
 
-    ch_ind_large_std= np.where(std_channels > mean_std_channels+std_lvl*std_std_channels) #find channels with largest std
-    ch_ind_small_std= np.where(std_channels < mean_std_channels-std_lvl*std_std_channels) #findchannels with smallest std
+    ch_ind_large_std= np.where(std_channels > mean_std_channels+std_lvl*std_std_channels)[0] #find channels with largest std
+    ch_ind_small_std= np.where(std_channels < mean_std_channels-std_lvl*std_std_channels)[0] #find channels with smallest std
 
-    channel_big_std_names=np.array(channels)[ch_ind_large_std] #find the name of the channel with largest std 
-    channel_small_std_names=np.array(channels)[ch_ind_small_std]
+    #make dictionaries with channel names and std values:
+    big_std_with_value = {}
+    for i, _ in enumerate (ch_ind_large_std):
+        ch_name=np.array(channels)[ch_ind_large_std][i] #find the names of the channels with large std 
+        ch_std=std_channels[ch_ind_large_std][i]
+        big_std_with_value[ch_name]=ch_std
 
+    small_std_with_value = {}
+    for i, _ in enumerate (ch_ind_small_std):
+        ch_name=np.array(channels)[ch_ind_small_std][i] #find the names of the channels with large std  
+        ch_std=std_channels[ch_ind_small_std][i]
+        small_std_with_value[ch_name]=ch_std
 
-    def Channels_with_nonnormal_stds(ch_ind, all_stds_m_or_g, channels_big_std_names):
-        #This function simply makes a list of tuples. Each tuple is: name of channel, std value.
-        #Each tuple represents channel with too big or too small std, calculated over whole data.
-        channel_big_std_vals=all_stds_m_or_g[ch_ind]
-        nonnormal_std_with_value={}
-        for i, _ in enumerate (ch_ind):
-            nonnormal_std_with_value[channels_big_std_names[i]]=channel_big_std_vals[i]
-        return nonnormal_std_with_value
-
-    big_std_with_value=Channels_with_nonnormal_stds(ch_ind_large_std[0], std_channels, channel_big_std_names)
-    small_std_with_value=Channels_with_nonnormal_stds(ch_ind_small_std[0], std_channels, channel_small_std_names)
         
     #Return the channel names with STD over the set STD level and under the set negative STD level.
     return big_std_with_value, small_std_with_value, std_channels
@@ -168,7 +217,7 @@ def std_of_epochs_dfs_fast(mg_names: list, epochs_mg: mne.Epochs, df_mg: pd.Data
 
 #%%
 
-def std_of_epochs(channels: list, epochs_mg: mne.Epochs):
+def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
     ''' --fastest  and cleanest version, no need to use data frames--
 
@@ -184,7 +233,7 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs):
     df_std_mg (pd.DataFrame): data frame containing stds for all epoch for each channel
     '''
     
-    dict_mg = {}
+    dict_ep = {}
 
     #get 1 epoch, 1 channel and calculate rmse of its data:
     for ep in range(0, len(epochs_mg)):
@@ -196,18 +245,12 @@ def std_of_epochs(channels: list, epochs_mg: mne.Epochs):
             rmse_epoch.append(np.float64(rmse_ch_ep))
 
             #std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
-            
+        dict_ep[ep] = rmse_epoch
 
-        dict_mg[ep] = rmse_epoch
-
-    df_std_mg = pd.DataFrame(dict_mg, index=channels)
-
-    return(df_std_mg)
+    return pd.DataFrame(dict_ep, index=channels)
 
 
-#%% 
-
-def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Epochs):
+def get_large_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, epochs_mg: mne.Epochs, std_or_ptp: str):
 
     '''
     - Calculate std for every separate epoch of a given list of channels
@@ -226,11 +269,7 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
 
     '''
 
-    # 1) Find std for every channel for every epoch:
-
-    df_std=std_of_epochs(channels=channels, epochs_mg=epochs_mg)
-
-    # 2) Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
+    # Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
 
     std_std_per_epoch=[]
     mean_std_per_epoch=[]
@@ -247,18 +286,18 @@ def RMSE_meg_epoch(ch_type: str, channels: list, std_lvl: int, epochs_mg: mne.Ep
         df_ch_ep_large_std.iloc[:,ep] = df_ch_ep_large_std.iloc[:,ep] > mean_std_per_epoch[ep]+std_lvl*std_std_per_epoch[ep] 
         df_ch_ep_small_std.iloc[:,ep] = df_ch_ep_small_std.iloc[:,ep] < mean_std_per_epoch[ep]-std_lvl*std_std_per_epoch[ep] 
 
-    # 3) Create derivatives:
+    # Create derivatives:
     dfs_deriv = [
-        QC_derivative(df_std,'std_per_epoch_'+ch_type, 'df'),
-        QC_derivative(df_ch_ep_large_std, 'Large_std_per_epoch_'+ch_type, 'df'),
-        QC_derivative(df_ch_ep_small_std, 'Small_std_per_epoch_'+ch_type, 'df')]
+        QC_derivative(df_std, std_or_ptp+'_per_epoch_'+ch_type, 'df'),
+        QC_derivative(df_ch_ep_large_std, 'Large_'+std_or_ptp+'_per_epoch_'+ch_type, 'df'),
+        QC_derivative(df_ch_ep_small_std, 'Small_'+std_or_ptp+'_per_epoch_'+ch_type, 'df')]
 
 
     return dfs_deriv
 
 #%% All about simple metrc jsons:
 
-def make_dict_global_rmse(std_lvl, unit, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
+def make_dict_global_rmse_ptp(std_lvl, unit, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
 
     global_details = {
         'noisy_ch': big_rmse_with_value_all_data,
@@ -276,7 +315,7 @@ def make_dict_global_rmse(std_lvl, unit, big_rmse_with_value_all_data, small_rms
     return metric_global_content
 
 
-def make_dict_local_rmse(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_flat: pd.DataFrame, epochs_mg, std_or_ptp, allow_percent_noisy: float=70, allow_percent_flat: float=70):
+def make_dict_local_rmse_ptp(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_flat: pd.DataFrame, epochs_mg, std_or_ptp, allow_percent_noisy: float=70, allow_percent_flat: float=70):
         
     eps=[ep for ep in range(0, len(epochs_mg))] #list of epoch numbers
 
@@ -364,10 +403,10 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
         _, unit = get_tit_and_unit(m_or_g)
-        metric_global_content[m_or_g]=make_dict_global_rmse(std_lvl, unit, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_lvl, unit, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse(std_lvl, unit, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content, dict_epochs_mg[m_or_g], 'std', allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_lvl, unit, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content, dict_epochs_mg[m_or_g], 'std', allow_percent_noisy, allow_percent_flat)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None
@@ -402,14 +441,16 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
 
     for m_or_g in m_or_g_chosen:
 
-        big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], rmse[m_or_g] = RMSE_meg_all(data=data, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'])
+        rmse[m_or_g] = get_rmse_all_data(data, channels[m_or_g])
+        big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(rmse[m_or_g], channels[m_or_g], rmse_params['std_lvl'])
+      
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
 
     deriv_epoch_rmse={}
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
-
-            deriv_epoch_rmse[m_or_g] = RMSE_meg_epoch(ch_type=m_or_g, channels=channels[m_or_g], std_lvl=rmse_params['std_lvl'], epochs_mg=dict_epochs_mg[m_or_g]) 
+            df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
+            deriv_epoch_rmse[m_or_g] = get_large_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], dict_epochs_mg[m_or_g], 'std') 
             derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_rmse[m_or_g][0].content, ch_type=m_or_g, what_data='stds')]
