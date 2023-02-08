@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, get_tit_and_unit
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
 from universal_html_report import simple_metric_basic
 from RMSE_meq_qc import get_large_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data
 
@@ -235,11 +235,10 @@ def make_simple_metric_ptp_manual(std_ptp_lvl, big_ptp_with_value_all_data, smal
     metric_global_content={'mag': None, 'grad': None}
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
-        _, unit = get_tit_and_unit(m_or_g)
-        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_ptp_lvl, unit, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_ptp_lvl, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_ptp_lvl, unit, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, dict_epochs_mg[m_or_g], 'ptp',  allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_ptp_lvl, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, dict_epochs_mg[m_or_g], 'ptp',  allow_percent_noisy, allow_percent_flat)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None

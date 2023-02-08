@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, get_tit_and_unit
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
 from universal_html_report import simple_metric_basic
 
 # In[2]:
@@ -297,25 +297,24 @@ def get_large_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl:
 
 #%% All about simple metrc jsons:
 
-def make_dict_global_rmse_ptp(std_lvl, unit, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
+def make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
 
     global_details = {
         'noisy_ch': big_rmse_with_value_all_data,
         'flat_ch': small_rmse_with_value_all_data}
 
     metric_global_content = {
-        'n_noisy_ch': len(big_rmse_with_value_all_data),
-        'percent_noisy_ch': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
-        'n_flat_ch': len(small_rmse_with_value_all_data),
-        'percent_flat_ch': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
+        'number_of_noisy_ch': len(big_rmse_with_value_all_data),
+        'percent_of_noisy_ch': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
+        'number_of_flat_ch': len(small_rmse_with_value_all_data),
+        'percent_of_flat_ch': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
         std_or_ptp+'_lvl': std_lvl,
-        std_or_ptp+'_values_unit': unit,
         'Details': global_details}
 
     return metric_global_content
 
 
-def make_dict_local_rmse_ptp(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_flat: pd.DataFrame, epochs_mg, std_or_ptp, allow_percent_noisy: float=70, allow_percent_flat: float=70):
+def make_dict_local_rmse_ptp(std_lvl, df_std_noisy: pd.DataFrame, df_std_flat: pd.DataFrame, epochs_mg, std_or_ptp, allow_percent_noisy: float=70, allow_percent_flat: float=70):
         
     eps=[ep for ep in range(0, len(epochs_mg))] #list of epoch numbers
 
@@ -339,7 +338,7 @@ def make_dict_local_rmse_ptp(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_f
         else:
             ep_too_flat=False
             
-        epochs_details += [{'epoch': ep, 'number_noisy_ch': number_noisy_ch, 'perc_noisy_ch': perc_noisy_ch, 'epoch_too_noisy': ep_too_noisy, 'number_flat_ch': number_flat_ch, 'perc_flat_ch': perc_flat_ch, 'epoch_too_flat': ep_too_flat}]
+        epochs_details += [{'epoch': ep, 'number_of_noisy_ch': number_noisy_ch, 'perc_of_noisy_ch': perc_noisy_ch, 'epoch_too_noisy': ep_too_noisy, 'number_of_flat_ch': number_flat_ch, 'perc_of_flat_ch': perc_flat_ch, 'epoch_too_flat': ep_too_flat}]
 
     total_num_noisy_ep=sum([ep for ep in epochs_details if ep['epoch_too_noisy'] is True])
     total_perc_noisy_ep=round(total_num_noisy_ep/len(eps)*100)
@@ -349,7 +348,6 @@ def make_dict_local_rmse_ptp(std_lvl, unit, df_std_noisy: pd.DataFrame, df_std_f
 
     metric_local_content={
         std_or_ptp+'_lvl': std_lvl,
-        std_or_ptp+'_values_unit': unit,
         'total_num_noisy_ep': total_num_noisy_ep, 
         'total_perc_noisy_ep': total_perc_noisy_ep, 
         'total_num_flat_ep': total_num_flat_ep,
@@ -402,11 +400,11 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     metric_global_content={'mag': None, 'grad': None}
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
-        _, unit = get_tit_and_unit(m_or_g)
-        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_lvl, unit, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
+
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_lvl, unit, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content, dict_epochs_mg[m_or_g], 'std', allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_lvl, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content, dict_epochs_mg[m_or_g], 'std', allow_percent_noisy, allow_percent_flat)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None

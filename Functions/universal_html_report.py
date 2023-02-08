@@ -1,4 +1,4 @@
-from universal_plots import QC_derivative
+from universal_plots import QC_derivative, get_tit_and_unit
 import mne
 
 # def add_fig_to_html_section(figure_report):
@@ -297,7 +297,12 @@ def make_PSD_report(sid: str, list_of_figure_paths: list):
 def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name, metric_local_description, metric_local_content_mag, metric_local_content_grad):
     '''Basic structure of simple metric for all measurements'''
     
+    _, unit_mag = get_tit_and_unit('mag')
+    _, unit_grad = get_tit_and_unit('grad')
+
     simple_metric={
+        'measurement_unit_mag': unit_mag,
+        'measurement_unit_grad': unit_grad,
         metric_global_name: {
             'description': metric_global_description,
             "mag": metric_global_content_mag,
