@@ -582,7 +582,16 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
         }
 
     return simple_metric
+
+def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
+    '''Get nfft and nperseg parameters for welch psd function. 
+    Allowes to always have the step size in psd wjich is chosen by the user. Recommended 0.5 Hz'''
     
+    sfreq=raw.info['sfreq']
+    nfft=int(sfreq/psd_step_size)
+    nperseg=int(sfreq/psd_step_size)
+    return nfft, nperseg
+
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, helperplots: bool):
     """Main psd function.
@@ -614,10 +623,11 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
     powerline_freqs = []
 
     method = 'welch'
+    nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
     for m_or_g in m_or_g_chosen:
 
-        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=psd_params['n_fft'], n_per_seg=psd_params['n_per_seg']).get_data(return_freqs=True)
+        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
         psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 

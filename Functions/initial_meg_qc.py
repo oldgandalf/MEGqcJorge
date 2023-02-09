@@ -100,8 +100,10 @@ def get_all_config_params(config_file_name: str):
         'freq_min': freq_min,
         'freq_max': freq_max,
         'mean_power_per_band_needed': psd_section.getboolean('mean_power_per_band_needed'),
-        'n_fft': psd_section.getint('n_fft'),
-        'n_per_seg': psd_section.getint('n_per_seg')})
+        'psd_step_size': psd_section.getfloat('psd_step_size')})
+
+        # 'n_fft': psd_section.getint('n_fft'),
+        # 'n_per_seg': psd_section.getint('n_per_seg'),
 
 
         ptp_manual_section = config['PTP_manual']
