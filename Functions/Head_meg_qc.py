@@ -57,20 +57,23 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos):
 
 def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, max_rotation_q):
     '''Make simple metric for head positions'''
+    
+    simple_metric_details={
+    'movement_amplitude_X': max_movement_xyz[0]*1000,
+    'movement_amplitude_Y': max_movement_xyz[1]*1000,
+    'movement_amplitude_Z': max_movement_xyz[2]*1000,
+    'rotation_amplitude_Q1': max_rotation_q[0],
+    'rotation_amplitude_Q2': max_rotation_q[1],
+    'rotation_amplitude_Q3': max_rotation_q[2]}   
 
-    simple_metric={}
-    simple_metric_details={}
 
-    simple_metric_details['Maximum movement in x direction in mm'] = max_movement_xyz[0]*1000
-    simple_metric_details['Maximum movement in y direction in mm'] = max_movement_xyz[1]*1000
-    simple_metric_details['Maximum movement in z direction in mm'] = max_movement_xyz[2]*1000
-    simple_metric_details['Maximum rotation in q1 direction in degrees'] = max_rotation_q[0]
-    simple_metric_details['Maximum rotation in q2 direction in degrees'] = max_rotation_q[1]
-    simple_metric_details['Maximum rotation in q3 direction in degrees'] = max_rotation_q[2]
-
-    simple_metric['STD of the movement of the head over time: '] = std_head_pos
-    simple_metric['STD of the rotation of the head over time'] = std_head_rotations
-    simple_metric['Details']=simple_metric_details
+    simple_metric = {
+    'Description': 'Head movement and rotation + their standard deviations calculated on base of 3 coordinates for each time point using Pythagorean theorem.',
+    'unit_movement_xyz': 'mm',
+    'unit_rotation_q1q2q3': 'quads',
+    'std_movement_xyz': std_head_pos,
+    'std_rotation_q1q2q3': std_head_rotations,
+    'Details': simple_metric_details}
     
     return simple_metric
 
