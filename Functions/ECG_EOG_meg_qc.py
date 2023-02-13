@@ -71,23 +71,23 @@ class Mean_artifact_with_peak:
 
         return fig
 
-    def find_largest_peak_in_timewindow(self, t, timelimit_min, timelimit_max):
+    def find_largest_peak_in_timewindow(self, t: np.ndarray, timelimit_min: float, timelimit_max: float):
 
-        #find the highest peak inside the timelimit_min and timelimit_max:
+        '''find the highest peak inside the give time wndow. Time window usually is centered aroud the t0 of the ecg/eog event.'''
 
         if self.peak_loc is None:
             self.main_peak_magnitude=None
             self.main_peak_loc=None
             return None, None
 
-        self.main_peak_magnitude = -100
+        self.main_peak_magnitude = -1000
         for peak_loc in self.peak_loc:
             if timelimit_min<t[peak_loc]<timelimit_max: #if peak is inside the timelimit_min and timelimit_max was found:
                 if self.mean_artifact_epoch[peak_loc] > self.main_peak_magnitude: #if this peak is higher than the previous one:
                     self.main_peak_magnitude=self.mean_artifact_epoch[peak_loc]
                     self.main_peak_loc=peak_loc 
   
-        if self.main_peak_magnitude == -100: #if no peak was found inside the timelimit_min and timelimit_max:
+        if self.main_peak_magnitude == -1000: #if no peak was found inside the timelimit_min and timelimit_max:
             self.main_peak_magnitude=None
             self.main_peak_loc=None
 
@@ -198,7 +198,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped, channels, max_n_peaks_allowed, 
     for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
         ecg_epoch_nonflipped = Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data)
         peak_locs, peak_magnitudes, _, _, _, _ = ecg_epoch_nonflipped.find_peaks_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
-        print('___MEG QC___: ', channels[i], ' peak_locs:', peak_locs)
+        #print('___MEG QC___: ', channels[i], ' peak_locs:', peak_locs)
 
         #find peak_locs which is located the closest to t0_estimated_ind:
         if peak_locs.size>0:
