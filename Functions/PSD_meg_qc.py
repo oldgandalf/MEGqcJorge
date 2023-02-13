@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from scipy.integrate import simpson
 from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
 from scipy.signal import find_peaks, peak_widths
+from universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data
@@ -443,12 +444,7 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
 
     #find indexes of noisy_bands_final in freqs:
     noisy_bands_indexes_final=[]
-    print(freqs, 'freqs')
     for band in noisy_bands_final:
-        print(band, 'band')
-        print(np.where(freqs==band[0])[0][0])
-        print(np.where(freqs==band[1])[0][0])
-        print('_______')
         noisy_bands_indexes_final.append([np.where(freqs==band[0])[0][0], np.where(freqs==band[1])[0][0]])
 
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_points
@@ -555,7 +551,7 @@ def find_number_and_power_of_noise_freqs(ch_name, freqs, one_psd, plotflag: bool
     return noise_pie_derivative, powerline_freqs, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
 #%%
-def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
+def make_simple_metric_psd_old(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
     """Make simple metric for psd.
 
     Parameters
@@ -647,6 +643,54 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
         }
 
     return simple_metric
+
+def make_dict_global_psd(noisy_freqs_global, noise_ampl_global, noise_ampl_relative_to_all_signal_global):
+        
+    noisy_freqs_dict={}
+    for fr_n, fr in enumerate(noisy_freqs_global):
+        noisy_freqs_dict[fr]={'noise_ampl_global': float(noise_ampl_global[fr_n]), 'percent_of_this_noise_ampl_relative_to_all_signal_global': round(float(noise_ampl_relative_to_all_signal_global[fr_n]*100), 2)}
+
+    dict_global = {
+        "noisy_frequencies_count: ": len(noisy_freqs_global),
+        "Details": noisy_freqs_dict}
+
+    return dict_global
+
+
+def make_dict_local_psd(noisy_freqs_local, noise_ampl_local, noise_ampl_relative_to_all_signal_local, channels):
+
+    noisy_freqs_dict_all_ch={}
+    for ch in channels:
+        central_freqs=noisy_freqs_local[ch]
+        noisy_freqs_dict={}     
+        for fr_n, fr in enumerate(central_freqs):
+            noisy_freqs_dict[fr]={'noise_ampl_local': float(noise_ampl_local[ch][fr_n]), 'percent_of_ths_noise_ampl_relative_to_all_signal_local':  round(float(noise_ampl_relative_to_all_signal_local[ch][fr_n]*100), 2)}
+        noisy_freqs_dict_all_ch[ch]=noisy_freqs_dict
+
+    dict_local = {"Details": noisy_freqs_dict_all_ch}
+
+    return dict_local
+
+
+def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
+
+    metric_global_name = 'PSD_global'
+    metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude.'
+    metric_local_name = 'PSD_local'
+    metric_local_description = 'Noise frequencies detected locally (present only on individual channels). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude'
+
+    metric_global_content={'mag': None, 'grad': None}
+    metric_local_content={'mag': None, 'grad': None}
+
+    for m_or_g in m_or_g_chosen:
+
+        metric_global_content[m_or_g]=make_dict_global_psd(noisy_freqs_global[m_or_g], noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g])
+        metric_local_content[m_or_g]=make_dict_local_psd(noisy_freqs_local[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], channels[m_or_g])
+        
+    simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], metric_local_name, metric_local_description, metric_local_content['mag'], metric_local_content['grad'])
+
+    return simple_metric
+
 
 def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     '''Get nfft and nperseg parameters for welch psd function. 
