@@ -426,6 +426,16 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
                 noisy_bands_final[-1][0]=split_point #split the current band
                 split_points.append(split_point)
 
+    # It might happen that when the band was created around the noise frequency, it is outside of the freqs range.
+    # For example noisy freq is 1Hz, band is -2..+2Hz, freq rage was 0.5...100Hz. 
+    # In this case we need to set the first and last bands to the edge of the freq range:
+    if noisy_bands_final[0][0]<freqs[0]: #if the first band starts before the first freq in freqs:
+        noisy_bands_final[0][0]=freqs[0]
+        print('___MEG QC___: ', 'First band starts before the first freq in freqs, setting it to the first freq in freqs')
+    if noisy_bands_final[-1][1]>freqs[-1]: #if the last band ends after the last freq in freqs:
+        noisy_bands_final[-1][1]=freqs[-1]
+        print('___MEG QC___: ', 'Last band ends after the last freq in freqs, setting it to the last freq in freqs')
+
     if helper_plots is True: #visual of the split
         _, unit = get_tit_and_unit(m_or_g)
         fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, [], noisy_bands_final, unit)
@@ -440,15 +450,6 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
         print(np.where(freqs==band[1])[0][0])
         print('_______')
         noisy_bands_indexes_final.append([np.where(freqs==band[0])[0][0], np.where(freqs==band[1])[0][0]])
-
-
-    #BUT IF I CHANGE IT HERE IN INDEXES. NEED TO DO SAME ALSO IN FREQ BENDS ABOVE!
-    if noisy_bands_final[0][0]>freqs[0]: #if the first band starts before the first freq in freqs:
-        noisy_bands_final[0][0]=freqs[0]
-        print('___MEG QC___: ', 'First band starts before the first freq in freqs, setting it to the first freq in freqs')
-    if noisy_bands_final[-1][1]<freqs[-1]: #if the last band ends after the last freq in freqs:
-        noisy_bands_final[-1][1]=freqs[-1]
-        print('___MEG QC___: ', 'Last band ends after the last freq in freqs, setting it to the last freq in freqs')
 
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_points
 
@@ -700,7 +701,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         avg_psd=np.mean(psds[m_or_g],axis=0) 
-        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, prominence_lvl_neg=100)
+        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, prominence_lvl_neg=100, simple_or_complex='simple')
 
         powerline_freqs += powerline_freqs
 
