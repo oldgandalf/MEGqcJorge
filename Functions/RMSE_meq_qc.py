@@ -270,7 +270,7 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     if metric_local==True:
         metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy (or allow_percent_flat). this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel here: if std of the chanels data in given epoch is higher than threshold - this channel is noisy. Threshold is:  mean of all channels data in this epoch + (std of all channels data in this epoch * std_lvl). std_lvl is set by user.'
     else:
-        metric_local_description = 'Not calculated. Ne epochs found'
+        metric_local_description = 'Not calculated. No epochs found'
 
     metric_global_content={'mag': None, 'grad': None}
     metric_local_content={'mag': None, 'grad': None}

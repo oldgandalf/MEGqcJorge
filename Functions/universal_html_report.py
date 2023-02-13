@@ -294,11 +294,19 @@ def make_PSD_report(sid: str, list_of_figure_paths: list):
         f.write(html_string)
 
 
-def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name, metric_local_description, metric_local_content_mag, metric_local_content_grad):
+def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name=None, metric_local_description=None, metric_local_content_mag=None, metric_local_content_grad=None, display_only_global=False):
     '''Basic structure of simple metric for all measurements'''
     
     _, unit_mag = get_tit_and_unit('mag')
     _, unit_grad = get_tit_and_unit('grad')
+
+    if display_only_global is False:
+       m_local = {metric_local_name: {
+            "description": metric_local_description,
+            "mag": metric_local_content_mag,
+            "grad": metric_local_content_grad}}
+    else:
+        m_local = {}
 
     simple_metric={
         'measurement_unit_mag': unit_mag,
@@ -306,10 +314,11 @@ def simple_metric_basic(metric_global_name, metric_global_description, metric_gl
         metric_global_name: {
             'description': metric_global_description,
             "mag": metric_global_content_mag,
-            "grad": metric_global_content_grad},  
+            "grad": metric_global_content_grad}}
 
-        metric_local_name: {
-            "description": metric_local_description,
-            "mag": metric_local_content_mag,
-            "grad": metric_local_content_grad}}
+    #merge local and global metrics:
+    simple_metric.update(m_local)
+
+    print('HERE!', type(simple_metric))
+
     return simple_metric
