@@ -35,7 +35,7 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
     'Description': 'Muscle artifact events at different z score thresholds.',
     'muscle_calculated_using': m_or_g_decided,
     'unit_muscle_evet_times': 'seconds',
-    'unit_muscle_event_magnitudes': 'z-score',
+    'unit_muscle_event_zscore': 'z-score',
     'zscore_thresholds': z_scores_dict}
 
     return simple_metric
