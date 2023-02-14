@@ -81,8 +81,8 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['RMSE'] = dict({
             'std_lvl':  rmse_section.getint('std_lvl'), 
             'allow_percent_noisy_flat_epochs': rmse_section.getfloat('allow_percent_noisy_flat_epochs'),
-            'noisy_multipliar': rmse_section.getfloat('noisy_multipliar'),
-            'flat_multipliar': rmse_section.getfloat('flat_multipliar'),})
+            'noisy_multiplier': rmse_section.getfloat('noisy_multiplier'),
+            'flat_multiplier': rmse_section.getfloat('flat_multiplier'),})
         
 
         psd_section = config['PSD']
@@ -114,9 +114,9 @@ def get_all_config_params(config_file_name: str):
         'allow_percent_noisy_flat_epochs': ptp_manual_section.getfloat('allow_percent_noisy_flat_epochs'),
         'ptp_top_limit': ptp_manual_section.getfloat('ptp_top_limit'),
         'ptp_bottom_limit': ptp_manual_section.getfloat('ptp_bottom_limit'),
-        'std_ptp_lvl': ptp_manual_section.getfloat('std_ptp_lvl'),
-        'noisy_multipliar': ptp_manual_section.getfloat('noisy_multipliar'),
-        'flat_multipliar': ptp_manual_section.getfloat('flat_multipliar')})
+        'std_lvl': ptp_manual_section.getfloat('std_lvl'),
+        'noisy_multiplier': ptp_manual_section.getfloat('noisy_multiplier'),
+        'flat_multiplier': ptp_manual_section.getfloat('flat_multiplier')})
 
 
         ptp_mne_section = config['PTP_auto']

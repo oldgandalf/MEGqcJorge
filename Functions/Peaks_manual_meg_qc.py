@@ -128,23 +128,23 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
 
 
 
-def make_simple_metric_ptp_manual(std_ptp_lvl, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, allow_percent_noisy, allow_percent_flat, metric_local, m_or_g_chosen):
+def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, metric_local, m_or_g_chosen):
 
-    metric_global_name = 'PtP_manual_all'
+    metric_global_name = 'ptp_manual_all'
     metric_global_description = 'Peak-to-peak deviation of the data over the entire time series (not epoched): ... The ptp_lvl is the peak-to-peak threshold level set by the user. Threshold = ... The channel where data is higher than this threshod is considered as noisy. Same: if the std of some channel is lower than -threshold, this channel is considered as flat. In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
-    metric_local_name = 'PtP_manual_epoch'
+    metric_local_name = 'ptp_manual_epoch'
     if metric_local==True:
-        metric_local_description = 'Peak-to-peak deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy (or allow_percent_flat). this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel here: ... Threshod is set by user.'
+        metric_local_description = 'Peak-to-peak deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy_flat. this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel inside of epoch: 1)Take Peak-to-Peak amplitude (PtP) of data of THIS channel in THIS epoch. 2) Take PtP of the data of THIS channel for ALL epochs and get mean of it. 3) If (1) is higher than (2)*noisy_multiplier - this channel is noisy.  If (1) is lower than (2)*flat_multiplier - this channel is flat. '
     else:
         metric_local_description = 'Not calculated. Ne epochs found'
 
     metric_global_content={'mag': None, 'grad': None}
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
-        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_ptp_lvl, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(ptp_manual_params, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_ptp_lvl, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, dict_epochs_mg[m_or_g], 'ptp',  allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(ptp_manual_params, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None
@@ -171,25 +171,24 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
     fig_ptp_epoch_with_name = []
     derivs_list = []
     peak_ampl = {}
-    deriv_epoch_ptp={}
     noisy_flat_epochs_derivs = {}
 
     # will run for both if mag+grad are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
         peak_ampl[m_or_g] = get_ptp_all_data(data, channels[m_or_g], sfreq, ptp_thresh_lvl=ptp_manual_params['ptp_thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
-        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_ptp_lvl'])
+        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='peaks')]
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_pp_ampl=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
-            #deriv_epoch_ptp[m_or_g] = get_big_small_RMSE_PtP_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_ptp_lvl'], 'ptp') 
+            #deriv_epoch_ptp[m_or_g] = get_big_small_RMSE_PtP_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_lvl'], 'ptp') 
             #derivs_list += deriv_epoch_ptp[m_or_g]
 
-            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_multipliar'], ptp_manual_params['flat_multipliar'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_ptp[m_or_g][0].content, ch_type=m_or_g, what_data='peaks')]
+            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks')]
             metric_local=True
     else:
         metric_local=False
@@ -197,6 +196,6 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
         
     derivs_ptp += fig_ptp_epoch_with_name + derivs_list
 
-    simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params['std_ptp_lvl'], big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, dict_epochs_mg, ptp_manual_params['allow_percent_noisy'], ptp_manual_params['allow_percent_flat'], metric_local, m_or_g_chosen)
+    simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
 
     return derivs_ptp, simple_metric_ptp_manual

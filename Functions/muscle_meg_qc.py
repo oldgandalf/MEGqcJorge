@@ -32,7 +32,7 @@ from universal_plots import QC_derivative, get_tit_and_unit
 def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
     simple_metric = {
-    'Description': 'Muscle artifact events at different z score thresholds.',
+    'description': 'Muscle artifact events at different z score thresholds.',
     'muscle_calculated_using': m_or_g_decided,
     'unit_muscle_evet_times': 'seconds',
     'unit_muscle_event_zscore': 'z-score',

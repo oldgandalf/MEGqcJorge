@@ -68,12 +68,12 @@ def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, m
 
 
     simple_metric = {
-    'Description': 'Head movement and rotation + their standard deviations calculated on base of 3 coordinates for each time point using Pythagorean theorem.',
+    'description': 'Head movement and rotation + their standard deviations calculated on base of 3 coordinates for each time point using Pythagorean theorem.',
     'unit_movement_xyz': 'mm',
     'unit_rotation_q1q2q3': 'quads',
     'std_movement_xyz': std_head_pos,
     'std_rotation_q1q2q3': std_head_rotations,
-    'Details': simple_metric_details}
+    'details': simple_metric_details}
     
     return simple_metric
 

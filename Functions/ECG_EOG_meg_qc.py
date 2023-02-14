@@ -432,8 +432,8 @@ def make_dict_global_ECG_EOG(all_affected_channels, channels):
     metric_global_content = {
         'number_of_affected_ch': number_of_affected_ch,
         'percent_of_affected_ch': percent_of_affected_ch, 
-        'Details':  affected_chs,
-        'Top_10_affected_chs': top_10_magnitudes}
+        'details':  affected_chs,
+        'top_10_affected_chs': top_10_magnitudes}
 
     return metric_global_content
 
@@ -441,7 +441,7 @@ def make_dict_global_ECG_EOG(all_affected_channels, channels):
 def make_simple_metric_ECG_EOG(all_affected_channels, m_or_g_chosen, ecg_or_eog, channels):
     """ Make simple metric for ECG/EOG artifacts. """
 
-    metric_global_name = 'All_'+ecg_or_eog+'_affected_channels'
+    metric_global_name = 'all_'+ecg_or_eog+'_affected_channels'
     metric_global_description = 'Affected channels are the channels with average (over '+ecg_or_eog+' epochs of this channel)' +ecg_or_eog+ ' artifact above the threshold. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Metrci also provides a list of 10 most strongly affected channels + their artfact peaks magnitdes.'
 
     metric_global_content={'mag': None, 'grad': None}

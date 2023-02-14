@@ -629,13 +629,13 @@ def make_simple_metric_psd_old(noise_ampl_global:dict, noise_ampl_relative_to_al
                 "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
                 "noise_ampl_global_unit": unit_mag,
                 "noise_ampl_relative_to_all_signal_global_unit": "%",
-                "Details": simple_metric_global['mag']},
+                "details": simple_metric_global['mag']},
             "grad": {
                 "noisy_frequencies_count: ": len(noisy_freqs_global['grad']),
                 "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
                 "noise_ampl_global_unit": unit_grad,
                 "noise_ampl_relative_to_all_signal_global_unit": "%",
-                "Details": simple_metric_global['grad']}
+                "details": simple_metric_global['grad']}
             },  
 
         "PSD_local": {
@@ -644,12 +644,12 @@ def make_simple_metric_psd_old(noise_ampl_global:dict, noise_ampl_relative_to_al
                 "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
                 "noise_ampl_local_unit": unit_mag,
                 "noise_ampl_relative_to_all_signal_local_unit": "%",
-                "Details": simple_metric_local['mag']},
+                "details": simple_metric_local['mag']},
             "grad": {
                 "description": "Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude",
                 "noise_ampl_local_unit": unit_grad,
                 "noise_ampl_relative_to_all_signal_local_unit": "%",
-                "Details": simple_metric_local['grad']}
+                "details": simple_metric_local['grad']}
             }
         }
 
@@ -663,7 +663,7 @@ def make_dict_global_psd(noisy_freqs_global, noise_ampl_global, noise_ampl_relat
 
     dict_global = {
         "noisy_frequencies_count: ": len(noisy_freqs_global),
-        "Details": noisy_freqs_dict}
+        "details": noisy_freqs_dict}
 
     return dict_global
 
@@ -678,7 +678,7 @@ def make_dict_local_psd(noisy_freqs_local, noise_ampl_local, noise_ampl_relative
             noisy_freqs_dict[fr]={'noise_ampl_local': float(noise_ampl_local[ch][fr_n]), 'percent_of_ths_noise_ampl_relative_to_all_signal_local':  round(float(noise_ampl_relative_to_all_signal_local[ch][fr_n]*100), 2)}
         noisy_freqs_dict_all_ch[ch]=noisy_freqs_dict
 
-    dict_local = {"Details": noisy_freqs_dict_all_ch}
+    dict_local = {"details": noisy_freqs_dict_all_ch}
 
     return dict_local
 

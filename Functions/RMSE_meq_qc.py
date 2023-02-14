@@ -128,7 +128,8 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
 def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, std_or_ptp: str):
 
-    '''
+    ''' NOT USED ANY MORE
+
     - Calculate std for every separate epoch of a given list of channels
     - Find which channels in which epochs have too high/too small stds
     - Create MEG_QC_derivative as dfs
@@ -151,6 +152,8 @@ def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: i
     mean_std_per_epoch=[]
 
     epochs = df_std.columns.tolist()
+    epochs = [int(ep) for ep in epochs]
+
     for ep in epochs:  
         std_std_per_epoch.append(np.std(df_std.iloc[:, ep])) #std of stds of all channels of every single epoch
         mean_std_per_epoch.append(np.mean(df_std.iloc[:, ep])) #mean of stds of all channels of every single epoch
@@ -191,10 +194,13 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
     # Now see which channles in epoch are over std_level or under -std_level:
     
-    #append 2 raws to df_noisy_epoch to hold the % of noisy/flat channels in each epoch:
-    df_noisy_epoch.loc['% noisy'] = None
+    #append raws to df_noisy_epoch to hold the % of noisy/flat channels in each epoch:
+    df_noisy_epoch.loc['number noisy channels'] = None
+    df_noisy_epoch.loc['% noisy channels'] = None
     df_noisy_epoch.loc['noisy > %s perc' % percent_noisy_flat_allowed] = None
-    df_flat_epoch.loc['% flat'] = None
+
+    df_flat_epoch.loc['number flat channels'] = None
+    df_flat_epoch.loc['% flat channels'] = None
     df_flat_epoch.loc['flat < %s perc' % percent_noisy_flat_allowed] = None
 
     for ep in epochs:  
@@ -203,14 +209,18 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
         df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std.iloc[:, -1] > noisy_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
         df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
+        
+        # Calculate the number of noisy/flat channels in this epoch:
+        df_noisy_epoch.iloc[-3,ep] = df_noisy_epoch.iloc[:-3,ep].sum()
+        df_flat_epoch.iloc[-3,ep] = df_flat_epoch.iloc[:-3,ep].sum()
 
         # Calculate percent of noisy channels in this epoch:
-        df_noisy_epoch.iloc[-2,ep] = df_noisy_epoch.iloc[:-2,ep].sum()/len(df_noisy_epoch)*100
-        df_flat_epoch.iloc[-2,ep] = df_flat_epoch.iloc[:-2,ep].sum()/len(df_flat_epoch)*100
+        df_noisy_epoch.iloc[-2,ep] = round(df_noisy_epoch.iloc[:-3,ep].sum()/len(df_noisy_epoch)*100, 1)
+        df_flat_epoch.iloc[-2,ep] = round(df_flat_epoch.iloc[:-3,ep].sum()/len(df_flat_epoch)*100, 1)
 
         # Now check if the epoch has over 70% of noisy/flat channels in it -> it is a noisy/flat epoch:
-        df_noisy_epoch.iloc[-1,ep] = df_noisy_epoch.iloc[:-2,ep].sum() > len(df_noisy_epoch)*percent_noisy_flat_allowed/100
-        df_flat_epoch.iloc[-1,ep] = df_flat_epoch.iloc[:-2,ep].sum() > len(df_flat_epoch)*percent_noisy_flat_allowed/100
+        df_noisy_epoch.iloc[-1,ep] = df_noisy_epoch.iloc[:-3,ep].sum() > len(df_noisy_epoch)*percent_noisy_flat_allowed/100
+        df_flat_epoch.iloc[-1,ep] = df_flat_epoch.iloc[:-3,ep].sum() > len(df_flat_epoch)*percent_noisy_flat_allowed/100
 
 
     # Create derivatives:
@@ -223,7 +233,7 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
 
 
-def make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
+def make_dict_global_rmse_ptp(rmse_params: dict, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
 
     global_details = {
         'noisy_ch': big_rmse_with_value_all_data,
@@ -234,57 +244,42 @@ def make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data, small_rmse_
         'percent_of_noisy_ch': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
         'number_of_flat_ch': len(small_rmse_with_value_all_data),
         'percent_of_flat_ch': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
-        std_or_ptp+'_lvl': std_lvl,
-        'Details': global_details}
+        std_or_ptp+'_lvl': rmse_params['std_lvl'],
+        'details': global_details}
 
     return metric_global_content
 
 
-def make_dict_local_rmse_ptp(std_lvl, df_std_noisy: pd.DataFrame, df_std_flat: pd.DataFrame, epochs_mg, std_or_ptp, allow_percent_noisy: float=70, allow_percent_flat: float=70):
+def make_dict_local_rmse_ptp(rmse_params: dict, noisy_epochs_df: pd.DataFrame, flat_epochs_df: pd.DataFrame):
         
-    eps=[ep for ep in range(0, len(epochs_mg))] #list of epoch numbers
+    epochs = noisy_epochs_df.columns.tolist()
+    epochs = [int(ep) for ep in epochs[:-1]]
 
     epochs_details = []
-    for ep in eps:
-        number_noisy_ch=int(df_std_noisy.loc[:,ep].sum()) 
-        number_flat_ch=int(df_std_flat.loc[:,ep].sum()) 
-        #count the number of TRUE in data frame. meaning the number of channels with high std for given epoch
-        #converted to int becuse json doesnt undertand numpy.int64
-
-        perc_noisy_ch=round(number_noisy_ch/len(df_std_noisy)*100, 1)
-        perc_flat_ch=round(number_flat_ch/len(df_std_flat)*100, 1)
-
-        if perc_noisy_ch>allow_percent_noisy:
-            ep_too_noisy=True
-        else:
-            ep_too_noisy=False
-
-        if perc_flat_ch>allow_percent_flat:
-            ep_too_flat=True
-        else:
-            ep_too_flat=False
-            
-        epochs_details += [{'epoch': ep, 'number_of_noisy_ch': number_noisy_ch, 'perc_of_noisy_ch': perc_noisy_ch, 'epoch_too_noisy': ep_too_noisy, 'number_of_flat_ch': number_flat_ch, 'perc_of_flat_ch': perc_flat_ch, 'epoch_too_flat': ep_too_flat}]
+    for ep in epochs:
+        epochs_details += [{'epoch': ep, 'number_of_noisy_ch': int(noisy_epochs_df.iloc[-3,ep]), 'perc_of_noisy_ch': float(noisy_epochs_df.iloc[-2,ep]), 'epoch_too_noisy': noisy_epochs_df.iloc[-1,ep], 'number_of_flat_ch': int(flat_epochs_df.iloc[-3,ep]), 'perc_of_flat_ch': float(flat_epochs_df.iloc[-2,ep]), 'epoch_too_flat': flat_epochs_df.iloc[-1,ep]}]
 
     total_num_noisy_ep=sum([ep for ep in epochs_details if ep['epoch_too_noisy'] is True])
-    total_perc_noisy_ep=round(total_num_noisy_ep/len(eps)*100)
+    total_perc_noisy_ep=round(total_num_noisy_ep/len(epochs)*100)
 
     total_num_flat_ep=sum([ep for ep in epochs_details if ep['epoch_too_flat'] is True])
-    total_perc_flat_ep=round(total_num_flat_ep/len(eps)*100)
+    total_perc_flat_ep=round(total_num_flat_ep/len(epochs)*100)
 
     metric_local_content={
-        std_or_ptp+'_lvl': std_lvl,
+        'allow_percent_noisy_flat_epochs': rmse_params['allow_percent_noisy_flat_epochs'],
+        'noisy_multiplier': rmse_params['noisy_multiplier'],
+        'flat_multiplier': rmse_params['flat_multiplier'],
         'total_num_noisy_ep': total_num_noisy_ep, 
         'total_perc_noisy_ep': total_perc_noisy_ep, 
         'total_num_flat_ep': total_num_flat_ep,
         'total_perc_flat_ep': total_perc_flat_ep,
-        'Details': epochs_details}
+        'details': epochs_details}
 
     return metric_local_content
 
 
 
-def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, deriv_epoch_rmse, dict_epochs_mg, allow_percent_noisy, allow_percent_flat, metric_local, m_or_g_chosen):
+def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, deriv_epoch_rmse, metric_local, m_or_g_chosen):
 
     """Make simple metric for RMSE.
 
@@ -319,7 +314,7 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Noisy channel: The channel where std of data is higher than threshod: mean_over_all_stds_channel + (std_of_all_channels*std_lvl). Flat: where std of data is lower than threshld: mean_over_all_stds_channel - (std_of_all_channels*std_lvl). In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
     metric_local_name = 'RMSE_epoch'
     if metric_local==True:
-        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy (or allow_percent_flat). this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel here: if std of the channels data in given epoch is higher than threshold - this channel is noisy. Threshold is:  mean of all channels data in this epoch + (std of all channels data in this epoch * std_lvl). std_lvl is set by user.'
+        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy_flat. this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel inside of epoch: 1)Take std of data of THIS channel in THIS epoch. 2) Take std of the data of THIS channel for ALL epochs and get mean of it. 3) If (1) is higher than (2)*noisy_multiplier - this channel is noisy.  If (1) is lower than (2)*flat_multiplier - this channel is flat.'
     else:
         metric_local_description = 'Not calculated. No epochs found'
 
@@ -327,10 +322,10 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
 
-        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
+        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(rmse_params, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(std_lvl, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content, dict_epochs_mg[m_or_g], 'std', allow_percent_noisy, allow_percent_flat)
+            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(rmse_params, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content)
             #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
         else:
             metric_local_content[m_or_g]=None
@@ -376,21 +371,21 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
-            
+
             #deriv_epoch_rmse[m_or_g] = get_big_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], 'std') 
             #derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
-            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_multipliar'], rmse_params['flat_multipliar'], rmse_params['allow_percent_noisy_flat_epochs'])
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_multiplier'], rmse_params['flat_multiplier'], rmse_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_rmse[m_or_g][0].content, ch_type=m_or_g, what_data='stds')]
+            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_std, ch_type=m_or_g, what_data='stds')]
             #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
     else:
         metric_local=False
         print('___MEG QC___: ', 'RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
 
-    simple_metric_rmse = make_simple_metric_rmse(rmse_params['std_lvl'], big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, deriv_epoch_rmse, dict_epochs_mg, rmse_params['allow_percent_noisy'], rmse_params['allow_percent_flat'], metric_local, m_or_g_chosen)
+    simple_metric_rmse = make_simple_metric_rmse(rmse_params, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
     
     derivs_rmse += fig_std_epoch_with_name + derivs_list 
     return derivs_rmse, simple_metric_rmse
