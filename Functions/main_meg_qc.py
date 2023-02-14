@@ -220,56 +220,60 @@ def make_derivative_meg_qc(config_file_name):
 
 
             # d=0
-            for section in QC_derivs.values():
-                if section: #if there are any derivs calculated in this section:
-                    for deriv in section:
-                        
-                        # d=d+1
-                        # print('___MEG QC___: ', 'writing deriv: ', d)
-                        # print('___MEG QC___: ', deriv)
 
-                        meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
-                        meg_artifact.add_entity('desc', deriv.name) #file name
-                        meg_artifact.suffix = 'meg'
-                        meg_artifact.extension = '.html'
+            #if there are any derivs calculated in this section:
+            for section in (section for section in QC_derivs.values() if section):
+                # loop over section where deriv.content_type is not 'matplotlib' or 'plotly'
+                for deriv in (deriv for deriv in section if deriv.content_type != 'matplotlib' and deriv.content_type != 'plotly' and deriv.content_type != 'report'):
+                    
+                    # d=d+1
+                    # print('___MEG QC___: ', 'writing deriv: ', d)
+                    # print('___MEG QC___: ', deriv)
 
-                        if deriv.content_type == 'df':
-                            meg_artifact.extension = '.csv'
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
+                    # if deriv.content_type == 'matplotlib':
+                    #     continue
+                    #     meg_artifact.extension = '.png'
+                    #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.savefig(file_path) 
 
-                        elif deriv.content_type == 'matplotlib':
-                            meg_artifact.extension = '.png'
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.savefig(file_path) 
+                    # elif deriv.content_type == 'plotly':
+                    #     continue
+                    #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
 
-                        elif deriv.content_type == 'plotly':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
-  
-                        elif deriv.content_type == 'report':
-                            def html_writer(file_path, cont=deriv.content):
-                                with open(file_path, "w") as file:
-                                    file.write(cont)
-                                #'with'command doesnt work in lambda
-                            meg_artifact.content = html_writer # function pointer instead of lambda
+                    # elif deriv.content_type == 'report':
+                    #     def html_writer(file_path, cont=deriv.content):
+                    #         with open(file_path, "w") as file:
+                    #             file.write(cont)
+                    #         #'with'command doesnt work in lambda
+                    #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        elif deriv.content_type == 'report mne':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
+                    meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
+                    meg_artifact.add_entity('desc', deriv.name) #file name
+                    meg_artifact.suffix = 'meg'
+                    meg_artifact.extension = '.html'
 
-                        elif deriv.content_type == 'json':
-                            meg_artifact.extension = '.json'
-                            def json_writer(file_path, cont=deriv.content):
-                                with open(file_path, "w") as file_wrapper:
-                                    json.dump(cont, file_wrapper, indent=4)
-                            meg_artifact.content = json_writer 
+                    if deriv.content_type == 'df':
+                        meg_artifact.extension = '.csv'
+                        meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
 
-                            # with open('derivs.json', 'w') as file_wrapper:
-                            #     json.dump(metric, file_wrapper, indent=4)
+                    elif deriv.content_type == 'report mne':
+                        meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
 
-                        else:
-                            print('___MEG QC___: ', meg_artifact.name)
-                            meg_artifact.content = 'dummy text'
-                            meg_artifact.extension = '.txt'
-                        # problem with lambda explained:
-                        # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+                    elif deriv.content_type == 'json':
+                        meg_artifact.extension = '.json'
+                        def json_writer(file_path, cont=deriv.content):
+                            with open(file_path, "w") as file_wrapper:
+                                json.dump(cont, file_wrapper, indent=4)
+                        meg_artifact.content = json_writer 
+
+                        # with open('derivs.json', 'w') as file_wrapper:
+                        #     json.dump(metric, file_wrapper, indent=4)
+
+                    else:
+                        print('___MEG QC___: ', meg_artifact.name)
+                        meg_artifact.content = 'dummy text'
+                        meg_artifact.extension = '.txt'
+                    # problem with lambda explained:
+                    # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
 
 
     ancpbids.write_derivative(dataset, derivative) 
