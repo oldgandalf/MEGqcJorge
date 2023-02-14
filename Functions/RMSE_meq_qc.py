@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, boxplot_epochs
 from universal_html_report import simple_metric_basic
 
 # In[2]:
@@ -185,12 +185,13 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
     epochs = df_std.columns.tolist() #get epoch numbers
     epochs = [int(ep) for ep in epochs]
 
-    df_std['mean'] = df_std.mean(axis=1) #mean of stds for each separate channel over all epochs together
+    df_std_with_mean=df_std.copy() #make a separate df, because it also changes this variable utside this function, to avoid messing up tye data.
+    df_std_with_mean['mean'] = df_std_with_mean.mean(axis=1) #mean of stds for each separate channel over all epochs together
 
     #compare mean std of each channel to std of this channel for every epoch:
-    df_noisy_epoch=df_std.copy()
-    df_flat_epoch=df_std.copy()
-    df_epoch_vs_mean=df_std.copy()
+    df_noisy_epoch=df_std_with_mean.copy()
+    df_flat_epoch=df_std_with_mean.copy()
+    df_epoch_vs_mean=df_std_with_mean.copy()
 
     # Now see which channles in epoch are over std_level or under -std_level:
     
@@ -205,10 +206,10 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
     for ep in epochs:  
 
-        df_epoch_vs_mean.iloc[:,ep] = df_epoch_vs_mean.iloc[:,ep]/ df_std.iloc[:, -1] #divide std of this channel for this epoch by mean std of this channel over all epochs
+        df_epoch_vs_mean.iloc[:,ep] = df_epoch_vs_mean.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] #divide std of this channel for this epoch by mean std of this channel over all epochs
 
-        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std.iloc[:, -1] > noisy_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
-        df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
+        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] > noisy_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
+        df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
         
         # Calculate the number of noisy/flat channels in this epoch:
         df_noisy_epoch.iloc[-3,ep] = df_noisy_epoch.iloc[:-3,ep].sum()
@@ -355,7 +356,8 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
     small_rmse_with_value_all_data = {}
     rmse = {}
     derivs_rmse = []
-    fig_std_epoch_with_name = []
+    fig_std_epoch = []
+    fig_std_epoch2 = []
     derivs_list = []
     deriv_epoch_rmse={}
     noisy_flat_epochs_derivs={}
@@ -372,13 +374,15 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
 
+            fig_std_epoch += [boxplot_channel_epoch_hovering_plotly(df_mg=df_std, ch_type=m_or_g, what_data='stds')]
+            fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds')]
+
             #deriv_epoch_rmse[m_or_g] = get_big_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], 'std') 
             #derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_multiplier'], rmse_params['flat_multiplier'], rmse_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_std, ch_type=m_or_g, what_data='stds')]
             #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
     else:
@@ -387,5 +391,5 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
 
     simple_metric_rmse = make_simple_metric_rmse(rmse_params, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
     
-    derivs_rmse += fig_std_epoch_with_name + derivs_list 
+    derivs_rmse += fig_std_epoch + fig_std_epoch2 + derivs_list 
     return derivs_rmse, simple_metric_rmse

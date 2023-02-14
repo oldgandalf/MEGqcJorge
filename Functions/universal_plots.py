@@ -149,6 +149,80 @@ def boxplot_channel_epoch_hovering_plotly(df_mg: pd.DataFrame, ch_type: str, wha
     return qc_derivative
 
 
+def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
+
+    '''
+    Creates representation of calculated data as multiple boxplots: 
+    each box represents 1 channel, each dot is std of 1 epoch in this channel
+    Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
+    The figure will be saved as an interactive html file.
+
+    Args:
+    df_mg(pd.DataFrame): data frame containing data (stds, peak-to-peak amplitudes, etc) for each epoch, each channel, 
+        mags OR grads, not together
+    ch_type (str): title, like "Magnetometers", or "Gradiometers", 
+    what_data (str): 'peaks' for peak-to-peak amplitudes or 'stds'
+
+    Returns:
+    fig (go.Figure): plottly figure
+
+    '''
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+
+    #collect all names of original df into a list to use as tick labels:
+    epochs = df_mg.columns.tolist()
+
+    fig = go.Figure()
+
+    for col in df_mg:
+        fig.add_trace(go.Box(y=df_mg[col].values, 
+        name=str(df_mg[col].name), 
+        opacity=0.7, 
+        boxpoints="all", 
+        pointpos=0,
+        marker_size=3,
+        line_width=1,
+        text=df_mg[col].index,
+        ))
+        fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}')
+
+    
+    fig.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(epochs))],
+            ticktext = epochs,
+            rangeslider=dict(visible=True)
+        ),
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' of epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        legend_title="Epochs")
+        
+    #fig.show()
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
+
 def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
 
     '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 

@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
+from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative, boxplot_epochs
 from universal_html_report import simple_metric_basic
 from RMSE_meq_qc import get_big_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_rmse_ptp_epochs
 
@@ -168,7 +168,8 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
     big_ptp_with_value_all_data = {}
     small_ptp_with_value_all_data = {}
     derivs_ptp = []
-    fig_ptp_epoch_with_name = []
+    fig_ptp_epoch = []
+    fig_ptp_epoch2 = []
     derivs_list = []
     peak_ampl = {}
     noisy_flat_epochs_derivs = {}
@@ -188,13 +189,14 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks')]
+            fig_ptp_epoch += [boxplot_channel_epoch_hovering_plotly(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks')]
+            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='stds')]
             metric_local=True
     else:
         metric_local=False
         print('___MEG QC___: ', 'Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
         
-    derivs_ptp += fig_ptp_epoch_with_name + derivs_list
+    derivs_ptp += fig_ptp_epoch + fig_ptp_epoch2 + derivs_list
 
     simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
 
