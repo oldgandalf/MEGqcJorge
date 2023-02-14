@@ -7,7 +7,7 @@ import pandas as pd
 import mne
 from universal_plots import boxplot_std_hovering_plotly, boxplot_channel_epoch_hovering_plotly, QC_derivative
 from universal_html_report import simple_metric_basic
-from RMSE_meq_qc import get_large_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data
+from RMSE_meq_qc import get_big_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_rmse_ptp_epochs
 
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:
@@ -171,6 +171,8 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
     fig_ptp_epoch_with_name = []
     derivs_list = []
     peak_ampl = {}
+    deriv_epoch_ptp={}
+    noisy_flat_epochs_derivs = {}
 
     # will run for both if mag+grad are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
@@ -178,12 +180,14 @@ def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, da
         big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_ptp_lvl'])
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='peaks')]
 
-    deriv_epoch_ptp={}
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_pp_ampl=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
-            deriv_epoch_ptp[m_or_g] = get_large_small_RMSE_PtP_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_ptp_lvl'], dict_epochs_mg[m_or_g], 'ptp') 
-            derivs_list += deriv_epoch_ptp[m_or_g]
+            #deriv_epoch_ptp[m_or_g] = get_big_small_RMSE_PtP_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_ptp_lvl'], 'ptp') 
+            #derivs_list += deriv_epoch_ptp[m_or_g]
+
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_multipliar'], ptp_manual_params['flat_multipliar'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
+            derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
             fig_ptp_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_ptp[m_or_g][0].content, ch_type=m_or_g, what_data='peaks')]
             metric_local=True

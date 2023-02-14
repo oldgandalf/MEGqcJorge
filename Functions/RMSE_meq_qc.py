@@ -67,29 +67,30 @@ def get_big_small_std_ptp_all_data(peak_ampl_channels, channels: list, std_ptp_l
 
     '''
     
-    
-    ## Check if channel data is within std level of PtP amplitudes.
-    std_of_ptp_channels=np.std(peak_ampl_channels)
-    mean_ptp_channels=np.mean(peak_ampl_channels)
+    ## Check if channel data is within std level of PtP/RMSE.
+    std_of_measure_channels=np.std(peak_ampl_channels)
+    mean_of_measure_channels=np.mean(peak_ampl_channels)
 
-    # Find the index of channels with largest and smallest std:
-    ch_ind_large_std = [index for (index, item) in enumerate(peak_ampl_channels) if item > mean_ptp_channels + std_ptp_lvl*std_of_ptp_channels] #find index with largest std
-    ch_ind_small_std = [index for (index, item) in enumerate(peak_ampl_channels) if item < mean_ptp_channels - std_ptp_lvl*std_of_ptp_channels] #find index with smallest std
+    print('___MEG QC___: ', mean_of_measure_channels + std_ptp_lvl*std_of_measure_channels, ' threshold for NOISY. ')
+    print('___MEG QC___: ', mean_of_measure_channels - std_ptp_lvl*std_of_measure_channels, ' threshold for FLAT. ')
 
-    #make dictionaries with channel names and std values:
-    big_ptp_with_value = {}
-    for index in ch_ind_large_std:
-        ch_name = np.array(channels)[index] #find the names of the channels with large std 
-        ch_std = peak_ampl_channels[index]
-        big_ptp_with_value[ch_name] = ch_std
+    # Find the index of channels with biggest and smallest std:
+    ch_ind_big_measure = [index for (index, item) in enumerate(peak_ampl_channels) if item > mean_of_measure_channels + std_ptp_lvl*std_of_measure_channels] #find index with bigst std
+    ch_ind_small_measure = [index for (index, item) in enumerate(peak_ampl_channels) if item < mean_of_measure_channels - std_ptp_lvl*std_of_measure_channels] #find index with smallest std
 
-    small_ptp_with_value = {}
-    for index in ch_ind_small_std:
+    #make dictionaries with channel names and their std values:
+    noisy_channels = {}
+    flat_channels = {}
+
+    for index in ch_ind_big_measure:
         ch_name = np.array(channels)[index]
-        ch_std = peak_ampl_channels[index]
-        small_ptp_with_value[ch_name] = ch_std
+        noisy_channels[ch_name] = peak_ampl_channels[index]
 
-    return big_ptp_with_value, small_ptp_with_value
+    for index in ch_ind_small_measure:
+        ch_name = np.array(channels)[index]
+        flat_channels[ch_name] = peak_ampl_channels[index]
+
+    return noisy_channels, flat_channels
 
 #%%
 def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
@@ -125,7 +126,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
     return pd.DataFrame(dict_ep, index=channels)
 
 
-def get_large_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, epochs_mg: mne.Epochs, std_or_ptp: str):
+def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, std_or_ptp: str):
 
     '''
     - Calculate std for every separate epoch of a given list of channels
@@ -149,28 +150,78 @@ def get_large_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl:
     std_std_per_epoch=[]
     mean_std_per_epoch=[]
 
-    for ep in range(0, len(epochs_mg)):
+    epochs = df_std.columns.tolist()
+    for ep in epochs:  
         std_std_per_epoch.append(np.std(df_std.iloc[:, ep])) #std of stds of all channels of every single epoch
         mean_std_per_epoch.append(np.mean(df_std.iloc[:, ep])) #mean of stds of all channels of every single epoch
 
-    df_ch_ep_large_std=df_std.copy()
+    df_ch_ep_big_std=df_std.copy()
     df_ch_ep_small_std=df_std.copy()
 
     # Now see which channles in epoch are over std_level or under -std_level:
-    for ep in range(0, len(epochs_mg)):  
-        df_ch_ep_large_std.iloc[:,ep] = df_ch_ep_large_std.iloc[:,ep] > mean_std_per_epoch[ep]+std_lvl*std_std_per_epoch[ep] 
+    for ep in epochs:   
+        df_ch_ep_big_std.iloc[:,ep] = df_ch_ep_big_std.iloc[:,ep] > mean_std_per_epoch[ep]+std_lvl*std_std_per_epoch[ep] 
         df_ch_ep_small_std.iloc[:,ep] = df_ch_ep_small_std.iloc[:,ep] < mean_std_per_epoch[ep]-std_lvl*std_std_per_epoch[ep] 
 
     # Create derivatives:
     dfs_deriv = [
         QC_derivative(df_std, std_or_ptp+'_per_epoch_'+ch_type, 'df'),
-        QC_derivative(df_ch_ep_large_std, 'Large_'+std_or_ptp+'_per_epoch_'+ch_type, 'df'),
+        QC_derivative(df_ch_ep_big_std, 'big_'+std_or_ptp+'_per_epoch_'+ch_type, 'df'),
         QC_derivative(df_ch_ep_small_std, 'Small_'+std_or_ptp+'_per_epoch_'+ch_type, 'df')]
 
 
     return dfs_deriv
 
 #%% All about simple metrc jsons:
+
+def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp: str, noisy_multiplier: float, flat_multiplier: float, percent_noisy_flat_allowed: float):
+    
+    """Compare the std of this channel for this epoch (df_std) TO the mean STD of this particular channel over all time. (or over all epchs!)
+    Use some multiplier to figure out by how much it is noisier."""
+
+    epochs = df_std.columns.tolist() #get epoch numbers
+    epochs = [int(ep) for ep in epochs]
+
+    df_std['mean'] = df_std.mean(axis=1) #mean of stds for each separate channel over all epochs together
+
+    #compare mean std of each channel to std of this channel for every epoch:
+    df_noisy_epoch=df_std.copy()
+    df_flat_epoch=df_std.copy()
+    df_epoch_vs_mean=df_std.copy()
+
+    # Now see which channles in epoch are over std_level or under -std_level:
+    
+    #append 2 raws to df_noisy_epoch to hold the % of noisy/flat channels in each epoch:
+    df_noisy_epoch.loc['% noisy'] = None
+    df_noisy_epoch.loc['noisy > %s perc' % percent_noisy_flat_allowed] = None
+    df_flat_epoch.loc['% flat'] = None
+    df_flat_epoch.loc['flat < %s perc' % percent_noisy_flat_allowed] = None
+
+    for ep in epochs:  
+
+        df_epoch_vs_mean.iloc[:,ep] = df_epoch_vs_mean.iloc[:,ep]/ df_std.iloc[:, -1] #divide std of this channel for this epoch by mean std of this channel over all epochs
+
+        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std.iloc[:, -1] > noisy_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
+        df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
+
+        # Calculate percent of noisy channels in this epoch:
+        df_noisy_epoch.iloc[-2,ep] = df_noisy_epoch.iloc[:-2,ep].sum()/len(df_noisy_epoch)*100
+        df_flat_epoch.iloc[-2,ep] = df_flat_epoch.iloc[:-2,ep].sum()/len(df_flat_epoch)*100
+
+        # Now check if the epoch has over 70% of noisy/flat channels in it -> it is a noisy/flat epoch:
+        df_noisy_epoch.iloc[-1,ep] = df_noisy_epoch.iloc[:-2,ep].sum() > len(df_noisy_epoch)*percent_noisy_flat_allowed/100
+        df_flat_epoch.iloc[-1,ep] = df_flat_epoch.iloc[:-2,ep].sum() > len(df_flat_epoch)*percent_noisy_flat_allowed/100
+
+
+    # Create derivatives:
+    noisy_flat_epochs_derivs = [
+        QC_derivative(df_epoch_vs_mean, std_or_ptp+'_per_epoch_vs_mean_ratio_'+ch_type, 'df'),
+        QC_derivative(df_noisy_epoch, 'Noisy_epochs_on_'+std_or_ptp+'_base_'+ch_type, 'df'),
+        QC_derivative(df_flat_epoch, 'Flat_epochs_on_'+std_or_ptp+'_base_'+ch_type, 'df')]
+
+    return noisy_flat_epochs_derivs
+
+
 
 def make_dict_global_rmse_ptp(std_lvl, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, std_or_ptp):
 
@@ -265,10 +316,10 @@ def make_simple_metric_rmse(std_lvl, big_rmse_with_value_all_data, small_rmse_wi
 """
 
     metric_global_name = 'RMSE_all'
-    metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Threshold = mean_over_ all_data + (std_of_all_data*std_lvl). The channel where data is higher than this threshod is considered as noisy. Same: if the std of some channel is lower than -threshold, this channel is considered as flat. In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
+    metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Noisy channel: The channel where std of data is higher than threshod: mean_over_all_stds_channel + (std_of_all_channels*std_lvl). Flat: where std of data is lower than threshld: mean_over_all_stds_channel - (std_of_all_channels*std_lvl). In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
     metric_local_name = 'RMSE_epoch'
     if metric_local==True:
-        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy (or allow_percent_flat). this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel here: if std of the chanels data in given epoch is higher than threshold - this channel is noisy. Threshold is:  mean of all channels data in this epoch + (std of all channels data in this epoch * std_lvl). std_lvl is set by user.'
+        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy (or allow_percent_flat). this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel here: if std of the channels data in given epoch is higher than threshold - this channel is noisy. Threshold is:  mean of all channels data in this epoch + (std of all channels data in this epoch * std_lvl). std_lvl is set by user.'
     else:
         metric_local_description = 'Not calculated. No epochs found'
 
@@ -311,6 +362,8 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
     derivs_rmse = []
     fig_std_epoch_with_name = []
     derivs_list = []
+    deriv_epoch_rmse={}
+    noisy_flat_epochs_derivs={}
 
     for m_or_g in m_or_g_chosen:
 
@@ -319,12 +372,16 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
       
         derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
 
-    deriv_epoch_rmse={}
+
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
-            deriv_epoch_rmse[m_or_g] = get_large_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], dict_epochs_mg[m_or_g], 'std') 
-            derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
+            
+            #deriv_epoch_rmse[m_or_g] = get_big_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], 'std') 
+            #derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
+
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_multipliar'], rmse_params['flat_multipliar'], rmse_params['allow_percent_noisy_flat_epochs'])
+            derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
             fig_std_epoch_with_name += [boxplot_channel_epoch_hovering_plotly(df_mg=deriv_epoch_rmse[m_or_g][0].content, ch_type=m_or_g, what_data='stds')]
             #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
