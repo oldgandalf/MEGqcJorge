@@ -263,6 +263,35 @@ def split_blended_freqs_at_negative_peaks(noisy_bands_indexes, peaks, peaks_neg)
     return noisy_bends_indexes_after_split, split_points
 
 
+def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes, one_psd, noisy_freqs_indexes, freq_res):
+    
+        noisy_bands_final_indexes = noisy_bands_indexes.copy()
+        split_indexes = []
+        for iter, _ in enumerate(noisy_bands_indexes[:-1]):
+            #if bands overlap - SPLIT them:
+            if noisy_bands_final_indexes[-1][0]<=noisy_bands_final_indexes[-2][1]: #if the end of the previous band is after the start of the current band
+                
+                #split way 1: split at the middle between 2 peaks:
+                # overlap_amount=noisy_bands_final[-2][1]-noisy_bands_final[-1][0]
+                # split_point=noisy_bands_final[-1][0]+overlap_amount/2
+                # split_point=round(split_point/freq_res)*freq_res #round the split point to freq_res:
+                # print('split at the middle between 2 peaks', split_point)
+
+                #split way 2: split at the lowest point between the 2 blended peaks - more accurate:
+                split_ind=np.argmin(one_psd[noisy_freqs_indexes[iter]:noisy_freqs_indexes[iter+1]])
+                split_ind=noisy_freqs_indexes[iter-1]+split_ind
+                #here need to sum them, because argmin above found the index counted from the start of the noisy_freqs_indexes[iter-1] band, not from the start of the freqs array
+                #print('split at the lowest point between 2 peaks', split_point)
+
+                noisy_bands_final_indexes[-2][1]=split_ind #assign end of the previous band
+                noisy_bands_final_indexes[-1][0]=split_ind #assigne beginnning of the current band
+                split_indexes.append(int(split_ind))
+    
+        #turn all values in noisy_bands_final_indexes into integers:
+        noisy_bands_final_indexes = [[int(i) for i in j] for j in noisy_bands_final_indexes]
+
+        return noisy_bands_final_indexes, split_indexes
+
 def cut_the_noise_from_psd(noisy_bends_indexes, freqs, one_psd, helper_plots: bool):
 
     #band height will be chosen as average between the height of the limits of this bend.
@@ -344,14 +373,20 @@ def make_helper_plots(freqs, avg_psd, peaks, peaks_neg, left_ips, right_ips, spl
 
     return fig
 
-def plot_one_psd(ch_name, freqs, one_psd, peak_indexes, peak_neg_indexes, noisy_freq_bands, unit):
+def plot_one_psd(ch_name, freqs, one_psd, peak_indexes, peak_neg_indexes, noisy_freq_bands_indexes, unit):
     '''plot avg_psd with peaks and split points using plotly'''
+
+    print(freqs[peak_indexes], 'freqs[peak_indexes]')
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=freqs, y=one_psd, name=ch_name+' psd'))
     fig.add_trace(go.Scatter(x=freqs[peak_indexes], y=one_psd[peak_indexes], mode='markers', name='peaks'))
     fig.add_trace(go.Scatter(x=freqs[peak_neg_indexes], y=one_psd[peak_neg_indexes], mode='markers', name='peaks_neg'))
     fig.update_layout(title=ch_name+' PSD with noise peaks and split edges', xaxis_title='Frequency', yaxis_title='Amplitude ('+unit+')')
     #plot split points as vertical lines and noise bands as red rectangles:
+
+    noisy_freq_bands = [[freqs[noisy_freq_bands_indexes[i][0]], freqs[noisy_freq_bands_indexes[i][1]]] for i in range(len(noisy_freq_bands_indexes))]
+    
     for fr_b in noisy_freq_bands:
         fig.add_vrect(x0=fr_b[0], x1=fr_b[-1], line_width=0.8, fillcolor="red", opacity=0.2, layer="below")
         #fig.add_vline(x=fr_b[0], line_width=0.5, line_dash="dash", line_color="black") #, annotation_text="split point", annotation_position="top right")
@@ -362,6 +397,10 @@ def plot_one_psd(ch_name, freqs, one_psd, peak_indexes, peak_neg_indexes, noisy_
 
 
 def find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots: bool, m_or_g, prominence_lvl_pos: int, prominence_lvl_neg: int = 60):
+
+    ''''Complex: bands around the nise frequencies are created based on detected peak_width + locations of negative peaks. 
+    This function is trying to detect the actual start and end of peaks. 
+    It also splits the peaks if they were blended together. The split point is the negative peak between 2 peaks.'''
 
     _, unit = get_tit_and_unit(m_or_g)
     # Run peak detection on psd -> get number of noise freqs, define freq bands around them
@@ -376,37 +415,36 @@ def find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots: bool, m
 
     noisy_freqs=freqs[noisy_freqs_indexes]
 
+    # Make frequency bands arpund noise frequencies on base of the detected width of the peaks:
     _, _, left_ips, right_ips = peak_widths(one_psd, noisy_freqs_indexes, rel_height=1)
 
-
-    # print('___MEG QC___: ', 'Central Freqs: ', freqs[noise_peaks])
-    # print('___MEG QC___: ', 'Central Amplitudes: ', one_psd[noise_peaks])
-
-    #turn found noisy segments into frequency bands around the central noise frequency:
     noisy_freq_bands_idx=[]
     for ip_n, _ in enumerate(noisy_freqs_indexes):
         #+1 here because I  will use these values as range,and range in python is usually "up to the value but not including", this should fix it to the right rang
         noisy_freq_bands_idx.append([round(left_ips[ip_n]), round(right_ips[ip_n])+1])
 
-    #2* Split the blended frequency bands into separate bands based on the negative peaks:
+    # Split the blended frequency bands into separate bands based on the negative peaks:
 
-    noisy_bands_indexes_final, split_points = split_blended_freqs_at_negative_peaks(noisy_freq_bands_idx, noisy_freqs_indexes, peaks_neg)
+    noisy_bands_final_indexes, split_freqs = split_blended_freqs_at_negative_peaks(noisy_freq_bands_idx, noisy_freqs_indexes, peaks_neg)
 
     #Get actual freq bands from their indexes:
     noisy_bands_final=[]
-    for fr_b in noisy_bands_indexes_final:
+    for fr_b in noisy_bands_final_indexes:
         noisy_bands_final.append([freqs[fr_b][0], freqs[fr_b][1]])
 
+    #turn all values in noisy_bands_final_indexes into integers:
+    noisy_bands_final_indexes = [[int(i) for i in j] for j in noisy_bands_final_indexes]
+
     if helper_plots is True: #visual of the split
-        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, peaks_neg, noisy_bands_final, unit)
+        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, peaks_neg, noisy_bands_final_indexes, unit)
         fig.show()
 
     
-    return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, peaks_neg
+    return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, peaks_neg, split_freqs
 
 
 def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_or_g, prominence_lvl_pos: int, band_length: float):
-    '''In this approach create frequency band around central noise frequency just by adding -x...+x Hz around.'''
+    '''Simple: In this approach create frequency band around central noise frequency just by adding -x...+x Hz around.'''
 
     prominence_pos=(max(one_psd) - min(one_psd)) / prominence_lvl_pos
     noisy_freqs_indexes, _ = find_peaks(one_psd, prominence=prominence_pos)
@@ -420,46 +458,42 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
 
         return [], [], [], [], []
 
-    noisy_freqs=freqs[noisy_freqs_indexes]
-
-    freq_res = freqs[1] - freqs[0]
     #make frequency bands around the central noise frequency (-2...+2 Hz band around the peak):
-    noisy_bands_final=[]
-    split_points=[]
-    for iter, peak in enumerate(noisy_freqs):
-        noisy_bands_final.append([peak - band_length, peak + band_length])
-        #if bands overlap - split them:
-        if iter>0:  #on the second iteration:
-            if noisy_bands_final[-1][0]<=noisy_bands_final[-2][1]: #if the end of the previous band is after the start of the current band
-                overlap_amount=noisy_bands_final[-2][1]-noisy_bands_final[-1][0]
-                split_point=noisy_bands_final[-1][0]+overlap_amount/2
-                split_point=round(split_point/freq_res)*freq_res #round the split point to freq_res:
-                noisy_bands_final[-2][1]=split_point #split the previous band
-                noisy_bands_final[-1][0]=split_point #split the current band
-                split_points.append(split_point)
+    freq_res = freqs[1] - freqs[0]
+    noisy_bands_indexes=[]
+    for i, _ in enumerate(noisy_freqs_indexes):
+        noisy_bands_indexes.append([noisy_freqs_indexes[i] - band_length/freq_res, noisy_freqs_indexes[i] + band_length/freq_res])
+    
+    # Split the blended freqs in their bands cross:
+    noisy_bands_final_indexes, split_indexes = split_blended_freqs_at_the_lowest_point(noisy_bands_indexes, one_psd, noisy_freqs_indexes, freq_res)
 
     # It might happen that when the band was created around the noise frequency, it is outside of the freqs range.
     # For example noisy freq is 1Hz, band is -2..+2Hz, freq rage was 0.5...100Hz. 
     # In this case we need to set the first and last bands to the edge of the freq range:
 
-    if noisy_bands_final[0][0]<freqs[0]: #if the first band starts before the first freq in freqs:
-        noisy_bands_final[0][0]=freqs[0]
-        print('___MEG QC___: ', 'First band starts before the first freq in freqs, setting it to the first freq in freqs')
-    if noisy_bands_final[-1][1]>freqs[-1]: #if the last band ends after the last freq in freqs:
-        noisy_bands_final[-1][1]=freqs[-1]
-        print('___MEG QC___: ', 'Last band ends after the last freq in freqs, setting it to the last freq in freqs')
+    if noisy_bands_final_indexes[0][0]<freqs[0]/freq_res: #if the first band starts before the first freq in freqs:
+        noisy_bands_final_indexes[0][0]=freqs[0]/freq_res
+    if noisy_bands_final_indexes[-1][1]>freqs[-1]/freq_res: #if the last band ends after the last freq in freqs:
+        noisy_bands_final_indexes[-1][1]=freqs[-1]/freq_res
+
+     # Convert indexes to frequencies:
+    # split_freqs = [split_indexes[i]*freq_res for i in range(len(split_indexes))]
+    # noisy_bands_final = [[noisy_bands_final_indexes[i][0]*freq_res, noisy_bands_final_indexes[i][1]*freq_res] for i in range(len(noisy_bands_final_indexes))]
+    # noisy_freqs = [noisy_freqs_indexes[i]*freq_res for i in range(len(noisy_freqs_indexes))]
+    # print('___MEG QC___: ', 'Noisy freqs: ', noisy_freqs,  noisy_bands_final)
+    noisy_freqs = freqs[noisy_freqs_indexes]
+
+    noisy_bands_final = [[freqs[noisy_bands_final_indexes[i][0]], freqs[noisy_bands_final_indexes[i][1]]] for i in range(len(noisy_bands_final_indexes))]
+    split_freqs = [freqs[split_indexes[i]] for i in range(len(split_indexes))]
+    print('___MEG QC___: ', 'Noisy freqs: ', noisy_freqs,  noisy_bands_final)
 
     if helper_plots is True: #visual of the split
         _, unit = get_tit_and_unit(m_or_g)
-        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, [], noisy_bands_final, unit)
+        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, [], noisy_bands_final_indexes, unit)
         fig.show()
 
-    #find indexes of noisy_bands_final in freqs:
-    noisy_bands_indexes_final=[]
-    for band in noisy_bands_final:
-        noisy_bands_indexes_final.append([np.where(freqs==band[0])[0][0], np.where(freqs==band[1])[0][0]])
 
-    return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_points
+    return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, split_freqs
 
 
 def find_number_and_power_of_noise_freqs(ch_name: str, freqs: list, one_psd: list, pie_plotflag: bool, helper_plots: bool, m_or_g: str, cut_noise_from_psd: bool, prominence_lvl_pos: int, prominence_lvl_neg: int = 60, simple_or_complex='simple'):
@@ -502,9 +536,9 @@ def find_number_and_power_of_noise_freqs(ch_name: str, freqs: list, one_psd: lis
 
         #Plot psd before and after cutting the noise:
         if helper_plots is True:
-            fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, peaks_neg, noisy_bands_final, unit)
+            fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, peaks_neg, noisy_bands_indexes_final, unit)
             fig.show()
-            fig2 = plot_one_psd(ch_name, freqs, psd_of_noise_peaks, noisy_freqs_indexes, peaks_neg, noisy_bands_final, unit)
+            fig2 = plot_one_psd(ch_name, freqs, psd_of_noise_peaks, noisy_freqs_indexes, peaks_neg, noisy_bands_indexes_final, unit)
             fig2.show()
 
         #print('___MEG QC___: ', 'Total amplitude: ', total_amplitude)
