@@ -8,7 +8,7 @@ from universal_html_report import simple_metric_basic
 
 def RMSE(data_m_or_g: np.array or list):
     ''' RMSE - general root means squared error function to use in other functions of this module.
-    Alternatively std could be used, but the calculation time of std is longer, result is the same.
+    Used before as alternative to std calculation, as my func was faster. Currently not used, as now std is slightly faster.
     
     Args:
     data_m_or_g (np.array or list): data for magnetometer or gradiometer given as np array or list 
@@ -45,7 +45,10 @@ def get_rmse_all_data(data: mne.io.Raw, channels: list):
     '''Calculate RMSE for each channel - for the entire time duration'''
     data_channels=data.get_data(picks = channels)
 
-    std_channels = RMSE(data_channels)
+    #std_channels = RMSE(data_channels)
+
+    std_channels = np.std(data_channels, axis=1)
+
 
     return std_channels
 
@@ -117,10 +120,11 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
         for ch_name in channels: 
             data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)[0][0] 
             #[0][0] is because get_data creats array in array in array, it expects several epochs, several channels, but we only need  one.
-            rmse_ch_ep = RMSE(data_ch_epoch)
+
+            #rmse_ch_ep = RMSE(data_ch_epoch)
+            rmse_ch_ep = np.std(data_ch_epoch) #if want to use std instead
             rmse_epoch.append(np.float64(rmse_ch_ep))
 
-            #std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
         dict_ep[ep] = rmse_epoch
 
     return pd.DataFrame(dict_ep, index=channels)
