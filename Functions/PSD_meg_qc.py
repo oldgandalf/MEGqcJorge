@@ -594,7 +594,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         avg_psd=np.mean(psds[m_or_g],axis=0) 
-        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=True, prominence_lvl_pos=50, simple_or_complex='complex')
+        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='simple')
 
         powerline_freqs += powerline_freqs
 
@@ -612,7 +612,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
             else:
                 helper_plotflag=False
 
-            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=True, prominence_lvl_pos=15, simple_or_complex='complex')
+            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, simple_or_complex='simple')
         
         noisy_freqs_local[m_or_g]=noisy_freqs_local_all_ch
         noise_ampl_local[m_or_g]=noise_ampl_local_all_ch

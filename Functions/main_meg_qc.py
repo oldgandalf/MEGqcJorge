@@ -3,7 +3,7 @@ import ancpbids
 import time
 import json
 
-from initial_meg_qc import get_all_config_params, sanity_check, initial_processing, detect_extra_channels, detect_noisy_ecg_eog
+from initial_meg_qc import get_all_config_params, sanity_check, initial_processing
 from RMSE_meq_qc import RMSE_meg_qc
 from PSD_meg_qc import PSD_meg_qc
 from Peaks_manual_meg_qc import PP_manual_meg_qc
@@ -71,7 +71,7 @@ def make_derivative_meg_qc(config_file_name):
         print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[1:2]: 
+    for sid in list_of_subs[0:1]: 
         print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -89,32 +89,19 @@ def make_derivative_meg_qc(config_file_name):
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
             if len(m_or_g_chosen) == 0: 
                 raise ValueError('No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.')
-            
-            picks_ECG,  picks_EOG = detect_extra_channels(raw)
+
+            print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], [], [], []
-            
             simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-
-            df_head_pos, head_pos = [], []
-            head_not_calculated, bad_ecg, bad_eog = False, False, False
-            powerline_freqs = None 
+            df_head_pos, head_pos, head_not_calculated, powerline_freqs = [], [], False, None
             # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
             # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
-            # noisy_ecg_derivs, bad_ecg=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_ECG,  thresh_lvl=1.1, plotflag=True)
-            # noisy_eog_derivs, bad_eog=detect_noisy_ecg_eog(raw_cropped, picked_channels_ecg_or_eog=picks_EOG,  thresh_lvl=1.1, plotflag=True)
-
-            # if bad_ecg is True and picks_ECG is not None: #ecg channel present but noisy - drop it and  try to reconstruct
-            #     no_ecg_str = 'ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.'
-            #     raw.drop_channels(picks_ECG)
-            #     raw_cropped_filtered.drop_channels(picks_ECG)
-            #     raw_cropped_filtered_resampled.drop_channels(picks_ECG)
-            #     raw_cropped.drop_channels(picks_ECG)
-
-            # print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
+            # Make strings with notes for the user to add to html report:
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
  
 
             # print('___MEG QC___: ', 'Starting RMSE...')
@@ -122,10 +109,10 @@ def make_derivative_meg_qc(config_file_name):
             # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('___MEG QC___: ', 'Starting PSD...')
-            start_time = time.time()
-            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
-            print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
+            # print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
             # start_time = time.time()
@@ -137,17 +124,16 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting ECG...')
-            # start_time = time.time()
-            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            # ecg_derivs, simple_metrics_ecg, ecg_events_times, all_ecg_affected_channels = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting ECG...')
+            start_time = time.time()
+            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            ecg_derivs, simple_metrics_ecg, no_ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # if picks_EOG is not None and bad_eog is False:
-            #     print('___MEG QC___: ', 'Starting EOG...')
-            #     start_time = time.time()
-            #     eog_derivs, simple_metrics_eog, eog_events_times, all_eog_affected_channels = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            #     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting EOG...')
+            start_time = time.time()
+            eog_derivs, simple_metrics_eog, no_eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Head movement calculation...')
             # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
@@ -159,8 +145,6 @@ def make_derivative_meg_qc(config_file_name):
             # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
-            # Make strings with notes for the user to add to html report:
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
 
             if active_shielding_used is True: 
                 shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
@@ -177,10 +161,6 @@ def make_derivative_meg_qc(config_file_name):
             if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
-            if picks_EOG is None:
-                no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-            else:
-                no_eog_str = 'Only blinks can be calculated using MNE, not saccades.'
 
             if head_not_calculated is True:
                 no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'

@@ -42,24 +42,22 @@ def make_html_section(derivs_section, section_title, no_ecg_str, no_eog_str, no_
     - Loop over list of derivs belonging to 1 section, keep only figures
     - Put them one after another with description under."""
 
-    all_section_content=''
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
-    if not fig_derivs_section and 'ECG' in section_title:
+    if 'ECG' in section_title:
         all_section_content='''<p>'''+no_ecg_str+'''</p>'''
-    elif not fig_derivs_section and 'EOG' in section_title:
+    elif 'EOG' in section_title:
         all_section_content='''<p>'''+no_eog_str+'''</p>'''
-    elif not fig_derivs_section and 'Head' in section_title:
+    elif 'Head' in section_title:
         all_section_content='''<p>'''+no_head_pos_str+'''</p>'''
     elif 'Muscle' in section_title:
         all_section_content='''<p>'''+muscle_grad_str+'''</p>'''
-        for f in range(0, len(fig_derivs_section)):
-            all_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
-    elif derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
+    elif derivs_section and not fig_derivs_section:
         all_section_content='''<p>This measurement has no figures. Please see csv files.</p>'''
-    elif not derivs_section and not fig_derivs_section and 'EOG' not in section_title and 'ECG' not in section_title:
-        all_section_content='''<p>This measurement was not calculated because...</p>'''
     else:
+        all_section_content='''<p>''''''</p>'''
+
+    if fig_derivs_section:
         for f in range(0, len(fig_derivs_section)):
             all_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
 
