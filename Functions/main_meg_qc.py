@@ -71,7 +71,7 @@ def make_derivative_meg_qc(config_file_name):
         print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[2:3]: 
+    for sid in list_of_subs[1:2]: 
         print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -124,7 +124,7 @@ def make_derivative_meg_qc(config_file_name):
  
             print('___MEG QC___: ', 'Starting PSD...')
             start_time = time.time()
-            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=False)
+            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
             print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
