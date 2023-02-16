@@ -193,47 +193,6 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
 
-
-#%% Final simple metrics: number of noise frequencies + aea ubnder the curve for each of them. How to:
-
-def split_blended_freqs_old(noisy_freq_bands_idx, width_heights):
-
-    band = 0
-    while band < len(noisy_freq_bands_idx):
-
-        # Checking if the last element of every band is contained in the current band
-        last = 0
-        while last < len(noisy_freq_bands_idx):
-
-            if (noisy_freq_bands_idx[last] != noisy_freq_bands_idx[band]) and (noisy_freq_bands_idx[last][-1] in noisy_freq_bands_idx[band]):
-                
-                #if yes - split the biggest band at the split point and also assign the same heights of peaks to both parts.
-
-                split_index = noisy_freq_bands_idx[band].index(noisy_freq_bands_idx[last][-1])
-
-                split_band_left = noisy_freq_bands_idx[band][:split_index+1]
-                split_band_right = noisy_freq_bands_idx[band][split_index+1:]
-
-
-                noisy_freq_bands_idx[last] = split_band_left
-                noisy_freq_bands_idx[band] = split_band_right
-
-                min_width_heights = min(width_heights[last],width_heights[band])
-                width_heights[band] = min_width_heights
-                width_heights[last] = min_width_heights
-
-
-                #set both bands to 0, so next time  the check will be done for all the bands from the beginning, 
-                # concedering new state of noisy_freq_bands_idx:
-                band = 0
-                last = 0
-
-            last += 1
-        band += 1
-
-    return noisy_freq_bands_idx, width_heights
-
-
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list, noisy_freqs_indexes:list):
     
     #check that noisy_bands_indexes dont contain floats and negative numbers:
