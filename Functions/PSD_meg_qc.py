@@ -192,7 +192,6 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     return psd_pie_derivative, dfs_with_name
 
 
-
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list, noisy_freqs_indexes:list):
     
     #check that noisy_bands_indexes dont contain floats and negative numbers:
@@ -205,7 +204,6 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
             if noisy_bands_indexes[i][j]<0:
                 print('ERROR: negative index in noisy_bands_indexes')
 
-    #print('noisy_bands_indexes', noisy_bands_indexes)
     noisy_bands_final_indexes = noisy_bands_indexes.copy()
     split_indexes = []
 
@@ -214,13 +212,6 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
             #if bands overlap - SPLIT them:
             if noisy_bands_final_indexes[i+1][0]<=noisy_bands_final_indexes[i][1]: #if the end of the previous band is after the start of the current band
                 
-                #split way 1: split at the middle between 2 peaks:
-                # overlap_amount=noisy_bands_final[-2][1]-noisy_bands_final[-1][0]
-                # split_point=noisy_bands_final[-1][0]+overlap_amount/2
-                # split_point=round(split_point/freq_res)*freq_res #round the split point to freq_res:
-                # print('split at the middle between 2 peaks', split_point)
-
-                #split way 2: split at the lowest point between the 2 blended peaks - more accurate:
                 split_ind=np.argmin(one_psd[noisy_freqs_indexes[i]:noisy_freqs_indexes[i+1]])
                 split_ind=noisy_freqs_indexes[i]+split_ind
                 #here need to sum them, because argmin above found the index counted from the start of the noisy_freqs_indexes[iter-1] band, not from the start of the freqs array
@@ -234,12 +225,13 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
 
     return noisy_bands_final_indexes, split_indexes
 
-def cut_the_noise_from_psd(noisy_bends_indexes, freqs, one_psd, helper_plots: bool):
+
+def cut_the_noise_from_psd(noisy_bands_indexes, freqs, one_psd, helper_plots, ch_name='', noisy_freqs_indexes=[], unit=''):
 
     #band height will be chosen as average between the height of the limits of this bend.
-    width_heights_split = []
-    for band_indexes in enumerate(noisy_bends_indexes):
-        width_heights_split.append(np.mean([one_psd[band_indexes][0], one_psd[band_indexes][-1]]))
+    peak_heights = []
+    for band_indexes in noisy_bands_indexes:
+        peak_heights.append(np.mean([one_psd[band_indexes[0]], one_psd[band_indexes[-1]]]))
 
     psd_only_signal=one_psd.copy()
     psd_only_peaks=one_psd.copy()
@@ -247,91 +239,76 @@ def cut_the_noise_from_psd(noisy_bends_indexes, freqs, one_psd, helper_plots: bo
     psd_only_peaks_baselined=one_psd.copy()
     psd_only_peaks_baselined[:]=0
     
-    bend_start, bend_end = [], []
-    for fr_n, fr_b in enumerate(noisy_bends_indexes):
-        bend_start.append(freqs[fr_b][0])
-        bend_end.append(freqs[fr_b][-1])
+    for fr_n, fr_b in enumerate(noisy_bands_indexes):
+        #turn fr_b into a range from start to end of it:
+        fr_b=[i for i in range(fr_b[0], fr_b[1]+1)]
         
         psd_only_signal[fr_b]=None #keep only main psd, remove noise bands, just for visual
         psd_only_peaks[fr_b]=one_psd[fr_b].copy() #keep only noise bands, remove psd, again for visual
-        psd_only_peaks_baselined[fr_b]=one_psd[fr_b].copy()-[width_heights_split[fr_n]]*len(psd_only_peaks[fr_b])
+        psd_only_peaks_baselined[fr_b]=one_psd[fr_b].copy()-[peak_heights[fr_n]]*len(psd_only_peaks[fr_b])
         #keep only noise bands and baseline them to 0 (remove the signal which is under the noise line)
 
         # clip the values to 0 if they are negative, they might appear in the beginning of psd curve
         psd_only_peaks_baselined=np.array(psd_only_peaks_baselined) 
         psd_only_peaks_baselined = np.clip(psd_only_peaks_baselined, 0, None) 
 
+    #Plot psd before and after cutting the noise:
+    if helper_plots is True:
+        fig1 = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_indexes, unit)
+        fig1.update_layout(title=ch_name+' Original noncut PSD')
+        fig2 = plot_one_psd(ch_name, freqs, psd_only_peaks, noisy_freqs_indexes, noisy_bands_indexes, unit)
+        fig2.update_layout(title=ch_name+' PSD with noise peaks only')
+        fig3 = plot_one_psd(ch_name, freqs, psd_only_signal, noisy_freqs_indexes, noisy_bands_indexes, unit)
+        fig3.update_layout(title=ch_name+' PSD with signal only')
+        fig4 = plot_one_psd(ch_name, freqs, psd_only_peaks_baselined, noisy_freqs_indexes, noisy_bands_indexes, unit)
+        fig4.update_layout(title=ch_name+' PSD with noise peaks only, baselined to 0')
 
-    return psd_only_peaks_baselined, psd_only_peaks, psd_only_signal, bend_start, bend_end, width_heights_split
+        #put all 4 figures in one figure as subplots:
+        from plotly.subplots import make_subplots
+        fig = make_subplots(rows=2, cols=2, subplot_titles=(ch_name+' Original noncut PSD', ch_name+' PSD with noise peaks only', ch_name+' PSD with signal only', ch_name+' PSD with noise peaks only, baselined to 0'))
+        fig.add_trace(fig1.data[0], row=1, col=1)
+        fig.add_trace(fig1.data[1], row=1, col=1)
+        fig.add_trace(fig2.data[0], row=1, col=2)
+        fig.add_trace(fig2.data[1], row=1, col=2)
+        fig.add_trace(fig3.data[0], row=2, col=1)
+        fig.add_trace(fig3.data[1], row=2, col=1)
+        fig.add_trace(fig4.data[0], row=2, col=2)
+        fig.add_trace(fig4.data[1], row=2, col=2)
+        #add rectagles to every subplot:
+        for i in range(len(noisy_bands_indexes)):
+            fig.add_shape(type="rect", xref="x", yref="y", x0=freqs[noisy_bands_indexes[i][0]], y0=0, x1=freqs[noisy_bands_indexes[i][1]], y1=max(one_psd), line_color="LightSeaGreen", line_width=2, fillcolor="LightSeaGreen", opacity=0.3, layer="below", row=1, col=1)
+            fig.add_shape(type="rect", xref="x", yref="y", x0=freqs[noisy_bands_indexes[i][0]], y0=0, x1=freqs[noisy_bands_indexes[i][1]], y1=max(one_psd), line_color="LightSeaGreen", line_width=2, fillcolor="LightSeaGreen", opacity=0.3, layer="below", row=1, col=2)
+            fig.add_shape(type="rect", xref="x", yref="y", x0=freqs[noisy_bands_indexes[i][0]], y0=0, x1=freqs[noisy_bands_indexes[i][1]], y1=max(one_psd), line_color="LightSeaGreen", line_width=2, fillcolor="LightSeaGreen", opacity=0.3, layer="below", row=2, col=1)
+            fig.add_shape(type="rect", xref="x", yref="y", x0=freqs[noisy_bands_indexes[i][0]], y0=0, x1=freqs[noisy_bands_indexes[i][1]], y1=max(one_psd), line_color="LightSeaGreen", line_width=2, fillcolor="LightSeaGreen", opacity=0.3, layer="below", row=2, col=2)
 
-def make_helper_plots(freqs, avg_psd, peaks, peaks_neg, left_ips, right_ips, split_points, ips_l, ips_r, width_heights, avg_psd_only_signal, avg_psd_only_peaks, avg_psd_only_peaks_baselined):
-    import matplotlib.pyplot as plt
+        fig.update_layout(height=800, width=1300, title_text=ch_name+' PSD before and after cutting the noise')
 
-    fig, axs = plt.subplots(2, 2, figsize=(13, 8))
+        fig.show()
+        #or show each figure separately:
+        # fig1.show()
+        # fig2.show()
+        # fig3.show()
+        # fig4.show()
 
-    axs[0, 0].plot(freqs,avg_psd)
-    axs[0, 0].plot(freqs[peaks], avg_psd[peaks], 'x', label='central noise frequencies')
-    axs[0, 0].plot(freqs[peaks_neg], avg_psd[peaks_neg], '*',label='split points')
-    xmin_f=[round(l) for l in left_ips]
-    xmax_f=[round(r) for r in right_ips]
-    xmin=[freqs[i] for i in xmin_f]
-    xmax=[freqs[i] for i in xmax_f]
-    axs[0, 0].hlines(y=width_heights, xmin=xmin, xmax=xmax, color="C3", label='detected peak bottom')
-    axs[0, 0].set_title('1. PSD Welch with peaks, blended freqs not split yet. \n Shown as detected by peak_widths')
-    axs[0, 0].set_xlim(freqs[0], freqs[-1])
-    axs[0, 0].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
-    axs[0, 0].legend()
-
-    axs[0, 1].plot(freqs,avg_psd_only_signal)
-    axs[0, 1].plot(freqs[peaks], avg_psd_only_signal[peaks], "x", label='central noise frequencies')
-    axs[0, 1].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3", label='detected peak bottom')
-    axs[0, 1].set_title('2. PSD without noise, split blended freqs')
-    axs[0, 1].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5, label='split peaks')
-    axs[0, 1].set_xlim(freqs[0], freqs[-1])
-    axs[0, 1].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
-    axs[0, 1].legend()
-
-    axs[1, 0].plot(freqs,avg_psd_only_peaks)
-    axs[1, 0].plot(freqs[peaks], avg_psd_only_peaks[peaks], "x", label='central noise frequencies')
-    axs[1, 0].hlines(y=width_heights, xmin=ips_l, xmax=ips_r, color="C3",label='detected peak bottom')
-    axs[1, 0].set_title('3. Only noise peaks, split blended freqs')
-    axs[1, 0].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5, label='split peaks')
-    axs[1, 0].set_xlim(freqs[0], freqs[-1])
-    axs[1, 0].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
-    axs[1, 0].legend()
-
-    axs[1, 1].plot(freqs,avg_psd_only_peaks_baselined)
-    axs[1, 1].plot(freqs[peaks], avg_psd_only_peaks_baselined[peaks], "x", label='central noise frequencies')
-    axs[1, 1].hlines(y=[0]*len(freqs[peaks]), xmin=ips_l, xmax=ips_r, color="C3",label='baselined peak bottom')
-    axs[1, 1].set_title('4. Noise peaks brought to basline, split blended freqs')
-    axs[1, 1].vlines(x=freqs[split_points], color="k", ymin=min(avg_psd)*-1, ymax=max(avg_psd)*0.7, linestyle="dashed", linewidth=0.5,label='split peaks')
-    axs[1, 1].set_xlim(freqs[0], freqs[-1])
-    axs[1, 1].set_ylim(min(avg_psd)*-1.05, max(avg_psd)*1.05)
-    axs[1, 1].legend()
-
-    #plt.tight_layout()
-
-    fig.suptitle('PSD: detecting noise peaks, splitting blended freqs, defining area under the curve.')
-
-    return fig
+    return psd_only_peaks_baselined
 
 
-def plot_one_psd(ch_name, freqs, one_psd, peak_indexes, noisy_freq_bands_indexes, unit):
+def plot_one_psd(ch_name, freqs, one_psd, peak_indexes, noisy_freq_bands_indexes, unit, yaxis_log = True):
     '''plot avg_psd with peaks and split points using plotly'''
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=freqs, y=one_psd, name=ch_name+' psd'))
     fig.add_trace(go.Scatter(x=freqs[peak_indexes], y=one_psd[peak_indexes], mode='markers', name='peaks'))
-    fig.update_layout(title=ch_name+' PSD with noise peaks and split edges', xaxis_title='Frequency', yaxis_title='Amplitude ('+unit+')')
     #plot split points as vertical lines and noise bands as red rectangles:
 
     noisy_freq_bands = [[freqs[noisy_freq_bands_indexes[i][0]], freqs[noisy_freq_bands_indexes[i][1]]] for i in range(len(noisy_freq_bands_indexes))]
 
     for fr_b in noisy_freq_bands:
         fig.add_vrect(x0=fr_b[0], x1=fr_b[-1], line_width=1, fillcolor="red", opacity=0.2, layer="below")
-        #fig.add_vline(x=fr_b[0], line_width=0.5, line_dash="dash", line_color="black") #, annotation_text="split point", annotation_position="top right")
-        #fig.add_vline(x=fr_b[-1], line_width=0.5, line_dash="dash", line_color="black") #, annotation_text="split point", annotation_position="top right")
-    fig.update_yaxes(type="log")
+    
+    fig.update_layout(title=ch_name+' PSD with noise peaks and split edges', xaxis_title='Frequency', yaxis_title='Amplitude ('+unit+')')
+    if yaxis_log is True:
+        fig.update_yaxes(type="log")
     
     return fig
 
@@ -457,23 +434,11 @@ def find_number_and_power_of_noise_freqs(ch_name: str, freqs: list, one_psd: lis
         print('simple_or_complex should be either "simple" or "complex"')
         return
 
+    #3*. Cut the noise peaks at the point they start and baseline them to 0.
     if cut_noise_from_psd is True:
-        #3. Fit the curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0.
-        psd_of_noise_peaks = cut_the_noise_from_psd(noisy_bands_indexes_final, freqs, one_psd, helper_plots)
-        # if helper_plots is True: #visual of the split and cut
-        #     fig = make_helper_plots(freqs, one_psd, noisy_freqs_indexes, peaks_neg, bend_start, bend_end, split_points, ips_l, ips_r, width_heights, avg_psd_only_signal, avg_psd_only_peaks, psd_of_noise_peaks)
-        #     fig.show()
-
-        #Plot psd before and after cutting the noise:
-        if helper_plots is True:
-            fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_indexes_final, unit)
-            fig.show()
-            fig2 = plot_one_psd(ch_name, freqs, psd_of_noise_peaks, noisy_freqs_indexes, noisy_bands_indexes_final, unit)
-            fig2.show()
-
-        #print('___MEG QC___: ', 'Total amplitude: ', total_amplitude)
+        psd_noise_final = cut_the_noise_from_psd(noisy_bands_indexes_final, freqs, one_psd, helper_plots, ch_name, noisy_freqs_indexes, unit)
     else:
-        psd_of_noise_peaks = one_psd
+        psd_noise_final = one_psd
 
 
     #4. Calculate area under the curve for each noisy peak: 
@@ -492,7 +457,7 @@ def find_number_and_power_of_noise_freqs(ch_name: str, freqs: list, one_psd: lis
             # correspond to this band.
 
             # Compute the absolute power of the band by approximating the area under the curve:
-            band_ampl = simpson(psd_of_noise_peaks[idx_band], dx=freq_res) #power of chosen band
+            band_ampl = simpson(psd_noise_final[idx_band], dx=freq_res) #power of chosen band
             noise_ampl+= [band_ampl] 
 
             #Calculate how much of the total power of the average signal goes into each of the noise freqs:
@@ -629,7 +594,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         avg_psd=np.mean(psds[m_or_g],axis=0) 
-        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='complex')
+        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_power_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=True, prominence_lvl_pos=50, simple_or_complex='complex')
 
         powerline_freqs += powerline_freqs
 
@@ -647,7 +612,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen, 
             else:
                 helper_plotflag=False
 
-            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, simple_or_complex='complex')
+            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_power_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=True, prominence_lvl_pos=15, simple_or_complex='complex')
         
         noisy_freqs_local[m_or_g]=noisy_freqs_local_all_ch
         noise_ampl_local[m_or_g]=noise_ampl_local_all_ch
