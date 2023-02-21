@@ -45,7 +45,7 @@ def make_derivative_meg_qc(config_file_name):
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-    # schema = dataset.get_schema()
+    schema = dataset.get_schema()
     # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
     # print('___MEG QC___: ', schema)
@@ -62,7 +62,8 @@ def make_derivative_meg_qc(config_file_name):
 
     #return
 
-    # entities = dataset.query_entities()
+    entities = dataset.query_entities()
+    print('___MEG QC___: ', 'entities', entities)
     # list_of_subs = list(entities["sub"])
     list_of_subs = sorted(list(dataset.query_entities()["sub"]))
     print('___MEG QC___: ', 'list_of_subs', list_of_subs)
