@@ -760,7 +760,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
     return simple_metric
 
 #%%
-def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
+def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen: list):
     """Main ECG function
     
     Parameters
@@ -858,7 +858,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list)
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen: list):
     """Main EOG function
     
     Parameters
