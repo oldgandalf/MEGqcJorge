@@ -7,6 +7,7 @@ from scipy.signal import find_peaks
 
 def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  thresh_lvl: float, ecg_or_eog: str, plotflag: bool):
     """Detects noisy ecg or eog channels.
+
     The channel is noisy when:
     1. There are too many peaks in the data (more frequent than possible heartbets or blinks of a healthy human).
     2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period).
@@ -111,11 +112,45 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
 
 
 class Mean_artifact_with_peak:
-    """Contains average ecg epoch for a particular channel,
+    """ 
+    
+    Contains average ecg epoch for a particular channel,
     calculates its main peak (location and magnitude),
-    info if this magnitude is concidered as artifact or not."""
+    info if this magnitude is concidered as artifact or not.
+    
+    Attributes
+    ----------
+    name : str
+        name of the channel
+    mean_artifact_epoch : list
+        list of floats, average ecg epoch for a particular channel
+    peak_loc : int
+        locations of peaks inside the artifact epoch
+    peak_magnitude : float
+        magnitudes of peaks inside the artifact epoch
+    r_wave_shape : bool
+        True if the average epoch has typical wave shape, False otherwise. R wave shape  - for ECG or just a wave shape for EOG.
+    artif_over_threshold : bool
+        True if the main peak is concidered as artifact, False otherwise. True if artifact sas magnitude over the threshold
+    main_peak_loc : int
+        location of the main peak inside the artifact epoch
+    main_peak_magnitude : float
+        magnitude of the main peak inside the artifact epoch
+
+    Methods
+    -------
+    __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
+        Constructor
+    __repr__(self)
+        Returns a string representation of the object
+
+
+
+    """
 
     def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
+        '''Constructor'''
+        
         self.name =  name
         self.mean_artifact_epoch = mean_artifact_epoch
         self.peak_loc = peak_loc
@@ -126,9 +161,34 @@ class Mean_artifact_with_peak:
         self.main_peak_magnitude = main_peak_magnitude
 
     def __repr__(self):
+        '''Returns a string representation of the object'''
         return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
     def find_peaks_and_detect_Rwave(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
+
+        '''Finds peaks in the average artifact epoch and detects if the main peak is R wave shape or not.
+        
+        Parameters
+        ----------
+        max_n_peaks_allowed : int
+            maximum number of peaks allowed in the average artifact epoch
+        thresh_lvl_peakfinder : float
+            threshold for peakfinder function
+            
+        Returns
+        -------
+        peak_loc : list
+            locations of peaks inside the artifact epoch
+        peak_magnitudes : list
+            magnitudes of peaks inside the artifact epoch
+        peak_locs_pos : list
+            locations of positive peaks inside the artifact epoch
+        peak_locs_neg : list
+            locations of negative peaks inside the artifact epoch
+        peak_magnitudes_pos : list
+            magnitudes of positive peaks inside the artifact epoch
+        peak_magnitudes_neg : list
+            magnitudes of negative peaks inside the artifact epoch'''
         
         peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = find_epoch_peaks(ch_data=self.mean_artifact_epoch, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
         
@@ -155,6 +215,24 @@ class Mean_artifact_with_peak:
 
     def plot_epoch_and_peak(self, fig, t, fig_tit, ch_type):
 
+        '''Plots the average artifact epoch and the peak inside it.
+
+        Parameters
+        ----------
+        fig : plotly.graph_objects.Figure
+            figure to plot the epoch and the peak
+        t : list
+            time vector
+        fig_tit: str
+            title of the figure
+        ch_type: str
+            type of the channel ('mag, 'grad')
+
+        Returns
+        -------
+        fig : plotly.graph_objects.Figure
+            figure with the epoch and the peak'''
+
         fig_ch_tit, unit = get_tit_and_unit(ch_type)
 
         fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.mean_artifact_epoch), name=self.name))
@@ -177,7 +255,24 @@ class Mean_artifact_with_peak:
 
     def find_largest_peak_in_timewindow(self, t: np.ndarray, timelimit_min: float, timelimit_max: float):
 
-        '''find the highest peak inside the give time wndow. Time window usually is centered aroud the t0 of the ecg/eog event.'''
+        '''Find the highest peak of the artifact epoch inside the give time wndow. 
+        Time window is centered around the t0 of the ecg/eog event and limited by timelimit_min and timelimit_max.
+        
+        Parameters
+        ----------
+        t : list
+            time vector
+        timelimit_min : float
+            minimum time limit for the peak
+        timelimit_max : float
+            maximum time limit for the peak
+            
+        Returns
+        -------
+        main_peak_magnitude : float
+            magnitude of the main peak
+        main_peak_loc : int
+            location of the main peak'''
 
         if self.peak_loc is None:
             self.main_peak_magnitude=None
@@ -523,18 +618,40 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     Then it compares the peak amplitudes across channels to decide which channels are affected the most.
     The function returns a list of channels that are affected by ECG or EOG events.
 
-    1. Calculate average ECG epoch: over all ecg epochs for each channel - to find contamminated channels 
+    0. For each separate channel get the average ECG epoch. If needed, flip this average epoch to make it's main peak positive.
+        Flip approach: 
+        - define  a window around the ecg/eog event deteceted by mne. This is not the real t0, but  an approximation. 
+            The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
+            So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
+        - take 5 channels with the largest peak in this window - assume these peaks are the actual artifact.
+        - find the average of these 5 peaks - this is the new estimated_t0 (but still not the real t0)
+        - create a new window around this new t0 - in this time window all the artifact wave shapes should be located on all channels.
+        - flip the channels, if they have a peak inside of this new window, but the peak is negative and it is the closest peak to estimated t0. 
+            if the peak is positive - do not flip.
+        - collect all final flipped+unflipped eppochs of these channels 
+        
+    1. Then, for each chennel make a check if the epoch has a typical wave shape. This is the first step to detect affected channels. 
+        If no wave shape - it s automatically a not affected channel. If it has - check further.
+        It could make sense to do this step after the next one, but actually check for wave shape is done together with peak detection in step 0. Hence this order)
 
-    2. Set a threshold which defines a high amplitude of ECG event. All above this threshold counted as potential ECG peak.
-    (Instead of comparing peak amplitudes could also calculate area under the curve. 
-    But peak can be better because data can be so noisy for some channels, that area will be pretty large 
-    even when the peak is not present.)
-    If there are several peaks above the threshold found - find the closest one to t0 and inside the tine window around the t0 is detect as ecg/eog peak.
+    2. Calculate average ECG epoch on the collected epochs from all channels. Check if average has a wave shape. 
+        If no wave shape - no need to check for affected channels further.
+        If it has - check further
 
-    3. Compare: found peaks will be compared across channels to decide which channels are affected the most:
-    - Average the peak magnitude over all channels. Set the norm_lvl. average*norm_lvl is the threshold, above which the channel is considered to be affected by ECG or EOG.
-    - Find all channels, where the artifact magnitude is above this threshold. These channels are considered to be affected by ECG or EOG.
+    3. Set a threshold which defines a high amplitude of ECG event. (All above this threshold counted as potential ECG peak.)
+        Threshold is the magnitude of the peak of the average ECG/EOG epoch multiplued by norm_lvl. 
+        norl_lvl is chosen by user in config file
+    
+    4. Find all peaks above this threshold.
+        Finding approach:
+        - again, set t0 actual as the time point of the peak of an average artifact (over all channels)
+        - again, set a window around t0_actual. this new window is defined by how long the wave of the artifact normally is. 
+            The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
+        - find one main peak of the epoch for each channel which would be inside this window and closest to t0.
+        - if this peaks magnitude is over the threshold - this channels is considered to be affected by ECG or EOG. Otherwise - not affected.
+            (The epoch has to have a wave shape).
 
+    5. Affected and non affected channels will be plotted and added to the dictionary for final report and json file.
 
 
     Parameters
