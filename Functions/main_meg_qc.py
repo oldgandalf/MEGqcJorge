@@ -200,7 +200,7 @@ def make_derivative_meg_qc(config_file_name):
 
             #if there are any derivs calculated in this section:
             for section in (section for section in QC_derivs.values() if section):
-                # loop over section where deriv.content_type is not 'matplotlib' or 'plotly'
+                # loop over section where deriv.content_type is not 'matplotlib' or 'plotly' or 'report'
                 for deriv in (deriv for deriv in section if deriv.content_type != 'matplotlib' and deriv.content_type != 'plotly' and deriv.content_type != 'report'):
                     
                     # d=d+1

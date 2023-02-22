@@ -42,10 +42,10 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
 
 
     xyz_coords=np.array([[x, y, z] for x, y, z in zip(head_pos_transposed[4], head_pos_transposed[5], head_pos_transposed[6])])
-    q1q2q3_coords_quads=np.array([[q1, q2, q3] for q1, q2, q3 in zip(head_pos_transposed[1], head_pos_transposed[2], head_pos_transposed[3])])
+    q1q2q3_coords=np.array([[q1, q2, q3] for q1, q2, q3 in zip(head_pos_transposed[1], head_pos_transposed[2], head_pos_transposed[3])])
 
     #Translate rotations into degrees: (360/2pi)*value 
-    q1q2q3_coords=360/(2*np.pi)*q1q2q3_coords_quads
+    #q1q2q3_coords=360/(2*np.pi)*q1q2q3_coords
 
     # Calculate the maximum movement in 3 directions:
     max_movement_x = (np.max(xyz_coords[:,0])-np.min(xyz_coords[:,0]))
@@ -171,7 +171,7 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
     average_head_pos=average_head_dev_t['trans'][:3, 3]
     original_head_pos=original_head_dev_t['trans'][:3, 3]
 
-    fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quats)"))
+    fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quat)"))
 
     # head_pos ndarray of shape (n_pos, 10): [t, q1, q2, q3, x, y, z, gof, err, v]
     # https://mne.tools/stable/generated/mne.chpi.compute_head_pos.html
@@ -313,7 +313,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
         return head_derivs, {}, no_head_pos_str, None, None
 
     # translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
-    # (we assume they are in radients. But in the plot it says they are in quats! 
+    # (we assume they are in radients. But in the plot it says they are in quat! 
     # see: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation)
 
     head_pos_degrees=head_pos.T.copy()

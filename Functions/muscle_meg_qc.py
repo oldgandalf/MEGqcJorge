@@ -1,12 +1,13 @@
 
 # # Annotate muscle artifacts
 # 
+# Explanation from MNE:
 # Muscle contractions produce high frequency activity that can mask brain signal
 # of interest. Muscle artifacts can be produced when clenching the jaw,
 # swallowing, or twitching a cranial muscle. Muscle artifacts are most
 # noticeable in the range of 110-140 Hz.
 # 
-# This example uses :func:`~mne.preprocessing.annotate_muscle_zscore` to annotate
+# This code uses :func:`~mne.preprocessing.annotate_muscle_zscore` to annotate
 # segments where muscle activity is likely present. This is done by band-pass
 # filtering the data in the 110-140 Hz range. Then, the envelope is taken using
 # the hilbert analytical signal to only consider the absolute amplitude and not
@@ -31,6 +32,22 @@ from universal_plots import QC_derivative, get_tit_and_unit
 
 def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
+    '''Make a simple metric dict for muscle events.
+    
+    Parameters
+    ----------
+    m_or_g_decided : str
+        The channel type used for muscle detection: 'mag' or 'grad'.
+    z_scores_dict : dict
+        The z-score thresholds used for muscle detection.
+        
+    Returns
+    -------
+    simple_metric : dict
+        A simple metric dict for muscle events.
+        
+    '''
+
     simple_metric = {
     'description': 'Muscle artifact events at different z score thresholds.',
     'muscle_calculated_using': m_or_g_decided,
@@ -41,12 +58,37 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
     return simple_metric
 
 
-def MUSCLE_meg_qc(muscle_params: dict, raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
+def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
 
-    # ADD checks:
-    # Do we even wanna try with grads? Output is usually messed up. still do or skip if there are only grads? DONE use grads in case no mags
-    # Do we want to notch filter? Check first on psd if there is powerline peak and at which freq. ADDED
-    # add several z-score options. or make it as input param? DONE 
+    '''Detect muscle artifacts in MEG data. Gives the number of muscle artifacts based on the set z score threshold.
+        Threshold  is set by the user in the config file. Several thresholds can be used on the loop.
+
+        The data has to fisrt be notch filtered at powerline frequencies as suggested by mne.
+
+
+    Parameters
+    ----------
+
+    muscle_params : dict
+        The parameters for muscle artifact detection originally defined in the config file.
+    raw : mne.io.Raw
+        The raw data.
+    powerline_freqs : list
+        The powerline frequencies found in the data by previously running PSD_meg_qc.
+    m_or_g_chosen : list
+        The channel types chosen for the analysis: 'mag' or 'grad'.
+    interactive_matplot : bool
+        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report. 
+        But might just be useful for beter undertanding while maintaining this function.
+
+    Returns
+    -------
+    muscle_derivs : list
+        A list of QC_derivative objects for muscle events containing figures.
+    simple_metric : dict
+        A simple metric dict for muscle events.
+
+    '''
 
 
     if 'mag' in m_or_g_chosen:
