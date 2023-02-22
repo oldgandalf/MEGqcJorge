@@ -1,9 +1,6 @@
-import os
 import mne
 import configparser
-import plotly.graph_objects as go
 import numpy as np
-from universal_plots import QC_derivative
 
 
 def get_all_config_params(config_file_name: str):
@@ -11,9 +8,17 @@ def get_all_config_params(config_file_name: str):
     divided by sections. Parsing approach can be changed here, which 
     will not affect working of other fucntions.
     
-    Return:
-    all_qc_params: dictionary of dictionaries, where each one refers to 
-    a QC pipeline section and contains corresponding parameters.
+
+    Parameters:
+    ----------
+    config_file_name: str
+        The name of the config file.
+
+    Returns:
+    -------
+    all_qc_params: dict
+        A dictionary with all the parameters from the config file.
+
     '''
     
     all_qc_params = {}
@@ -164,18 +169,21 @@ def get_all_config_params(config_file_name: str):
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
-    '''Gives epoched data in 2 separated data frames: mag and grad + as epoch objects.
+    '''Epochs MEG data based on the parameters provided in the config file.
     
-    Args:
-    config
-    data (mne.io.Raw): data in raw format
-    
-    Returns: 
-    n_events (int): number of events(=number of epochs)
-    df_epochs_mag (pd. Dataframe): data frame containing data for all epochs for mag 
-    df_epochs_grad (pd. Dataframe): data frame containing data for all epochs for grad 
-    epochs_mag (mne. Epochs): epochs as mne data structure for magnetometers
-    epochs_grad (mne. Epochs): epochs as mne data structure for gradiometers '''
+    Parameters
+    ----------
+    epoching_params : dict
+        Dictionary with parameters for epoching.
+    data : mne.io.Raw
+        MEG data to be epoch.
+        
+    Returns
+    -------
+    dict_epochs_mg : dict
+        Dictionary with epochs for each channel type: mag, grad.
+
+    '''
 
     event_dur = epoching_params['event_dur']
     epoch_tmin = epoching_params['epoch_tmin']
@@ -212,26 +220,39 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
     '''Here all the initial actions need to work with MEG data are done: 
-    - load fif file and convert into raw,
-    - create folders in BIDS compliant format,
+    - read fif file,
     - crop the data if needed,
     - filter and downsample the data,
     - epoch the data.
 
-    Args:
-    config: config file like settings.ini
-    data_file (str): path to the data file
+    Parameters
+    ----------
+    default_settings : dict
+        Dictionary with default settings for MEG QC.
+    filtering_settings : dict
+        Dictionary with parameters for filtering.
+    epoching_params : dict
+        Dictionary with parameters for epoching.
+    data_file : str
+        Path to the fif file with MEG data.
 
-    Returns: 
-    dict_of_dfs_epoch (dict with 2 pd. Dataframe): 2 data frames containing data for all epochs for mag and grad
-    epochs_mg (dict with 2 mne. Epochs): 2 epoch objects for mag and  grad
-    channels (dict): mag and grad channels names
-    raw_bandpass(mne.raw): data only filtered, cropped (*)
-    raw_bandpass_resamp(mne.raw): data filtered and resampled, cropped (*)
-    raw_cropped(mne.io.Raw): data in raw format, cropped, not filtered, not resampled (*)
-    raw(mne.io.Raw): original data in raw format, not cropped, not filtered, not resampled.
-    (*): if duration was set to None - the data will not be cropped and these outputs 
-    will return what is stated, but in origibal duration.
+    Returns
+    -------
+    dict_epochs_mg : dict
+        Dictionary with epochs for each channel type: mag, grad.
+    channels : dict
+        Dictionary with channel names for each channel type: mag, grad.
+    raw_crop_filtered : mne.io.Raw
+        Filtered and cropped MEG data.
+    raw_crop_filtered_resampled : mne.io.Raw
+        Filtered, cropped and resampled MEG data.
+    raw_cropped : mne.io.Raw
+        Cropped MEG data.
+    raw : mne.io.Raw
+        MEG data.
+    active_shielding_used : bool
+        True if active shielding was used during recording.
+    
     '''
 
     active_shielding_used = False
@@ -276,7 +297,22 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 
 def sanity_check(m_or_g_chosen, channels):
-    '''Check if the channels which the user gave in config file to analize actually present in the data set'''
+    
+    '''Check if the channels which the user gave in config file to analize actually present in the data set.
+    
+    Parameters
+    ----------
+    m_or_g_chosen : list
+        List with channel types to analize: mag, grad. These are theones the user chose.
+    channels : dict
+        Dictionary with channel names for each channel type: mag, grad. These are the ones present in the data set.
+    
+    Returns
+    -------
+    m_or_g_chosen : list
+        List with channel types to analize: mag, grad.
+        
+    '''
 
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
