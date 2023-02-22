@@ -818,25 +818,19 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
         number_of_affected_ch = 0
         percent_of_affected_ch = 0
         affected_chs = None
-        top_10_magnitudes = None
+        #top_10_magnitudes = None
     else:
         number_of_affected_ch = len(all_affected_channels)
         percent_of_affected_ch = round(len(all_affected_channels)/len(channels)*100, 1)
-        affected_chs = {ch.name: ch.main_peak_magnitude for ch in all_affected_channels}
-        # CHECK HERE! MAX MAGNITUDE MIGHT BE NOT THE ONE I NEED. NEED THE ONE WHICH IS IN TIME WINDOW OF INTEREST. 
-        # Create in the class a method that returns the peak magnitude in the time window of interest.
 
-        #get top 10 magnitudes: 
         # sort all_affected_channels by main_peak_magnitude:
         all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: ch.main_peak_magnitude, reverse=True)
-        #make a dictionary of top 10 channels with highest peak magnitude:
-        top_10_magnitudes = {ch_peak.name: max(ch_peak.peak_magnitude) for ch_peak in all_affected_channels_sorted[0:10]}
+        affected_chs = {ch.name: ch.main_peak_magnitude for ch in all_affected_channels_sorted}
 
     metric_global_content = {
         'number_of_affected_ch': number_of_affected_ch,
         'percent_of_affected_ch': percent_of_affected_ch, 
-        'details':  affected_chs,
-        'top_10_affected_chs': top_10_magnitudes}
+        'details':  affected_chs}
 
     return metric_global_content
 
@@ -866,7 +860,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
     metric_global_name = 'all_'+ecg_or_eog+'_affected_channels'
     metric_global_content={'mag': None, 'grad': None}
-    metric_global_description = 'Affected channels are the channels with average (over '+ecg_or_eog+' epochs of this channel)' +ecg_or_eog+ ' artifact above the threshold. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Metrci also provides a list of 10 most strongly affected channels + their artfact peaks magnitdes.'
+    metric_global_description = 'Affected channels are the channels with average (over '+ecg_or_eog+' epochs of this channel) ' +ecg_or_eog+ ' artifact above the threshold. Channels are listed here in order from the highest to lowest artifact amplitude. Non affected channels are not listed. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Metrci also provides a list of 10 most strongly affected channels + their artfact peaks magnitdes.'
 
     for m_or_g in m_or_g_chosen:
         if bad_avg[m_or_g] is False:

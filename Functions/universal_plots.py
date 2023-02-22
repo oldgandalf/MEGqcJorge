@@ -8,12 +8,12 @@ import warnings
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
     if m_or_g=='mag':
-        m_or_g_tit="Magnetometers"
+        m_or_g_tit='Magnetometers'
         if psd is False:
             unit='T'
         elif psd is True:
             unit='T/Hz'
-    elif m_or_g=='grad' and psd is False:
+    elif m_or_g=='grad':
         m_or_g_tit='Gradiometers'
         if psd is False:
             unit='T/m'
