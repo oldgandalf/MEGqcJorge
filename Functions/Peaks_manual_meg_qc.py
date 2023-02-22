@@ -10,23 +10,36 @@ from universal_html_report import simple_metric_basic
 from RMSE_meq_qc import get_big_small_RMSE_PtP_epochs, make_dict_global_rmse_ptp, make_dict_local_rmse_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_rmse_ptp_epochs
 
 
-def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray) -> float:
+def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
 
     ''' Function finds a pair: postive+negative peak and calculates the amplitude between them. 
     If no neighbour is found withing given distance - this peak is skipped. 
     If several neighbours are found - several pairs are created. 
     As the result a mean peak-to-peak distance is calculated over all detected pairs for given chunck of data
     
-    Args:
-    max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
-    sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
-    pos_peak_locs (np.ndarray): output of peak_finder (Python) function - positions of detected Positive peaks
-    neg_peak_locs (np.ndarray): output of peak_finder (Python) function - positions of detected Negative peaks
-    pos_peak_magnitudes (np.ndarray): output of peak_finder (Python) function - magnitudes of detected Positive peaks
-    neg_peak_magnitudes (np.ndarray): output of peak_finder (Python) function - magnitudes of detected Negative peaks
+    Parameters:
+    -----------
+    max_pair_dist_sec : float
+        Maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair
+    sfreq : int
+        Sampling frequency of data. Attention to which data is used! original or resampled.
+    pos_peak_locs : np.ndarray
+        Output of peak_finder function - positions of detected Positive peaks
+    neg_peak_locs : np.ndarray
+        Output of peak_finder function - positions of detected Negative peaks
+    pos_peak_magnitudes : np.ndarray
+        Output of peak_finder function - magnitudes of detected Positive peaks
+    neg_peak_magnitudes : np.ndarray
+        Output of peak_finder function - magnitudes of detected Negative peaks
 
     Returns:
-    (float): mean value over all detected peak pairs for this chunck of data.
+    --------
+    mean_amplitude : float
+        Mean value over all detected peak pairs for this chunck of data.
+    amplitude : np.ndarray
+        Array of all detected peak pairs for this chunck of data.
+
+
     '''
 
     pair_dist=max_pair_dist_sec*sfreq
@@ -65,7 +78,31 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
 
     return np.mean(amplitude), amplitude
 
+
 def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
+
+    ''' Function calculates peak-to-peak amplitude for all channels over whole data (not epoched).
+
+    Parameters:
+    -----------
+    data : mne.io.Raw
+        Raw data
+    channels : list
+        List of channel names to be used for peak-to-peak amplitude calculation
+    sfreq : int
+        Sampling frequency of data. Attention to which data is used! original or resampled.
+    ptp_thresh_lvl : float
+        The level definig how the PtP threshold will be scaled. Higher number will result in more peaks detected.
+        The threshold is calculated as (max - min) / ptp_thresh_lvl
+    max_pair_dist_sec : float
+        Maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair
+
+    Returns:
+    --------
+    peak_ampl_channels : list
+        List of peak-to-peak amplitude values for each channel in the same order as in channels list.
+
+    '''
         
     data_channels=data.get_data(picks = channels)
 
@@ -88,21 +125,26 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
 
 def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
-    ''' --fastest  and cleanest version, no need to use data frames--
+    '''  Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
-    Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
-
-    Args:
-    channels (list of tuples): channel name + its index
-    df_epoch_mg (pd. Dataframe): data frame containing data for all epochs for mag  or grad
-    sfreq: sampling frequency of data. Attention to which data is used! original or resampled.
-    n_events (int): number of events in this peace of data
-    ptp_thresh_lvl (float): defines how high or low need to peak to be to be detected, this can also be changed into a sigle value later
-        used in: max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
-    max_pair_dist_sec (float): maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair 
+    Parameters:
+    -----------
+    channels : list
+        List of channel names to be used for peak-to-peak amplitude calculation
+    epochs_mg : mne.Epochs
+        Epochs data
+    sfreq : int
+        Sampling frequency of data. Attention to which data is used! original or resampled.
+    ptp_thresh_lvl : float  
+        The level definig how the PtP threshold will be scaled. Higher number will result in more peaks detected.
+        The threshold is calculated as (max - min) / ptp_thresh_lvl
+    max_pair_dist_sec : float
+        Maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair
 
     Returns:
-    df_pp_ampl_mg (pd.DataFrame): contains the mean peak-to-peak aplitude for each epoch for each channel
+    --------
+    pd.DataFrame
+        Dataframe containing the mean peak-to-peak aplitude for each epoch for each channel
 
     '''
     dict_ep = {}
@@ -128,7 +170,35 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
 
 
 
-def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, deriv_epoch_ptp, metric_local, m_or_g_chosen):
+def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data: dict, small_ptp_with_value_all_data: dict, channels: dict, deriv_epoch_ptp: dict, metric_local: bool, m_or_g_chosen: list):
+
+    ''' Function creates a simple metric for peak-to-peak amplitude. 
+    Global: The metric is calculated for all data (not epoched) and 
+    Local: for each epoch.
+
+    Parameters:
+    -----------
+    ptp_manual_params : dict
+        Dictionary containing the parameters for the metric
+    big_ptp_with_value_all_data : dict
+        Dict (mag, grad) with channels with peak-to-peak amplitude higher than the threshold + the value of the peak-to-peak amplitude
+    small_ptp_with_value_all_data : dict
+        Dict (mag, grad) with channels with peak-to-peak amplitude lower than the threshold + the value of the peak-to-peak amplitude
+    channels : dict
+        Dict (mag, grad) with all channel names
+    deriv_epoch_ptp : dict
+        Dict (mag, grad) with peak-to-peak amplitude for each epoch for each channel
+    metric_local : bool
+        If True, the local metric was calculated and will be added to the simple metric
+    m_or_g_chosen : list
+        'mag' or 'grad' or both, chosen by user in config file
+
+    Returns:
+    --------
+    simple_metric : dict
+        Dict (mag, grad) with the simple metric for peak-to-peak amplitude
+
+    '''
 
     metric_global_name = 'ptp_manual_all'
     metric_global_description = 'Peak-to-peak deviation of the data over the entire time series (not epoched): ... The ptp_lvl is the peak-to-peak threshold level set by the user. Threshold = ... The channel where data is higher than this threshod is considered as noisy. Same: if the std of some channel is lower than -threshold, this channel is considered as flat. In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
@@ -154,13 +224,31 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     return simple_metric
 
 
-def PP_manual_meg_qc(ptp_manual_params, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
-
+def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     """Main Peak to peak amplitude function.
+
+    Parameters:
+    -----------
+    ptp_manual_params : dict
+        Dictionary containing the parameters for the metric
+    channels : dict
+        Dict (mag, grad) with all channel names
+    dict_epochs_mg : dict
+        Dict (mag, grad) with epochs for each channel. Should be the same for both channels. Used only to check if epochs are present.
+    data : mne.io.Raw
+        Raw data
+    m_or_g_chosen : list
+        'mag' or 'grad' or both, chosen by user in config file.
+
+    Returns:
+    --------
+    derivs_ptp : list
+        List with QC_deriv objects for peak-to-peak amplitude (figures and csv files)
+    simple_metric_ptp_manual : dict
+        Simple metric for peak-to-peak amplitude
     
-    Output:
-    out_with_name_and_format: list of tuples(figure, fig_name, fig_path, format_of_output_content)"""
+    """
 
 
     sfreq = data.info['sfreq']
