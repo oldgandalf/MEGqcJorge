@@ -24,20 +24,30 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
 
     This function is called in Power_of_freq_meg
     
-    Args:
-    freqs (np.ndarray): numpy array of frequencies,
-    psds (np.ndarray): numpy array of power spectrum dencities. Expects array of arrays: channels*psds. !
-        Will not work properly if it is 1 dimentional array give. In this case do: np.array([your_1d_array])
-    f_low (float): minimal frequency of the chosend band, in Hz (For delta it would be: 0.5),
-    f_high (float): maximal frequency of the chosend band, in Hz (For delta it would be: 4).
+    Parameters
+    ----------
+    freqs : np.ndarray
+        numpy array of frequencies.
+    f_low : float
+        minimal frequency of the chosend band, in Hz (For delta it would be: 0.5).
+    f_high : float
+        maximal frequency of the chosend band, in Hz (For delta it would be: 4)
+    psds : np.ndarray
+        numpy array of power spectrum dencities. Expects array of arrays: channels*psds. !
+        Will not work properly if 1 dimentional array given. In this case do: np.array([your_1d_array])
 
-
-    Returns:
-    bandpower_per_ch_list (list): list of powers of each band like: [abs_power_of_delta, abs_power_of_gamma, etc...] - in absolute values
-    power_by_Nfreq_per_ch_list (list): list of powers of bands divided by the  number of frequencies in the band - to compare 
+    Returns
+    -------
+    bandpower_per_ch_list : list
+        List of amplitudes of each band like: [abs_power_of_delta, abs_power_of_gamma, etc...] - in absolute values
+    power_by_Nfreq_per_ch_list : list
+        List of amplitudes of bands divided by the  number of frequencies in the band - to compare
         with RMSE later. Like: [power_of_delta/n_freqs, power_of_gamma/n_freqs, etc...]
-    rel_bandpower_per_ch_list (list): list of power of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative  
-        (percentage) values: what percentage of the total power does this band take.
+    rel_bandpower_per_ch_list : list
+        List of amplitudes of each band like: [rel_power_of_delta, rel_power_of_gamma, etc...] - in relative values:
+        what percentage of the total power does this band take.
+    total_power : float
+        Total power of the signal.
 
     '''
 
@@ -70,7 +80,7 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
         rel_bandpower_per_ch_list.append(band_rel_power)
         power_by_Nfreq_per_ch_list.append(power_compare)
 
-    return(bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, total_power)
+    return bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, total_power
 
 
     
@@ -79,26 +89,34 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool):
 
     '''
-    - Power of frequencies calculation for all mag + grad channels separately, 
-    - Saving power + power/freq value into data frames.
-    - If desired: creating a pie chart of mean power of every band over the entire data (all channels of 1 type together)
-    
-    Args:
-    ch_names (list of tuples): channel names + index as list, 
-    freqs (np.ndarray): numpy array of frequencies for mag  or grad
-    psds (np.ndarray): numpy array of power spectrum dencities for mag or grad
-    mean_power_per_band_needed (bool): need to calculate mean band power in the ENTIRE signal (averaged over all channels) or not.
-        if True, results will also be printed.
-    plotflag (bool): need to plot pie chart of mean_power_per_band_needed or not
+    - Power of frequencies calculation for all channels, 
+    - If desired: creating a pie chart of mean power of every band over the entire data.
 
-    Returns:
-    data frames as csv files saved:
-    absolute power of each frequency band in each channel (mag or grad)
-    relative power of each frequency band in each channel (mag or grad)
-    absolute power of each frequency band in each channel (mag or grad) divided by the number of frequencies in this band
-    + if plotflag is True:
-    fig: plottly piechart figure 
-    fig_path: path where the figure is saved as html file 
+    Parameters
+    ----------
+    ch_names : list
+        List of channel names
+    m_or_g : str
+        'mag' or 'grad' - to choose which channels to calculate power for.
+    freqs : np.ndarray
+        numpy array of frequencies for mag  or grad
+    psds : np.ndarray
+        numpy array of power spectrum dencities for mag or grad
+    mean_power_per_band_needed : bool
+        need to calculate mean band power in the ENTIRE signal (averaged over all channels) or not.
+    plotflag : bool
+        need to plot pie chart of mean_power_per_band_needed or not
+
+    Returns
+    -------
+    psd_pie_derivative : QC_derivative object or empty list
+        If plotflag is True, returns one QC_derivative object, which is a plotly piechart figure.
+        If plotflag is False, returns empty list.
+    
+    
+    dfs_with_name : list
+        List of dataframes with power of each frequency band in each channel
+
     '''
     
     # Calculate the band power:
@@ -318,7 +336,7 @@ def find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots: bool, m
     ''''Complex: bands around the noise frequencies are created based on detected peak_width. 
     This function is trying to detect the actual start and end of peaks. '''
 
-    _, unit = get_tit_and_unit(m_or_g)
+    _, unit = get_tit_and_unit(m_or_g, True)
     # Run peak detection on psd -> get number of noise freqs, define freq bands around them
      
     prominence_pos=(max(one_psd) - min(one_psd)) / prominence_lvl_pos
@@ -327,7 +345,7 @@ def find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots: bool, m
     if noisy_freqs_indexes.size==0:
 
         if helper_plots is True: #visual
-            _, unit = get_tit_and_unit(m_or_g)
+            _, unit = get_tit_and_unit(m_or_g, True)
             fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit)
             fig.show()
 
@@ -370,7 +388,7 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
     if noisy_freqs_indexes.size==0:
 
         if helper_plots is True: #visual
-            _, unit = get_tit_and_unit(m_or_g)
+            _, unit = get_tit_and_unit(m_or_g, True)
             fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit)
             fig.show()
 
@@ -394,7 +412,7 @@ def find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots: bool, m_
     # Split the blended freqs if their bands cross:
     noisy_bands_final_indexes, split_indexes = split_blended_freqs_at_the_lowest_point(noisy_bands_indexes, one_psd, noisy_freqs_indexes)
     if helper_plots is True: #visual of the split
-        _, unit = get_tit_and_unit(m_or_g)
+        _, unit = get_tit_and_unit(m_or_g, True)
         fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_final_indexes, unit)
         fig.show()
 
@@ -420,7 +438,7 @@ def find_number_and_power_of_noise_freqs(ch_name: str, freqs: list, one_psd: lis
     
     """
 
-    m_or_g_tit, unit = get_tit_and_unit(m_or_g)
+    m_or_g_tit, unit = get_tit_and_unit(m_or_g, True)
 
     #Total amplitude of the signal together with noise:
     freq_res = freqs[1] - freqs[0]
@@ -536,7 +554,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
         metric_global_content[m_or_g]=make_dict_global_psd(noisy_freqs_global[m_or_g], noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g])
         metric_local_content[m_or_g]=make_dict_local_psd(noisy_freqs_local[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], channels[m_or_g])
         
-    simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], metric_local_name, metric_local_description, metric_local_content['mag'], metric_local_content['grad'])
+    simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], metric_local_name, metric_local_description, metric_local_content['mag'], metric_local_content['grad'], psd=True)
 
     return simple_metric
 

@@ -6,15 +6,21 @@ import pandas as pd
 import numpy as np
 import warnings
 
-def get_tit_and_unit(m_or_g: str):
+def get_tit_and_unit(m_or_g: str, psd: bool = False):
     if m_or_g=='mag':
         m_or_g_tit="Magnetometers"
-        unit='T/Hz'
-    elif m_or_g=='grad':
+        if psd is False:
+            unit='T'
+        elif psd is True:
+            unit='T/Hz'
+    elif m_or_g=='grad' and psd is False:
         m_or_g_tit='Gradiometers'
-        unit='T/m / Hz'
+        if psd is False:
+            unit='T/m'
+        elif psd is True:
+            unit='T/m / Hz'
     else:
-        m_or_g_tit='?'
+        m_or_g_tit = '?'
         unit='?'
 
     return m_or_g_tit, unit

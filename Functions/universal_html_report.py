@@ -292,11 +292,11 @@ def make_PSD_report(sid: str, list_of_figure_paths: list):
         f.write(html_string)
 
 
-def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name=None, metric_local_description=None, metric_local_content_mag=None, metric_local_content_grad=None, display_only_global=False):
+def simple_metric_basic(metric_global_name, metric_global_description, metric_global_content_mag, metric_global_content_grad, metric_local_name=None, metric_local_description=None, metric_local_content_mag=None, metric_local_content_grad=None, display_only_global=False, psd=False):
     '''Basic structure of simple metric for all measurements'''
     
-    _, unit_mag = get_tit_and_unit('mag')
-    _, unit_grad = get_tit_and_unit('grad')
+    _, unit_mag = get_tit_and_unit('mag', psd=psd)
+    _, unit_grad = get_tit_and_unit('grad', psd=psd)
 
     if display_only_global is False:
        m_local = {metric_local_name: {

@@ -181,7 +181,7 @@ def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: i
 
 #%% All about simple metrc jsons:
 
-def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp: str, noisy_multiplier: float, flat_multiplier: float, percent_noisy_flat_allowed: float):
+def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp: str, noisy_channel_multiplier: float, flat_multiplier: float, percent_noisy_flat_allowed: float):
     
     """Compare the std of this channel for this epoch (df_std) TO the mean STD of this particular channel over all time. (or over all epchs!)
     Use some multiplier to figure out by how much it is noisier."""
@@ -212,7 +212,7 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
         df_epoch_vs_mean.iloc[:,ep] = df_epoch_vs_mean.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] #divide std of this channel for this epoch by mean std of this channel over all epochs
 
-        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] > noisy_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
+        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] > noisy_channel_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
         df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
         
         # Calculate the number of noisy/flat channels in this epoch:
@@ -272,7 +272,7 @@ def make_dict_local_rmse_ptp(rmse_params: dict, noisy_epochs_df: pd.DataFrame, f
 
     metric_local_content={
         'allow_percent_noisy_flat_epochs': rmse_params['allow_percent_noisy_flat_epochs'],
-        'noisy_multiplier': rmse_params['noisy_multiplier'],
+        'noisy_channel_multiplier': rmse_params['noisy_channel_multiplier'],
         'flat_multiplier': rmse_params['flat_multiplier'],
         'total_num_noisy_ep': total_num_noisy_ep, 
         'total_perc_noisy_ep': total_perc_noisy_ep, 
@@ -315,11 +315,11 @@ def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data, sm
 
 """
 
-    metric_global_name = 'RMSE_all'
+    metric_global_name = 'RMSE_all_time_series'
     metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Noisy channel: The channel where std of data is higher than threshod: mean_over_all_stds_channel + (std_of_all_channels*std_lvl). Flat: where std of data is lower than threshld: mean_over_all_stds_channel - (std_of_all_channels*std_lvl). In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
     metric_local_name = 'RMSE_epoch'
     if metric_local==True:
-        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy_flat. this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel inside of epoch: 1)Take std of data of THIS channel in THIS epoch. 2) Take std of the data of THIS channel for ALL epochs and get mean of it. 3) If (1) is higher than (2)*noisy_multiplier - this channel is noisy.  If (1) is lower than (2)*flat_multiplier - this channel is flat.'
+        metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy_flat. this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel inside of epoch: 1)Take std of data of THIS channel in THIS epoch. 2) Take std of the data of THIS channel for ALL epochs and get mean of it. 3) If (1) is higher than (2)*noisy_channel_multiplier - this channel is noisy.  If (1) is lower than (2)*flat_multiplier - this channel is flat.'
     else:
         metric_local_description = 'Not calculated. No epochs found'
 
@@ -384,7 +384,7 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
             #deriv_epoch_rmse[m_or_g] = get_big_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], 'std') 
             #derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
 
-            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_multiplier'], rmse_params['flat_multiplier'], rmse_params['allow_percent_noisy_flat_epochs'])
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_channel_multiplier'], rmse_params['flat_multiplier'], rmse_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
             #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
