@@ -10,7 +10,29 @@ from universal_plots import QC_derivative
 mne.viz.set_browser_backend('matplotlib')
 
 
-def compute_head_pos_std_and_max_rotation_movement(head_pos):
+def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
+
+    '''Compute the standard deviation of the movement of the head over time and the maximum rotation and movement in 3 directions.
+    
+    Parameters
+    ----------
+    head_pos : np.ndarray
+        Head positions as numpy array calculated by MNE. The shape of the array should be (n_timepoints, 10).
+
+    Returns
+    -------
+    std_head_pos : float
+        Standard deviation of the movement of the head over time: X, Y, Z coordinates are calculated using Pythagorean theorem to get 1 float value.
+    std_head_rotations : float
+        Standard deviation of the rotation of the head over time: Q1, Q2, Q3 coordinates are calculated using Pythagorean theorem to get 1 float value.
+    max_movement_xyz : list
+        Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
+    max_rotation_q : list
+        Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
+    df_head_pos : pandas dataframe
+        Head positions as pandas dataframe just for visualization and check.
+
+    '''
 
     #head positions as data frame just for visualization and check:
     df_head_pos = pd.DataFrame(head_pos, columns = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']) #..., goodness of fit, error, velocity
@@ -52,11 +74,28 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos):
     std_head_pos = np.std(distances_xyz)
     std_head_rotations = np.std(distances_q)
 
-    return std_head_pos, std_head_rotations, (max_movement_x, max_movement_y, max_movement_z), (max_rotation_q1, max_rotation_q2, max_rotation_q3), df_head_pos, head_pos
+    return std_head_pos, std_head_rotations, [max_movement_x, max_movement_y, max_movement_z], [max_rotation_q1, max_rotation_q2, max_rotation_q3], df_head_pos
 
 
-def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, max_rotation_q):
-    '''Make simple metric for head positions'''
+def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: list, max_rotation_q: list):
+
+    '''Make simple metric for head positions.
+    
+    Parameters
+    ----------
+    std_head_pos : float
+        Standard deviation of the movement of the head over time.
+    std_head_rotations : float
+        Standard deviation of the rotation of the head over time.
+    max_movement_xyz : list
+        Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
+    max_rotation_q : list
+        Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
+        
+    Returns
+    -------
+    simple_metric : dict
+        Simple metric for head positions.'''
     
     simple_metric_details={
     'movement_amplitude_X': max_movement_xyz[0]*1000,
@@ -78,9 +117,24 @@ def make_simple_metric_head(std_head_pos,std_head_rotations, max_movement_xyz, m
     return simple_metric
 
 
-def make_head_pos_plot(raw, head_pos):
+def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
-    ''' Plot positions and rotations of the head'''
+    ''' Plot positions and rotations of the head.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    head_pos : np.ndarray
+        Head positions and rotations.
+        
+    Returns
+    -------
+    head_derivs : list 
+        List of QC_derivative objects containing figures with head positions and rotations.
+    head_pos_baselined : np.ndarray
+        Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
+    '''
 
     head_derivs = []
 
@@ -148,8 +202,22 @@ def make_head_pos_plot(raw, head_pos):
     return head_derivs, head_pos_baselined
 
 
-def make_head_annots_plot(raw, head_pos):
-    '''Plot raw data with annotated head movement:'''
+def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
+    '''Plot raw data with annotated head movement. Currently not used.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    head_pos : np.ndarray
+        Head positions and rotations.
+        
+    Returns
+    -------
+    head_derivs : list
+        List of QC derivatives with annotated figures.
+        
+    '''
 
     head_derivs = []
 
@@ -162,11 +230,36 @@ def make_head_annots_plot(raw, head_pos):
 
     return head_derivs
 
-def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
+def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_annotations: bool =False):
+
+    '''Main function for head movement QC.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    plot_with_lines : bool
+        If True, plot head movement with lines.
+    plot_annotations : bool
+        If True, plot head movement with annotations.
+        
+    Returns
+    -------
+    head_derivs : list
+        List of QC derivatives with figures.
+    simple_metrics_head : dict
+        Dictionary with simple metrics for head movement.
+    head_not_calculated: bool
+        If True, head movement was not calculated.
+    df_head_pos : pd.DataFrame
+        Dataframe with head positions and rotations.
+    head_pos : np.ndarray
+        Head positions and rotations calculated with mne.chpi.compute_head_pos.
+    '''
 
     # 1. Main part:
     head_derivs = []
-    head_not_calculated=False
+    no_head_pos_str = ''
 
     try: 
         #for Neuromag use (3 steps):
@@ -202,7 +295,8 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
                 chpi_locs = mne.chpi.extract_chpi_locs_kit(raw)
             except:
                 print('___MEG QC___: ', 'Also KIT appriach to compute Head positions failed. Head positions can not be computed')
-                return head_derivs, {}, True, []
+                no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
+                return head_derivs, {}, no_head_pos_str, None, None
 
     # Next steps - for all systems:
     print('___MEG QC___: ', 'Start computing head positions...')
@@ -215,7 +309,8 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     # check if head positions are computed successfully:
     if head_pos.size == 0:
         print('___MEG QC___: ', 'Head positions were not computed successfully.')
-        return head_derivs, {}, True, []
+        no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
+        return head_derivs, {}, no_head_pos_str, None, None
 
     # translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
     # (we assume they are in radients. But in the plot it says they are in quats! 
@@ -241,7 +336,7 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     head_derivs += head_pos_derivs + plot_annot_derivs
 
     # 4. Calculate the standard deviation of the movement of the head over time:
-    std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos, head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
+    std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
 
 
     print('___MEG QC___: ', 'Std of head positions in mm: ', std_head_pos*1000)
@@ -252,6 +347,6 @@ def HEAD_movement_meg_qc(raw, plot_with_lines=True, plot_annotations=False):
     # 5. Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos
+    return head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos
 
 

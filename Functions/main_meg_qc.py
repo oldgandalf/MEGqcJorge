@@ -62,8 +62,8 @@ def make_derivative_meg_qc(config_file_name):
 
     #return
 
-    entities = dataset.query_entities()
-    print('___MEG QC___: ', 'entities', entities)
+    # entities = dataset.query_entities()
+    # print('___MEG QC___: ', 'entities', entities)
     # list_of_subs = list(entities["sub"])
     list_of_subs = sorted(list(dataset.query_entities()["sub"]))
     print('___MEG QC___: ', 'list_of_subs', list_of_subs)
@@ -83,6 +83,9 @@ def make_derivative_meg_qc(config_file_name):
 
         for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
+            # Make strings with notes for the user to add to html report:
+            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
+ 
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
             dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
@@ -101,9 +104,6 @@ def make_derivative_meg_qc(config_file_name):
             # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
-            # Make strings with notes for the user to add to html report:
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
- 
 
             # print('___MEG QC___: ', 'Starting RMSE...')
             # start_time = time.time()
@@ -125,20 +125,20 @@ def make_derivative_meg_qc(config_file_name):
             # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
             # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting ECG...')
-            start_time = time.time()
-            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
-            ecg_derivs, simple_metrics_ecg, no_ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting ECG...')
+            # start_time = time.time()
+            # # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
+            # ecg_derivs, simple_metrics_ecg, no_ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting EOG...')
-            start_time = time.time()
-            eog_derivs, simple_metrics_eog, no_eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting EOG...')
+            # start_time = time.time()
+            # eog_derivs, simple_metrics_eog, no_eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            # print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Head movement calculation...')
-            # head_derivs, simple_metrics_head, head_not_calculated, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Head movement calculation...')
+            head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
             # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
@@ -162,10 +162,6 @@ def make_derivative_meg_qc(config_file_name):
             if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
-
-            if head_not_calculated is True:
-                no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
-                head_pos, df_head_pos = None, None
 
             QC_derivs={
             'Standard deviation of the data': rmse_derivs, 
