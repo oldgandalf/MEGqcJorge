@@ -139,14 +139,14 @@ def get_all_config_params(config_file_name: str):
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
-        'use_abs_of_all_data': ecg_section['use_abs_of_all_data']})
+        'flip_data': bool(ecg_section['flip_data'])})
 
         eog_section = config['EOG']
         all_qc_params['EOG'] = dict({
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),
-        'use_abs_of_all_data': eog_section['use_abs_of_all_data']})
+        'flip_data': bool(eog_section['flip_data'])})
 
         head_section = config['Head_movement']
         all_qc_params['Head'] = dict({})

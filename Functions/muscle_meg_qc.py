@@ -112,12 +112,14 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
     #     detecting muscle artifacts. See `tut-section-line-noise` for an example.
 
     raw.load_data() #need to preloaf data for filtering both in notch filter and in annotate_muscle_zscore
-    if (len(powerline_freqs))>0:
+    if powerline_freqs is None or (len(powerline_freqs))==0:
+        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+    elif (len(powerline_freqs))>0:
         powerline_freqs+=[x*2 for x in powerline_freqs]
         print('___MEG QC___: ', 'Powerline noise found in data. Notch filtering at: ', powerline_freqs, ' Hz')
         raw.notch_filter(powerline_freqs)
     else:
-        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+        print('Something went wrong with powerline frequencies. Notch filtering skipped. Check parameter powerline_freqs')
 
 
     # The threshold is data dependent, check the optimal threshold by plotting

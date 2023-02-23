@@ -111,31 +111,31 @@ def make_derivative_meg_qc(config_file_name):
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], [], [], []
             simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-            df_head_pos, head_pos, powerline_freqs = [], [], None
+            df_head_pos, head_pos, powerline_freqs = [], [], []
             # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
             # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
 
-            print('___MEG QC___: ', 'Starting RMSE...')
-            start_time = time.time()
-            rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting RMSE...')
+            # start_time = time.time()
+            # rmse_derivs, simple_metrics_rmse = RMSE_meg_qc(all_qc_params['RMSE'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            # print('___MEG QC___: ', "Finished RMSE. --- Execution %s seconds ---" % (time.time() - start_time))
  
-            print('___MEG QC___: ', 'Starting PSD...')
-            start_time = time.time()
-            psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
-            print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting PSD...')
+            # start_time = time.time()
+            # psd_derivs, simple_metrics_psd, powerline_freqs = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
+            # print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
-            start_time = time.time()
-            pp_manual_derivs, simple_metrics_pp_manual = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
+            # start_time = time.time()
+            # pp_manual_derivs, simple_metrics_pp_manual = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            # print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
-            start_time = time.time()
-            pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-            print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
+            # start_time = time.time()
+            # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
+            # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('___MEG QC___: ', 'Starting ECG...')
             start_time = time.time()

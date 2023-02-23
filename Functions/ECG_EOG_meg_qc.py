@@ -299,7 +299,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
     Parameters
     ----------
     norm_lvl : float
-        The norm level is the average of the mean artifact amplitude over all channels. The norm level is multiplied by the norm_lvl to get the threshold.
+        The norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold.
     list_mean_ecg_epochs : list
         List of MeanArtifactEpoch objects, each hold the information about mean artifact for one channel.
     mean_ecg_magnitude_peak : float
@@ -360,7 +360,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
     return affected_channels, not_affected_channels, artifact_lvl
 
 
-def plot_affected_channels(ecg_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, use_abs_of_all_data: bool or str = 'flip'):
+def plot_affected_channels(ecg_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, flip_data: bool or str = 'flip'):
 
     '''Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
     
@@ -376,7 +376,7 @@ def plot_affected_channels(ecg_affected_channels: list, artifact_lvl: float, t: 
         Either 'mag' or 'grad'.
     fig_tit: str
         The title of the figure.
-    use_abs_of_all_data : bool
+    flip_data : bool
         If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
         'flip' means that the data will be flipped if the peak of the artifact is negative. 
         This is donr to get the same sign of the artifact for all channels, then to get the mean artifact amplitude over all channels and the threshold for the artifact amplitude onbase of this mean
@@ -398,7 +398,7 @@ def plot_affected_channels(ecg_affected_channels: list, artifact_lvl: float, t: 
 
     fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
 
-    if use_abs_of_all_data == 'False':
+    if flip_data == 'False':
         fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
 
     fig.update_layout(
@@ -609,7 +609,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, use_abs_of_all_data='flip'):
+def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip'):
 
     '''
     Find channels that are affected by ECG or EOG events.
@@ -675,7 +675,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         End time.
     plotflag : bool, optional
         Plot flag. The default is True.
-    use_abs_of_all_data : bool, optional    
+    flip_data : bool, optional    
         Use absolute value of all data. The default is 'flip'.
 
     Returns 
@@ -717,19 +717,14 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
 
     ecg_epoch_per_ch=[]
-    if use_abs_of_all_data == 'True':
-        ecg_epoch_per_ch_only_data=np.abs(avg_ecg_epochs.data)
-        for i, ch_data in enumerate(ecg_epoch_per_ch_only_data):
-            ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data))
-            ecg_epoch_per_ch[i].find_peaks_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
 
-    elif use_abs_of_all_data == 'False':
+    if flip_data is False:
         ecg_epoch_per_ch_only_data=avg_ecg_epochs.data
         for i, ch_data in enumerate(ecg_epoch_per_ch_only_data):
             ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ch_data))
             ecg_epoch_per_ch[i].find_peaks_and_detect_Rwave(max_n_peaks_allowed, thresh_lvl_peakfinder)
 
-    elif use_abs_of_all_data == 'flip':
+    elif flip_data is True:
 
         # New ecg flip approach:
 
@@ -746,7 +741,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
       
     else:
-        print('___MEG QC___: ', 'Wrong set variable: use_abs_of_all_data=', use_abs_of_all_data)
+        print('___MEG QC___: ', 'Wrong set variable: flip_data=', flip_data)
 
 
     # Find affected channels after flipping:
@@ -784,8 +779,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     ecg_affected_channels, ecg_not_affected_channels, artifact_lvl = detect_channels_above_norm(norm_lvl=norm_lvl, list_mean_ecg_epochs=ecg_epoch_per_ch, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog)
 
     if plotflag is True:
-        fig_affected = plot_affected_channels(ecg_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
-        fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', use_abs_of_all_data=use_abs_of_all_data)
+        fig_affected = plot_affected_channels(ecg_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', flip_data=flip_data)
+        fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', flip_data=flip_data)
 
     if avg_ecg_overall_obj.r_wave_shape is False and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
         print('___MEG QC___: ', 'Something went wrong! The overall average ' +ecg_or_eog+ ' is  bad, but all  channels are affected by ' +ecg_or_eog+ ' artifact.')
@@ -923,7 +918,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     tmin=ecg_params['ecg_epoch_tmin']
     tmax=ecg_params['ecg_epoch_tmax']
     norm_lvl=ecg_params['norm_lvl']
-    use_abs_of_all_data=ecg_params['use_abs_of_all_data']
+    flip_data=ecg_params['flip_data']
     
     all_ecg_affected_channels={}
     bad_avg = {}
@@ -950,7 +945,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
         ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
         fig_ecg_sensors.show()
 
-        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        ecg_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, 'plotly')]
         ecg_derivs += [QC_derivative(fig_not_affected, 'ECG_not_affected_channels_'+m_or_g, 'plotly')]
         ecg_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly')]
@@ -1025,7 +1020,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     tmin=eog_params['eog_epoch_tmin']
     tmax=eog_params['eog_epoch_tmax']
     norm_lvl=eog_params['norm_lvl']
-    use_abs_of_all_data=eog_params['use_abs_of_all_data']
+    flip_data=eog_params['flip_data']
 
     all_eog_affected_channels={}
     bad_avg = {}
@@ -1041,7 +1036,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
         fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g)
         eog_derivs += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
 
-        eog_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, use_abs_of_all_data=use_abs_of_all_data)
+        eog_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         eog_derivs += [QC_derivative(fig_affected, 'EOG_affected_channels_'+m_or_g, 'plotly')]
         eog_derivs += [QC_derivative(fig_not_affected, 'EOG_not_affected_channels_'+m_or_g, 'plotly')]
         eog_derivs += [QC_derivative(fig_avg, 'overall_average_EOG_epoch_'+m_or_g, 'plotly')]
