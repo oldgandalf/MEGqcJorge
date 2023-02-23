@@ -8,7 +8,7 @@ import pandas as pd
 import mne
 import plotly.graph_objects as go
 from scipy.integrate import simpson
-from universal_plots import Plot_periodogram, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
+from universal_plots import Plot_psd, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
 from scipy.signal import find_peaks, peak_widths
 from universal_html_report import simple_metric_basic
 
@@ -175,14 +175,6 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         mean_relative=[]
         mean_power_nfreq=[]
 
-        if m_or_g == 'mag':
-            tit='Magnetometers'
-        elif m_or_g == 'grad':
-            tit='Gradiometers'
-        else:
-            TypeError ("Check channel type!")
-
-        print('___MEG QC___: ', tit)
         for d in enumerate(power_dfs):
             print('___MEG QC___: ', '  \n'+measure_title[d[0]])
 
@@ -200,7 +192,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 
         if plotflag is True: 
-            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, tit=tit, bands_names=bands_names)
+            psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
         else:
             psd_pie_derivative = []
 
@@ -691,7 +683,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
         bands_legend.append(main_signal_legend)
 
         Snr=noise_ampl_relative_to_signal+[1-sum(noise_ampl_relative_to_signal)]
-        noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, tit='Signal and Noise. '+m_or_g_tit, bands_names=bands_legend)
+        noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, m_or_g=m_or_g, bands_names=bands_legend, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
         noise_pie_derivative.content.show()
     else:
         noise_pie_derivative = []
@@ -907,7 +899,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
-        psd_derivative=Plot_periodogram(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 
+        psd_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 
         
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 

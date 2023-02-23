@@ -65,6 +65,8 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
     Gives the number of muscle artifacts based on the set z score threshold: artifact time + artifact z score.
     Threshold  is set by the user in the config file. Several thresholds can be used on the loop.
 
+    Notes
+    -----
     The data has to first be notch filtered at powerline frequencies as suggested by mne.
 
 
