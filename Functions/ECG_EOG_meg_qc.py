@@ -94,7 +94,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
 
             fig.update_layout(
                 title={
-                'text': picked+": atypical peaks and breaks",
+                'text': picked+": peaks and breaks. Channel is "+bad_ecg_eog[picked],
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
@@ -105,8 +105,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
                     exponentformat = 'e'))
                 
             fig.show()
-            noisy_ch_derivs += [QC_derivative(fig, 'Noisy_ECG_channel', None, 'plotly')]
-        
+            noisy_ch_derivs += [QC_derivative(fig, 'Noisy_ECG_channel', 'plotly')]
 
     return noisy_ch_derivs, bad_ecg_eog
 

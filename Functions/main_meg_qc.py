@@ -111,7 +111,7 @@ def make_derivative_meg_qc(config_file_name):
             # QC measurements:
             rmse_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], [], [], []
             simple_metrics_psd, simple_metrics_rmse, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-            df_head_pos, head_pos, head_not_calculated, powerline_freqs = [], [], False, None
+            df_head_pos, head_pos, powerline_freqs = [], [], None
             # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
             # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
@@ -139,7 +139,6 @@ def make_derivative_meg_qc(config_file_name):
 
             print('___MEG QC___: ', 'Starting ECG...')
             start_time = time.time()
-            # Add here!!!: calculate still artif if ch is not present. Check the average peak - if it s reasonable take it.
             ecg_derivs, simple_metrics_ecg, no_ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
             print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
@@ -154,7 +153,7 @@ def make_derivative_meg_qc(config_file_name):
 
             print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
             #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, [60], m_or_g_chosen, interactive_matplot=False)
+            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, powerline_freqs, m_or_g_chosen, interactive_matplot=False)
             print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
