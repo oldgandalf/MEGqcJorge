@@ -96,7 +96,7 @@ def make_derivative_meg_qc(config_file_name):
         for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
 
             # Make strings with notes for the user to add to html report:
-            shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
+            shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
  
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
@@ -165,11 +165,11 @@ def make_derivative_meg_qc(config_file_name):
             if 'mag' in m_or_g_chosen:
                 muscle_grad_str = '''<p>Magnetometers were used for muscle artifact detection as a more sensitive type of channel to this type of noise.</p><br></br>'''
             else:
-                channels_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+                m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
                 muscle_grad_str = '''<p>Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.</p><br></br>'''
             
             if 'grad' not in m_or_g_chosen:
-                channels_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+                m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
             if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
                 epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
@@ -197,10 +197,10 @@ def make_derivative_meg_qc(config_file_name):
 
 
             #Make report and add to QC_derivs:
-            report_html_string = make_joined_report(QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
+            report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
             QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
 
-            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, channels_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
+            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
             QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', 'report mne')]
 
             #Collect all simple metrics into a dictionary and add to QC_derivs:
