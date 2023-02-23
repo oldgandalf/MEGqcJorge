@@ -872,7 +872,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
 #%%
 def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen: list):
-    """Main ECG function
+    """Main ECG function. Calculates average ECG artifact and finds affected channels.
     
     Parameters
     ----------
@@ -970,7 +970,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
 #%%
 def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen: list):
-    """Main EOG function
+    """Main EOG function. Calculates average EOG artifact and finds affected channels.
     
     Parameters
     ----------

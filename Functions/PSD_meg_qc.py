@@ -843,7 +843,14 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: list, helperplots: bool):
     
-    """Main psd function.
+    """Main psd function. Calculates:
+    - psd for each channel
+    - average psd over all channels
+    - amplitudes (area under the curve) of delta, theta, alpha, beta, gamma bands for average psd
+    - noise frequencies for average psd + creates a band around them
+    - noise frequencies for each channel + creates a band around them
+    - noise amplitudes (area under the curve) for each noisy frequency band for average psd
+    - noise amplitudes (area under the curve) for each noisy frequency band for each channel.
 
     Freq spectrum peaks we can often see:
     50, 100, 150 - powerline EU

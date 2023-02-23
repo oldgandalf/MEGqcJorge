@@ -226,7 +226,12 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
 
 def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
-    """Main Peak to peak amplitude function.
+    """Main Peak to peak amplitude function. Calculates:
+    - Peak to peak amplitudes (PtP) of data for each channel over all time series.
+    - Channels with big PtP (noisy) and small PtP (flat) over all time series.
+    - PtP of data for each channel  in each epoch.
+    - Epochs with big PtP (noisy) and small PtP (flat).
+
 
     Parameters:
     -----------

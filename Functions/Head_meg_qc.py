@@ -232,7 +232,12 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_annotations: bool =False):
 
-    '''Main function for head movement QC.
+    '''Main function for head movement. Calculates:
+    - head positions (x, y, z) and rotations (q1, q2, q3)
+    - maximum amplitude of positions and rotations
+    - std of positions and rotations over whole time series: 
+        calculate 1 values for positions and 1 values for rotations using Pythagorean theorem - for each time point.
+        calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
     
     Parameters
     ----------

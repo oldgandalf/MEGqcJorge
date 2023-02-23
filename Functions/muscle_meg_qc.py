@@ -60,10 +60,12 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
 def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
 
-    '''Detect muscle artifacts in MEG data. Gives the number of muscle artifacts based on the set z score threshold.
-        Threshold  is set by the user in the config file. Several thresholds can be used on the loop.
+    '''
+    Detect muscle artifacts in MEG data. 
+    Gives the number of muscle artifacts based on the set z score threshold: artifact time + artifact z score.
+    Threshold  is set by the user in the config file. Several thresholds can be used on the loop.
 
-        The data has to fisrt be notch filtered at powerline frequencies as suggested by mne.
+    The data has to first be notch filtered at powerline frequencies as suggested by mne.
 
 
     Parameters
