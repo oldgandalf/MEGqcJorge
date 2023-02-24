@@ -255,6 +255,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     
     '''
 
+    print('___MEG QC___: ', 'Reading data from file:', data_file)
     active_shielding_used = False
     try:
         raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')

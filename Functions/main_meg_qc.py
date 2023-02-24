@@ -57,7 +57,7 @@ def make_derivative_meg_qc(config_file_name):
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-    schema = dataset.get_schema()
+    # schema = dataset.get_schema()
     # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
     # print('___MEG QC___: ', schema)
@@ -93,13 +93,14 @@ def make_derivative_meg_qc(config_file_name):
 
         list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-        for fif_ind,data_file in enumerate([list_of_fifs[0]]): #RUN OVER JUST 1 fif to save time
+        for fif_ind, data_file in enumerate(list_of_fifs[0:1]): #RUN OVER JUST 1 fif to save time
 
             # Make strings with notes for the user to add to html report:
             shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
  
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
+            print('___MEG QC___: ', 'data_file', data_file)
             dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
