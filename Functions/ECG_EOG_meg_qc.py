@@ -505,15 +505,18 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels: list, max
         if peak_locs.size>0:
             peak_loc_closest_to_t0=peak_locs[np.argmin(np.abs(peak_locs-t0_estimated_ind))]
 
-        #if peak_loc_closest_t0 is negative and is located in the estimated time window of the wave - flip the data:
-        if (ch_data[peak_loc_closest_to_t0]<0) & (peak_loc_closest_to_t0>t0_estimated_ind_start) & (peak_loc_closest_to_t0<t0_estimated_ind_end):
-            ecg_epoch_per_ch_only_data[i]=-ch_data
-            peak_magnitudes=-peak_magnitudes
-            #print('___MEG QC___: ', channels[i]+' was flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
+            #if peak_loc_closest_t0 is negative and is located in the estimated time window of the wave - flip the data:
+            if (ch_data[peak_loc_closest_to_t0]<0) & (peak_loc_closest_to_t0>t0_estimated_ind_start) & (peak_loc_closest_to_t0<t0_estimated_ind_end):
+                ecg_epoch_per_ch_only_data[i]=-ch_data
+                peak_magnitudes=-peak_magnitudes
+                #print('___MEG QC___: ', channels[i]+' was flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
+            else:
+                ecg_epoch_per_ch_only_data[i]=ch_data
+                #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
         else:
             ecg_epoch_per_ch_only_data[i]=ch_data
             #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
-
+            
         ecg_epoch_per_ch.append(Mean_artifact_with_peak(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
