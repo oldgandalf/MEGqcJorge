@@ -82,12 +82,12 @@ def get_all_config_params(config_file_name: str):
         'stim_channel': stim_channel})
         all_qc_params['Epoching'] = epoching_params
 
-        rmse_section = config['RMSE']
-        all_qc_params['RMSE'] = dict({
-            'std_lvl':  rmse_section.getint('std_lvl'), 
-            'allow_percent_noisy_flat_epochs': rmse_section.getfloat('allow_percent_noisy_flat_epochs'),
-            'noisy_channel_multiplier': rmse_section.getfloat('noisy_channel_multiplier'),
-            'flat_multiplier': rmse_section.getfloat('flat_multiplier'),})
+        std_section = config['STD']
+        all_qc_params['STD'] = dict({
+            'std_lvl':  std_section.getint('std_lvl'), 
+            'allow_percent_noisy_flat_epochs': std_section.getfloat('allow_percent_noisy_flat_epochs'),
+            'noisy_channel_multiplier': std_section.getfloat('noisy_channel_multiplier'),
+            'flat_multiplier': std_section.getfloat('flat_multiplier'),})
         
 
         psd_section = config['PSD']

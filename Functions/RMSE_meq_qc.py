@@ -46,7 +46,7 @@ def RMSE(data_m_or_g: np.array or list):
 
     return rmse_np
 
-def get_rmse_all_data(data: mne.io.Raw, channels: list):
+def get_std_all_data(data: mne.io.Raw, channels: list):
 
     '''Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
 
@@ -99,7 +99,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
 
     '''
     
-    ## Check if channel data is within std level of PtP/RMSE.
+    ## Check if channel data is within std level of PtP/std.
     std_of_measure_channels=np.std(ptp_or_std_channels)
     mean_of_measure_channels=np.mean(ptp_or_std_channels)
 
@@ -129,7 +129,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
     ''' 
     Calculate std for multiple epochs for a list of channels.
-    Used as internal function in RMSE_meg_epoch
+    Used as internal function in std_meg_epoch
 
     Parameters:
     ----------
@@ -146,23 +146,23 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
     
     dict_ep = {}
 
-    #get 1 epoch, 1 channel and calculate rmse of its data:
+    #get 1 epoch, 1 channel and calculate std of its data:
     for ep in range(0, len(epochs_mg)):
-        rmse_epoch=[]
+        std_epoch=[]
         for ch_name in channels: 
             data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)[0][0] 
             #[0][0] is because get_data creats array in array in array, it expects several epochs, several channels, but we only need  one.
 
-            #rmse_ch_ep = RMSE(data_ch_epoch)
-            rmse_ch_ep = np.std(data_ch_epoch) #if want to use std instead
-            rmse_epoch.append(np.float64(rmse_ch_ep))
+            #std_ch_ep = RMSE(data_ch_epoch)
+            std_ch_ep = np.std(data_ch_epoch) #if want to use std instead
+            std_epoch.append(np.float64(std_ch_ep))
 
-        dict_ep[ep] = rmse_epoch
+        dict_ep[ep] = std_epoch
 
     return pd.DataFrame(dict_ep, index=channels)
 
 
-def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, std_or_ptp: str):
+def get_big_small_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, std_or_ptp: str):
 
     ''' NOT USED ANY MORE
 
@@ -206,7 +206,7 @@ def get_big_small_RMSE_PtP_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: i
 
 #%% All about simple metrc jsons:
 
-def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp: str, noisy_channel_multiplier: float, flat_multiplier: float, percent_noisy_flat_allowed: float):
+def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp: str, noisy_channel_multiplier: float, flat_multiplier: float, percent_noisy_flat_allowed: float):
     
     """
     1. Define if the channels data inside the epoch is noisy or flat:
@@ -304,19 +304,19 @@ def get_noisy_flat_rmse_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_pt
 
 
 
-def make_dict_global_rmse_ptp(rmse_ptp_params: dict, big_rmse_with_value_all_data: list, small_rmse_with_value_all_data: list, channels: list[str], std_or_ptp: str):
+def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], std_or_ptp: str):
 
-    '''Make a dictionary with global metric content for rmse or ptp metric.
+    '''Make a dictionary with global metric content for std or ptp metric.
     Global means that it is calculated over entire data series, not over epochs.
     
     Parameters:
     ----------
-    rmse_ptp_params : dict
-        dictionary with parameters for rmse or ptp metric
-    big_rmse_with_value_all_data : list
-        list of dictionaries (channel_name: value) for channels with big rmse or ptp
-    small_rmse_with_value_all_data : list
-        list of dictionaries (channel_name: value) for channels with small rmse or ptp
+    std_ptp_params : dict
+        dictionary with parameters for std or ptp metric
+    big_std_with_value_all_data : list
+        list of dictionaries (channel_name: value) for channels with big std or ptp
+    small_std_with_value_all_data : list
+        list of dictionaries (channel_name: value) for channels with small std or ptp
     channels : list
         list of channel names
     std_or_ptp : str
@@ -325,33 +325,33 @@ def make_dict_global_rmse_ptp(rmse_ptp_params: dict, big_rmse_with_value_all_dat
     Returns:
     -------
     metric_global_content : dict
-        dictionary with global metric content for rmse or ptp metric
+        dictionary with global metric content for std or ptp metric
     '''
 
     global_details = {
-        'noisy_ch': big_rmse_with_value_all_data,
-        'flat_ch': small_rmse_with_value_all_data}
+        'noisy_ch': big_std_with_value_all_data,
+        'flat_ch': small_std_with_value_all_data}
 
     metric_global_content = {
-        'number_of_noisy_ch': len(big_rmse_with_value_all_data),
-        'percent_of_noisy_ch': round(len(big_rmse_with_value_all_data)/len(channels)*100, 1), 
-        'number_of_flat_ch': len(small_rmse_with_value_all_data),
-        'percent_of_flat_ch': round(len(small_rmse_with_value_all_data)/len(channels)*100, 1), 
-        std_or_ptp+'_lvl': rmse_ptp_params['std_lvl'],
+        'number_of_noisy_ch': len(big_std_with_value_all_data),
+        'percent_of_noisy_ch': round(len(big_std_with_value_all_data)/len(channels)*100, 1), 
+        'number_of_flat_ch': len(small_std_with_value_all_data),
+        'percent_of_flat_ch': round(len(small_std_with_value_all_data)/len(channels)*100, 1), 
+        std_or_ptp+'_lvl': std_ptp_params['std_lvl'],
         'details': global_details}
 
     return metric_global_content
 
 
-def make_dict_local_rmse_ptp(rmse_ptp_params: dict, noisy_epochs_df: pd.DataFrame, flat_epochs_df: pd.DataFrame):
+def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame, flat_epochs_df: pd.DataFrame):
 
-    '''Make a dictionary with local metric content for rmse or ptp metric.
+    '''Make a dictionary with local metric content for std or ptp metric.
     Local means that it is calculated over epochs.
 
     Parameters:
     ----------
-    rmse_ptp_params : dict
-        dictionary with parameters for rmse or ptp metric, originally from config file
+    std_ptp_params : dict
+        dictionary with parameters for std or ptp metric, originally from config file
     noisy_epochs_df : pd.DataFrame
         dataframe with True/False values for noisy channels in each epoch
     flat_epochs_df : pd.DataFrame
@@ -360,7 +360,7 @@ def make_dict_local_rmse_ptp(rmse_ptp_params: dict, noisy_epochs_df: pd.DataFram
     Returns:
     -------
     metric_local_content : dict
-        dictionary with local metric content for rmse or ptp metric
+        dictionary with local metric content for std or ptp metric
 
     '''
         
@@ -378,9 +378,9 @@ def make_dict_local_rmse_ptp(rmse_ptp_params: dict, noisy_epochs_df: pd.DataFram
     total_perc_flat_ep=round(total_num_flat_ep/len(epochs)*100)
 
     metric_local_content={
-        'allow_percent_noisy_flat_epochs': rmse_ptp_params['allow_percent_noisy_flat_epochs'],
-        'noisy_channel_multiplier': rmse_ptp_params['noisy_channel_multiplier'],
-        'flat_multiplier': rmse_ptp_params['flat_multiplier'],
+        'allow_percent_noisy_flat_epochs': std_ptp_params['allow_percent_noisy_flat_epochs'],
+        'noisy_channel_multiplier': std_ptp_params['noisy_channel_multiplier'],
+        'flat_multiplier': std_ptp_params['flat_multiplier'],
         'total_num_noisy_ep': total_num_noisy_ep, 
         'total_perc_noisy_ep': total_perc_noisy_ep, 
         'total_num_flat_ep': total_num_flat_ep,
@@ -391,21 +391,21 @@ def make_dict_local_rmse_ptp(rmse_ptp_params: dict, noisy_epochs_df: pd.DataFram
 
 
 
-def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data: list, small_rmse_with_value_all_data: list, channels: list[str], deriv_epoch_rmse: dict, metric_local_present: bool, m_or_g_chosen: list):
+def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: list):
 
-    """Make simple metric for RMSE.
+    """Make simple metric for STD.
 
     Parameters
     ----------
-    rmse_params : dict
-        dictionary with parameters for rmse metric, originally from config file
-    big_rmse_with_value_all_data : list
-        list of dictionaries (channel_name: value) for channels with big rmse
-    small_rmse_with_value_all_data : list
-        list of dictionaries (channel_name: value) for channels with small rmse
+    std_params : dict
+        dictionary with parameters for std metric, originally from config file
+    big_std_with_value_all_data : list
+        list of dictionaries (channel_name: value) for channels with big std
+    small_std_with_value_all_data : list
+        list of dictionaries (channel_name: value) for channels with small std
     channels : list
         list of channel names
-    deriv_epoch_rmse : dict
+    deriv_epoch_std : dict
         dictionary with QC_derivative objects containing data frames. 
         Used only data frame 1 and 2. 
         1: contains True/False values for noisy channels in each epoch. 
@@ -418,13 +418,13 @@ def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data: li
     Returns
     -------
     simple_metric : dict
-        dictionary with simple metric for rmse/ptp
+        dictionary with simple metric for std/ptp
 
 """
 
-    metric_global_name = 'RMSE_all_time_series'
+    metric_global_name = 'STD_all_time_series'
     metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Noisy channel: The channel where std of data is higher than threshod: mean_over_all_stds_channel + (std_of_all_channels*std_lvl). Flat: where std of data is lower than threshld: mean_over_all_stds_channel - (std_of_all_channels*std_lvl). In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
-    metric_local_name = 'RMSE_epoch'
+    metric_local_name = 'STD_epoch'
     if metric_local_present==True:
         metric_local_description = 'Standard deviation of the data over stimulus-based epochs. The epoch is counted as noisy (or flat) if the percentage of noisy (or flat) channels in this epoch is over allow_percent_noisy_flat. this percent is set by user, default=70%. Hense, if no epochs have over 70% of noisy channels - total number of noisy epochs will be 0. Definition of a noisy channel inside of epoch: 1)Take std of data of THIS channel in THIS epoch. 2) Take std of the data of THIS channel for ALL epochs and get mean of it. 3) If (1) is higher than (2)*noisy_channel_multiplier - this channel is noisy.  If (1) is lower than (2)*flat_multiplier - this channel is flat.'
     else:
@@ -434,11 +434,11 @@ def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data: li
     metric_local_content={'mag': None, 'grad': None}
     for m_or_g in m_or_g_chosen:
 
-        metric_global_content[m_or_g]=make_dict_global_rmse_ptp(rmse_params, big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g], channels[m_or_g], 'std')
+        metric_global_content[m_or_g]=make_dict_global_std_ptp(std_params, big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g], channels[m_or_g], 'std')
         
         if metric_local_present is True:
-            metric_local_content[m_or_g]=make_dict_local_rmse_ptp(rmse_params, deriv_epoch_rmse[m_or_g][1].content, deriv_epoch_rmse[m_or_g][2].content)
-            #deriv_epoch_rmse[m_or_g][1].content is df with big rmse(noisy), df_epoch_rmse[m_or_g][2].content is df with small rmse(flat)
+            metric_local_content[m_or_g]=make_dict_local_std_ptp(std_params, deriv_epoch_std[m_or_g][1].content, deriv_epoch_std[m_or_g][2].content)
+            #deriv_epoch_std[m_or_g][1].content is df with big std(noisy), df_epoch_std[m_or_g][2].content is df with small std(flat)
         else:
             metric_local_content[m_or_g]=None
     
@@ -447,10 +447,10 @@ def make_simple_metric_rmse(rmse_params:  dict, big_rmse_with_value_all_data: li
     return simple_metric
 
 #%%
-def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def STD_meg_qc(std_params:  dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     '''
-    Main RMSE function. Calculates:
+    Main STD function. Calculates:
     - Std of data for each channel over all time series.
     - Channels with big std (noisy) and small std (flat) over all time series.
     - Std of data for each channel  in each epoch.
@@ -458,8 +458,8 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
 
     Parameters
     ----------
-    rmse_params : dict
-        dictionary with parameters for rmse metric, originally from config file
+    std_params : dict
+        dictionary with parameters for std metric, originally from config file
     channels : dict
         dictionary with channel names for each channel type: channels['mag'] or channels['grad']
     dict_epochs_mg : dict
@@ -471,30 +471,30 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
 
     Returns
     -------
-    derivs_rmse : list
-        list of QC_derivative objects containing data frames and figures for rmse metric.
+    derivs_std : list
+        list of QC_derivative objects containing data frames and figures for std metric.
     simple_metric : dict
-        dictionary with simple metric for rmse/ptp.
+        dictionary with simple metric for std/ptp.
     
     '''
 
 
-    big_rmse_with_value_all_data = {}
-    small_rmse_with_value_all_data = {}
-    rmse = {}
-    derivs_rmse = []
+    big_std_with_value_all_data = {}
+    small_std_with_value_all_data = {}
+    std_all_data = {}
+    derivs_std = []
     fig_std_epoch = []
     fig_std_epoch2 = []
     derivs_list = []
-    deriv_epoch_rmse={}
+    deriv_epoch_std={}
     noisy_flat_epochs_derivs={}
 
     for m_or_g in m_or_g_chosen:
 
-        rmse[m_or_g] = get_rmse_all_data(data, channels[m_or_g])
-        big_rmse_with_value_all_data[m_or_g], small_rmse_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(rmse[m_or_g], channels[m_or_g], rmse_params['std_lvl'])
+        std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
+        big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
       
-        derivs_rmse += [boxplot_std_hovering_plotly(std_data=rmse[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
+        derivs_std += [boxplot_std_hovering_plotly(std_data=std_all_data[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
 
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
@@ -504,19 +504,19 @@ def RMSE_meg_qc(rmse_params:  dict, channels: dict, dict_epochs_mg: dict, data: 
             fig_std_epoch += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels')]
             fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs')]
 
-            #deriv_epoch_rmse[m_or_g] = get_big_small_RMSE_PtP_epochs(df_std, m_or_g, rmse_params['std_lvl'], 'std') 
-            #derivs_list += deriv_epoch_rmse[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_rmse list at the next line.
+            #deriv_epoch_std[m_or_g] = get_big_small_std_ptp_epochs(df_std, m_or_g, std_params['std_lvl'], 'std') 
+            #derivs_list += deriv_epoch_std[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_std list at the next line.
 
-            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_rmse_ptp_epochs(df_std, m_or_g, 'std', rmse_params['noisy_channel_multiplier'], rmse_params['flat_multiplier'], rmse_params['allow_percent_noisy_flat_epochs'])
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_std, m_or_g, 'std', std_params['noisy_channel_multiplier'], std_params['flat_multiplier'], std_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            #df_epoch_rmse[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
+            #df_epoch_std[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
     else:
         metric_local=False
-        print('___MEG QC___: ', 'RMSE per epoch can not be calculated because no events are present. Check stimulus channel.')
+        print('___MEG QC___: ', 'STD per epoch can not be calculated because no events are present. Check stimulus channel.')
 
-    simple_metric_rmse = make_simple_metric_rmse(rmse_params, big_rmse_with_value_all_data, small_rmse_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
+    simple_metric_std = make_simple_metric_std(std_params, big_std_with_value_all_data, small_std_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
     
-    derivs_rmse += fig_std_epoch + fig_std_epoch2 + derivs_list 
-    return derivs_rmse, simple_metric_rmse
+    derivs_std += fig_std_epoch + fig_std_epoch2 + derivs_list 
+    return derivs_std, simple_metric_std
