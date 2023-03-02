@@ -13,7 +13,7 @@ from scipy.signal import find_peaks, peak_widths
 from universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
-# COULDNT SPLIT  when filtered data
+# COULDNT SPLIT  when filtered data - check with new psd version
 # In[42]:
 
 def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarray):
@@ -837,8 +837,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     
     """Main psd function. Calculates:
     - psd for each channel
+    - amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
     - average psd over all channels
-    - amplitudes (area under the curve) of delta, theta, alpha, beta, gamma bands for average psd
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
     - noise amplitudes (area under the curve) for each noisy frequency band for average psd
