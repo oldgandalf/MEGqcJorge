@@ -155,10 +155,13 @@ def get_all_config_params(config_file_name: str):
         list_thresholds = muscle_section['threshold_muscle']
         #separate values in list_thresholds based on coma, remove spaces and convert them to floats:
         list_thresholds = [float(i) for i in list_thresholds.split(',')]
+        muscle_freqs = [float(i) for i in muscle_section['muscle_freqs'].split(',')]
 
         all_qc_params['Muscle'] = dict({
         'threshold_muscle': list_thresholds,
-        'min_distance_between_different_muscle_events': muscle_section.getfloat('min_distance_between_different_muscle_events')})
+        'min_distance_between_different_muscle_events': muscle_section.getfloat('min_distance_between_different_muscle_events'),
+        'muscle_freqs': muscle_freqs,
+        'min_length_good': muscle_section.getfloat('min_length_good')})
 
     except:
         print('___MEG QC___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n -freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
