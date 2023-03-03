@@ -148,14 +148,14 @@ def make_derivative_meg_qc(config_file_name):
             # eog_derivs, simple_metrics_eog, no_eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
             # print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting Head movement calculation...')
-            head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting Head movement calculation...')
+            # head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
-            # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-            # muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, powerline_freqs, m_or_g_chosen, interactive_matplot=False)
-            # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
+            #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, powerline_freqs, m_or_g_chosen, interactive_matplot=False)
+            print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
 
 
