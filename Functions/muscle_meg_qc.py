@@ -157,7 +157,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     # - detect other noisy freqs in range of muscle artifacts:
     extra_noise_freqs = [x for x in noisy_freqs if muscle_freqs[0]<x<muscle_freqs[1]]
 
-    noisy_freqs_all = powerline_freqs+extra_noise_freqs
+    noisy_freqs_all = list(set(powerline_freqs+extra_noise_freqs)) #leave only unique values
 
     # - notch filter the data:
     raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
