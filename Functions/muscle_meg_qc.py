@@ -115,7 +115,64 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
 
     return fig_derivs
 
-def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m_or_g_chosen:list, interactive_matplot:bool = False):
+
+def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: list = [110, 140]):
+
+    '''Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
+    MNE advices to filter power line noise.
+    Filtering the rest was our idea.
+    Noisy frequencies for filtering come from PSD artifact detection function. If any noise peaks were found there for mags or grads 
+    - they will all be passed here and checked if they are in range of muscle artifacts.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data.
+    noisy_freqs_global : dict
+        The noisy frequencies found in PSD artifact detection function.
+    muscle_freqs : list
+        The frequencies of muscle artifacts, usually 110 and 140 Hz.
+        
+    Returns
+    -------
+    raw : mne.io.Raw
+        The raw data with filtered noise or not filtered if no noise was found.'''
+
+    #print(noisy_freqs_global, 'noisy_freqs_global')
+
+    #Find out if the data contains powerline noise freqs or other noisy in range of muscle artifacts - notch filter them before muscle artifact detection:
+
+    # - collect all values in moisy_freqs_global into one list:
+    noisy_freqs=[]
+    for key in noisy_freqs_global.keys():
+        noisy_freqs.extend(np.round(noisy_freqs_global[key], 1))
+    
+    #print(noisy_freqs, 'noisy_freqs')
+    
+    # - detect power line freqs and their harmonics
+    powerline=[50, 60]
+    powerline_freqs = [x for x in powerline if x in np.round(noisy_freqs)]
+    powerline_freqs+=[x*2 for x in powerline_freqs]+[x*3 for x in powerline_freqs]
+
+    # - detect other noisy freqs in range of muscle artifacts:
+    extra_noise_freqs = [x for x in noisy_freqs if muscle_freqs[0]<x<muscle_freqs[1]]
+
+    noisy_freqs_all = powerline_freqs+extra_noise_freqs
+
+    # - notch filter the data:
+    raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
+    if noisy_freqs_all==[]:
+        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+    elif (len(noisy_freqs_all))>0:
+        print('___MEG QC___: ', 'Powerline and|or other noise in range of muscle frequencies was found in data. Notch filtering at: ', noisy_freqs_all, ' Hz')
+        raw.notch_filter(noisy_freqs_all)
+    else:
+        print('Something went wrong with powerline frequencies. Notch filtering skipped. Check parameter noisy_freqs_all')
+
+    return raw
+
+
+def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False):
 
     '''
     Detect muscle artifacts in MEG data. 
@@ -134,7 +191,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
         The parameters for muscle artifact detection originally defined in the config file.
     raw : mne.io.Raw
         The raw data.
-    powerline_freqs : list
+    noisy_freqs_global : list
         The powerline frequencies found in the data by previously running PSD_meg_qc.
     m_or_g_chosen : list
         The channel types chosen for the analysis: 'mag' or 'grad'.
@@ -151,6 +208,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
 
     '''
 
+    muscle_freqs = muscle_params['muscle_freqs']
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
@@ -164,23 +222,10 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
 
     muscle_derivs=[]
 
-    # Notch filter the data:
-    # If line noise is present, you should perform notch-filtering *before*
-    #     detecting muscle artifacts. See `tut-section-line-noise` for an example.
-
-    raw.load_data() #need to preloaf data for filtering both in notch filter and in annotate_muscle_zscore
-    if powerline_freqs is None or (len(powerline_freqs))==0:
-        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
-    elif (len(powerline_freqs))>0:
-        powerline_freqs+=[x*2 for x in powerline_freqs]+[x*3 for x in powerline_freqs]
-        print('___MEG QC___: ', 'Powerline noise found in data. Notch filtering at: ', powerline_freqs, ' Hz')
-        raw.notch_filter(powerline_freqs)
-    else:
-        print('Something went wrong with powerline frequencies. Notch filtering skipped. Check parameter powerline_freqs')
+    # Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
+    raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
 
 
-    # The threshold is data dependent, check the optimal threshold by plotting
-    # ``scores_muscle``.
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
@@ -193,7 +238,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
 
             annot_muscle, scores_muscle = annotate_muscle_zscore(
             raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
-            filter_freq=muscle_params['muscle_freqs'])
+            filter_freq=muscle_freqs)
 
             # Plot muscle z-scores across recording
             peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
@@ -203,7 +248,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, powerline_freqs: list, m
 
             muscle_derivs += plot_muscle(m_or_g, raw, scores_muscle, threshold_muscle, muscle_times, high_scores_muscle, interactive_matplot, annot_muscle)
 
-            # collect all detailf for simple metric:
+            # collect all details for simple metric:
             z_score_details['muscle_event_times'] = muscle_times.tolist()
             z_score_details['muscle_event_zscore'] = high_scores_muscle.tolist()
             z_scores_dict[threshold_muscle] = {

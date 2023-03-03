@@ -229,9 +229,9 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
             if noisy_bands_indexes[i][j] % 1 == 0: #if the number can be divided by 1 without remainder - it is integer. works for both int and float
                 noisy_bands_indexes[i][j] = int(noisy_bands_indexes[i][j])
             else:
-                print('ERROR: float index in noisy_bands_indexes')
+                print('ERROR: float index in noisy_bands_indexes', noisy_bands_indexes[i][j])
             if noisy_bands_indexes[i][j]<0:
-                print('ERROR: negative index in noisy_bands_indexes')
+                print('ERROR: negative index in noisy_bands_indexes', noisy_bands_indexes[i][j])
 
     noisy_bands_final_indexes = noisy_bands_indexes.copy()
     split_indexes = []
@@ -547,7 +547,9 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     freq_res = freqs[1] - freqs[0]
     noisy_bands_indexes=[]
     for i, _ in enumerate(noisy_freqs_indexes):
-        noisy_bands_indexes.append([noisy_freqs_indexes[i] - band_length/freq_res, noisy_freqs_indexes[i] + band_length/freq_res])
+        noisy_bands_indexes.append([round(noisy_freqs_indexes[i] - band_length/freq_res), round(noisy_freqs_indexes[i] + band_length/freq_res)])
+        #need to round the indexes. because freq_res has sometimes many digits after coma, like 0.506686867543 instead of 0.5, so the indexes might be floats.
+
 
     # It might happen that when the band was created around the noise frequency, it is outside of the freqs range.
     # For example noisy freq is 1Hz, band is -2..+2Hz, freq rage was 0.5...100Hz. 
@@ -582,7 +584,6 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
         If 3* was done: area is limited to where noise band crosses the fitted curve. - count from there.
         If not (default): area is limited to the whole area under the noise band, including the psd of the signal.
     5. Calculate what part of the whole psd is the noise (noise amplitude) and what part is the signal (signal amplitude) + plot as pie chart
-    6*. Detect powerline noise if present. Used later in Muscle artifact detection. 
 
     Parameters
     ----------
@@ -610,8 +611,6 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     -------
     noise_pie_derivative : list
         list with QC_derivative object containing the pie chart with the noise amplitude and signal amplitude
-    powerline_freqs : list
-        list of powerline frequencies detected in the psd
     noise_ampl : list
         list of noise amplitudes for each noisy frequency band
     noise_ampl_relative_to_signal : list
@@ -688,11 +687,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     else:
         noise_pie_derivative = []
 
-    #find out if the data contains powerline noise freqs - later to notch filter them before muscle artifact detection:
-    powerline=[50, 60]
-    powerline_freqs = [x for x in powerline if x in np.round(noisy_freqs)]
-
-    return noise_pie_derivative, powerline_freqs, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
+    return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
 
 def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
@@ -873,8 +868,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         list with the psd derivatives as QC_derivative objects (figures)
     simple_metric : dict
         dictionary with the psd simple metrics
-    powerline_freqs : list
-        list with powerline frequencies detected in the data. Used later in Musckle artifact detection.
+    noisy_freqs_global : dict
+        dictionary with noisy frequencies for average psd
 
     """
     
@@ -888,8 +883,6 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     noise_ampl_local={'mag':[], 'grad':[]}
     noise_ampl_relative_to_all_signal_local={'mag':[], 'grad':[]}
     noisy_freqs_local={'mag':[], 'grad':[]}
-
-    powerline_freqs = []
 
     method = 'welch'
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
@@ -905,9 +898,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         avg_psd=np.mean(psds[m_or_g],axis=0) 
-        noise_pie_derivative, powerline_freqs, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_ampl_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='simple')
-
-        powerline_freqs += powerline_freqs
+        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_ampl_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='simple')
 
         derivs_psd += [psd_derivative] + [fig_power_with_name] + dfs_with_name +[noise_pie_derivative] 
 
@@ -923,7 +914,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
             else:
                 helper_plotflag=False
 
-            _, _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, simple_or_complex='simple')
+            _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, simple_or_complex='simple')
         
         noisy_freqs_local[m_or_g]=noisy_freqs_local_all_ch
         noise_ampl_local[m_or_g]=noise_ampl_local_all_ch
@@ -935,6 +926,4 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     # Make a simple metric for SNR:
     simple_metric=make_simple_metric_psd(noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local, noise_ampl_relative_to_all_signal_local, noisy_freqs_local, m_or_g_chosen, freqs, channels)
 
-    powerline_freqs = list(set(powerline_freqs)) #take only unique freqs if they are repeated for mags, grads
-
-    return derivs_psd, simple_metric, powerline_freqs 
+    return derivs_psd, simple_metric, noisy_freqs_global
