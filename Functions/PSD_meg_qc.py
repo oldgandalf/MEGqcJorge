@@ -832,7 +832,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     
     """Main psd function. Calculates:
     - psd for each channel
-    - amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
+    - amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5–4 Hz), 
+        theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
