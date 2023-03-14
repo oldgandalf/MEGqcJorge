@@ -9,7 +9,7 @@ from universal_html_report import simple_metric_basic
 def RMSE(data_m_or_g: np.array or list):
 
     ''' 
-    RMSE - general root means squared error. Currently not used, as np.std is slightly faster.
+    RMSE - general root means squared error. Currently NOT USED, as np.std is slightly faster.
     Was used before as alternative to std calculation, was faster.
     
     Parameters:
@@ -20,7 +20,8 @@ def RMSE(data_m_or_g: np.array or list):
         
     Returns:
     -------
-    rmse_np (np.array): rmse as numpy array (1-dimentional if 1 channel was given, 2-dim if more channels)
+    np.ndarray 
+        rmse as numpy array (1-dimentional if 1 channel was given, 2-dim if more channels)
     '''
 
     data_m_or_g=np.array(data_m_or_g) #convert to numpy array if it s not
@@ -59,7 +60,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
     Returns:
     -------
-    std_channels : np.ndarray
+    np.ndarray
         rmse/std for each channel
     
     '''
@@ -92,9 +93,9 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
 
     Returns:
     -------
-    noisy_channels : dict
+    dict
         dictionary with channel names and their stds/ptp values. Noisy channels.
-    flat_channels : dict
+    dict
         dictionary with channel names and their stds/ptp values. Flat channels.
 
     '''
@@ -242,7 +243,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
     Returns:
     -------
-    noisy_flat_epochs_derivs : list
+    list
         list of 3 MEG_QC_derivative objects:
         - df_epoch_vs_mean: ratio of std of this channel for this epoch to the mean std of this channel over all epochs together
         - df_noisy_epoch: df with True/False values for each channel in each epoch, True if this channel is noisy in this epoch
@@ -324,7 +325,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
 
     Returns:
     -------
-    metric_global_content : dict
+    dict
         dictionary with global metric content for std or ptp metric
     '''
 
@@ -359,7 +360,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     
     Returns:
     -------
-    metric_local_content : dict
+    dict
         dictionary with local metric content for std or ptp metric
 
     '''
@@ -417,7 +418,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list,
 
     Returns
     -------
-    simple_metric : dict
+    dict
         dictionary with simple metric for std/ptp
 
 """
@@ -447,7 +448,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list,
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params:  dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     '''
     Main STD function. Calculates:
@@ -471,9 +472,9 @@ def STD_meg_qc(std_params:  dict, channels: dict, dict_epochs_mg: dict, data: mn
 
     Returns
     -------
-    derivs_std : list
+    list
         list of QC_derivative objects containing data frames and figures for std metric.
-    simple_metric : dict
+    dict
         dictionary with simple metric for std/ptp.
     
     '''
