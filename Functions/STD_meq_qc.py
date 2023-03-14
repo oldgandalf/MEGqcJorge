@@ -492,15 +492,14 @@ def STD_meg_qc(std_params:  dict, channels: dict, dict_epochs_mg: dict, data: mn
     for m_or_g in m_or_g_chosen:
 
         std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
-        big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
-      
         derivs_std += [boxplot_std_hovering_plotly(std_data=std_all_data[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
+
+        big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
-
             fig_std_epoch += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels')]
             fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs')]
 
