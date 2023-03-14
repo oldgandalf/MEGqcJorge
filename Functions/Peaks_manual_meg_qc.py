@@ -270,8 +270,9 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
     # will run for both if mag+grad are chosen,otherwise just for one of them:
     for m_or_g in m_or_g_chosen:
         peak_ampl[m_or_g] = get_ptp_all_data(data, channels[m_or_g], sfreq, ptp_thresh_lvl=ptp_manual_params['ptp_thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
-        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
         derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='peaks')]
+
+        big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
@@ -279,11 +280,12 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
             #deriv_epoch_ptp[m_or_g] = get_big_small_std_ptp_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_lvl'], 'ptp') 
             #derivs_list += deriv_epoch_ptp[m_or_g]
 
+            fig_ptp_epoch += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels')]
+            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs')]
+
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_channel_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            fig_ptp_epoch += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels')]
-            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs')]
             metric_local=True
     else:
         metric_local=False
