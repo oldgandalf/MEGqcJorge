@@ -18,7 +18,7 @@ from universal_html_report import simple_metric_basic
 
 def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarray):
 
-    '''Calculates the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
+    """Calculates the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
     (Named here as power, but in fact it s amplitude of the signal, since psds are turned into amplitudes already.)
     Adopted from: https://raphaelvallat.com/bandpower.html
 
@@ -49,7 +49,7 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
     total_power : float
         Total power of the signal.
 
-    '''
+    """
 
     bandpower_per_ch_list=[]
     rel_bandpower_per_ch_list=[]
@@ -88,7 +88,7 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
 
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool):
 
-    '''
+    """
     - Power of frequencies calculation for all channels, 
     - If desired: creating a pie chart of mean power of every band over the entire data.
 
@@ -115,7 +115,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
     dfs_with_name : list
         List of dataframes with power of each frequency band in each channel
 
-    '''
+    """
     
     # Calculate the band power:
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
@@ -202,7 +202,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
 
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list, noisy_freqs_indexes:list):
 
-    '''If there are 2 bands that are blended together, split them at the lowest point between 2 central noise frequencies.
+    """If there are 2 bands that are blended together, split them at the lowest point between 2 central noise frequencies.
     
     Parameters
     ----------
@@ -221,7 +221,7 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
     split_indexes : list
         list of indexes at which the bands were split (used later for plotting only).
     
-    '''
+    """
     
     #check that noisy_bands_indexes dont contain floats and negative numbers:
     for i, _ in enumerate(noisy_bands_indexes):
@@ -257,7 +257,7 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
 
 def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
 
-    '''Cut the noise peaks out of PSD curve. By default, it is not used, but can be turned on.
+    """Cut the noise peaks out of PSD curve. By default, it is not used, but can be turned on.
     If turned on, in the next steps, the area under the curve will be calculated only for the cut out peaks.
 
     By default, the area under the curve is calculated under the whole peak, uncluding the 'main brain signal' psd area + peak area. 
@@ -294,7 +294,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd
     psd_only_peaks_baselined : list
         vector of psd values for 1 channel (or 1 average over all channels) with the noise peaks cut out and baselined to 0 level.
         Later used to calculate area under the curve for the noise peaks only.
-    '''
+    """
 
 
 
@@ -364,7 +364,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd
 
 
 def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str, yaxis_log = True):
-    '''plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
+    """plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
     
     Parameters
     ----------
@@ -388,7 +388,7 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
     fig
         plotly figure of the psd with noise peaks and bands around them.
 
-    '''
+    """
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=freqs, y=one_psd, name=ch_name+' psd'))
@@ -409,7 +409,7 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
 
 def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int):
 
-    ''''
+    """'
     Detect the frequency band around the noise peaks.
     Complex approach: This function is trying to detect the actual start and end of peaks.
     1. Bands around the noise frequencies are created based on detected peak_width.
@@ -447,7 +447,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     split_indexes : list
         list of indexes of the split points in the psd
     
-     '''
+     """
 
     _, unit = get_tit_and_unit(m_or_g, True)
     # Run peak detection on psd -> get number of noise freqs, define freq bands around them
@@ -493,7 +493,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
 
 
 def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_length: float):
-    '''
+    """
     Detect the frequency band around the noise peaks.
     Simple approach: used by default.
     1. Create frequency band around central noise frequency just by adding -x...+x Hz around.
@@ -529,7 +529,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     split_indexes : list
         list of indexes of the split points in the psd
     
-    '''
+    """
 
     prominence_pos=(max(one_psd) - min(one_psd)) / prominence_lvl_pos
     noisy_freqs_indexes, _ = find_peaks(one_psd, prominence=prominence_pos)
@@ -692,7 +692,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
 def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
 
-    ''' Create a dictionary for the global part of psd simple metrics. Global: overall part of noise in the signal (all channels averaged).
+    """ Create a dictionary for the global part of psd simple metrics. Global: overall part of noise in the signal (all channels averaged).
 
     Parameters
     ----------
@@ -707,7 +707,7 @@ def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, nois
     -------
     dict_global : dict
         dictionary with the global part of psd simple metrics
-    '''
+    """
         
     noisy_freqs_dict={}
     for fr_n, fr in enumerate(noisy_freqs_global):
@@ -722,7 +722,7 @@ def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, nois
 
 def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_ampl_relative_to_all_signal_local: dict, channels: list):
 
-    ''' Create a dictionary for the local part of psd simple metrics. Local: part of noise in the signal for each channel separately.
+    """ Create a dictionary for the local part of psd simple metrics. Local: part of noise in the signal for each channel separately.
     
     Parameters
     ----------
@@ -738,7 +738,7 @@ def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_a
     dict_local : dict
         dictionary with the local part of psd simple metrics
         
-    '''
+    """
 
     noisy_freqs_dict_all_ch={}
     for ch in channels:
@@ -755,7 +755,7 @@ def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_a
 
 def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
 
-    ''' Create a dictionary for the psd simple metrics.
+    """ Create a dictionary for the psd simple metrics.
 
     Parameters
     ----------
@@ -779,7 +779,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
     simple_metric : dict
         dictionary with the psd simple metrics
 
-    '''
+    """
 
     metric_global_name = 'PSD_global'
     metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude.'
@@ -800,7 +800,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
 
 
 def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
-    '''Get nfft and nperseg parameters for Welch psd function. 
+    """Get nfft and nperseg parameters for Welch psd function. 
     Allowes to always have the step size in psd which is chosen by the user. Recommended 0.5 Hz.
     
     Parameters
@@ -820,7 +820,7 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
         Number of points for each segment. Used in welch psd function from mne.
         Length of each Welch segment (windowed with a Hamming window). Defaults to None, which sets n_per_seg equal to n_fft.
 
-    '''
+    """
 
     sfreq=raw.info['sfreq']
     nfft=int(sfreq/psd_step_size)

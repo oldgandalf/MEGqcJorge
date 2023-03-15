@@ -12,7 +12,7 @@ from STD_meq_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, m
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
 
-    ''' Function finds a pair: postive+negative peak and calculates the amplitude between them. 
+    """ Function finds a pair: postive+negative peak and calculates the amplitude between them. 
     If no neighbour is found withing given distance - this peak is skipped. 
     If several neighbours are found - several pairs are created. 
     As the result a mean peak-to-peak distance is calculated over all detected pairs for given chunck of data
@@ -40,7 +40,7 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
         Array of all detected peak pairs for this chunck of data.
 
 
-    '''
+    """
 
     pair_dist=max_pair_dist_sec*sfreq
     pairs_magnitudes=[]
@@ -81,7 +81,7 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
 
 def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
-    ''' Function calculates peak-to-peak amplitude for all channels over whole data (not epoched).
+    """ Function calculates peak-to-peak amplitude for all channels over whole data (not epoched).
 
     Parameters:
     -----------
@@ -102,7 +102,7 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
     peak_ampl_channels : list
         List of peak-to-peak amplitude values for each channel in the same order as in channels list.
 
-    '''
+    """
         
     data_channels=data.get_data(picks = channels)
 
@@ -125,7 +125,7 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
 
 def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
-    '''  Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
+    """  Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
     Parameters:
     -----------
@@ -146,7 +146,7 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
     pd.DataFrame
         Dataframe containing the mean peak-to-peak aplitude for each epoch for each channel
 
-    '''
+    """
     dict_ep = {}
 
     #get 1 epoch, 1 channel and calculate PtP on its data:
@@ -172,7 +172,7 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
 
 def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data: dict, small_ptp_with_value_all_data: dict, channels: dict, deriv_epoch_ptp: dict, metric_local: bool, m_or_g_chosen: list):
 
-    ''' Function creates a simple metric for peak-to-peak amplitude. 
+    """ Function creates a simple metric for peak-to-peak amplitude. 
     Global: The metric is calculated for all data (not epoched) and 
     Local: for each epoch.
 
@@ -198,7 +198,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     simple_metric : dict
         Dict (mag, grad) with the simple metric for peak-to-peak amplitude
 
-    '''
+    """
 
     metric_global_name = 'ptp_manual_all'
     metric_global_description = 'Peak-to-peak deviation of the data over the entire time series (not epoched): ... The ptp_lvl is the peak-to-peak threshold level set by the user. Threshold = ... The channel where data is higher than this threshod is considered as noisy. Same: if the std of some channel is lower than -threshold, this channel is considered as flat. In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'

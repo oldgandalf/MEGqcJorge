@@ -32,7 +32,7 @@ from universal_plots import QC_derivative, get_tit_and_unit
 
 def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
-    '''Make a simple metric dict for muscle events.
+    """Make a simple metric dict for muscle events.
     
     Parameters
     ----------
@@ -46,7 +46,7 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
     simple_metric : dict
         A simple metric dict for muscle events.
         
-    '''
+    """
 
     simple_metric = {
     'description': 'Muscle artifact events at different z score thresholds.',
@@ -60,7 +60,7 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
 def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, threshold_muscle: float, muscle_times: np.ndarray, high_scores_muscle: np.ndarray, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
 
-    '''Plot the muscle events with the z-scores and the threshold.
+    """Plot the muscle events with the z-scores and the threshold.
     
     Parameters
     ----------
@@ -86,7 +86,7 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
     fig_derivs : list
         A list of QC_derivative objects with plotly figures for muscle events.
 
-    '''
+    """
     fig_derivs = []
 
     fig=go.Figure()
@@ -118,7 +118,7 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
 
 def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: list = [110, 140]):
 
-    '''Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
+    """Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
     MNE advices to filter power line noise.
     Filtering the rest was our idea.
     Noisy frequencies for filtering come from PSD artifact detection function. If any noise peaks were found there for mags or grads 
@@ -136,7 +136,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     Returns
     -------
     raw : mne.io.Raw
-        The raw data with filtered noise or not filtered if no noise was found.'''
+        The raw data with filtered noise or not filtered if no noise was found."""
 
     #print(noisy_freqs_global, 'noisy_freqs_global')
 
@@ -174,7 +174,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
 
 def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False):
 
-    '''
+    """
     Detect muscle artifacts in MEG data. 
     Gives the number of muscle artifacts based on the set z score threshold: artifact time + artifact z score.
     Threshold  is set by the user in the config file. Several thresholds can be used on the loop.
@@ -206,7 +206,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
     simple_metric : dict
         A simple metric dict for muscle events.
 
-    '''
+    """
 
     muscle_freqs = muscle_params['muscle_freqs']
 

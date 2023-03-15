@@ -12,7 +12,7 @@ mne.viz.set_browser_backend('matplotlib')
 
 def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
 
-    '''Compute the standard deviation of the movement of the head over time and the maximum rotation and movement in 3 directions.
+    """Compute the standard deviation of the movement of the head over time and the maximum rotation and movement in 3 directions.
     
     Parameters
     ----------
@@ -32,7 +32,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
     df_head_pos : pandas dataframe
         Head positions as pandas dataframe just for visualization and check.
 
-    '''
+    """
 
     #head positions as data frame just for visualization and check:
     df_head_pos = pd.DataFrame(head_pos, columns = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']) #..., goodness of fit, error, velocity
@@ -79,7 +79,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
 
 def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: list, max_rotation_q: list):
 
-    '''Make simple metric for head positions.
+    """Make simple metric for head positions.
     
     Parameters
     ----------
@@ -95,7 +95,7 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
     Returns
     -------
     simple_metric : dict
-        Simple metric for head positions.'''
+        Simple metric for head positions."""
     
     simple_metric_details={
     'movement_amplitude_X': max_movement_xyz[0]*1000,
@@ -119,7 +119,7 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
 
 def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
-    ''' Plot positions and rotations of the head.
+    """ Plot positions and rotations of the head.
     
     Parameters
     ----------
@@ -134,7 +134,7 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
         List of QC_derivative objects containing figures with head positions and rotations.
     head_pos_baselined : np.ndarray
         Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
-    '''
+    """
 
     head_derivs = []
 
@@ -203,7 +203,7 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 
 def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
-    '''Plot raw data with annotated head movement. Currently not used.
+    """Plot raw data with annotated head movement. Currently not used.
     
     Parameters
     ----------
@@ -217,7 +217,7 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
     head_derivs : list
         List of QC derivatives with annotated figures.
         
-    '''
+    """
 
     head_derivs = []
 
@@ -232,7 +232,7 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 
 def get_head_positions(raw: mne.io.Raw):
-    '''Get head positions and rotations using MNE
+    """Get head positions and rotations using MNE
     
     Parameters
     ----------
@@ -246,7 +246,7 @@ def get_head_positions(raw: mne.io.Raw):
     no_head_pos_str: str
         String with information about head positions if they were not calculated, otherwise empty.
 
-    '''
+    """
 
     no_head_pos_str = ''
     head_pos = np.empty([0])
@@ -301,7 +301,7 @@ def get_head_positions(raw: mne.io.Raw):
 
 def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_annotations: bool =False):
 
-    '''Main function for head movement. Calculates:
+    """Main function for head movement. Calculates:
     - head positions (x, y, z) and rotations (q1, q2, q3)
     - maximum amplitude of positions and rotations
     - std of positions and rotations over whole time series: 
@@ -329,7 +329,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
         Dataframe with head positions and rotations.
     head_pos : np.ndarray
         Head positions and rotations calculated with mne.chpi.compute_head_pos.
-    '''
+    """
 
     # Compute head positions using mne:
     head_pos, no_head_pos_str = get_head_positions(raw)

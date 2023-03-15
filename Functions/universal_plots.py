@@ -8,7 +8,7 @@ import warnings
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
-    ''''Returns title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
+    """Returns title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
     
     Parameters
     ----------
@@ -24,7 +24,8 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     unit : str
         'T' or 'T/m' or 'T/Hz' or 'T/m / Hz'
 
-    '''
+    """
+    
     if m_or_g=='mag':
         m_or_g_tit='Magnetometers'
         if psd is False:
@@ -45,7 +46,7 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
 class QC_derivative:
 
-    ''' Derivative of a QC measurement, main content of which is figure, data frame (saved later as csv) or html string.
+    """ Derivative of a QC measurement, main content of which is figure, data frame (saved later as csv) or html string.
 
     Attributes
     ----------
@@ -70,11 +71,11 @@ class QC_derivative:
         Returns a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
     
     
-    '''
+    """
 
     def __init__(self, content, name, content_type, description_for_user = 'Add measurement description for a user...'):
 
-        '''Constructor method
+        """Constructor method
         
         Parameters
         ----------
@@ -88,7 +89,7 @@ class QC_derivative:
         description_for_user : str, optional
             The description of the derivative, by default 'Add measurement description for a user...'
             Used in the report to describe the derivative.
-        '''
+        """
 
         self.content =  content
         self.name = name
@@ -97,19 +98,19 @@ class QC_derivative:
 
     def __repr__(self):
 
-        '''Returns the string representation of the object.'''
+        """Returns the string representation of the object."""
 
         return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
 
     def convert_fig_to_html(self):
 
-        '''Converts figure to html string.
+        """Converts figure to html string.
         
         Returns
         -------
         html : str or None
             Html string or None if content_type is not 'plotly' or 'matplotlib'.
-        '''
+        """
 
         if self.content_type == 'plotly':
             return plotly.io.to_html(self.content, full_html=False)
@@ -127,29 +128,29 @@ class QC_derivative:
 
     def convert_fig_to_html_add_description(self):
 
-        '''Converts figure to html string and adds description.
+        """Converts figure to html string and adds description.
 
         Returns
         -------
         html : str or None
             Html string: fig + description or None + description if content_type is not 'plotly' or 'matplotlib'.
-        '''
+        """
 
         figure_report = self.convert_fig_to_html()
 
-        return '''<br></br>'''+ figure_report + '''<p>'''+self.description_for_user+'''</p>'''
+        return """<br></br>"""+ figure_report + """<p>"""+self.description_for_user+"""</p>"""
 
 
     def get_section(self):
 
-        ''' Returns a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
+        """ Returns a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
         
         Returns
         -------
         section : str
             'RMSE', 'PTP_MANUAL', 'PTP_AUTO', 'PSD', 'EOG', 'ECG', 'MUSCLE', 'HEAD'.
 
-        '''
+        """
 
         if 'std' in self.name or 'rmse' in self.name or 'STD' in self.name or 'RMSE' in self.name:
             return 'RMSE'
@@ -173,7 +174,7 @@ class QC_derivative:
 
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
 
-    '''
+    """
     Creates representation of calculated data as multiple boxplots. Used in RMSE and PtP_manual measurements. 
     - If x_axis_boxes is 'channels', each box represents 1 epoch, each dot is std of 1 channel for this epoch
     - If x_axis_boxes is 'epochs', each box represents 1 channel, each dot is std of 1 epoch for this channel
@@ -194,7 +195,7 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
     fig_deriv : QC_derivative 
         derivative containing plotly figure
     
-    '''
+    """
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -267,7 +268,7 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
 
 def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
 
-    '''
+    """
     Creates representation of calculated data as multiple boxplots: 
     each box represents 1 channel, each dot is std of 1 epoch in this channel
     Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
@@ -282,7 +283,7 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
     Returns:
     fig (go.Figure): plottly figure
 
-    '''
+    """
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -341,7 +342,7 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
 
 def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
 
-    '''Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
+    """Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
     each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
 
     Parameters
@@ -359,7 +360,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     -------
     QC_derivative
         QC_derivative object with plotly figure as content
-    '''
+    """
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -409,7 +410,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
 #%%
 def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, method: str):
 
-    '''Plotting Power Spectral Density for all channels
+    """Plotting Power Spectral Density for all channels
 
     Parameters:
     ----------
@@ -430,7 +431,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
         QC_derivative object with plotly figure as content
 
 
-    '''
+    """
     tit, unit = get_tit_and_unit(m_or_g)
 
     df_psds=pd.DataFrame(psds.T, columns=channels)
@@ -469,7 +470,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
 
 def plot_pie_chart_freq(mean_relative_freq: list, m_or_g: str, bands_names: str, fig_tit: str, fig_name: str):
     
-    ''''Plot pie chart representation of relative power of each frequency band over the entire 
+    """'Plot pie chart representation of relative power of each frequency band over the entire 
     times series of mags or grads, not separated by individual channels.
 
     Parameters:
@@ -490,7 +491,7 @@ def plot_pie_chart_freq(mean_relative_freq: list, m_or_g: str, bands_names: str,
     QC_derivative
         QC_derivative object with plotly figure as content
 
-    '''
+    """
 
     ch_type_tit, _ = get_tit_and_unit(m_or_g, psd=True)
 

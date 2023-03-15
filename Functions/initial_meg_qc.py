@@ -4,7 +4,7 @@ import numpy as np
 
 
 def get_all_config_params(config_file_name: str):
-    '''Parse all the parameters from config and put into a python dictionary 
+    """Parse all the parameters from config and put into a python dictionary 
     divided by sections. Parsing approach can be changed here, which 
     will not affect working of other fucntions.
     
@@ -19,7 +19,7 @@ def get_all_config_params(config_file_name: str):
     all_qc_params: dict
         A dictionary with all the parameters from the config file.
 
-    '''
+    """
     
     all_qc_params = {}
 
@@ -172,7 +172,7 @@ def get_all_config_params(config_file_name: str):
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
-    '''Epochs MEG data based on the parameters provided in the config file.
+    """Epochs MEG data based on the parameters provided in the config file.
     
     Parameters
     ----------
@@ -186,7 +186,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     dict_epochs_mg : dict
         Dictionary with epochs for each channel type: mag, grad.
 
-    '''
+    """
 
     event_dur = epoching_params['event_dur']
     epoch_tmin = epoching_params['epoch_tmin']
@@ -222,7 +222,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
-    '''Here all the initial actions need to work with MEG data are done: 
+    """Here all the initial actions need to work with MEG data are done: 
     - read fif file,
     - crop the data if needed,
     - filter and downsample the data,
@@ -256,7 +256,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     active_shielding_used : bool
         True if active shielding was used during recording.
     
-    '''
+    """
 
     print('___MEG QC___: ', 'Reading data from file:', data_file)
     active_shielding_used = False
@@ -302,7 +302,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 def sanity_check(m_or_g_chosen, channels):
     
-    '''Check if the channels which the user gave in config file to analize actually present in the data set.
+    """Check if the channels which the user gave in config file to analize actually present in the data set.
     
     Parameters
     ----------
@@ -316,7 +316,7 @@ def sanity_check(m_or_g_chosen, channels):
     m_or_g_chosen : list
         List with channel types to analize: mag, grad.
         
-    '''
+    """
 
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []

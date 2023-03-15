@@ -8,7 +8,7 @@ from universal_html_report import simple_metric_basic
 
 def RMSE(data_m_or_g: np.array or list):
 
-    ''' 
+    """ 
     RMSE - general root means squared error. Currently NOT USED, as np.std is slightly faster.
     Was used before as alternative to std calculation, was faster.
     
@@ -22,7 +22,7 @@ def RMSE(data_m_or_g: np.array or list):
     -------
     np.ndarray 
         rmse as numpy array (1-dimentional if 1 channel was given, 2-dim if more channels)
-    '''
+    """
 
     data_m_or_g=np.array(data_m_or_g) #convert to numpy array if it s not
     rmse_list=[]
@@ -49,7 +49,7 @@ def RMSE(data_m_or_g: np.array or list):
 
 def get_std_all_data(data: mne.io.Raw, channels: list):
 
-    '''Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
+    """Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
 
     Parameters:
     ----------
@@ -63,7 +63,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
     np.ndarray
         rmse/std for each channel
     
-    '''
+    """
     data_channels=data.get_data(picks = channels)
 
     #std_channels = RMSE(data_channels)
@@ -74,7 +74,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
 def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: list, std_multiplier: float):
 
-    '''Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
+    """Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
     Threshold for noisy is defined as: (mean + std_multiplier*std), where: 
     - mean is mean stds/ptp values over all channels
     - std is standard deviation of stds/ptp values over all channels
@@ -98,7 +98,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
     dict
         dictionary with channel names and their stds/ptp values. Flat channels.
 
-    '''
+    """
     
     ## Check if channel data is within std level of PtP/std.
     std_of_measure_channels=np.std(ptp_or_std_channels)
@@ -128,7 +128,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
 #%%
 def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
-    ''' 
+    """ 
     Calculate std for multiple epochs for a list of channels.
     Used as internal function in std_meg_epoch
 
@@ -143,7 +143,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
     -------
     pd.DataFrame
         dataframe with std values for each channel and each epoch
-    '''
+    """
     
     dict_ep = {}
 
@@ -165,7 +165,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
 def get_big_small_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: int, std_or_ptp: str):
 
-    ''' NOT USED ANY MORE
+    """ NOT USED ANY MORE
 
     - Calculate std for every separate epoch of a given list of channels
     - Find which channels in which epochs have too high/too small stds or PtP amplitudes
@@ -174,7 +174,7 @@ def get_big_small_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: in
     Parameters:
     ----------
 
-    '''
+    """
 
     # Check (which epochs for which channel) are over set STD_level (1 or 2, 3, etc STDs) for this epoch for all channels
 
@@ -307,7 +307,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
 def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], std_or_ptp: str):
 
-    '''Make a dictionary with global metric content for std or ptp metric.
+    """Make a dictionary with global metric content for std or ptp metric.
     Global means that it is calculated over entire data series, not over epochs.
     
     Parameters:
@@ -327,7 +327,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
     -------
     dict
         dictionary with global metric content for std or ptp metric
-    '''
+    """
 
     global_details = {
         'noisy_ch': big_std_with_value_all_data,
@@ -346,7 +346,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
 
 def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame, flat_epochs_df: pd.DataFrame):
 
-    '''Make a dictionary with local metric content for std or ptp metric.
+    """Make a dictionary with local metric content for std or ptp metric.
     Local means that it is calculated over epochs.
 
     Parameters:
@@ -363,7 +363,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     dict
         dictionary with local metric content for std or ptp metric
 
-    '''
+    """
         
     epochs = noisy_epochs_df.columns.tolist()
     epochs = [int(ep) for ep in epochs[:-1]]
@@ -450,7 +450,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list,
 #%%
 def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
-    '''
+    """
     Main STD function. Calculates:
     - Std of data for each channel over all time series.
     - Channels with big std (noisy) and small std (flat) over all time series.
@@ -477,7 +477,7 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
     dict
         dictionary with simple metric for std/ptp.
     
-    '''
+    """
 
 
     big_std_with_value_all_data = {}

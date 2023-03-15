@@ -35,30 +35,30 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
     if 'ECG' in section_name:
-        all_section_content='''<p>'''+no_ecg_str+'''</p>'''
+        all_section_content="""<p>"""+no_ecg_str+"""</p>"""
     elif 'EOG' in section_name:
-        all_section_content='''<p>'''+no_eog_str+'''</p>'''
+        all_section_content="""<p>"""+no_eog_str+"""</p>"""
     elif 'Head' in section_name:
-        all_section_content='''<p>'''+no_head_pos_str+'''</p>'''
+        all_section_content="""<p>"""+no_head_pos_str+"""</p>"""
     elif 'Muscle' in section_name:
-        all_section_content='''<p>'''+muscle_grad_str+'''</p>'''
+        all_section_content="""<p>"""+muscle_grad_str+"""</p>"""
     elif derivs_section and not fig_derivs_section:
-        all_section_content='''<p>This measurement has no figures. Please see csv files.</p>'''
+        all_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
     else:
-        all_section_content='''<p>''''''</p>'''
+        all_section_content="""<p>""""""</p>"""
 
     if fig_derivs_section:
         for f in range(0, len(fig_derivs_section)):
             all_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
 
-    html_section_str='''
+    html_section_str="""
         <!-- *** Section *** --->
         <center>
-        <h2>'''+section_name+'''</h2>
-        ''' + all_section_content+'''
+        <h2>"""+section_name+"""</h2>
+        """ + all_section_content+"""
         <br></br>
         <br></br>
-        </center>'''
+        </center>"""
 
     # The way to get figures if need to open them from saved files:
     # figures = {}
@@ -72,7 +72,7 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
 
 def keep_fig_derivs(derivs_section:list[QC_derivative]):
 
-    '''Loop over list of derivs belonging to 1 section, keep only figures to add to report.
+    """Loop over list of derivs belonging to 1 section, keep only figures to add to report.
     
     Parameters
     ----------
@@ -82,7 +82,7 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
     Returns
     -------
     fig_derivs_section : list
-        A list of QC_derivative objects belonging to 1 section with only figures.'''
+        A list of QC_derivative objects belonging to 1 section with only figures."""
     
     fig_derivs_section=[]
     for d in derivs_section:
@@ -94,7 +94,7 @@ def keep_fig_derivs(derivs_section:list[QC_derivative]):
 
 def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: str, epoching_skipped_str: str, no_ecg_str: str, no_eog_str: str, no_head_pos_str: str, muscle_grad_str: str):
 
-    '''
+    """
     Create report as html string with all sections. Currently make_joined_report_for_mne is used.
 
     Parameters
@@ -121,10 +121,10 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
     html_string : str
         The html whole string of the report.
     
-    '''
+    """
 
 
-    header_html_string = '''
+    header_html_string = """
     <!doctype html>
     <html>
         <head>
@@ -137,7 +137,7 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
             <center>
             <h1>MEG data quality analysis report</h1>
             <br></br>
-            '''+shielding_str+m_or_g_skipped_str+epoching_skipped_str
+            """+shielding_str+m_or_g_skipped_str+epoching_skipped_str
 
     main_html_string = ''
     for key in sections:
@@ -148,20 +148,20 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
         #     html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
         #     #html_section_str = make_html_section(figures_report["f{0}".format(x)], section_titles[x])
         # else:
-        #     html_section_str = '''
+        #     html_section_str = """
         #     <!-- *** Section *** --->
-        #     <h2>'''+key+'''</h2>
+        #     <h2>"""+key+"""</h2>
         #     <p>This measurement could not be calculated because.....</p>
         #     <br></br>
-        #     <br></br>'''
+        #     <br></br>"""
 
         main_html_string += html_section_str
 
 
-    end_string = '''
+    end_string = """
                      </center>
             </body>
-        </html>'''
+        </html>"""
 
 
     html_string = header_html_string + main_html_string + end_string
@@ -171,7 +171,7 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
 
 def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_skipped_str: str, epoching_skipped_str: str, no_ecg_str: str, no_eog_str: str, no_head_pos_str: str, muscle_grad_str: str):
 
-    '''
+    """
     Create report as html string with all sections and embed the sections into MNE report object.
 
     Parameters
@@ -198,21 +198,21 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
     report : mne.Report
         The MNE report object with all sections.
     
-    '''
+    """
 
     report = mne.Report(title='& MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
     report.add_raw(raw=raw, title='Raw', psd=False)  # omit PSD plot
 
-    header_html_string = '''
+    header_html_string = """
     <!doctype html>
         <body style="font-family: Arial">
             <center>
             <h1>MEG data quality analysis report</h1>
             <br></br>
-            '''+shielding_str+m_or_g_skipped_str+epoching_skipped_str+'''
+            """+shielding_str+m_or_g_skipped_str+epoching_skipped_str+"""
             </center>
-        </body>'''
+        </body>"""
 
     report.add_html(header_html_string, title='MEG QC report')
 
@@ -227,7 +227,7 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
 
 def simple_metric_basic(metric_global_name: str, metric_global_description: str, metric_global_content_mag: dict, metric_global_content_grad: dict, metric_local_name: str =None, metric_local_description: str =None, metric_local_content_mag: dict =None, metric_local_content_grad: dict =None, display_only_global: bool =False, psd: bool=False):
     
-    '''Basic structure of simple metric for all measurements.
+    """Basic structure of simple metric for all measurements.
     
     Parameters
     ----------
@@ -263,7 +263,7 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     -------
     simple_metric : dict
         Dictionary with the whole simple metric to be converted into json in main script.
-        '''
+        """
     
     _, unit_mag = get_tit_and_unit('mag', psd=psd)
     _, unit_grad = get_tit_and_unit('grad', psd=psd)
