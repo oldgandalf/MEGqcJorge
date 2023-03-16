@@ -33,6 +33,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
     bad_ecg_eog : dict
         Dictionary with channel names as keys and 'good' or 'bad' as values.
 
+        
     """
 
     sfreq=raw.info['sfreq']
@@ -144,6 +145,7 @@ class Avg_artif:
     __repr__(self)
         Returns a string representation of the object
 
+        
     """
 
     def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
@@ -161,6 +163,8 @@ class Avg_artif:
     def __repr__(self):
         """
         Returns a string representation of the object
+        
+        
         """
 
         return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
@@ -192,6 +196,7 @@ class Avg_artif:
         peak_magnitudes_neg : list
             magnitudes of negative peaks inside the artifact epoch
         
+            
         """
         
         peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = find_epoch_peaks(ch_data=self.mean_artifact_epoch, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
@@ -237,6 +242,8 @@ class Avg_artif:
         -------
         fig : plotly.graph_objects.Figure
             figure with the epoch and the peak
+        
+        
         """
 
         fig_ch_tit, unit = get_tit_and_unit(ch_type)
@@ -280,6 +287,7 @@ class Avg_artif:
             magnitude of the main peak
         main_peak_loc : int
             location of the main peak
+        
         
         """
 
@@ -330,6 +338,8 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
         List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl. -> not affected by ECG/EOG artifact
     artifact_lvl : float
         The threshold for the artifact amplitude: average over all channels*norm_lvl.
+    
+    
     """
 
 
@@ -399,6 +409,7 @@ def plot_affected_channels(ecg_affected_channels: list, artifact_lvl: float, t: 
     fig : plotly.graph_objects.Figure
         The plotly figure with the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
 
+        
     """
 
     fig_ch_tit, unit = get_tit_and_unit(ch_type)
@@ -455,6 +466,7 @@ def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
     peak_magnitudes_neg : np.ndarray
         The magnitudes of the negative peaks.
 
+        
     """
 
     thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
@@ -565,6 +577,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
     t0_estimated_ind_end : int
         The end index of the time window for the estimated t0.
     
+        
     """
     
 
@@ -638,13 +651,13 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     0. For each separate channel get the average ECG epoch. If needed, flip this average epoch to make it's main peak positive.
     Flip approach: 
     - define  a window around the ecg/eog event deteceted by mne. This is not the real t0, but  an approximation. 
-        The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
-        So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
+    The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
+    So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
     - take 5 channels with the largest peak in this window - assume these peaks are the actual artifact.
     - find the average of these 5 peaks - this is the new estimated_t0 (but still not the real t0)
     - create a new window around this new t0 - in this time window all the artifact wave shapes should be located on all channels.
     - flip the channels, if they have a peak inside of this new window, but the peak is negative and it is the closest peak to estimated t0. 
-        if the peak is positive - do not flip.
+    if the peak is positive - do not flip.
     - collect all final flipped+unflipped eppochs of these channels 
         
     1. Then, for each chennel make a check if the epoch has a typical wave shape. This is the first step to detect affected channels. 
@@ -663,7 +676,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     Finding approach:
     - again, set t0 actual as the time point of the peak of an average artifact (over all channels)
     - again, set a window around t0_actual. this new window is defined by how long the wave of the artifact normally is. 
-        The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
+    The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
     - find one main peak of the epoch for each channel which would be inside this window and closest to t0.
     - if this peaks magnitude is over the threshold - this channels is considered to be affected by ECG or EOG. Otherwise - not affected.
     (The epoch has to have a wave shape).
@@ -714,6 +727,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     bad_avg: bool
         True if the average ecg/eog artifact is bad: too noisy. In case of a noisy average ecg/eog artifact, no affected channels should be further detected.
 
+        
     """
 
     if  ecg_or_eog=='ECG':
@@ -826,6 +840,7 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
     dict_global_ECG_EOG : dict
         Dictionary with simple metrics for ECG/EOG artifacts.
 
+        
     """
 
     if not all_affected_channels:
@@ -871,6 +886,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
     simple_metric : dict
         Dictionary with simple metrics for ECG/EOG artifacts.
         
+
     """
 
     metric_global_name = 'all_'+ecg_or_eog+'_affected_channels'
@@ -911,6 +927,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     no_ecg_str : str
         String with information about ECG channel used in the final report.
         
+
     """
 
     picks_ECG = mne.pick_types(raw.info, ecg=True)

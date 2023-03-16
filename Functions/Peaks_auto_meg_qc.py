@@ -4,7 +4,7 @@
 
 import pandas as pd
 import mne
-from universal_plots import QC_derivative
+#from universal_plots import QC_derivative
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float) -> tuple[pd.DataFrame, list]:
     """Function creates amplitude (peak-to-peak annotations) for every channel separately"""

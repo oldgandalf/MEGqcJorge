@@ -14,8 +14,8 @@ import Functions
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MEG_QC_code'
-copyright = '2023, Evgeniia Gapontseva, Aaron Reer, Jochem Rieger'
+project = 'MEG QC Pipeline'
+copyright = '2023, ANCP Lab, University of Oldenburg, Evgeniia Gapontseva, Aaron Reer, Jochem Rieger'
 author = 'Evgeniia Gapontseva, Aaron Reer, Jochem Rieger'
 release = '2023'
 
@@ -33,4 +33,8 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
+html_theme_options = {
+    "sidebarwidth": 250,
+    "body_min_width": 800
+}
 html_static_path = ['_static']

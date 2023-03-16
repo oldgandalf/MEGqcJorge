@@ -3,16 +3,16 @@ import ancpbids
 import time
 import json
 
-from all_funcs.initial_meg_qc import get_all_config_params, sanity_check, initial_processing
-from all_funcs.STD_meq_qc import STD_meg_qc
-from all_funcs.PSD_meg_qc import PSD_meg_qc
-from all_funcs.Peaks_manual_meg_qc import PP_manual_meg_qc
-from all_funcs.Peaks_auto_meg_qc import PP_auto_meg_qc
-from all_funcs.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
-from all_funcs.Head_meg_qc import HEAD_movement_meg_qc
-from all_funcs.muscle_meg_qc import MUSCLE_meg_qc
-from all_funcs.universal_html_report import make_joined_report, make_joined_report_for_mne
-from all_funcs.universal_plots import QC_derivative
+# from initial_meg_qc import get_all_config_params, sanity_check, initial_processing
+# from STD_meq_qc import STD_meg_qc
+# from PSD_meg_qc import PSD_meg_qc
+# from Peaks_manual_meg_qc import PP_manual_meg_qc
+# from Peaks_auto_meg_qc import PP_auto_meg_qc
+# from ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
+# from Head_meg_qc import HEAD_movement_meg_qc
+# from muscle_meg_qc import MUSCLE_meg_qc
+# from universal_html_report import make_joined_report, make_joined_report_for_mne
+# from universal_plots import QC_derivative
 
 
 def make_derivative_meg_qc(config_file_name):

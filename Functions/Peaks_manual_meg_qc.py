@@ -5,9 +5,9 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs
-from universal_html_report import simple_metric_basic
-from STD_meq_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
+#from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs
+#from universal_html_report import simple_metric_basic
+#from STD_meq_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):

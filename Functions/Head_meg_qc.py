@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
-from universal_plots import QC_derivative
+#from universal_plots import QC_derivative
 
 mne.viz.set_browser_backend('matplotlib')
 
@@ -305,8 +305,8 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
     - head positions (x, y, z) and rotations (q1, q2, q3)
     - maximum amplitude of positions and rotations
     - std of positions and rotations over whole time series: 
-        calculate 1 values for positions and 1 values for rotations using Pythagorean theorem - for each time point.
-        calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
+    calculate 1 value for positions and 1 value for rotations using Pythagorean theorem - for each time point.
+    calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
     
     Parameters
     ----------

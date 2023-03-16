@@ -9,12 +9,12 @@ def get_all_config_params(config_file_name: str):
     will not affect working of other fucntions.
     
 
-    Parameters:
+    Parameters
     ----------
     config_file_name: str
         The name of the config file.
 
-    Returns:
+    Returns
     -------
     all_qc_params: dict
         A dictionary with all the parameters from the config file.

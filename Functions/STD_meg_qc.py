@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
-from universal_html_report import simple_metric_basic
+#from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+#from universal_html_report import simple_metric_basic
 
 # In[2]:
 
@@ -12,13 +12,13 @@ def RMSE(data_m_or_g: np.array or list):
     RMSE - general root means squared error. Currently NOT USED, as np.std is slightly faster.
     Was used before as alternative to std calculation, was faster.
     
-    Parameters:
+    Parameters
     ----------
     data_m_or_g : np.array or list 
         data for magnetometer or gradiometer given as np array or list 
         (it can be 1 or several channels data  as 2 dimentional array or as list of lists)
         
-    Returns:
+    Returns
     -------
     np.ndarray 
         rmse as numpy array (1-dimentional if 1 channel was given, 2-dim if more channels)
@@ -51,14 +51,14 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
     """Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
 
-    Parameters:
+    Parameters
     ----------
     data : mne.io.Raw
         raw data 
     channels : list 
         list of channel names
 
-    Returns:
+    Returns
     -------
     np.ndarray
         rmse/std for each channel
@@ -82,7 +82,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
     Above this thresold - noisy, 
     below (mean - std_multiplier*std) - flat.
 
-    Parameters:
+    Parameters
     ----------
     ptp_or_std_channels : np.ndarray
         peak-to-peak amplitude or std for each channel
@@ -91,7 +91,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
     std_multiplier : float
         multipliar for std, used to define thresholds for noisy and flat channels
 
-    Returns:
+    Returns
     -------
     dict
         dictionary with channel names and their stds/ptp values. Noisy channels.
@@ -132,14 +132,14 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
     Calculate std for multiple epochs for a list of channels.
     Used as internal function in std_meg_epoch
 
-    Parameters:
+    Parameters
     ----------
     channels : list
         list of channel names
     epochs_mg : mne.Epochs
         epochs data as mne.Epochs object
 
-    Returns:
+    Returns
     -------
     pd.DataFrame
         dataframe with std values for each channel and each epoch
@@ -171,7 +171,7 @@ def get_big_small_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: in
     - Find which channels in which epochs have too high/too small stds or PtP amplitudes
     - Create MEG_QC_derivative as dfs
 
-    Parameters:
+    Parameters
     ----------
 
     """
@@ -223,7 +223,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     - df_noisy_epoch: df with True/False values for each channel in each epoch, True if this channel is noisy in this epoch
     - df_flat_epoch: df with True/False values for each channel in each epoch, True if this channel is flat in this epoch
 
-    Parameters:
+    Parameters
     ----------
     df_std : pd.DataFrame
         dataframe with std/ptp values for each channel and each epoch
@@ -241,7 +241,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
         percent of noisy/flat channels allowed in each epoch, if more than this percent, then this epoch is noisy/flat. Example: 70
         Means that if more than 70% of channels are noisy/flat in this epoch, then this epoch is noisy/flat.
 
-    Returns:
+    Returns
     -------
     list
         list of 3 MEG_QC_derivative objects:
@@ -310,7 +310,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
     """Make a dictionary with global metric content for std or ptp metric.
     Global means that it is calculated over entire data series, not over epochs.
     
-    Parameters:
+    Parameters
     ----------
     std_ptp_params : dict
         dictionary with parameters for std or ptp metric
@@ -323,7 +323,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
     std_or_ptp : str
         'std' or 'ptp': use STD or Peak-to-peak metric
 
-    Returns:
+    Returns
     -------
     dict
         dictionary with global metric content for std or ptp metric
@@ -349,7 +349,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     """Make a dictionary with local metric content for std or ptp metric.
     Local means that it is calculated over epochs.
 
-    Parameters:
+    Parameters
     ----------
     std_ptp_params : dict
         dictionary with parameters for std or ptp metric, originally from config file
@@ -358,7 +358,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     flat_epochs_df : pd.DataFrame
         dataframe with True/False values for flat channels in each epoch
     
-    Returns:
+    Returns
     -------
     dict
         dictionary with local metric content for std or ptp metric

@@ -1,5 +1,6 @@
-from universal_plots import QC_derivative, get_tit_and_unit
+
 import mne
+#from universal_plots import QC_derivative, get_tit_and_unit
 
 def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
 
@@ -70,7 +71,7 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
     return html_section_str
 
 
-def keep_fig_derivs(derivs_section:list[QC_derivative]):
+def keep_fig_derivs(derivs_section:list):
 
     """Loop over list of derivs belonging to 1 section, keep only figures to add to report.
     
