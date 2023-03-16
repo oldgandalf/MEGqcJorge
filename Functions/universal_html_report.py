@@ -1,6 +1,6 @@
 
 import mne
-#from universal_plots import QC_derivative, get_tit_and_unit
+from universal_plots import QC_derivative, get_tit_and_unit
 
 def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
 

@@ -14,7 +14,7 @@ import Functions
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MEG QC Pipeline'
+project = 'MEG QC'
 copyright = '2023, ANCP Lab, University of Oldenburg, Evgeniia Gapontseva, Aaron Reer, Jochem Rieger'
 author = 'Evgeniia Gapontseva, Aaron Reer, Jochem Rieger'
 release = '2023'
@@ -22,7 +22,11 @@ release = '2023'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+extensions = ['sphinx.ext.autodoc', 
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary']
+
+# https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
 
 templates_path = ['_templates']
 exclude_patterns = []

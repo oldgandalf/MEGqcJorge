@@ -8,9 +8,9 @@ import pandas as pd
 import mne
 import plotly.graph_objects as go
 from scipy.integrate import simpson
-#from universal_plots import Plot_psd, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
+from universal_plots import Plot_psd, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
 from scipy.signal import find_peaks, peak_widths
-#from universal_html_report import simple_metric_basic
+from universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version

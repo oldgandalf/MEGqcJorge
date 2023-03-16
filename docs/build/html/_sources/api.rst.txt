@@ -2,6 +2,10 @@
 API documentation
 """"""""""""""""""
 
+.. autosummary::
+   :toctree: generated
+
+ 
 Main 
 ----
 .. automodule:: Functions.main_meg_qc
