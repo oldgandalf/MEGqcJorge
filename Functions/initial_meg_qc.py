@@ -222,8 +222,10 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
-    """Here all the initial actions need to work with MEG data are done: 
+    """
+    Here all the initial actions needed to analyse MEG data are done: 
     - read fif file,
+    - separate mags and grads names into 2 lists,
     - crop the data if needed,
     - filter and downsample the data,
     - epoch the data.
@@ -259,16 +261,13 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     """
 
     print('___MEG QC___: ', 'Reading data from file:', data_file)
-    active_shielding_used = False
+
     try:
         raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
+        shielding_str = ''
     except: 
         raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
-        active_shielding_used = True
-
-    mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
-    grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
-    channels = {'mag': mag_ch_names, 'grad': grad_ch_names}
+        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
 
     #crop the data to calculate faster:
     tmax=default_settings['crop_tmax']
@@ -297,7 +296,11 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
 
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, active_shielding_used
+    mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
+    grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
+    channels = {'mag': mag_ch_names, 'grad': grad_ch_names}
+
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str
 
 
 def sanity_check(m_or_g_chosen, channels):

@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
 
 import Functions
+#from universal_plots 
 
 
 # -- Project information -----------------------------------------------------
@@ -37,8 +38,8 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-html_theme_options = {
-    "sidebarwidth": 250,
-    "body_min_width": 800
-}
+# html_theme_options = {
+#     "sidebarwidth": 250,
+#     "body_min_width": 800
+# }
 html_static_path = ['_static']
