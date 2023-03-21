@@ -5,61 +5,60 @@ API documentation
 
 Main 
 ----
-.. automodule:: Functions.main_meg_qc
+.. automodule:: meg_qc.meg_qc_pipeline
    :members:
    
 
 Initial processing
 ------------------
-.. automodule:: Functions.initial_meg_qc
+.. automodule:: meg_qc.source.initial_meg_qc
    :members:
-
 
 Standard deviation
 ------------------
-.. automodule:: Functions.STD_meg_qc
+.. automodule:: meg_qc.source.STD_meg_qc
    :members:
 
 
 Frequency spectrum
 ------------------
-.. automodule:: Functions.PSD_meg_qc
+.. automodule:: meg_qc.source.PSD_meg_qc
    :members:
 
 
 ECG and EOG
 -----------
 
-.. automodule:: Functions.ECG_EOG_meg_qc
+.. automodule:: meg_qc.source.ECG_EOG_meg_qc
    :members:
 
 
 Head movement artifacts
 -----------------------
-.. automodule:: Functions.Head_meg_qc
+.. automodule:: meg_qc.source.Head_meg_qc
    :members:
 
 
 Muscle artifacts
 ----------------
-.. automodule:: Functions.muscle_meg_qc
+.. automodule:: meg_qc.source.muscle_meg_qc
    :members:
 
 
 Peak to peak amplitude manual 
 ------------------------------
-.. automodule:: Functions.Peaks_manual_meg_qc
+.. automodule:: meg_qc.source.Peaks_manual_meg_qc
    :members:
 
 
 HTML report
 ----------------------------
-.. automodule:: Functions.universal_html_report
+.. automodule:: meg_qc.source.universal_html_report
     :members:
 
 
 Universal plotting functions
 ----------------------------
-.. automodule:: Functions.universal_plots
+.. automodule:: meg_qc.source.universal_plots
     :members:
 

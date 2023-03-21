@@ -8,10 +8,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
 
-import Functions
-#from universal_plots 
-
-
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -23,9 +19,13 @@ release = '2023'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
+
+
 extensions = ['sphinx.ext.autodoc', 
     'sphinx.ext.napoleon',
-    'sphinx.ext.autosummary']
+    'sphinx.ext.autosummary',
+    'sphinx.ext.viewcode'
+    ]
 
 # https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
 
@@ -33,13 +33,20 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-# html_theme_options = {
-#     "sidebarwidth": 250,
-#     "body_min_width": 800
-# }
+
+# alabaster theme options
+html_theme_options = {
+    "fixed_sidebar": "true",
+    "github_button": "true",
+    "github_user": "evgeniia-gapontseva",
+    "github_repo": "MEG-QC-code",
+    "description": "Python based pipeline for quality control of MEG data",
+    # "logo": "meg_qc_logo.png",
+    # "logo_name": "true",
+}
+
 html_static_path = ['_static']

@@ -3,17 +3,24 @@ import ancpbids
 import time
 import json
 
-from initial_meg_qc import get_all_config_params, sanity_check, initial_processing
-from STD_meg_qc import STD_meg_qc
-from PSD_meg_qc import PSD_meg_qc
-from Peaks_manual_meg_qc import PP_manual_meg_qc
-from Peaks_auto_meg_qc import PP_auto_meg_qc
-from ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
-from Head_meg_qc import HEAD_movement_meg_qc
-from muscle_meg_qc import MUSCLE_meg_qc
-from universal_html_report import make_joined_report, make_joined_report_for_mne
-from universal_plots import QC_derivative
+import sys
 
+# Needed to import the modules without specifying the full path, for command line and jupyter notebook
+sys.path.append('./meg_qc/source/')
+
+# relative path for `make html` (docs)
+sys.path.append('../meg_qc/source/')
+
+from meg_qc.source.initial_meg_qc import get_all_config_params, sanity_check, initial_processing
+from meg_qc.source.STD_meg_qc import STD_meg_qc
+from meg_qc.source.PSD_meg_qc import PSD_meg_qc
+from meg_qc.source.Peaks_manual_meg_qc import PP_manual_meg_qc
+from meg_qc.source.Peaks_auto_meg_qc import PP_auto_meg_qc
+from meg_qc.source.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
+from meg_qc.source.Head_meg_qc import HEAD_movement_meg_qc
+from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
+from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_for_mne
+from meg_qc.source.universal_plots import QC_derivative
 
 def make_derivative_meg_qc(config_file_name):
 
@@ -266,8 +273,3 @@ def make_derivative_meg_qc(config_file_name):
 
     return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos
 
-
-#%%
-
-# config_file_name = 'settings.ini'
-# raw = make_derivative_meg_qc(config_file_name)
