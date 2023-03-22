@@ -591,12 +591,13 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     1. Calculate average psd curve over all channels
     2. Run peak detection on it -> get number of noise freqs. Create the bands around them. Split blended freqs.
-    3. * Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
+    3. (Optional) Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
     4. Calculate area under the curve for each noisy peak (amplitude of the noise)): 
-    If 3* was done: area is limited to where noise band crosses the fitted curve. - count from there.
-    If not (default): area is limited to the whole area under the noise band, including the psd of the signal.
+        - If 3 was done: area is limited to where noise band crosses the fitted curve. - count from there.
+        - If not (default): area is limited to the whole area under the noise band, including the psd of the signal.
     5. Calculate what part of the whole psd is the noise (noise amplitude) and what part is the signal (signal amplitude) + plot as pie chart
 
+    
     Parameters
     ----------
     ch_name : str
@@ -852,25 +853,27 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     Main psd function. Calculates:
 
     - PSD for each channel
-    - amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5–4 Hz), 
-    theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
+    - amplitudes (area under the curve) of functionally distinct frequency bands, such as 
+        delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
     - noise amplitudes (area under the curve) for each noisy frequency band for average psd
     - noise amplitudes (area under the curve) for each noisy frequency band for each channel.
 
+    
     Frequency spectrum peaks we can often see:
     
-    - 50, 100, 150 - powerline EU
-    - 60, 120, 180 - powerline US
-    - 6 - noise of shielding chambers 
-    - 44 - meg noise
-    - 17 - train station 
-    - 10 - Secret :)
-    - 1hz - highpass filter.
-    - flat spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
+    - Hz 50, 100, 150 - powerline EU
+    - Hz 60, 120, 180 - powerline US
+    - Hz 6 - noise of shielding chambers 
+    - Hz 44 - meg device noise
+    - Hz 17 - train station 
+    - Hz 10 - secret :)
+    - Hz 1 - highpass filter.
+    - flat frequency spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
 
+    
     Parameters
     ----------
     psd_params : dict

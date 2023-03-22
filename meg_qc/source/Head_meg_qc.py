@@ -314,9 +314,10 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
     - head positions (x, y, z) and rotations (q1, q2, q3)
     - maximum amplitude of positions and rotations
     - std of positions and rotations over whole time series: 
-    1) calculate 1 value for positions and 1 value for rotations using Pythagorean theorem - for each time point.
-    2) calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
+        1) calculate 1 value for positions and 1 value for rotations using Pythagorean theorem - for each time point.
+        2) calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
     
+
     Parameters
     ----------
     raw : mne.io.Raw
