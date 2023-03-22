@@ -1,1 +1,2 @@
-## MEGqc - a standardized pipeline for MEG data quality control
+MEGqc - a standardized pipeline for MEG data quality control
+============================================================
