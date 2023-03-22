@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import mne
-#from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
-#from universal_html_report import simple_metric_basic
+from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+from universal_html_report import simple_metric_basic
 
 # In[2]:
 
@@ -49,7 +49,8 @@ def RMSE(data_m_or_g: np.array or list):
 
 def get_std_all_data(data: mne.io.Raw, channels: list):
 
-    """Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
+    """
+    Calculate RMSE/std (same mathematically) for each channel - for the entire time duration.
 
     Parameters
     ----------
@@ -74,11 +75,14 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
 def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: list, std_multiplier: float):
 
-    """Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
+    """
+    Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
     Threshold for noisy is defined as: (mean + std_multiplier*std), where: 
+
     - mean is mean stds/ptp values over all channels
     - std is standard deviation of stds/ptp values over all channels
     - std_multiplier is a parameter set in config, defines how many stds above/below mean should be takes as threshold.
+
     Above this thresold - noisy, 
     below (mean - std_multiplier*std) - flat.
 
@@ -215,10 +219,13 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     Use multiplier as a threshold: 
     channel data inside a give epoch is noisy if std of this channel for this epoch is over (the mean std of this channel for all epochs together*multipliar)
     Multipliar is set by user in the config file.
+
     2. Count how many channels are noisy/flat in each epoch. 
     If more than percent_noisy_flat_allowed of channels are noisy/flat, then this epoch is noisy/flat.
     Percent is set by user in the config file.
+
     3. Create MEG_QC_derivative as 3 dfs:
+
     - df_epoch_vs_mean: ratio of std of this channel for this epoch to the mean std of this channel over all epochs together
     - df_noisy_epoch: df with True/False values for each channel in each epoch, True if this channel is noisy in this epoch
     - df_flat_epoch: df with True/False values for each channel in each epoch, True if this channel is flat in this epoch

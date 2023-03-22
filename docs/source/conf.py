@@ -42,7 +42,7 @@ html_theme = 'alabaster'
 html_theme_options = {
     "fixed_sidebar": "true",
     "github_button": "true",
-    "github_user": "evgeniia-gapontseva",
+    "github_user": "ANCPLabOldenburg",
     "github_repo": "MEG-QC-code",
     "description": "Python based pipeline for quality control of MEG data",
     # "logo": "meg_qc_logo.png",

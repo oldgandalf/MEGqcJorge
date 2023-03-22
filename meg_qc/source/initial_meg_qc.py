@@ -4,7 +4,8 @@ import numpy as np
 
 
 def get_all_config_params(config_file_name: str):
-    """Parse all the parameters from config and put into a python dictionary 
+    """
+    Parse all the parameters from config and put into a python dictionary 
     divided by sections. Parsing approach can be changed here, which 
     will not affect working of other fucntions.
     
@@ -172,7 +173,8 @@ def get_all_config_params(config_file_name: str):
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
-    """Epochs MEG data based on the parameters provided in the config file.
+    """
+    Epoch MEG data based on the parameters provided in the config file.
     
     Parameters
     ----------
@@ -224,6 +226,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     """
     Here all the initial actions needed to analyse MEG data are done: 
+
     - read fif file,
     - separate mags and grads names into 2 lists,
     - crop the data if needed,
@@ -305,7 +308,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 def sanity_check(m_or_g_chosen, channels):
     
-    """Check if the channels which the user gave in config file to analize actually present in the data set.
+    """
+    Check if the channels which the user gave in config file to analize actually present in the data set.
     
     Parameters
     ----------

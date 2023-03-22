@@ -5,14 +5,15 @@
 import numpy as np
 import pandas as pd
 import mne
-#from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs
-#from universal_html_report import simple_metric_basic
-#from STD_meq_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
+from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs
+from universal_html_report import simple_metric_basic
+from STD_meq_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
 
-    """ Function finds a pair: postive+negative peak and calculates the amplitude between them. 
+    """ 
+    Find a pair: postive + negative peak and calculates the amplitude between them. 
     If no neighbour is found withing given distance - this peak is skipped. 
     If several neighbours are found - several pairs are created. 
     As the result a mean peak-to-peak distance is calculated over all detected pairs for given chunck of data
@@ -81,7 +82,8 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
 
 def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
-    """ Function calculates peak-to-peak amplitude for all channels over whole data (not epoched).
+    """ 
+    Calculate peak-to-peak amplitude for all channels over whole data (not epoched).
 
     Parameters:
     -----------
@@ -125,7 +127,8 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
 
 def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
-    """  Function calculates peak-to-peak amplitude for every epoch and every channel (mag or grad).
+    """  
+    Calculate peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
     Parameters:
     -----------
@@ -172,7 +175,8 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
 
 def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data: dict, small_ptp_with_value_all_data: dict, channels: dict, deriv_epoch_ptp: dict, metric_local: bool, m_or_g_chosen: list):
 
-    """ Function creates a simple metric for peak-to-peak amplitude. 
+    """ 
+    Create a simple metric for peak-to-peak amplitude. 
     Global: The metric is calculated for all data (not epoched) and 
     Local: for each epoch.
 
@@ -226,7 +230,9 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
 
 def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
-    """Main Peak to peak amplitude function. Calculates:
+    """
+    Main Peak to peak amplitude function. Calculates:
+    
     - Peak to peak amplitudes (PtP) of data for each channel over all time series.
     - Channels with big PtP (noisy) and small PtP (flat) over all time series.
     - PtP of data for each channel  in each epoch.

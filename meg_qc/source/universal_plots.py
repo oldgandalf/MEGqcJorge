@@ -8,7 +8,8 @@ import warnings
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
-    """Returns title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
+    """
+    Return title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
     
     Parameters
     ----------
@@ -145,7 +146,7 @@ class QC_derivative:
     def get_section(self):
 
         """ 
-        Returns a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
+        Return a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
         
         Returns
         -------
@@ -178,6 +179,7 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
 
     """
     Creates representation of calculated data as multiple boxplots. Used in RMSE and PtP_manual measurements. 
+
     - If x_axis_boxes is 'channels', each box represents 1 epoch, each dot is std of 1 channel for this epoch
     - If x_axis_boxes is 'epochs', each box represents 1 channel, each dot is std of 1 epoch for this channel
 
@@ -272,7 +274,7 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
 def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
 
     """
-    Creates representation of calculated data as multiple boxplots: 
+    Create representation of calculated data as multiple boxplots: 
     each box represents 1 channel, each dot is std of 1 epoch in this channel
     Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
     The figure will be saved as an interactive html file.
@@ -351,7 +353,7 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
 def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
 
     """
-    Creates representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
+    Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
     each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
 
     Parameters

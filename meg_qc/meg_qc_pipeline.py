@@ -22,27 +22,30 @@ from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
 from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_for_mne
 from meg_qc.source.universal_plots import QC_derivative
 
-def make_derivative_meg_qc(config_file_name):
+def make_derivative_meg_qc(config_file_path):
 
-    """ Main function of MEG QC:
-    - Parse parameters from config
-    - Get the data .fif file for each subject using ancpbids
-    - Run initial processing (filtering, epoching, resampling)
-    - Run whole QC analysis for every subject, every fif
-    - Save derivatives (csvs, html reports) into the file system using ancpbids.
+    """ 
+    Main function of MEG QC:
+    
+    * Parse parameters from config
+    * Get the data .fif file for each subject using ancpbids
+    * Run initial processing (filtering, epoching, resampling)
+    * Run whole QC analysis for every subject, every fif
+    * Save derivatives (csvs, html reports) into the file system using ancpbids.
     
     Parameters
     ----------
-    config_file_name : str
-        Name of the config file with all the parameters for the QC analysis.
+    config_file_path : str
+        Path the config file with all the parameters for the QC analysis and data directory path.
         
     Returns
     -------
-
+        raw : mne.io.Raw
+            The raw MEG data.
 
     """
 
-    all_qc_params = get_all_config_params(config_file_name)
+    all_qc_params = get_all_config_params(config_file_path)
 
     if all_qc_params is None:
         return

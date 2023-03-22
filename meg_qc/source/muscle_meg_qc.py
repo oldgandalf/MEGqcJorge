@@ -32,7 +32,8 @@ from universal_plots import QC_derivative, get_tit_and_unit
 
 def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
-    """Make a simple metric dict for muscle events.
+    """
+    Make a simple metric dict for muscle events.
     
     Parameters
     ----------
@@ -60,7 +61,8 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
 
 def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, threshold_muscle: float, muscle_times: np.ndarray, high_scores_muscle: np.ndarray, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
 
-    """Plot the muscle events with the z-scores and the threshold.
+    """
+    Plot the muscle events with the z-scores and the threshold.
     
     Parameters
     ----------
@@ -118,11 +120,11 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
 
 def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: list = [110, 140]):
 
-    """Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
-    MNE advices to filter power line noise.
-    Filtering the rest was our idea.
-    Noisy frequencies for filtering come from PSD artifact detection function. If any noise peaks were found there for mags or grads 
-    - they will all be passed here and checked if they are in range of muscle artifacts.
+    """
+    Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
+    MNE advices to filter power line noise. We also filter here noisy frequencies in range of muscle artifacts.
+    List of noisy frequencies for filtering come from PSD artifact detection function. If any noise peaks were found there for mags or grads 
+    they will all be passed here and checked if they are in range of muscle artifacts.
     
     Parameters
     ----------

@@ -20,11 +20,10 @@ from universal_html_report import simple_metric_basic
 def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarray):
 
     """
-    Calculates the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
+    Calculate the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
     (Named here as power, but in fact it s amplitude of the signal, since psds are turned into amplitudes already.)
     Adopted from: https://raphaelvallat.com/bandpower.html
 
-    This function is called in Power_of_freq_meg
     
     Parameters
     ----------
@@ -91,8 +90,8 @@ def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarr
 def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, mean_power_per_band_needed: bool, plotflag: bool):
 
     """
-    - Power of frequencies calculation for all channels, 
-    - If desired: creating a pie chart of mean power of every band over the entire data.
+    Power of frequencies calculation for all channels.
+    If desired: creating a pie chart of mean power of every band over the entire data.
 
     Parameters
     ----------
@@ -269,6 +268,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd
     In case later, during preprocessing this noise will be filtered out, it will be done completely: both the peak and the main psd area.
 
     Process:
+
     1. Find the height of the noise peaks. For this take the average between the height of the start and end of this noise bend.
     2. Cut the noise peaks out of PSD curve at the found height.
     3. Baseline the peaks: all the peaks are brought to 0 level.
@@ -419,6 +419,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     """
     Detect the frequency band around the noise peaks.
     Complex approach: This function is trying to detect the actual start and end of peaks.
+
     1. Bands around the noise frequencies are created based on detected peak_width.
     2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks pn PSD curve.
 
@@ -504,6 +505,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     """
     Detect the frequency band around the noise peaks.
     Simple approach: used by default.
+
     1. Create frequency band around central noise frequency just by adding -x...+x Hz around.
     2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks pn PSD curve.
 
@@ -586,9 +588,10 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     """
     The function finds the number and amplitude of noisy frequencies in PSD function in these steps:
+
     1. Calculate average psd curve over all channels
     2. Run peak detection on it -> get number of noise freqs. Create the bands around them. Split blended freqs.
-    3*. Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
+    3. * Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
     4. Calculate area under the curve for each noisy peak (amplitude of the noise)): 
     If 3* was done: area is limited to where noise band crosses the fitted curve. - count from there.
     If not (default): area is limited to the whole area under the noise band, including the psd of the signal.
@@ -847,6 +850,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     
     """
     Main psd function. Calculates:
+
     - PSD for each channel
     - amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5–4 Hz), 
     theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
@@ -857,6 +861,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     - noise amplitudes (area under the curve) for each noisy frequency band for each channel.
 
     Frequency spectrum peaks we can often see:
+    
     - 50, 100, 150 - powerline EU
     - 60, 120, 180 - powerline US
     - 6 - noise of shielding chambers 

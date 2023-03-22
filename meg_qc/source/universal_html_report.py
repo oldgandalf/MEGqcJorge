@@ -7,6 +7,7 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
     Functions does:
+
     - Add section title
     - Add user notification if needed (for example: head positions not calculated)
     - Loop over list of derivs belonging to 1 section, keep only figures
@@ -73,7 +74,8 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
 
 def keep_fig_derivs(derivs_section:list):
 
-    """Loop over list of derivs belonging to 1 section, keep only figures to add to report.
+    """
+    Loop over list of derivs belonging to 1 section, keep only figures to add to report.
     
     Parameters
     ----------
@@ -228,7 +230,8 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
 
 def simple_metric_basic(metric_global_name: str, metric_global_description: str, metric_global_content_mag: dict, metric_global_content_grad: dict, metric_local_name: str =None, metric_local_description: str =None, metric_local_content_mag: dict =None, metric_local_content_grad: dict =None, display_only_global: bool =False, psd: bool=False):
     
-    """Basic structure of simple metric for all measurements.
+    """
+    Basic structure of simple metric for all measurements.
     
     Parameters
     ----------

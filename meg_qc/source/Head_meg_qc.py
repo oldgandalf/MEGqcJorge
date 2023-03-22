@@ -5,14 +5,15 @@ from plotly.subplots import make_subplots
 import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
-#from universal_plots import QC_derivative
+from universal_plots import QC_derivative
 
 mne.viz.set_browser_backend('matplotlib')
 
 
 def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
 
-    """Compute the standard deviation of the movement of the head over time and the maximum rotation and movement in 3 directions.
+    """
+    Compute the standard deviation of the movement of the head over time and the maximum rotation and movement in 3 directions.
     
     Parameters
     ----------
@@ -79,7 +80,8 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
 
 def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: list, max_rotation_q: list):
 
-    """Make simple metric for head positions.
+    """
+    Make simple metric for head positions.
     
     Parameters
     ----------
@@ -119,7 +121,8 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
 
 def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
-    """ Plot positions and rotations of the head.
+    """ 
+    Plot positions and rotations of the head.
     
     Parameters
     ----------
@@ -203,7 +206,9 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 
 def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
-    """Plot raw data with annotated head movement. Currently not used.
+
+    """
+    Plot raw data with annotated head movement. Currently not used.
     
     Parameters
     ----------
@@ -232,7 +237,9 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 
 def get_head_positions(raw: mne.io.Raw):
-    """Get head positions and rotations using MNE
+    
+    """
+    Get head positions and rotations using MNE
     
     Parameters
     ----------
@@ -301,12 +308,14 @@ def get_head_positions(raw: mne.io.Raw):
 
 def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_annotations: bool =False):
 
-    """Main function for head movement. Calculates:
+    """
+    Main function for head movement. Calculates:
+
     - head positions (x, y, z) and rotations (q1, q2, q3)
     - maximum amplitude of positions and rotations
     - std of positions and rotations over whole time series: 
-    calculate 1 value for positions and 1 value for rotations using Pythagorean theorem - for each time point.
-    calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
+    1) calculate 1 value for positions and 1 value for rotations using Pythagorean theorem - for each time point.
+    2) calculate std of these values and get 1 std for positions and 1 std for rotations over whole time series.
     
     Parameters
     ----------

@@ -10,6 +10,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
     Detects noisy ecg or eog channels.
 
     The channel is noisy when:
+
     1. There are too many peaks in the data (more frequent than possible heartbets or blinks of a healthy human).
     2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period).
 
@@ -115,6 +116,7 @@ class Avg_artif:
     
     """ 
     Instance of this class:
+
     - contains average ECG/EOG epoch for a particular channel,
     - calculates its main peak (location and magnitude),
     - evaluates if this epoch is concidered as artifact or not based on the main peak amplitude.
@@ -225,7 +227,7 @@ class Avg_artif:
     def plot_epoch_and_peak(self, fig, t, fig_tit, ch_type):
 
         """
-        Plots the average artifact epoch and the peak inside it.
+        Plot the average artifact epoch and the peak inside it.
 
         Parameters
         ----------
@@ -553,6 +555,8 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
     
     """ 
     Estimate t0 for the artifact. MNE has it s own estomation of t0, but it is often not accurate.
+    Steps:
+
     1. find peaks on all channels in time frame around -0.02<t[peak_loc]<0.012 (here R wave is typically dettected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
     2. take 5 channels with most prominent peak 
     3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate.
@@ -650,6 +654,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
     0. For each separate channel get the average ECG epoch. If needed, flip this average epoch to make it's main peak positive.
     Flip approach: 
+
     - define  a window around the ecg/eog event deteceted by mne. This is not the real t0, but  an approximation. 
     The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
     So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
@@ -674,6 +679,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     
     4. Find all peaks above this threshold.
     Finding approach:
+
     - again, set t0 actual as the time point of the peak of an average artifact (over all channels)
     - again, set a window around t0_actual. this new window is defined by how long the wave of the artifact normally is. 
     The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
@@ -826,7 +832,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
     """
     Make a dictionary for the global part of simple metrics for ECG/EOG artifacts.
-    For ECG.EOG metric no local metrics are calculated, so global is the only one.
+    For ECG/EOG no local metrics are calculated, so global is the only one.
     
     Parameters
     ----------
