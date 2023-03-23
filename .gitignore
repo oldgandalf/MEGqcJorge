@@ -17,3 +17,5 @@ data/ck06an19_vp13/190521/bad_channels.json
 *.png
 *.bkp
 *.dtmp
+.DS_Store
+**/.DS_Store
