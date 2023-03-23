@@ -10,6 +10,33 @@ sys.path.append('./meg_qc/source/')
 
 # relative path for `make html` (docs)
 sys.path.append('../meg_qc/source/')
+sys.path.append('../../meg_qc/source/')
+sys.path.append('../../../meg_qc/source/')
+sys.path.append('../../../../meg_qc/source/')
+sys.path.append('../../../../../meg_qc/source/')
+
+
+sys.path.append('./meg_qc/')
+
+# relative path for `make html` (docs)
+sys.path.append('../meg_qc/')
+sys.path.append('../../meg_qc/')
+sys.path.append('../../../meg_qc/')
+sys.path.append('../../../../meg_qc/')
+sys.path.append('../../../../../meg_qc/')
+
+sys.path.append('./meg_qc/source/')
+
+# relative path for `make html` (docs)
+sys.path.append('../source/')
+sys.path.append('../../source/')
+sys.path.append('../../../source/')
+sys.path.append('../../../../source/')
+sys.path.append('../../../../../source/')
+
+
+
+
 
 from meg_qc.source.initial_meg_qc import get_all_config_params, sanity_check, initial_processing
 from meg_qc.source.STD_meg_qc import STD_meg_qc
