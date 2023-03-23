@@ -17,6 +17,36 @@ from universal_html_report import simple_metric_basic
 # COULDNT SPLIT  when filtered data - check with new psd version
 # In[42]:
 
+def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray, channels: list):
+
+    freq_res = freqs[1] - freqs[0]
+    
+    total_signal_amplitude = []
+    band_ampl_df = pd.DataFrame(index=channels, columns=[band for band in freq_bands])
+    band_ampl_relative_to_signal_df = pd.DataFrame(index=channels, columns=[band for band in freq_bands])
+    ampl_by_Nfreq_per_ch_list_df = pd.DataFrame(index=channels, columns=[band for band in freq_bands])
+
+    for ch_n in psds:
+        total_signal_amplitude.append(simpson(psds[ch_n], dx=freq_res)) #power of all bands 
+
+        for band in freq_bands:
+
+            idx_band = np.logical_and(freqs >= band[0], freqs <= band[-1]) 
+            # Find closest indices of band in frequency vector so idx_band is a list of indices frequencies that 
+            # correspond to this band.
+
+            # Compute the absolute power of the band by approximating the area under the curve:
+            band_ampl_df.loc[channels[ch_n], band] = simpson(psds[ch_n][idx_band], dx=freq_res) #power of chosen band
+
+            #Calculate how much of the total power of the average signal goes into each of the noise freqs:
+            band_ampl_relative_to_signal_df.loc[channels[ch_n], band] = band_ampl_df.loc[channels[ch_n], band] / total_signal_amplitude # relative power: % of this band in the total bands power for this channel:
+
+            #devide the power of band by the  number of frequencies in the band, to compare with RMSE later:
+            ampl_by_Nfreq_per_ch_list_df.loc[channels[ch_n], band] = band_ampl_df.loc[channels[ch_n], band]/sum(idx_band)
+
+    return band_ampl_df, band_ampl_relative_to_signal_df, ampl_by_Nfreq_per_ch_list_df, total_signal_amplitude
+
+
 def Power_of_band(freqs: np.ndarray, f_low: float, f_high: float, psds: np.ndarray):
 
     """
@@ -131,7 +161,7 @@ def Power_of_freq_meg(ch_names: list, m_or_g: str, freqs: np.ndarray, psds: np.n
         f_low, f_high = w[1] # Define band lower and upper limits
 
         #loop over mag or grad:
-        bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, _ =Power_of_band(freqs, f_low, f_high, psds)
+        bandpower_per_ch_list, power_by_Nfreq_per_ch_list, rel_bandpower_per_ch_list, _ = Power_of_band(freqs, f_low, f_high, psds)
 
         dict_power[w[0]] = bandpower_per_ch_list
         dict_power_freq[w[0]] = power_by_Nfreq_per_ch_list
@@ -664,18 +694,8 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     noise_ampl_relative_to_signal=[]
 
     if noisy_bands_final: #if not empty
-        for band in noisy_bands_final:
 
-            idx_band = np.logical_and(freqs >= band[0], freqs <= band[-1]) 
-            # Find closest indices of band in frequency vector so idx_band is a list of indices frequencies that 
-            # correspond to this band.
-
-            # Compute the absolute power of the band by approximating the area under the curve:
-            band_ampl = simpson(psd_noise_final[idx_band], dx=freq_res) #power of chosen band
-            noise_ampl+= [band_ampl] 
-
-            #Calculate how much of the total power of the average signal goes into each of the noise freqs:
-            noise_ampl_relative_to_signal.append(band_ampl / total_amplitude) # relative power: % of this band in the total bands power for this channel:
+        band_ampl, noise_ampl_relative_to_signal, _ = get_bands_amplitude(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
 
 
     #noise_ampl_relative_to_signal=[r[0] for r in noise_ampl_relative_to_signal]
@@ -854,7 +874,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
     - PSD for each channel
     - amplitudes (area under the curve) of functionally distinct frequency bands, such as 
-        delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel + average power of band over all channels
+        delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel 
+        and average power of band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
@@ -919,6 +940,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
         psd_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method) 
         
+        #Calculate the amplitude of alpha, beta, etc bands for each channel + average oveall channels:
         fig_power_with_name, dfs_with_name = Power_of_freq_meg(ch_names=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], mean_power_per_band_needed = psd_params['mean_power_per_band_needed'], plotflag = True)
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
