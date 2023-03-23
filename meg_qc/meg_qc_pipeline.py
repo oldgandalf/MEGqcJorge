@@ -97,7 +97,7 @@ def make_derivative_meg_qc(config_file_path):
         print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
         return
 
-    for sid in list_of_subs[0:1]: 
+    for sid in list_of_subs[1:2]: 
         print('___MEG QC___: ', 'Take SID: ', sid)
         
         subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
@@ -165,11 +165,11 @@ def make_derivative_meg_qc(config_file_path):
             # head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
             # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
-            #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-            #noisy_freqs_global = [50, 60] 
-            muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False)
-            print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
+            # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+            # #noisy_freqs_global = [50, 60] 
+            # muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False)
+            # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
    
             if 'mag' in m_or_g_chosen:
