@@ -25,9 +25,10 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
-    'sphinx.ext.autosectionlabel',
-    'sphinx_inline_tabs'
+    'sphinx.ext.autosectionlabel'
     ]
+#   'sphinx_inline_tabs' - removed extention, not needed now, maybe later. 
+#   need to install it first, also on readthedocs, otherwise build failes
 
 # https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
 
