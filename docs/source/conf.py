@@ -24,7 +24,9 @@ release = '2023'
 extensions = ['sphinx.ext.autodoc', 
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autosectionlabel',
+    'sphinx_inline_tabs'
     ]
 
 # https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
@@ -40,8 +42,10 @@ html_theme = 'alabaster'
 
 # alabaster theme options
 html_theme_options = {
-    "fixed_sidebar": "true",
+    "fixed_sidebar": "false",
     "github_button": "true",
+    "sidebarwidth": "400",
+    "body_min_width": "800",
     "github_user": "ANCPLabOldenburg",
     "github_repo": "MEG-QC-code",
     "description": "Python based pipeline for quality control of MEG data",

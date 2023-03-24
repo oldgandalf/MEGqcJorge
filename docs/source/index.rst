@@ -7,11 +7,10 @@ Welcome to MEG_QC documentation!
 ================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    api
-
 
 
 Indices and tables
