@@ -150,7 +150,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     mean_brain_waves_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
 
     if plotflag is True: 
-        psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_brain_waves_relative, mean_abs_values = mean_brain_waves_abs, total_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
+        psd_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=mean_brain_waves_relative, freq_amplitudes_absolute = mean_brain_waves_abs, total_freq_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
         psd_pie_derivative.content.show()
     else:
         psd_pie_derivative = []
@@ -648,12 +648,72 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
         noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
 
-        noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=noise_ampl_relative_to_signal, mean_abs_values = noise_and_signal_ampl, total_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
+        noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
         noise_pie_derivative.content.show()
     else:
         noise_pie_derivative = []
 
     return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
+
+def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag=True, helperplots=True, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple'):
+
+    """
+    Find noisy frequencies, their absolute and relative amplitude for averages over all channel (mag or grad) PSD and for each separate channel.
+
+    Parameters
+    ----------
+    channels : list
+        list of channel names
+    freqs : list
+        list of frequencies
+    avg_psd : list
+        list of average PSD values over all channels
+    psds : list
+        list of PSD values for each channel
+    m_or_g : str
+        'mag' or 'grad'
+    pie_plotflag : bool
+        if True, plot pie chart of SNR
+    helperplots : bool
+        if True, plot helper plots
+    cut_noise_from_psd : bool
+        if True, cut the noise peaks at the point they start and baseline them to 0.
+    prominence_lvl_pos_avg : int
+        prominence level of peak detection for finding noisy frequencies in the average PSD
+    prominence_lvl_pos_channels : int
+        prominence level of peak detection for finding noisy frequencies in the PSD of each channel
+    simple_or_complex : str
+        'simple' or 'complex' - method of finding noisy frequencies. see find_number_and_ampl_of_noise_freqs() for details
+
+    Returns
+    -------
+    noise_pie_derivative : QC_derivative object or empty list if pie_plotflag is False
+        QC_derivative containig a pie chart of SNR
+    
+    
+    
+    """
+
+    #Calculate noise freqs globally: on the average psd curve over all channels together:
+    noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global = find_number_and_ampl_of_noise_freqs('Average', freqs, avg_psd, pie_plotflag, helperplots, m_or_g, cut_noise_from_psd, prominence_lvl_pos_avg, simple_or_complex)
+
+
+    #Calculate noise freqs locally: on the psd curve of each channel separately:
+    noise_ampl_local_all_ch={}
+    noise_ampl_relative_to_all_signal_local_all_ch={}
+    noisy_freqs_local_all_ch={}
+
+    for ch_n, ch in enumerate(channels): #plot only for some channels
+
+        if (ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92) and helperplots is True:
+            helper_plotflag=True
+        else:
+            helper_plotflag=False
+
+        _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs, psds[ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd, prominence_lvl_pos_channels, simple_or_complex)
+        #here pie_plotflag is set to false, otherwise it ll produce a pie for each channel.
+
+    return noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local_all_ch, noise_ampl_relative_to_all_signal_local_all_ch, noisy_freqs_local_all_ch
 
 
 def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
@@ -885,30 +945,10 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         #Calculate the amplitude of alpha, beta, etc bands for each channel + average over all channels:
         pie_wave_bands_derivative, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True)
 
-        #Calculate noise freqs globally: on the average psd curve over all channels together:
-        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_ampl_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='simple')
-
-        derivs_psd += [psd_plot_derivative] + [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
-
-        #Calculate noise freqs locally: on the psd curve of each channel separately:
-        noise_ampl_local_all_ch={}
-        noise_ampl_relative_to_all_signal_local_all_ch={}
-        noisy_freqs_local_all_ch={}
-
-        for ch_n, ch in enumerate(channels[m_or_g]): #plot only for some channels
-
-            if (ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92) and helperplots is True:
-                helper_plotflag=True
-            else:
-                helper_plotflag=False
-
-            _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs[m_or_g], psds[m_or_g][ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=15, simple_or_complex='simple')
+        # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
+        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple')
         
-        noisy_freqs_local[m_or_g]=noisy_freqs_local_all_ch
-        noise_ampl_local[m_or_g]=noise_ampl_local_all_ch
-        noise_ampl_relative_to_all_signal_local[m_or_g]=noise_ampl_relative_to_all_signal_local_all_ch
-
-        #collect all noise freqs from each channel, then find which freqs there are in total. Make a list for each freq: affected cannels, amplitudeof this freq in this channel, amplitudeof this freq relative to the main signal amplitudein this channel
+        derivs_psd += [psd_plot_derivative] + [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
 
 
     # Make a simple metric for PSD:
