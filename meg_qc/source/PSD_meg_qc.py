@@ -141,12 +141,14 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
         QC_derivative(band_ampl_relative_to_signal_df, 'relative_power_'+m_or_g, 'df')]
 
     # Calculate the mean amplitude of each band over all channels:
-    _, noise_ampl_relative_to_signal_df, _, _ = get_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
+    band_ampl_df, noise_ampl_relative_to_signal_df, _, total_ampl = get_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
     #convert results to a list:
-    mean_relative2=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
+
+    mean_ampl=band_ampl_df.iloc[0, :].values.tolist()
+    mean_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
 
     if plotflag is True: 
-        psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative2, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
+        psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, mean_abs_values = mean_ampl, total_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
         psd_pie_derivative.content.show()
     else:
         psd_pie_derivative = []
@@ -617,6 +619,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
         noise_ampl_df, noise_ampl_relative_to_signal_df, _, _ = get_bands_amplitude(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
         #convert results to a list:
+
         noise_ampl = noise_ampl_df.iloc[0, :].values.tolist() #take the first and only raw, because there is only one channel calculated by this fucntion
         noise_ampl_relative_to_signal=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
 
@@ -629,16 +632,18 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     if pie_plotflag is True: # Plot pie chart of SNR:
         #Legend for the pie chart:
-        bands_legend=[]
+        bands_names=[]
         for fr_n, fr in enumerate(noisy_freqs):
-            bands_legend.append(str(round(fr,1))+' Hz noise: '+str("%.2e" % noise_ampl[fr_n])+' '+unit) # "%.2e" % removes too many digits after coma
-        main_signal_ampl = total_amplitude-sum(noise_ampl)
-        #print('___MEG QC___: ', 'Main signal amplitude: ', main_signal_ampl, unit)
-        main_signal_legend='Main signal: '+str("%.2e" % main_signal_ampl)+' '+unit
-        bands_legend.append(main_signal_legend)
+            bands_names.append(str(round(fr,1))+' Hz noise')
 
-        Snr=noise_ampl_relative_to_signal+[1-sum(noise_ampl_relative_to_signal)]
-        noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=Snr, m_or_g=m_or_g, bands_names=bands_legend, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
+        bands_names.append('Main signal')
+        
+        noise_and_signal_ampl = noise_ampl.copy()
+        noise_and_signal_ampl.append(total_amplitude-sum(noise_ampl)) #adding main signal ampl in the list
+
+        noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
+
+        noise_pie_derivative = plot_pie_chart_freq(mean_relative_freq=noise_ampl_relative_to_signal, mean_abs_values = noise_and_signal_ampl, total_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
         noise_pie_derivative.content.show()
     else:
         noise_pie_derivative = []
@@ -865,7 +870,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
-        #Calculate the amplitude of alpha, beta, etc bands for each channel + average oveall channels:
+        #Calculate the amplitude of alpha, beta, etc bands for each channel + average over all channels:
         pie_wave_bands_derivative, dfs_wave_bands_ampl = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True)
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
