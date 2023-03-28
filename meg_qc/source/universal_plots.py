@@ -485,13 +485,18 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
 def plot_pie_chart_freq(mean_relative_freq: list, mean_abs_values: list, total_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str):
     
     """
-    Plot pie chart representation of relative power of each frequency band over the entire 
+    Plot pie chart representation of relative amplitude of each frequency band over the entire 
     times series of mags or grads, not separated by individual channels.
 
     Parameters
     ----------
     mean_relative_freq : list
-        list of relative power of each frequency band averaged over all channels
+        list of relative amplitudes of each frequency band averaged over all channels
+    mean_abs_values : list
+        list of absolute amplitudes of each frequency band averaged over all channels
+        (but you can actually use this function for individual channel)
+    total_ampl : float
+        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
     m_or_g : str
         'mag' or 'grad'
     bands_names : list

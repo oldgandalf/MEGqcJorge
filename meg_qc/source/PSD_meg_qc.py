@@ -23,7 +23,6 @@ def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list,
 
     """
     Calculate the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
-    (Named here as power, but in fact it s amplitude of the signal, since psds are turned into amplitudes already.)
     Adopted from: https://raphaelvallat.com/bandpower.html
 
     
@@ -46,7 +45,7 @@ def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list,
     band_ampl_df : pd.DataFrame
         Dataframe of amplitudes of each frequency band like: [abs_power_of_delta, abs_power_of_gamma, etc...] - in absolute values
     band_ampl_relative_to_signal_df : pd.DataFrame
-        Dataframe of amplitudes of each frequency band divided by the total power of the signal for this channel. 
+        Dataframe of amplitudes of each frequency band divided by the total amplitudeof the signal for this channel. 
         Shows how much amplitude this particular band takes in the entire signal.
     ampl_by_Nfreq_per_ch_list_df : pd.DataFrame
         Dataframe of amplitudes of each frequency band divided by the number of frequencies in the band.
@@ -66,7 +65,7 @@ def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list,
     ampl_by_Nfreq_per_ch_list_df = pd.DataFrame(index=channels, columns=bands_as_str)
 
     for ch_n, _ in enumerate(psds):
-        total_signal_amplitude.append(simpson(psds[ch_n], dx=freq_res)) #power of all bands 
+        total_signal_amplitude.append(simpson(psds[ch_n], dx=freq_res)) #amplitudeof all bands 
 
         for band_n, band in enumerate(freq_bands):
 
@@ -74,15 +73,15 @@ def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list,
             # Find closest indices of band in frequency vector so idx_band is a list of indices frequencies that 
             # correspond to this band.
 
-            # Compute the absolute power of the band by approximating the area under the curve:
-            band_ampl = simpson(psds[ch_n][idx_band], dx=freq_res) #power of chosen band
+            # Compute the absolute amplitude of the band by approximating the area under the curve:
+            band_ampl = simpson(psds[ch_n][idx_band], dx=freq_res) #amplitude of chosen band
 
             band_ampl_df.iloc[ch_n, band_n] = band_ampl
 
-            #Calculate how much of the total power of the average signal goes into each of the noise freqs:
-            band_ampl_relative_to_signal_df.iloc[ch_n, band_n] = band_ampl / total_signal_amplitude[ch_n] # relative power: % of this band in the total bands power for this channel:
+            #Calculate how much of the total amplitude of the average signal goes into each of the noise freqs:
+            band_ampl_relative_to_signal_df.iloc[ch_n, band_n] = band_ampl / total_signal_amplitude[ch_n] # relative amplitude: % of this band in the total bands amplitude for this channel:
 
-            #devide the power of band by the  number of frequencies in the band, to compare with RMSE later:
+            #devide the amplitude of band by the  number of frequencies in the band, to compare with RMSE later:
             ampl_by_Nfreq_per_ch_list_df.iloc[ch_n, band_n] = band_ampl/sum(idx_band)
 
 
@@ -95,15 +94,15 @@ def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list,
 def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, avg_psd: np.ndarray, plotflag: bool):
 
     """
-    Power of frequencies calculation for all channels.
-    If desired: creating a pie chart of mean power of every band over the entire data.
+    Amplitude of frequencies calculation for all channels.
+    If desired: creating a pie chart of mean amplitude of every band over the entire data.
 
     Parameters
     ----------
     channels : list
         List of channel names
     m_or_g : str
-        'mag' or 'grad' - to choose which channels to calculate power for.
+        'mag' or 'grad' - to choose which channels to calculate amplitude for.
     freqs : np.ndarray
         numpy array of frequencies for mag  or grad
     psds : np.ndarray
@@ -119,11 +118,14 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
         If plotflag is True, returns one QC_derivative object, which is a plotly piechart figure.
         If plotflag is False, returns empty list.
     dfs_with_name : list
-        List of dataframes with power of each frequency band in each channel
+        List of dataframes with amplitude of each frequency band in each channel
+        (dfs: absolute amplitude, relative amplitude, amplitude divided by number of frequencies in the band)
+    mean_brain_waves_dict : dict
+        Dictionary of mean amplitude of each frequency band (used for simple metric json)
 
     """
     
-    # Calculate the band power:
+    # Calculate the band amplitude:
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
     bands_names = ["delta (0.5-4 Hz)", "theta (4-8 Hz)", "alpha (8-12 Hz)", "beta (12-30 Hz)", "gamma (30-100 Hz)"]
 
@@ -137,8 +139,8 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
 
     dfs_with_name = [
         QC_derivative(band_ampl_df,'abs_ampl_'+m_or_g, 'df'),
-        QC_derivative(ampl_by_Nfreq_per_ch_list_df, 'power_by_Nfreq_'+m_or_g, 'df'),
-        QC_derivative(band_ampl_relative_to_signal_df, 'relative_power_'+m_or_g, 'df')]
+        QC_derivative(band_ampl_relative_to_signal_df, 'relative_ampl_'+m_or_g, 'df'),
+        QC_derivative(ampl_by_Nfreq_per_ch_list_df, 'ampl_by_Nfreq_'+m_or_g, 'df')]
 
     # Calculate the mean amplitude of each band over all channels:
     band_ampl_df, noise_ampl_relative_to_signal_df, _, total_ampl = get_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
@@ -661,6 +663,8 @@ def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, 
 
     Parameters
     ----------
+    mean_brain_waves_dict : dict
+        dictionary with the mean brain waves (alpha, beta, etc) metrics in the form: {wave band name: {mean realtive value, mean absolute value}, ...}
     noisy_freqs_global : list
         list of noisy frequencies
     noise_ampl_global : list
@@ -729,6 +733,8 @@ def make_simple_metric_psd(mean_brain_waves_dict: dict, noise_ampl_global:dict, 
 
     Parameters
     ----------
+    mean_brain_waves_dict : dict
+        dictionary with mean brain waves (alpha, beta, etc) for each channel type. Inside each channel type: dictionary in the form: {wave band name: {mean realtive value, mean absolute value}, ...}
     noise_ampl_global : dict
         dictionary with noise amplitudes for each noisy frequency band 
     noise_ampl_relative_to_all_signal_global : dict
@@ -752,9 +758,9 @@ def make_simple_metric_psd(mean_brain_waves_dict: dict, noise_ampl_global:dict, 
     """
 
     metric_global_name = 'PSD_global'
-    metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude. Brain wave bands mean: amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-12 Hz), beta (12-30 Hz), and gamma (30-100 Hz). Values are presented as: {band name: {mean relative power of this band in %, mean absolute amplitude of this band in units}}.'
+    metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude. Brain wave bands mean: amplitudes (area under the curve) of functionally distinct frequency bands. mean_brain_waves_relative in %, mean_brain_waves_abs in mag/grad units.'
     metric_local_name = 'PSD_local'
-    metric_local_description = 'Noise frequencies detected locally (present only on individual channels). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude'
+    metric_local_description = 'Noise frequencies detected locally (present only on individual channels). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude. Brain wave bands per every channel - see csv files.'
 
     metric_global_content={'mag': None, 'grad': None}
     metric_local_content={'mag': None, 'grad': None}
@@ -808,7 +814,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     - PSD for each channel
     - amplitudes (area under the curve) of functionally distinct frequency bands, such as 
         delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-12 Hz), beta (12-30 Hz), and gamma (30-100 Hz) for each channel 
-        and average power of band over all channels
+        and average amplitudeof band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
@@ -821,9 +827,9 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     - Hz 50, 100, 150 - powerline EU
     - Hz 60, 120, 180 - powerline US
     - Hz 6 - noise of shielding chambers 
-    - Hz 44 - meg device noise
+    - Hz 44 - MEG device noise
     - Hz 17 - train station 
-    - Hz 10 - secret :)
+    - Hz 10 - specific for MEG device in Nessy 
     - Hz 1 - highpass filter.
     - flat frequency spectrum is white noise process. Has same energy in every frequency (starts around 50Hz or even below)
 
@@ -902,7 +908,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         noise_ampl_local[m_or_g]=noise_ampl_local_all_ch
         noise_ampl_relative_to_all_signal_local[m_or_g]=noise_ampl_relative_to_all_signal_local_all_ch
 
-        #collect all noise freqs from each channel, then find which freqs there are in total. Make a list for each freq: affected cannels, power of this freq in this channel, power of this freq relative to the main signal power in this channel
+        #collect all noise freqs from each channel, then find which freqs there are in total. Make a list for each freq: affected cannels, amplitudeof this freq in this channel, amplitudeof this freq relative to the main signal amplitudein this channel
 
 
     # Make a simple metric for PSD:
