@@ -144,16 +144,19 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     band_ampl_df, noise_ampl_relative_to_signal_df, _, total_ampl = get_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
     #convert results to a list:
 
-    mean_ampl=band_ampl_df.iloc[0, :].values.tolist()
-    mean_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
+    mean_brain_waves_abs=band_ampl_df.iloc[0, :].values.tolist()
+    mean_brain_waves_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
 
     if plotflag is True: 
-        psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_relative, mean_abs_values = mean_ampl, total_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
+        psd_pie_derivative = plot_pie_chart_freq(mean_relative_freq=mean_brain_waves_relative, mean_abs_values = mean_brain_waves_abs, total_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_')
         psd_pie_derivative.content.show()
     else:
         psd_pie_derivative = []
 
-    return psd_pie_derivative, dfs_with_name
+
+    mean_brain_waves_dict= {bands_names[i]: {'mean_brain_waves_relative': np.round(mean_brain_waves_relative[i]*100, 2), 'mean_brain_waves_abs': mean_brain_waves_abs[i]} for i in range(len(bands_names))}
+
+    return psd_pie_derivative, dfs_with_name, mean_brain_waves_dict
 
 
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list, noisy_freqs_indexes:list):
@@ -651,7 +654,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
 
-def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
+def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
 
     """
     Create a dictionary for the global part of psd simple metrics. Global: overall part of noise in the signal (all channels averaged).
@@ -676,7 +679,9 @@ def make_dict_global_psd(noisy_freqs_global: list, noise_ampl_global: list, nois
     for fr_n, fr in enumerate(noisy_freqs_global):
         noisy_freqs_dict[fr]={'noise_ampl_global': float(noise_ampl_global[fr_n]), 'percent_of_this_noise_ampl_relative_to_all_signal_global': round(float(noise_ampl_relative_to_all_signal_global[fr_n]*100), 2)}
 
+
     dict_global = {
+        "mean_brain_waves: ": mean_brain_waves_dict,
         "noisy_frequencies_count: ": len(noisy_freqs_global),
         "details": noisy_freqs_dict}
 
@@ -717,7 +722,7 @@ def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_a
     return dict_local
 
 
-def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
+def make_simple_metric_psd(mean_brain_waves_dict: dict, noise_ampl_global:dict, noise_ampl_relative_to_all_signal_global:dict, noisy_freqs_global:dict, noise_ampl_local:dict, noise_ampl_relative_to_all_signal_local:dict, noisy_freqs_local:dict, m_or_g_chosen:list, freqs:dict, channels: dict):
 
     """
     Create a dictionary for the psd simple metrics.
@@ -747,7 +752,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
     """
 
     metric_global_name = 'PSD_global'
-    metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude.'
+    metric_global_description = 'Noise frequencies detected globally (based on average over all channels in this data file). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude. Brain wave bands mean: amplitudes (area under the curve) of functionally distinct frequency bands, such as delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-12 Hz), beta (12-30 Hz), and gamma (30-100 Hz). Values are presented as: {band name: {mean relative power of this band in %, mean absolute amplitude of this band in units}}.'
     metric_local_name = 'PSD_local'
     metric_local_description = 'Noise frequencies detected locally (present only on individual channels). Details show each detected noisy frequency in Hz with info about its amplitude and this amplitude relative to the whole signal amplitude'
 
@@ -756,7 +761,7 @@ def make_simple_metric_psd(noise_ampl_global:dict, noise_ampl_relative_to_all_si
 
     for m_or_g in m_or_g_chosen:
 
-        metric_global_content[m_or_g]=make_dict_global_psd(noisy_freqs_global[m_or_g], noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g])
+        metric_global_content[m_or_g]=make_dict_global_psd(mean_brain_waves_dict[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g])
         metric_local_content[m_or_g]=make_dict_local_psd(noisy_freqs_local[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], channels[m_or_g])
         
     simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], metric_local_name, metric_local_description, metric_local_content['mag'], metric_local_content['grad'], psd=True)
@@ -802,7 +807,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
     - PSD for each channel
     - amplitudes (area under the curve) of functionally distinct frequency bands, such as 
-        delta (0.5–4 Hz), theta (4–8 Hz), alpha (8–12 Hz), beta (12–30 Hz), and gamma (30–100 Hz) for each channel 
+        delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-12 Hz), beta (12-30 Hz), and gamma (30-100 Hz) for each channel 
         and average power of band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
@@ -851,6 +856,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     freqs = {}
     psds = {}
     derivs_psd = []
+    mean_brain_waves_dict = {'mag':{}, 'grad':{}}
     noise_ampl_global={'mag':[], 'grad':[]}
     noise_ampl_relative_to_all_signal_global={'mag':[], 'grad':[]}
     noisy_freqs_global={'mag':[], 'grad':[]}
@@ -871,7 +877,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
         #Calculate the amplitude of alpha, beta, etc bands for each channel + average over all channels:
-        pie_wave_bands_derivative, dfs_wave_bands_ampl = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True)
+        pie_wave_bands_derivative, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True)
 
         #Calculate noise freqs globally: on the average psd curve over all channels together:
         noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g] = find_number_and_ampl_of_noise_freqs('Average', freqs[m_or_g], avg_psd, True, True, m_or_g, cut_noise_from_psd=False, prominence_lvl_pos=50, simple_or_complex='simple')
@@ -900,6 +906,6 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
 
     # Make a simple metric for PSD:
-    simple_metric=make_simple_metric_psd(noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local, noise_ampl_relative_to_all_signal_local, noisy_freqs_local, m_or_g_chosen, freqs, channels)
+    simple_metric=make_simple_metric_psd(mean_brain_waves_dict, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local, noise_ampl_relative_to_all_signal_local, noisy_freqs_local, m_or_g_chosen, freqs, channels)
 
     return derivs_psd, simple_metric, noisy_freqs_global

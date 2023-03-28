@@ -482,7 +482,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
     return qc_derivative
 
 
-def plot_pie_chart_freq(mean_relative_freq: list, mean_abs_values: list, total_ampl: float, m_or_g: str, bands_names: str, fig_tit: str, fig_name: str):
+def plot_pie_chart_freq(mean_relative_freq: list, mean_abs_values: list, total_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str):
     
     """
     Plot pie chart representation of relative power of each frequency band over the entire 
@@ -507,22 +507,25 @@ def plot_pie_chart_freq(mean_relative_freq: list, mean_abs_values: list, total_a
         QC_derivative object with plotly figure as content
 
     """
-
+    all_bands_names=bands_names.copy() 
+    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
+    #To keep them in original state outside the function, they are copied here.
+    all_mean_abs_values=mean_abs_values.copy()
     ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    mean_relative_values=[v * 100 for v in mean_relative_freq]  #in percentage
+    all_mean_relative_values=[v * 100 for v in mean_relative_freq]  #in percentage
     relative_unknown=100-(sum(mean_relative_freq))*100
     if relative_unknown>0:
-        mean_relative_values.append(relative_unknown)
-        bands_names.append('unknown')
-        mean_abs_values.append(total_ampl - sum(mean_abs_values))
+        all_mean_relative_values.append(relative_unknown)
+        all_bands_names.append('unknown')
+        all_mean_abs_values.append(total_ampl - sum(mean_abs_values))
 
-    labels=[None]*len(bands_names)
-    for n, name in enumerate(bands_names):
-        labels[n]=name + ': ' + str("%.2e" % mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
+    labels=[None]*len(all_bands_names)
+    for n, name in enumerate(all_bands_names):
+        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
-    fig = go.Figure(data=[go.Pie(labels=labels, values=mean_relative_values)])
+    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
     title={
     'text': fig_tit + ch_type_tit,
