@@ -77,14 +77,14 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
 
     """
     Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
-    Threshold for noisy is defined as: (mean + std_multiplier*std), where: 
+    Threshold for noisy = mean + multiplier*std, above it - noisy,
+    Threshold for flat = mean - multiplier*std, below it - flat,
+    where:
 
     - mean is mean stds/ptp values over all channels
-    - std is standard deviation of stds/ptp values over all channels
-    - std_multiplier is a parameter set in config, defines how many stds above/below mean should be takes as threshold.
+    - std is standard deviation of stds values over all channels
+    - multiplier is a parameter set in config, defines how many stds/ptp above or below mean should be taken as threshold.
 
-    Above this thresold - noisy, 
-    below (mean - std_multiplier*std) - flat.
 
     Parameters
     ----------
@@ -215,10 +215,12 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     
     """
     1. Define if the channels data inside the epoch is noisy or flat:
-    Compare the std of this channel for this epoch (df_std) to the mean STD of this particular channel over all time. (or over all epchs!)
-    Use multiplier as a threshold: 
-    channel data inside a give epoch is noisy if std of this channel for this epoch is over (the mean std of this channel for all epochs together*multipliar)
-    Multipliar is set by user in the config file.
+    Compare the std of this channel for this epoch (df_std) to the mean STD of this particular channel or over all epchs.
+
+    - If std of this channel for this epoch is over the mean std of this channel for all epochs together * flat multiplyer, then  the data for this channel in this epoch is noisy.
+    - If std of this channel for this epoch is under the mean std of this channel for all epochs together * noisy multiplyer, then this the data for this channel in this epoch is flat.
+    
+    Multiplyer is set by user in the config file.
 
     2. Count how many channels are noisy/flat in each epoch. 
     If more than percent_noisy_flat_allowed of channels are noisy/flat, then this epoch is noisy/flat.
