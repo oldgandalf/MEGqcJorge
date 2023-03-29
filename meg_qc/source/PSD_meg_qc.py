@@ -689,7 +689,18 @@ def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag
     -------
     noise_pie_derivative : QC_derivative object or empty list if pie_plotflag is False
         QC_derivative containig a pie chart of SNR
-    
+    noise_ampl_global : dict
+        dictionary for simple metric with info about noisy frequencies in the average PSD, absolute values for bands
+    noise_ampl_relative_to_all_signal_global : dict
+        dictionary for simple metric with info about noisy frequencies in the average PSD, relative values for bands
+    noisy_freqs_global : dict
+        dictionary for simple metric with info about noisy frequencies in the average PSD, central frequencies
+    noise_ampl_local_all_ch : dict
+        dictionary for simple metric with info about noisy frequencies in the PSD of each channel, absolute values for bands
+    noise_ampl_relative_to_all_signal_local_all_ch : dict
+        dictionary for simple metric with info about noisy frequencies in the PSD of each channel, relative values for bands
+    noisy_freqs_local_all_ch : dict
+        dictionary for simple metric with info about noisy frequencies in the PSD of each channel, central frequencies
     
     
     """
