@@ -17,5 +17,6 @@ API documentation
    head 
    universal_plots 
    html_report
+   settings_ini
    
 
