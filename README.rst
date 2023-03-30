@@ -7,3 +7,5 @@ MEGqc is designed to detect specific noise patterns in the data and visualize th
 Since neuroimaging data can be very diverse with respect to their structural organization the software is tailored to the BIDS standard (Gorgolewski et al., 2016; Niso et al., 2018). Thus MEGqc requires the data to be organized according to BIDS. 
 
 MEGqc strongly relies on the MNE-python software package (Gramfort et al., 2013).
+
+Documentation: https://meg-qc.readthedocs.io/
