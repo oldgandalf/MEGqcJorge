@@ -133,7 +133,7 @@ class Avg_artif:
         locations of peaks inside the artifact epoch
     peak_magnitude : float
         magnitudes of peaks inside the artifact epoch
-    r_wave_shape : bool
+    wave_shape : bool
         True if the average epoch has typical wave shape, False otherwise. R wave shape  - for ECG or just a wave shape for EOG.
     artif_over_threshold : bool
         True if the main peak is concidered as artifact, False otherwise. True if artifact sas magnitude over the threshold
@@ -145,7 +145,7 @@ class Avg_artif:
         
     Methods
     -------
-    __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
+    __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
         Constructor
     __repr__(self)
         Returns a string representation of the object
@@ -153,14 +153,14 @@ class Avg_artif:
         
     """
 
-    def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, r_wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
+    def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
         """Constructor"""
         
         self.name =  name
         self.mean_artifact_epoch = mean_artifact_epoch
         self.peak_loc = peak_loc
         self.peak_magnitude = peak_magnitude
-        self.r_wave_shape =  r_wave_shape
+        self.wave_shape =  wave_shape
         self.artif_over_threshold = artif_over_threshold
         self.main_peak_loc = main_peak_loc
         self.main_peak_magnitude = main_peak_magnitude
@@ -171,12 +171,14 @@ class Avg_artif:
         
         """
 
-        return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n r_wave_shape: '+ str(self.r_wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
+        return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
     def get_peaks_wave(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
 
         """
-        Find peaks in the average artifact epoch and detects if the main peak is R wave shape or not.
+        Find peaks in the average artifact epoch and decide if the epoch has wave shape: 
+        few peaks (different number allowed for ECG and EOG) - wave shape, many or no peaks - not.
+        Many peaks would mean that the epoch a mean over artifact-free data, looking noisy due to the lack of the pattern.
         
         Parameters
         ----------
@@ -209,13 +211,13 @@ class Avg_artif:
 
         if np.size(self.peak_loc)==0: #no peaks found - set peaks as just max of the whole epoch
             self.peak_loc=np.array([np.argmax(np.abs(self.mean_artifact_epoch))])
-            self.r_wave_shape=False
+            self.wave_shape=False
         elif 1<=len(self.peak_loc)<=max_n_peaks_allowed:
-            self.r_wave_shape=True
+            self.wave_shape=True
         elif len(self.peak_loc)>max_n_peaks_allowed:
-            self.r_wave_shape=False
+            self.wave_shape=False
         else:
-            self.r_wave_shape=False
+            self.wave_shape=False
             print('___MEG QC___: ', self.name + ': no expected artifact wave shape, check the reason!')
 
         self.peak_magnitude=np.array(self.mean_artifact_epoch[self.peak_loc])
@@ -364,21 +366,21 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
     not_affected_channels=[]
     artifact_lvl=mean_ecg_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
     for potentially_affected_channel in list_mean_ecg_epochs:
-        #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
+        #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
 
 
         #find the highest peak inside the timelimit_min and timelimit_max:
         main_peak_loc, main_peak_magnitude = potentially_affected_channel.get_highest_peak(t, timelimit_min, timelimit_max)
 
-        print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.r_wave_shape)
+        print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.wave_shape)
         
         if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
-            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.r_wave_shape is True:
+            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
                 potentially_affected_channel.artif_over_threshold=True
                 affected_channels.append(potentially_affected_channel)
             else:
                 not_affected_channels.append(potentially_affected_channel)
-                print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.r_wave_shape)
+                print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.wave_shape)
         else:
             not_affected_channels.append(potentially_affected_channel)
             print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
@@ -549,7 +551,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels: list, max
             ecg_epoch_per_ch_only_data[i]=ch_data
             #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
             
-        ecg_epoch_per_ch.append(Avg_artif(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, r_wave_shape=ecg_epoch_nonflipped.r_wave_shape))
+        ecg_epoch_per_ch.append(Avg_artif(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, wave_shape=ecg_epoch_nonflipped.wave_shape))
 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
 
@@ -806,7 +808,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     #set t0_actual as the time of the peak of the average ecg artifact:
     t0_actual=t[mean_ecg_loc_peak]
 
-    if avg_ecg_overall_obj.r_wave_shape is True:
+    if avg_ecg_overall_obj.wave_shape is True:
         print('___MEG QC___: ', "GOOD " +ecg_or_eog+ " average.")
         bad_avg=False
     else:
@@ -826,7 +828,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         fig_affected = plot_affected_channels(ecg_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', flip_data=flip_data)
         fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', flip_data=flip_data)
 
-    if avg_ecg_overall_obj.r_wave_shape is False and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
+    if avg_ecg_overall_obj.wave_shape is False and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
         print('___MEG QC___: ', 'Something went wrong! The overall average ' +ecg_or_eog+ ' is  bad, but all  channels are affected by ' +ecg_or_eog+ ' artifact.')
 
     return ecg_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg
