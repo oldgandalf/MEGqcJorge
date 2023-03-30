@@ -2,6 +2,7 @@ Pipeline Settings
 =================
 
 The pipeline settings are stored in the ``settings.ini`` file. 
+
 Settings are divided into sections, each corresponding to a different pipeline step.
 
 [Default]
