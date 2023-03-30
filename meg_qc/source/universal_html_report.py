@@ -2,7 +2,7 @@
 import mne
 from universal_plots import QC_derivative, get_tit_and_unit
 
-def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str):
+def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
 
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
@@ -19,14 +19,9 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
         A list of QC_derivative objects belonging to 1 section.
     section_name : str
         The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
-    no_ecg_str : str
-        The user notification: if ECG was not calculated
-    no_eog_str : str
-        The user notification: if EOG was not calculated
-    no_head_pos_str : str
-        The user notification: if head positions were not calculated
-    muscle_grad_str : str
-        The user notification: if muscle was not calculated or which channel type was used for muscle calculation
+    report_strings : dict
+        A dictionary with strings to be added to the report: general notes + notes about every measurement (when it was not calculated, for example). 
+        This is not a detailed description of the measurement.
 
     Returns
     -------
@@ -37,13 +32,21 @@ def make_html_section(derivs_section, section_name, no_ecg_str, no_eog_str, no_h
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
     if 'ECG' in section_name:
-        all_section_content="""<p>"""+no_ecg_str+"""</p>"""
+        all_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
     elif 'EOG' in section_name:
-        all_section_content="""<p>"""+no_eog_str+"""</p>"""
+        all_section_content="""<p>"""+report_strings['EOG']+"""</p>"""
     elif 'Head' in section_name:
-        all_section_content="""<p>"""+no_head_pos_str+"""</p>"""
+        all_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
     elif 'Muscle' in section_name:
-        all_section_content="""<p>"""+muscle_grad_str+"""</p>"""
+        all_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
+    elif 'Standard deviation' in section_name:
+        all_section_content="""<p>"""+report_strings['STD']+"""</p>"""
+    elif 'Frequency' in section_name:
+        all_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
+    elif 'Peak-to-Peak manual' in section_name:
+        all_section_content="""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
+    elif 'Peak-to-Peak auto' in section_name:
+        all_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
     elif derivs_section and not fig_derivs_section:
         all_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
     else:
@@ -95,29 +98,19 @@ def keep_fig_derivs(derivs_section:list):
     return fig_derivs_section
 
 
-def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: str, epoching_skipped_str: str, no_ecg_str: str, no_eog_str: str, no_head_pos_str: str, muscle_grad_str: str):
+def make_joined_report(sections: dict, report_strings: dict):
 
     """
-    Create report as html string with all sections. Currently make_joined_report_for_mne is used.
+    Create report as html string with all sections. Currently make_joined_report_mne is used.
 
     Parameters
     ----------
     sections : dict
         A dictionary with section names as keys and lists of QC_derivative objects as values.
-    shielding_str : str
-        The user notification: if active shielding was used during data acquisition.
-    m_or_g_skipped_str : str
-        The user notification: if 'mags' or 'grads' were skipped during data analysis, becase they dont present in data or not chosen by usert.
-    epoching_skipped_str : str
-        The user notification: if epoching was skipped during data analysis, becase no events were found.
-    no_ecg_str : str
-        The user notification: if ECG was not calculated
-    no_eog_str : str
-        The user notification: if EOG was not calculated
-    no_head_pos_str : str
-        The user notification: if head positions were not calculated
-    muscle_grad_str : str
-        The user notification: if muscle was not calculated or which channel type was used for muscle calculation
+    sreport_strings : dict
+        A dictionary with strings to be added to the report: general notes + notes about every measurement (when it was not calculated, for example). 
+        This is not a detailed description of the measurement.
+    
 
     Returns
     -------
@@ -140,24 +133,12 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
             <center>
             <h1>MEG data quality analysis report</h1>
             <br></br>
-            """+shielding_str+m_or_g_skipped_str+epoching_skipped_str
+            """+ report_strings['SHIELDING'] + report_strings['M_OR_G_SKIPPED'] + report_strings['EPOCHING']
 
     main_html_string = ''
     for key in sections:
 
-        html_section_str = make_html_section(derivs_section = sections[key], section_name = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, muscle_grad_str=muscle_grad_str)
-
-        # if sections[key]:
-        #     html_section_str = make_html_section(derivs_section = sections[key], section_title = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str)
-        #     #html_section_str = make_html_section(figures_report["f{0}".format(x)], section_titles[x])
-        # else:
-        #     html_section_str = """
-        #     <!-- *** Section *** --->
-        #     <h2>"""+key+"""</h2>
-        #     <p>This measurement could not be calculated because.....</p>
-        #     <br></br>
-        #     <br></br>"""
-
+        html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
         main_html_string += html_section_str
 
 
@@ -172,29 +153,21 @@ def make_joined_report(sections: dict, shielding_str: str, m_or_g_skipped_str: s
     return html_string
 
 
-def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_skipped_str: str, epoching_skipped_str: str, no_ecg_str: str, no_eog_str: str, no_head_pos_str: str, muscle_grad_str: str):
+def make_joined_report_mne(raw, sections:dict, report_strings: dict):
 
     """
     Create report as html string with all sections and embed the sections into MNE report object.
 
     Parameters
     ----------
+    raw : mne.io.Raw
+        The raw object.
     sections : dict
         A dictionary with section names as keys and lists of QC_derivative objects as values.
-    shielding_str : str
-        The user notification: if active shielding was used during data acquisition.
-    m_or_g_skipped_str : str
-        The user notification: if 'mags' or 'grads' were skipped during data analysis, becase they dont present in data or not chosen by usert.
-    epoching_skipped_str : str
-        The user notification: if epoching was skipped during data analysis, becase no events were found.
-    no_ecg_str : str
-        The user notification: if ECG was not calculated
-    no_eog_str : str
-        The user notification: if EOG was not calculated
-    no_head_pos_str : str
-        The user notification: if head positions were not calculated
-    muscle_grad_str : str
-        The user notification: if muscle was not calculated or which channel type was used for muscle calculation
+    report_strings : dict
+        A dictionary with strings to be added to the report: general notes + notes about every measurement (when it was not calculated, for example). 
+        This is not a detailed description of the measurement.
+    
 
     Returns
     -------
@@ -203,7 +176,7 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
     
     """
 
-    report = mne.Report(title='& MEG QC Report')
+    report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
     report.add_raw(raw=raw, title='Raw', psd=False)  # omit PSD plot
 
@@ -213,7 +186,7 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
             <center>
             <h1>MEG data quality analysis report</h1>
             <br></br>
-            """+shielding_str+m_or_g_skipped_str+epoching_skipped_str+"""
+            """+ report_strings['SHIELDING'] + report_strings['M_OR_G_SKIPPED'] + report_strings['EPOCHING'] + """
             </center>
         </body>"""
 
@@ -221,8 +194,8 @@ def make_joined_report_for_mne(raw, sections:dict, shielding_str: str, m_or_g_sk
 
     
     for key in sections:
-        if key != 'Report':
-            html_section_str = make_html_section(derivs_section = sections[key], section_name = key, no_ecg_str=no_ecg_str, no_eog_str=no_eog_str, no_head_pos_str=no_head_pos_str, muscle_grad_str=muscle_grad_str)
+        if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':
+            html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
             report.add_html(html_section_str, title=key)
 
     return report

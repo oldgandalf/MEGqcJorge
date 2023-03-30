@@ -1,4 +1,3 @@
-# Calculating peak-to-peak amplitudes using mne annotations.
 
 # !!! Automatically choose peak and flat values by averaging the data maybe?
 
@@ -7,7 +6,32 @@ import mne
 from universal_plots import QC_derivative
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float) -> tuple[pd.DataFrame, list]:
-    """Function creates amplitude (peak-to-peak annotations) for every channel separately"""
+    
+    """
+    Create peak-to-peak amplitude annotations for every channel separately
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    peak : float
+        Peak value.
+    flat : float
+        Flat value.
+    channels : list
+        List of channel names.
+    bad_percent : int
+        Percent of bad data allowed to still cound channels as good.
+    min_duration : float
+        Minimum duration of bad data to be considered as bad? (check this)
+    
+    Returns
+    -------
+    df_ptp_amlitude_annot : pd.DataFrame
+        Dataframe with peak-to-peak amplitude annotations.
+    bad_channels : list
+        List of bad channels.
+    """
     
     amplit_annot_with_ch_names=mne.Annotations(onset=[], duration=[], description=[], orig_time=raw.annotations.orig_time) #initialize 
     bad_channels=[]
@@ -26,6 +50,31 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
 
 
 def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_g_chosen: list):
+    
+    """
+    Function calculates peak-to-peak amplitude annotations for every channel separately.
+    
+    Parameters
+    ----------
+    ptp_auto_params : dict
+        Dictionary with parameters for peak-to-peak amplitude annotations.
+    channels : list
+        List of channels.
+    data : mne.io.Raw
+        Raw data.
+    m_or_g_chosen : list
+        List of channels types.
+        
+    Returns
+    -------
+    deriv_ptp_auto : list
+        List of QC_derivative objects containing dataframes with peak-to-peak amplitude annotations.
+    bad_channels : list
+        List of bad channels.
+    pp_auto_str : str
+        string with notes about PtP auto for report
+        
+    """
 
     peaks = {'grad': ptp_auto_params['peak_g'], 'mag': ptp_auto_params['peak_m']}
     flats = {'grad': ptp_auto_params['flat_g'], 'mag': ptp_auto_params['flat_m']}
@@ -36,4 +85,6 @@ def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_
         dfs_ptp_amlitude_annot, bad_channels[m_or_g] = get_amplitude_annots_per_channel(data, peaks[m_or_g], flats[m_or_g], channels[m_or_g], bad_percent=ptp_auto_params['bad_percent'], min_duration= ptp_auto_params['min_duration'])
         deriv_ptp_auto += [QC_derivative(dfs_ptp_amlitude_annot,'ptp_amplitude_annots_'+m_or_g, 'df')]
 
-    return deriv_ptp_auto, bad_channels
+    pp_auto_str = 'Peak-to-peak amplitude annotations were calculated automatically using mne function annotate_amplitude. See csv files for details.'
+    
+    return deriv_ptp_auto, bad_channels, pp_auto_str

@@ -924,8 +924,10 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         list with the psd derivatives as QC_derivative objects (figures)
     simple_metric : dict
         dictionary with the psd simple metrics
+    psd_str : str
+        string with notes about PSD for report
     noisy_freqs_global : dict
-        dictionary with noisy frequencies for average psd
+        dictionary with noisy frequencies for average psd - used in Muscle artifact detection
 
     """
     
@@ -965,4 +967,6 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     # Make a simple metric for PSD:
     simple_metric=make_simple_metric_psd(mean_brain_waves_dict, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local, noise_ampl_relative_to_all_signal_local, noisy_freqs_local, m_or_g_chosen, freqs, channels)
 
-    return derivs_psd, simple_metric, noisy_freqs_global
+    psd_str = '' #blank for now. maybe wil need to add notes later.
+
+    return derivs_psd, simple_metric, psd_str, noisy_freqs_global

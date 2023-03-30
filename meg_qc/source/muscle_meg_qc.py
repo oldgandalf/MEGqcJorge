@@ -207,17 +207,22 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
         A list of QC_derivative objects for muscle events containing figures.
     simple_metric : dict
         A simple metric dict for muscle events.
+    muscle_str : str
+        String with notes about muscle artifacts for report
 
     """
 
     muscle_freqs = muscle_params['muscle_freqs']
+   
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
-        print('___MEG QC___: ', 'Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.')
+        muscle_str = 'Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.'
+        print('___MEG QC___: ', muscle_str)
     elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
         m_or_g_decided=['grad']
-        print('___MEG QC___: ', 'Muscle artifact detection performed on gradiometers. Magnetometers are more sensitive to muscle artifacts then gradiometers and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.')
+        muscle_str = 'Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. If it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.'
+        print('___MEG QC___: ', muscle_str)
     else:
         print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
         return [], []
@@ -259,7 +264,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
             
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict)
 
-    return muscle_derivs, simple_metric
+    return muscle_derivs, simple_metric, muscle_str
 
 
 

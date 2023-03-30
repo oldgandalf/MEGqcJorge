@@ -200,7 +200,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     Returns:
     --------
     simple_metric : dict
-        Dict (mag, grad) with the simple metric for peak-to-peak amplitude
+        Dict (mag, grad) with the simple metric for peak-to-peak manual amplitude
 
     """
 
@@ -258,6 +258,8 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
         List with QC_deriv objects for peak-to-peak amplitude (figures and csv files)
     simple_metric_ptp_manual : dict
         Simple metric for peak-to-peak amplitude
+    pp+manual_str : str
+        String with notes about PtP manual for report
     
     """
 
@@ -293,12 +295,15 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
             metric_local=True
+        pp_manual_str = ''
+
     else:
         metric_local=False
-        print('___MEG QC___: ', 'Peak-to-Peak per epoch can not be calculated because no events are present. Check stimulus channel.')
+        pp_manual_str = 'Peak-to-Peak amplitude per epoch can not be calculated because no events are present. Check stimulus channel.'
+        print('___MEG QC___: ', pp_manual_str)
         
     derivs_ptp += fig_ptp_epoch + fig_ptp_epoch2 + derivs_list
 
     simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
 
-    return derivs_ptp, simple_metric_ptp_manual
+    return derivs_ptp, simple_metric_ptp_manual, pp_manual_str

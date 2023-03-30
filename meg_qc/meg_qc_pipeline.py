@@ -26,7 +26,7 @@ from meg_qc.source.Peaks_auto_meg_qc import PP_auto_meg_qc
 from meg_qc.source.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.source.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
-from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_for_mne
+from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.source.universal_plots import QC_derivative
 
 def make_derivative_meg_qc(config_file_path):
@@ -112,17 +112,23 @@ def make_derivative_meg_qc(config_file_path):
 
         for fif_ind, data_file in enumerate(list_of_fifs[0:1]): #RUN OVER JUST 1 fif to save time
 
-            # Make strings with notes for the user to add to html report:
-            shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str = '', '', '', '', '', '', ''
+            # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
+            shielding_str, m_or_g_skipped_str, epoching_str, ecg_str, eog_str, head_str, muscle_str, pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', '', '', '', '', '', '', '', ''
  
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
             print('___MEG QC___: ', 'data_file', data_file)
-            dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+            dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
             m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
             if len(m_or_g_chosen) == 0: 
-                raise ValueError('No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.')
+                m_or_g_skipped_str = '''No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.'''
+                raise ValueError(m_or_g_skipped_str)
+               
+            if 'mag' not in m_or_g_chosen:
+                m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+            if 'grad' not in m_or_g_chosen:
+                m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
             print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
@@ -135,59 +141,59 @@ def make_derivative_meg_qc(config_file_path):
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
 
-            # print('___MEG QC___: ', 'Starting STD...')
-            # start_time = time.time()
-            # std_derivs, simple_metrics_std = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting STD...')
+            start_time = time.time()
+            std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
  
             print('___MEG QC___: ', 'Starting PSD...')
             start_time = time.time()
-            psd_derivs, simple_metrics_psd, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
+            psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
             print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
-            # start_time = time.time()
-            # pp_manual_derivs, simple_metrics_pp_manual = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
+            start_time = time.time()
+            pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
-            # start_time = time.time()
-            # pp_auto_derivs, bad_channels = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
+            start_time = time.time()
+            pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting ECG...')
-            # start_time = time.time()
-            # ecg_derivs, simple_metrics_ecg, no_ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting ECG...')
+            start_time = time.time()
+            ecg_derivs, simple_metrics_ecg, ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting EOG...')
-            # start_time = time.time()
-            # eog_derivs, simple_metrics_eog, no_eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting EOG...')
+            start_time = time.time()
+            eog_derivs, simple_metrics_eog, eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Head movement calculation...')
-            # head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Head movement calculation...')
+            head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
-            # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-            # #noisy_freqs_global = [50, 60] 
-            # muscle_derivs, simple_metrics_muscle = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False)
-            # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
+            #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+            #noisy_freqs_global = [50, 60] 
+            muscle_derivs, simple_metrics_muscle, muscle_str = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False)
+            print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-   
-            if 'mag' in m_or_g_chosen:
-                muscle_grad_str = '''<p>Magnetometers were used for muscle artifact detection as a more sensitive type of channel to this type of noise.</p><br></br>'''
-            else:
-                m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
-                muscle_grad_str = '''<p>Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. But if it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.</p><br></br>'''
-            
-            if 'grad' not in m_or_g_chosen:
-                m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
 
-            if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
-                epoching_skipped_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
-            
+            report_strings = {
+            'STD': std_str,
+            'PSD': psd_str,
+            'PTP_MANUAL': pp_manual_str,
+            'PTP_AUTO': pp_auto_str,
+            'ECG': ecg_str,
+            'EOG': eog_str,
+            'HEAD': head_str,
+            'MUSCLE': muscle_str,
+            'M_OR_G_SKIPPED': m_or_g_skipped_str,
+            'EPOCHING': epoching_str,
+            'SHIELDING': shielding_str,}
 
             QC_derivs={
             'Standard deviation of the data': std_derivs, 
@@ -211,14 +217,13 @@ def make_derivative_meg_qc(config_file_path):
 
 
             #Make report and add to QC_derivs:
-            report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
-            QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
+            # report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_str)
+            # QC_derivs['Report']= [QC_derivative(report_html_string, 'REPORT', 'report')]
 
-            report_html_string = make_joined_report_for_mne(raw, QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_grad_str)
+            report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings)
             QC_derivs['Report MNE']= [QC_derivative(report_html_string, 'REPORT MNE', 'report mne')]
 
             #Collect all simple metrics into a dictionary and add to QC_derivs:
-            #Add QC_simple to QC_derivs always AFTER the report is made, since the report uses each QC_deriv to make the html string.
             QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'Simple_metrics', 'json')]
 
 

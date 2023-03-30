@@ -50,6 +50,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
             max_peak_dist=5 #normal spontaneous blink rate is between 12 and 15/min, allow 5 blinks a min minimum. However do we really need to limit here?
 
     bad_ecg_eog = {}
+    noisy_ch_derivs=[]
     for picked in picked_channels_ecg_or_eog:
         bad_ecg_eog[picked] = 'good'
 
@@ -83,7 +84,6 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
             bad_ecg_eog[picked] = 'bad'
             print('___MEG QC___: ', picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
 
-        noisy_ch_derivs=[]
         if plotflag:
             t=np.arange(0, duration_crop, 1/60/sfreq) 
             fig = go.Figure()

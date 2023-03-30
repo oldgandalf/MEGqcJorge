@@ -333,20 +333,17 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
         List of QC derivatives with figures.
     simple_metrics_head : dict
         Dictionary with simple metrics for head movement.
-    head_not_calculated: bool
-        If True, head movement was not calculated.
-    df_head_pos : pd.DataFrame
-        Dataframe with head positions and rotations.
-    head_pos : np.ndarray
-        Head positions and rotations calculated with mne.chpi.compute_head_pos.
+    head_str : str
+        String with information about head positions if they were not calculated, otherwise empty. For report
+
     """
 
     # Compute head positions using mne:
-    head_pos, no_head_pos_str = get_head_positions(raw)
+    head_pos, head_str = get_head_positions(raw)
     if head_pos.size == 0:
-        no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
-        print('___MEG QC___: ', no_head_pos_str)
-        return [], {}, no_head_pos_str, None, None
+        head_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
+        print('___MEG QC___: ', head_str)
+        return [], {}, head_str, None, None
 
     # Optional! translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
     # (we assume they are in radients. But in the plot it says they are in quat! 
@@ -383,6 +380,6 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
     # Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, no_head_pos_str, df_head_pos, head_pos
+    return head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos
 
 

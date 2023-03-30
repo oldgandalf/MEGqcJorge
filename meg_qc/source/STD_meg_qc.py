@@ -485,6 +485,8 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
         list of QC_derivative objects containing data frames and figures for std metric.
     dict
         dictionary with simple metric for std/ptp.
+    std_str : str
+        String with notes about STD for report
     
     """
 
@@ -521,11 +523,13 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
 
             #df_epoch_std[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
+        std_str = ''
     else:
         metric_local=False
-        print('___MEG QC___: ', 'STD per epoch can not be calculated because no events are present. Check stimulus channel.')
+        std_str = 'STD per epoch can not be calculated because no events are present. Check stimulus channel.'
+        print('___MEG QC___: ', std_str)
 
     simple_metric_std = make_simple_metric_std(std_params, big_std_with_value_all_data, small_std_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
     
     derivs_std += fig_std_epoch + fig_std_epoch2 + derivs_list 
-    return derivs_std, simple_metric_std
+    return derivs_std, simple_metric_std, std_str

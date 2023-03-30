@@ -11,6 +11,7 @@ API documentation
    std
    psd
    ptp_manual
+   ptp_auto
    ecg_eog 
    muscle
    head 
