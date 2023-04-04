@@ -3,144 +3,64 @@ import numpy as np
 from universal_html_report import simple_metric_basic
 from universal_plots import QC_derivative, get_tit_and_unit
 import plotly.graph_objects as go
-from scipy.signal import find_peaks, butter, filtfilt, hilbert
+from scipy.signal import find_peaks
 
-def detect_hilbert(ch_data, fs):
 
-    time = np.arange(len(ch_data))/fs
+def check_ch_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_allowed_per_10min: int = 3):
+
+    """
+    Check if the ECG/EOG channel is not corrupted using 3 conditions:
+    - peaks have similar amplitude
+    - intervals between ECG/EOG events are in the normal healthy human range (extended the range in case of a special experiment)
+    - recording has no or only a few breaks
+
+    Parameters
+    ----------
+    ch_data
+
     
-    # Define filter parameters
-    lowcut = 5.0
-    highcut = 15.0
-    order = 2
+    """
 
-    # Apply bandpass filter
-    nyquist = 0.5 * fs
-    low = lowcut / nyquist
-    high = highcut / nyquist
-    b, a = butter(order, [low, high], btype='band')
-    filtered_signal = filtfilt(b, a, ch_data)
-
-    # Apply Hilbert transform
-    analytic_signal = hilbert(filtered_signal)
-
-    # Calculate instantaneous amplitude
-    amplitude_envelope = np.abs(analytic_signal)
-
-    # Smooth amplitude envelope using a moving average filter
-    window_size = 50
-    window = np.ones(window_size)/float(window_size)
-    smoothed_amplitude = np.convolve(amplitude_envelope, window, 'same')
-
-    peaks, _ = find_peaks(smoothed_amplitude, distance=150)
-
-    # Plot the original signal and the R-peaks
-
-    # Plot the original signal and the amplitude envelope using plotly:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name='ECG'))
-    fig.add_trace(go.Scatter(x=time, y=amplitude_envelope, mode='lines', name='Envelope'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='R-peaks'))
-    fig.update_layout(title='ECG signal and Envelope', xaxis_title='time, s', yaxis_title='Amplitude')
-    fig.show()
-
-    return fig
-
-
-def detect_simple(ecg_data, fs, n_breaks_allowed_per_10min=3):
-
-
+    # 1. Check if R peaks have similar amplitude. If not - data is too noisy:
     # Find R peaks using find_peaks
-    height = np.mean(ecg_data) + 1 * np.std(ecg_data)
-    peaks, _ = find_peaks(ecg_data, height=height, distance=round(0.5 * fs)) 
+    height = np.mean(ch_data) + 1 * np.std(ch_data)
+    peaks, _ = find_peaks(ch_data, height=height, distance=round(0.5 * fs)) 
 
-    # Calculate amplitude of each peak
-    # peak_amplitudes = ecg_data[peaks]
 
     # scale ecg data between 0 and 1: here we dont care about the absolute values. important is the pattern: 
     # are the peak magnitudes the same on average or not? Since absolute values and hence mean and std 
     # can be different for different data sets, we can just scale everything between 0 and 1 and then
     # compare the peak magnitudes
-    ecg_data_scaled = (ecg_data - np.min(ecg_data))/(np.max(ecg_data) - np.min(ecg_data))
+    ecg_data_scaled = (ch_data - np.min(ch_data))/(np.max(ch_data) - np.min(ch_data))
     peak_amplitudes = ecg_data_scaled[peaks]
 
-    # Check if peak amplitudes are similar
-    mean_amplitude = np.mean(peak_amplitudes)
     amplitude_std = np.std(peak_amplitudes)
 
-    #similar_ampl = True
-
-    if amplitude_std < 0.05:
+    if amplitude_std < 0.05: #0.05 is experimentally found value.
         similar_ampl = True
         print("___MEG QC___: R peaks have similar amplitudes, amplitude std: ", amplitude_std)
     else:
         similar_ampl = False
         print("___MEG QC___: R peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
 
-    # # check if over 80% of the data has similar peak-to-peak amplitude
-    # window_size = round(0.5*fs) # in seconds
-    # pp_amplitudes = [max(ecg_data[i:i+window_size]) - min(ecg_data[i:i+window_size]) for i in range(0, len(ecg_data), window_size)]
 
-    # mean_pp_amplitude = np.mean(pp_amplitudes)
-    # pp_amplitude_std = np.std(pp_amplitudes)
-    # print("___MEG QC___: Mean peak-to-peak amplitude: ", mean_pp_amplitude, "Standard deviation: ", pp_amplitude_std)
-
-    # if pp_amplitude_std > mean_pp_amplitude*0.3:
-    #     similar_ampl = False
-    #     print("___MEG QC___: peaks have abnormal amplitude, ratio: ", pp_amplitude_std/mean_pp_amplitude)
-    # else:
-    #     similar_ampl = True
-    #     print("___MEG QC___: peaks have similar amplitude, ratio: ", pp_amplitude_std/mean_pp_amplitude)
-
-    # # Define a range of amplitudes to consider as "similar"
-    # multiplier = 1.5
-    # similar_range = (mean_pp_amplitude - pp_amplitude_std*multiplier, mean_pp_amplitude + pp_amplitude_std*multiplier)
-
-    # # Count the number of peaks whose amplitude is within the "similar" range
-    # num_similar_peaks = sum(1 for amplitude in pp_amplitudes if similar_range[0] <= amplitude <= similar_range[1])
-
-    # # Calculate the percentage of peaks that have similar amplitude
-    # percent_similar_peaks = num_similar_peaks / len(pp_amplitudes) * 100
-    # to_print = round((100 - percent_similar_peaks))
-
-    # # Compare the percentage to 80 to determine if over 80% of peaks have similar amplitude
-    # if percent_similar_peaks > 80:
-    #     similar_ampl = True
-    #     print("___MEG QC___: Over 80% of peaks have similar amplitude. Percentage of peaks with abnormal amplitude: ", str(to_print))
-    # else:
-    #     similar_ampl = False
-    #     print("___MEG QC___: Over 20% of peaks have abnormal amplitude. Percentage of peaks with abnormal amplitude: ",  str(to_print))
-
-
-    #count the number of peaks that are within 20% of the mean amplitude:
-    # pa_count = 0
-    # for pa in peak_amplitudes:
-    #     baselined_peak_amplitude = pa - mean_peak_amplitude
-    #     if mean_peak_amplitude*0.2 < baselined_peak_amplitude < mean_peak_amplitude*1.2:
-    #         pa_count += 1
-    
-    # if pa_count < len(peak_amplitudes)*0.8:
-    #     similar_ampl = True
-    #     print("___MEG QC___: Over 80% have amplitudes within average - idicates standard ECG data")
-    # else:
-    #     similar_ampl = False
-    #     print("___MEG QC___: Over 20% of peaks have amplitudes above or below average - indicates noisy data")
-
-
-    # Find breaks:
-    # calculate the time differences between consecutive R peaks and check if there are 
-    # any large deviations from the average time difference
-
-    # Calculate RR intervals (time differences between consecutive R peaks)
+    # 2. Calculate RR intervals (time differences between consecutive R peaks)
     rr_intervals = np.diff(peaks) / fs
     mean_RR_dist = np.mean(rr_intervals)
-    if mean_RR_dist < 0.6 or mean_RR_dist > 1.6: #take possible pulse rate of 40-100 bpm
+
+    if ecg_or_eog == 'ECG':
+        rr_dist_allowed = [0.6, 1.6] #take possible pulse rate of 40-100 bpm
+    elif ecg_or_eog == 'EOG':
+        rr_dist_allowed = [0.05, 0.35] #take possible blink rate of 3-21 bpm
+
+    if mean_RR_dist < rr_dist_allowed[0] or mean_RR_dist > rr_dist_allowed[1]: 
         print("___MEG QC___: Mean NNI is not between 0.6 and 1.6 sec. Mean NNI: %s s" % mean_RR_dist)
-        mean_nni_ok = False
+        mean_rr_interval_ok = False
     else:
-        mean_nni_ok = True
+        mean_rr_interval_ok = True
         print("___MEG QC___: Mean NNI is between 0.6 and 1.6 sec. Mean NNI: %s s" % mean_RR_dist)
 
+    # 3. Check for breaks in recording:
     # Calculate average time difference and standard deviation
     avg_time_diff = np.mean(rr_intervals)
     std_time_diff = np.std(rr_intervals)
@@ -163,168 +83,16 @@ def detect_simple(ecg_data, fs, n_breaks_allowed_per_10min=3):
         print("___MEG QC___: All parts of the data have regular peaks")
 
 
-    # Plot the original signal and the amplitude envelope using plotly:
+    # Plot the SCALED signal and the amplitude envelope using plotly:
     time = np.arange(len(ecg_data_scaled))/fs
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time, y=ecg_data_scaled, mode='lines', name='ECG'))
     fig.add_trace(go.Scatter(x=time[peaks], y=ecg_data_scaled[peaks], mode='markers', name='R-peaks'))
-    fig.update_layout(title='ECG channel with R wave peaks', xaxis_title='time, s', yaxis_title='Amplitude')
+    fig.update_layout(title='ECG channel (scaled) with R wave peaks', xaxis_title='time, s', yaxis_title='Amplitude')
     fig.show()
 
-    return (mean_nni_ok, similar_ampl, no_breaks), fig
+    return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
 
-
-def detect_noisy_channel_new(ch_data, fs):
-
-    # Define filter parameters
-    fc_low = 5  # Low cutoff frequency
-    fc_high = 15  # High cutoff frequency
-    order = 2  # Filter order
-
-    # Design bandpass filter
-    nyquist_freq = 0.5 * fs
-    low = fc_low / nyquist_freq
-    high = fc_high / nyquist_freq
-    b, a = butter(order, [low, high], btype='band')
-
-    # Apply filter to ECG data
-    filtered_ecg = filtfilt(b, a, ch_data)
-
-
-    # Differentiate filtered signal
-    diff_ecg = np.diff(filtered_ecg)
-
-    # Square the differentiated signal
-    squared_ecg = diff_ecg ** 2
-
-    # Integrate squared signal
-    window_size = int(0.150 * fs)
-    ones = np.ones(window_size)
-    integrated_ecg = np.convolve(squared_ecg, ones, 'valid')
-
-    # Find R-peaks using thresholding
-    threshold = np.mean(integrated_ecg) * 15
-    #r_peaks = np.where(integrated_ecg > threshold)[0]
-    r_peaks, _ = find_peaks(filtered_ecg, height=threshold)
-
-    # Calculate RR intervals
-    rr_intervals = np.diff(r_peaks) / fs
-
-    # Calculate HRV features
-    mean_nni = np.mean(rr_intervals)
-    sdnn = np.std(rr_intervals)
-    rmssd = np.sqrt(np.mean(np.diff(rr_intervals) ** 2))
-    pnn50 = np.sum(np.abs(np.diff(rr_intervals)) > 50) / len(rr_intervals)
-
-    # Print HRV features
-    print('Mean RR interval:', mean_nni)
-    print('SDNN:', sdnn)
-    print('RMSSD:', rmssd)
-    print('pNN50:', pnn50)
-
-    # 1. Mean RR interval (mean_nni): This is the average time interval between successive R-peaks in the ECG signal, and is a measure of the average heart rate over a given time period. Mean_nni is calculated as the mean of all RR intervals.
-
-    # 2. Standard deviation of RR intervals (SDNN): This is a measure of the overall variability of the RR intervals, and reflects the total power of the HRV signal. SDNN is calculated as the standard deviation of all RR intervals.
-
-    # 3. Root mean square of successive differences (RMSSD): This is a measure of the short-term variability of the RR intervals, and reflects the high-frequency power of the HRV signal. RMSSD is calculated as the square root of the mean of the squared differences between successive RR intervals.
-
-    # 4. Percentage of successive RR intervals that differ by more than 50 ms (pNN50): This is a measure of the parasympathetic (rest and digest) nervous system activity, and reflects the ability of the ANS to respond to rapid changes in physiological demands. pNN50 is calculated as the percentage of successive RR intervals that differ by more than 50 ms.
-
-    # These HRV features are commonly used in HRV analysis and can provide insights into the balance between sympathetic and parasympathetic nervous system activity, as well as the overall health and adaptability of the ANS.
-
-    # some typical reference values for HRV features:
-
-    # - Mean RR interval: 600-1200 ms
-    # - SDNN: 20-100 ms
-    # - RMSSD: 10-50 ms
-    # - pNN50: 5-25%
-
-
-    # Plot HRV time series
-    hrv_ts = np.concatenate(([0], np.diff(rr_intervals)))
-    print(hrv_ts)
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=np.arange(len(hrv_ts)), y=hrv_ts, mode='lines', name='HRV'))
-    fig.update_layout(title='HRV time series', xaxis_title='Time (s)', yaxis_title='HRV (ms)')
-    fig.show()
-
-    #create time vector for x axis:
-    time = np.arange(len(ch_data))/fs
-    # Plot ECG signal and R-peaks using plotly:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name='ECG'))
-    fig.add_trace(go.Scatter(x=time[r_peaks], y=ch_data[r_peaks], mode='markers', name='R-peaks'))
-    fig.update_layout(title='ECG signal and R-peaks', xaxis_title='time, s', yaxis_title='Amplitude')
-    fig.show()
-
-    #plot filtered ECG:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=filtered_ecg, mode='lines', name='ECG'))
-    fig.add_trace(go.Scatter(x=time[r_peaks], y=filtered_ecg[r_peaks], mode='markers', name='R-peaks'))
-    fig.update_layout(title='Filtered ECG signal and R-peaks', xaxis_title='time, s', yaxis_title='Amplitude')
-    fig.show()
-
-    return r_peaks, fig, mean_nni, sdnn, rmssd, pnn50
-    
-def detect_old (ch_data, picked, sfreq, thresh_lvl, max_peak_dist, duration_crop, plotflag):
-    bad_ecg_eog = 'good'
-
-    thresh=(max(ch_data) - min(ch_data)) / thresh_lvl 
-
-    pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
-    neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
-
-    print(pos_peak_locs, 'pos_peak_locs')
-    print(neg_peak_locs, 'neg_peak_locs')
-
-    #find places of recording without peaks at all:
-    ind_break_start = np.where(np.diff(pos_peak_locs)/sfreq/60>max_peak_dist)#find where the distance between positive peaks is too long
-
-    #_, amplitudes=neighbour_peak_amplitude(max_pair_dist_sec,sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
-    # if amplitudes is not None and len(amplitudes)>3*duration_crop/60: #allow 3 non-standard peaks per minute. Or 0? DISCUSS
-    #     bad_ecg_eog=True
-    #     print('___MEG QC___: ', picked, ' channel is too noisy. Number of unusual amplitudes detected over the set limit: '+str(len (amplitudes)))
-
-    all_peaks=np.concatenate((pos_peak_locs,neg_peak_locs),axis=None)
-    if len(all_peaks)/duration_crop>3:
-    # allow 3 non-standard peaks per minute. Or 0? DISCUSS. implies that noiseness has to be repeated regularly.  
-    # if there is only 1 little piece of time with noise and the rest is good, will not show that one. 
-    # include some time limitation of noisy times?
-        bad_ecg_eog = 'bad'
-        print('___MEG QC___: ', 'ECG channel might be corrupted. Atypical peaks in ECG amplitudes detected: '+str(len (all_peaks))+'. Peaks per minute: '+str(round(len(all_peaks)/duration_crop)))
-
-    if len(ind_break_start[0])/duration_crop>3: #allow 3 breaks per minute. Or 0? DISCUSS
-        #ind_break_start[0] - here[0] because np.where created array of arrays above
-        bad_ecg_eog = 'bad'
-        print('___MEG QC___: ', picked, ' channel has breaks in recording. Number of breaks detected: '+str(len(ind_break_start[0]))+'. Breaks per minute: '+str(round(len(ind_break_start[0])/duration_crop)))
-
-    if plotflag:
-        t=np.arange(0, duration_crop, 1/60/sfreq) 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=t, y=ch_data, name=picked+' data'))
-        fig.add_trace(go.Scatter(x=t[pos_peak_locs], y=pos_peak_magnitudes, mode='markers', name='+peak'))
-        fig.add_trace(go.Scatter(x=t[neg_peak_locs], y=neg_peak_magnitudes, mode='markers', name='-peak'))
-
-        for n in ind_break_start[0]:
-            fig.add_vline(x=t[pos_peak_locs][n],
-            annotation_text='break', annotation_position="bottom right",line_width=0.6,annotation=dict(font_size=8))
-
-        fig.update_layout(
-            title={
-            'text': picked+": peaks and breaks. Channel is "+bad_ecg_eog,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-            xaxis_title="Time in minutes",
-            yaxis = dict(
-                showexponent = 'all',
-                exponentformat = 'e'))
-            
-        fig.show()
-
-    return bad_ecg_eog, fig
 
 
 def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  thresh_lvl: float, ecg_or_eog: str, plotflag: bool):
@@ -361,8 +129,6 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
     """
 
     sfreq=raw.info['sfreq']
-    duration_crop = len(raw)/raw.info['sfreq']/60  #duration in minutes
-
 
     if ecg_or_eog == 'ECG' or ecg_or_eog == 'ecg':
             max_peak_dist=40 #allow the lowest pulse to be 40/min. this is the maximal possible distance between 2 pulses.
@@ -377,17 +143,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
 
         ch_data=raw.get_data(picks=picked)[0] 
 
-        #fig = detect_hilbert(ch_data, sfreq)
-
-        # r_peaks, fig, mean_nni, sdnn, rmssd, pnn50 = detect_noisy_channel_new(ch_data, sfreq)
-        # # Mean RR interval must be: 600-1200 ms
-        # if mean_nni < 600/sfreq or mean_nni > 1200/sfreq:
-        #     bad_ecg_eog[picked] = 'bad'
-        #     print(f'Bad {ecg_or_eog} channel: {picked}, mean_nni: {mean_nni*sfreq} ms')
-
-        # bad_ecg_eog[picked], fig = detect_old(ch_data, picked, sfreq, thresh_lvl, max_peak_dist, duration_crop, plotflag)
-
-        ecg_eval, fig = detect_simple(ch_data, sfreq, n_breaks_allowed_per_10min=3)
+        ecg_eval, fig = check_ch_conditions(ch_data, sfreq, ecg_or_eog = 'ecg', n_breaks_allowed_per_10min=3)
         print(ecg_eval)
 
         if all(ecg_eval):
