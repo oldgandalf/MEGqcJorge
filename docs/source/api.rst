@@ -6,6 +6,7 @@ API documentation
    :maxdepth: 3
    :caption: Modules:
 
+   settings_ini
    main
    initial_processing
    std
@@ -17,6 +18,6 @@ API documentation
    head 
    universal_plots 
    html_report
-   settings_ini
+   
    
 

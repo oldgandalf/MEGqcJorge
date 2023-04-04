@@ -299,6 +299,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
     dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
+    epoching_str = ''
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
