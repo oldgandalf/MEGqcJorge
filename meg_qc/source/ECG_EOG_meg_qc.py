@@ -1003,6 +1003,52 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
     return simple_metric
 
+
+def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: float):
+
+    """
+    Plot ECG/EOG artifact with topomap and average over epochs (MNE plots based on matplotlib)
+
+    Parameters
+    ----------
+    ecg_epochs : mne.Epochs
+        ECG/EOG epochs.
+    m_or_g : str
+        String 'mag' or 'grad' depending on the channel type.
+    tmin : float
+        Start time of the epoch.
+    tmax : float
+        End time of the epoch.
+    
+    Returns
+    -------
+    ecg_derivs : list
+        List of QC_derivative objects with plots.
+    
+    
+    """
+
+    mne_ecg_derivs = []
+    fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
+    # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
+    # to do them saparetely depending on what was chosen for analysis
+    mne_ecg_derivs += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, 'matplotlib')]
+    fig_ecg.show()
+
+    #averaging the ECG epochs together:
+    avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
+    # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
+
+    #plot average artifact with topomap
+    fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = m_or_g)
+    # tmin+tmin/10 and tmax-tmax/10 is done because mne sometimes has a plotting issue, probably connected tosamplig rate: 
+    # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
+
+    mne_ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
+    fig_ecg_sensors.show()
+
+    return mne_ecg_derivs
+
 #%%
 def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen: list):
     
@@ -1075,23 +1121,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
-        fig_ecg = ecg_epochs.plot_image(combine='mean', picks = m_or_g)[0] #plot averageg over ecg epochs artifact
-        # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
-        # to do them saparetely depending on what was chosen for analysis
-        ecg_derivs += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, 'matplotlib')]
-        fig_ecg.show()
-
-        #averaging the ECG epochs together:
-        avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
-        # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
-    
-        fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = m_or_g)
-        # tmin+tmin/10 and tmax-tmax/10 is done because mne sometimes has a plotting issue, probably connected tosamplig rate: 
-        # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
-
-        #plot average artifact with topomap
-        ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
-        fig_ecg_sensors.show()
+        ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
         ecg_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += [QC_derivative(fig_affected, 'ECG_affected_channels_'+m_or_g, 'plotly')]
@@ -1153,7 +1183,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
     # Notify id EOG channel is bad (dont drop it in any case, no analysis possible without it):
     # COMMENTED OUT because it is not working properly. Approch same as for ECG, parameters different, but still detects good channels where they are bad.
-    # Might work on in later, keft out for now, because thsi step doesnt influence the final results, just the warning.
+    # Might work on in later, left out for now, because this step doesnt influence the final results, just a warning.
     # noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, eog_ch_name,  ecg_or_eog = 'EOG', n_breaks_allowed_per_10min = eog_params['n_breaks_allowed_per_10min'], allowed_range_of_peaks_stds = eog_params['allowed_range_of_peaks_stds'])
     # eog_derivs += noisy_ch_derivs
 
@@ -1189,12 +1219,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
         eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
-        fig_eog = eog_epochs.plot_image(combine='mean', picks = m_or_g)[0]
-        eog_derivs += [QC_derivative(fig_eog, 'mean_EOG_epoch_'+m_or_g, 'matplotlib')]
-
-        #averaging the ECG epochs together:
-        fig_eog_sensors = eog_epochs.average().plot_joint(picks = m_or_g)
-        eog_derivs += [QC_derivative(fig_eog_sensors, 'EOG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
+        eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
         eog_affected_channels, fig_affected, fig_not_affected, fig_avg, bad_avg[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         eog_derivs += [QC_derivative(fig_affected, 'EOG_affected_channels_'+m_or_g, 'plotly')]
