@@ -77,16 +77,16 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
     mean_RR_dist = np.mean(rr_intervals)
 
     if ecg_or_eog == 'ECG':
-        rr_dist_allowed = [0.6, 1.6] #take possible pulse rate of 40-100 bpm
+        rr_dist_allowed = [0.6, 1.6] #take possible pulse rate of 100-40 bpm (hense distance between peaks is 0.6-1.6 seconds)
     elif ecg_or_eog == 'EOG':
-        rr_dist_allowed = [0.05, 0.35] #take possible blink rate of 3-21 bpm
+        rr_dist_allowed = [1, 10] #take possible blink rate of 60-5 per minute (hense distance between peaks is 1-10 seconds). Yes, 60 is a very high rate, but I see this in some data sets often.
 
     if mean_RR_dist < rr_dist_allowed[0] or mean_RR_dist > rr_dist_allowed[1]: 
-        print("___MEG QC___: Mean NNI is not between 0.6 and 1.6 sec. Mean NNI: %s s" % mean_RR_dist)
+        print("___MEG QC___: Mean peak distance is not between " + str(rr_dist_allowed) + " sec. Mean dist: %s sec" % mean_RR_dist)
         mean_rr_interval_ok = False
     else:
         mean_rr_interval_ok = True
-        print("___MEG QC___: Mean NNI is between 0.6 and 1.6 sec. Mean NNI: %s s" % mean_RR_dist)
+        print("___MEG QC___: Mean peak distance is between " + str(rr_dist_allowed) + " sec. Mean dist: %s sec" % mean_RR_dist)
 
     # 3. Check for breaks in recording:
     # Calculate average time difference and standard deviation
@@ -111,10 +111,17 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
         print("___MEG QC___: All parts of the data have regular peaks")
 
 
-    # Plot the signal and the amplitude envelope using plotly:
+    # Plot the signal using plotly:
+    fig = plot_channel(ch_data, peaks, ch_name = picked, fs = fs)
+
+    return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
+
+
+def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
+
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=picked + ' data'))
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
     fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
     fig.update_layout(xaxis_title='time, s', 
                 yaxis = dict(
@@ -122,16 +129,14 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
                 exponentformat = 'e'),
                 yaxis_title='Amplitude',
                 title={
-                'text': picked,
+                'text': ch_name,
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'})
     fig.show()
 
-    return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
-
-
+    return fig
 
 def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  ecg_or_eog: str, n_breaks_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
     """
@@ -1146,15 +1151,23 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
     eog_derivs = []
 
-    noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, eog_ch_name,  ecg_or_eog = 'EOG', n_breaks_allowed_per_10min = eog_params['n_breaks_allowed_per_10min'], allowed_range_of_peaks_stds = eog_params['allowed_range_of_peaks_stds'])
-    eog_derivs += noisy_ch_derivs
+    # Notify id EOG channel is bad (dont drop it in any case, no analysis possible without it):
+    # COMMENTED OUT because it is not working properly. Approch same as for ECG, parameters different, but still detects good channels where they are bad.
+    # Might work on in later, keft out for now, because thsi step doesnt influence the final results, just the warning.
+    # noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, eog_ch_name,  ecg_or_eog = 'EOG', n_breaks_allowed_per_10min = eog_params['n_breaks_allowed_per_10min'], allowed_range_of_peaks_stds = eog_params['allowed_range_of_peaks_stds'])
+    # eog_derivs += noisy_ch_derivs
 
+    # for ch_eog in eog_ch_name:
+    #     if bad_ecg_eog[ch_eog] == 'bad': #ecg channel present but noisy give warning, otherwise just continue. 
+    #         #BTW we dont relly care if the bad escg channel is the one for saccades, becase we only use blinks. Identify this in the warning?
+    #         #IDK how because I dont know which channel is the one for saccades
+    #         print('___MEG QC___:  '+ch_eog+' channel data is noisy. EOG data will be estimated, but might not be accurate. Cosider checking the quality of ECG channel on your recording device.')
+
+    #plot EOG channels
     for ch_eog in eog_ch_name:
-        if bad_ecg_eog[ch_eog] == 'bad': #ecg channel present but noisy give waring, otherwise just contine. 
-            #BTW we dont relly care if the bad escg channel is the one for saccades, becase we only use blinks. Identify this in the warning?
-            #IDK how because I dont know which channel is the one for saccades
-            print('___MEG QC___:  '+ch_eog+' channel data is noisy. EOG data will be estimated, but might not be accurate. Cosider checking the quality of ECG channel on your recording device.')
-
+        ch_data = raw.get_data(picks=ch_eog)[0]
+        fig_ch = plot_channel(ch_data, peaks = [], ch_name = ch_eog, fs = raw.info['sfreq'])
+        eog_derivs += [QC_derivative(fig_ch, ch_eog, 'plotly')]
 
     #eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
     # ch_name: This doesn’t have to be a channel of eog type; it could, for example, also be an ordinary 
