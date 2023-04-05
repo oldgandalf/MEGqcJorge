@@ -192,7 +192,7 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
             print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {picked}')
             bad_ecg_eog[picked] = 'bad'
 
-        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly')]
+        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) mean interval between peaks as expected: '+str(ecg_eval[1])+', 3) no or few breaks in the data: '+str(ecg_eval[2]))]
         
     return noisy_ch_derivs, bad_ecg_eog
 
@@ -1038,14 +1038,20 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     if ecg_ch_name:
         for ch in ecg_ch_name:
             if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy - drop it and  try to reconstruct
-                no_ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. \n'
-                print('___MEG QC___: ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.')
-                raw.drop_channels(ch)
-            else:
-                no_ecg_str = 'ECG channel used to identify hearbeats: ' + ch + '. \n'
+                if ecg_params['drop_bad_ch'] is True:
+                    no_ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device.'
+                    print('___MEG QC___: ', no_ecg_str)
+                    raw.drop_channels(ch)
+                elif ecg_params['drop_bad_ch'] is False:
+                    no_ecg_str = 'ECG channel data is too noisy, still attempt to calculate artifats using this channel. Consider checking the quality of ECG channel on your recording device.'
+                    print('___MEG QC___: ', no_ecg_str)
+                else:
+                    raise ValueError('drop_bad_ch should be either True or False')
+            elif bad_ecg_eog[ch] == 'good': #ecg channel present and good - use it
+                no_ecg_str = ch+' is good and is used to identify hearbeats: '
                 print('___MEG QC___: ', no_ecg_str)
     else:
-        no_ecg_str = 'No ECG channel found. The signal is reconstructed based  of magnetometers data.'
+        no_ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data.'
         print('___MEG QC___: ', no_ecg_str)
     
 
