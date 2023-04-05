@@ -1,16 +1,8 @@
 *.fif
 *.csv
-*.html
 *.pickle
 *.pyc
 *.pickle
-derivatives/sub-1/megqc/figures/PSD_over_all_data_gradiometers.png
-derivatives/sub-1/megqc/figures/PSD_over_all_data_interactivemagnetomoters.fig.pickle
-data/ck06an19_vp13/190521/bad_channels.json
-.$MEG_QC_diagram.drawio.bkp
-.$MEG_QC_diagram.html.bkp
-.$MEG_QC_diagram.png.bkp
-.$MEG_QC_flow_small.drawio.bkp
 .DS_Store
 .DS_Store?
 *.DS_Store
@@ -19,3 +11,4 @@ data/ck06an19_vp13/190521/bad_channels.json
 *.dtmp
 .DS_Store
 **/.DS_Store
+docs/build/html/*
