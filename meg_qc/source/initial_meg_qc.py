@@ -136,6 +136,8 @@ def get_all_config_params(config_file_name: str):
 
         ecg_section = config['ECG']
         all_qc_params['ECG'] = dict({
+        'n_breaks_allowed_per_10min': ecg_section.getint('n_breaks_allowed_per_10min'),
+        'allowed_range_of_peaks_stds': ecg_section.getfloat('allowed_range_of_peaks_stds'),
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
@@ -143,6 +145,8 @@ def get_all_config_params(config_file_name: str):
 
         eog_section = config['EOG']
         all_qc_params['EOG'] = dict({
+        'n_breaks_allowed_per_10min': eog_section.getint('n_breaks_allowed_per_10min'),
+        'allowed_range_of_peaks_stds': eog_section.getfloat('allowed_range_of_peaks_stds'),
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),

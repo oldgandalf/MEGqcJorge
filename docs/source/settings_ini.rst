@@ -63,6 +63,12 @@ Peak-to-peak amplitude auto (based on MNE annotatons) [PTP_auto]
 
 Heart beat artifacts [ECG]
 --------------------------
+- **n_breaks_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for ECG channel only, not for any other channels Used to detect a noisy ECG channel). Default: *3*
+- **allowed_range_of_peaks_stds** (float) - the allowed range of peaks in standard deviations. (This setting is for ECG channel only, not for any other channels Used to detect a noisy ECG channel). Defaault: *0.05* (experimentally chosen value). How the setting is used:
+    - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
+    - The peaks will be detected on the scaled data
+    - The average std of all peaks has to be within this allowed range, If it is higher - the channel has too high deviation in peaks height and is counted as noisy
+
 - **ecg_epoch_tmin** (float) : time in seconds before the event. Recommended -0.04 seconds. Dont set smaller than -0.03. Default: *-0.04*
 - **ecg_epoch_tmax** (float) : time in seconds after the event. Recommended 0.04 seconds. Dont set smaller than 0.03. Default: *0.04*
 - **norm_lvl** (int) : The norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*
@@ -70,6 +76,12 @@ Heart beat artifacts [ECG]
 
 Eye movement artifacts [EOG]
 ----------------------------
+- **n_breaks_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for EOG channel only, not for any other channels Used to detect a noisy EOG channel). Default: *3*
+- **allowed_range_of_peaks_stds** (float) - the allowed range of peaks in standard deviations. (This setting is for EOG channel only, not for any other channels Used to detect a noisy EOG channel). Defaault: *0.05* (experimentally chosen value). How the setting is used:
+    - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
+    - The peaks will be detected on the scaled data
+    - The average std of all peaks has to be within this allowed range, If it is higher - the channel has too high deviation in peaks height and is counted as noisy
+
 - **eog_epoch_tmin** (float) : time in seconds before the event. Default: *-0.2*
 - **eog_epoch_tmax** (float) : time in seconds after the event. Default: *0.4*
 - **norm_lvl** (int) : the norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*

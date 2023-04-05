@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 
 
-def check_ch_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_allowed_per_10min: int = 3):
+def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_allowed_per_10min: int = 3, allowed_range_of_peaks_stds: float = 0.05):
 
     """
     Check if the ECG/EOG channel is not corrupted using 3 conditions:
@@ -16,32 +16,60 @@ def check_ch_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n
 
     Parameters
     ----------
-    ch_data
+    picked: str
+        Named of picked ECG/EOG channel
+    ch_data: list or np.ndarray
+        ECG/EOG channel data
+    fs: int
+        Sampling frequency
+    ecg_or_eog: str
+        'ECG' or 'EOG'
+    n_breaks_allowed_per_10min: int
+        Number of breaks allowed per 10 minutes of recording
+    allowed_range_of_peaks_stds : float, optional
+        Allowed range of peaks standard deviations. The default is 0.05.
+        
+        - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
+        - The peaks will be detected on the scaled data
+        - The average std of all peaks has to be within this allowed range, If it is higher - the channel has too high deviation in peaks height and is counted as noisy
+
+    
+    
+    Returns
+    -------
+    similar_ampl : bool
+        True if peaks have similar amplitude
+    mean_rr_interval_ok: bool
+        True if intervals between ECG/EOG events are in the normal healthy human range
+    no_breaks : bool
+        True if recording has no or only a few breaks 
+    fig : plotly.graph_objects.Figure
+        Figure with ECG/EOG channel data and peaks marked
 
     
     """
 
-    # 1. Check if R peaks have similar amplitude. If not - data is too noisy:
-    # Find R peaks using find_peaks
+    # 1. Check if R peaks (or EOG peaks)  have similar amplitude. If not - data is too noisy:
+    # Find R peaks (or peaks of EOG wave) using find_peaks
     height = np.mean(ch_data) + 1 * np.std(ch_data)
-    peaks, _ = find_peaks(ch_data, height=height, distance=round(0.5 * fs)) 
+    peaks, _ = find_peaks(ch_data, height=height, distance=round(0.5 * fs)) #assume there are no peaks within 0.5 seconds from each other.
 
 
     # scale ecg data between 0 and 1: here we dont care about the absolute values. important is the pattern: 
     # are the peak magnitudes the same on average or not? Since absolute values and hence mean and std 
     # can be different for different data sets, we can just scale everything between 0 and 1 and then
     # compare the peak magnitudes
-    ecg_data_scaled = (ch_data - np.min(ch_data))/(np.max(ch_data) - np.min(ch_data))
-    peak_amplitudes = ecg_data_scaled[peaks]
+    ch_data_scaled = (ch_data - np.min(ch_data))/(np.max(ch_data) - np.min(ch_data))
+    peak_amplitudes = ch_data_scaled[peaks]
 
     amplitude_std = np.std(peak_amplitudes)
 
-    if amplitude_std < 0.05: #0.05 is experimentally found value.
+    if amplitude_std < allowed_range_of_peaks_stds: 
         similar_ampl = True
-        print("___MEG QC___: R peaks have similar amplitudes, amplitude std: ", amplitude_std)
+        print("___MEG QC___: Peaks have similar amplitudes, amplitude std: ", amplitude_std)
     else:
         similar_ampl = False
-        print("___MEG QC___: R peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
+        print("___MEG QC___: Peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
 
 
     # 2. Calculate RR intervals (time differences between consecutive R peaks)
@@ -83,26 +111,37 @@ def check_ch_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n
         print("___MEG QC___: All parts of the data have regular peaks")
 
 
-    # Plot the SCALED signal and the amplitude envelope using plotly:
-    time = np.arange(len(ecg_data_scaled))/fs
+    # Plot the signal and the amplitude envelope using plotly:
+    time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ecg_data_scaled, mode='lines', name='ECG'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ecg_data_scaled[peaks], mode='markers', name='R-peaks'))
-    fig.update_layout(title='ECG channel (scaled) with R wave peaks', xaxis_title='time, s', yaxis_title='Amplitude')
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=picked + ' data'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.update_layout(xaxis_title='time, s', 
+                yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+                yaxis_title='Amplitude',
+                title={
+                'text': picked,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
     fig.show()
 
     return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
 
 
 
-def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  thresh_lvl: float, ecg_or_eog: str, plotflag: bool):
+def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  ecg_or_eog: str, n_breaks_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
     """
     Detects noisy ecg or eog channels.
 
     The channel is noisy when:
 
-    1. There are too many peaks in the data (more frequent than possible heartbets or blinks of a healthy human).
-    2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period).
+    1. The distance between the peaks of ECG/EOG signal is too large (events are not frequent enoigh for a human) or too small (events are too frequent for a human).
+    2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period) -corrupted channel or dustructed recording
+    3. Peaks are of significantly different amplitudes (indicating that the channel is noisy).
 
     
     Parameters
@@ -111,12 +150,17 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
         Raw data.
     picked_channels_ecg_or_eog : list[str]
         List of ECH or EOG channel names to be checked.
-    thresh_lvl : float
-        Threshold level for peak detection.
     ecg_or_eog : str
-        'ECG' or 'EOG'.
-    plotflag : bool
-        If True, plots the data and detected peaks.
+        'ECG' or 'EOG'
+    n_breaks_allowed_per_10min : int, optional
+        Number of breaks allowed per 10 minutes of recording. The default is 3.
+    allowed_range_of_peaks_stds : float, optional
+        Allowed range of peaks standard deviations. The default is 0.05.
+
+        - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
+        - The peaks will be detected on the scaled data
+        - The average std of all peaks has to be within this allowed range, If it is higher - the channel has too high deviation in peaks height and is counted as noisy
+
 
     Returns
     -------
@@ -130,36 +174,27 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
 
     sfreq=raw.info['sfreq']
 
-    if ecg_or_eog == 'ECG' or ecg_or_eog == 'ecg':
-            max_peak_dist=40 #allow the lowest pulse to be 40/min. this is the maximal possible distance between 2 pulses.
-
-    elif ecg_or_eog == 'EOG' or ecg_or_eog == 'eog':
-            max_peak_dist=7 #normal spontaneous blink rate is between 12 and 15/min, allow 7 blinks per min minimum. However do we really need to limit here?
-
     bad_ecg_eog = {}
     noisy_ch_derivs=[]
     for picked in picked_channels_ecg_or_eog:
-        bad_ecg_eog[picked] = 'good'
 
         ch_data=raw.get_data(picks=picked)[0] 
+        # get_data creates list inside of a list becausee expects to create a list for each channel. 
+        # but iteration takes 1 ch at a time. this is why [0]
 
-        ecg_eval, fig = check_ch_conditions(ch_data, sfreq, ecg_or_eog = 'ecg', n_breaks_allowed_per_10min=3)
-        print(ecg_eval)
+        ecg_eval, fig = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_allowed_per_10min, allowed_range_of_peaks_stds)
+        print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
 
         if all(ecg_eval):
-            print(f'Good {ecg_or_eog} channel: {picked}')
+            print(f'___MEG QC___: Overall good {ecg_or_eog} channel: {picked}')
+            bad_ecg_eog[picked] = 'good'
         else:
+            print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {picked}')
             bad_ecg_eog[picked] = 'bad'
-            print(f'Bad {ecg_or_eog} channel: {picked}')
 
-        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+'_ECG_channel', 'plotly')]
-
-        # # get_data creates list inside of a list becausee expects to create a list for each channel. 
-        # # but interation takes 1 ch at a time anyways. this is why [0]
+        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly')]
         
- 
     return noisy_ch_derivs, bad_ecg_eog
-
 
 
 class Avg_artif:
@@ -933,13 +968,13 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
     Parameters
     ----------
     all_affected_channels : dict
-        Dictionary with lists of affected channels for each channel type.
+        Dictionary with listds of affected channels for each channel type.
     m_or_g_chosen : list
         List of channel types chosen for the analysis. 
     ecg_or_eog : str
         String 'ecg' or 'eog' depending on the artifact type.
     channels : dict
-        Dictionary with lists of channels for each channel type.
+        Dictionary with listds of channels for each channel type.
     bad_avg : dict
         Dictionary with boolean values for mag and grad, indicating if the average artifact is bad or not. 
         
@@ -976,7 +1011,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     raw : mne.io.Raw
         Raw data.
     channels : dict
-        Dictionary with lists of channels for each channel type (typer mag and grad).
+        Dictionary with listds of channels for each channel type (typer mag and grad).
     m_or_g_chosen : list
         List of channel types chosen for the analysis.
         
@@ -997,14 +1032,14 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
     ecg_derivs = []
 
-    noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, ecg_ch_name,  thresh_lvl = 1.3, ecg_or_eog = 'ECG', plotflag = True)
+    noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_allowed_per_10min = ecg_params['n_breaks_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
 
     ecg_derivs += noisy_ch_derivs
     if ecg_ch_name:
         for ch in ecg_ch_name:
             if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy - drop it and  try to reconstruct
                 no_ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. \n'
-                print('___MEG QC___:  ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.')
+                print('___MEG QC___: ECG channel data is too noisy, cardio artifacts reconstruction will be attempted but might not be perfect. Cosider checking the quality of ECG channel on your recording device.')
                 raw.drop_channels(ch)
             else:
                 no_ecg_str = 'ECG channel used to identify hearbeats: ' + ch + '. \n'
@@ -1077,7 +1112,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     raw : mne.io.Raw
         Raw MEG data.
     channels : dict
-        Dictionary with lists of channels for each channel type (typer mag and grad).
+        Dictionary with listds of channels for each channel type (typer mag and grad).
     m_or_g_chosen : list
         List of channel types chosen for the analysis.
         
@@ -1105,7 +1140,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
     eog_derivs = []
 
-    noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, eog_ch_name,  thresh_lvl = 1, ecg_or_eog = 'EOG', plotflag = True)
+    noisy_ch_derivs, bad_ecg_eog = detect_noisy_ecg_eog(raw, eog_ch_name,  ecg_or_eog = 'EOG', n_breaks_allowed_per_10min = eog_params['n_breaks_allowed_per_10min'], allowed_range_of_peaks_stds = eog_params['allowed_range_of_peaks_stds'])
     eog_derivs += noisy_ch_derivs
 
     for ch_eog in eog_ch_name:
