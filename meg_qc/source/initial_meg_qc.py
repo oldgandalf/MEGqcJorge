@@ -108,7 +108,8 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['PSD'] = dict({
         'freq_min': freq_min,
         'freq_max': freq_max,
-        'psd_step_size': psd_section.getfloat('psd_step_size')})
+        'psd_step_size': psd_section.getfloat('psd_step_size'),
+        'use_logscale': psd_section.getboolean('use_logscale')})
 
         # 'n_fft': psd_section.getint('n_fft'),
         # 'n_per_seg': psd_section.getint('n_per_seg'),

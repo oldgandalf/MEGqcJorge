@@ -420,7 +420,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     return qc_derivative
 
 #%%
-def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, method: str):
+def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, method: str, use_logscale: bool = True):
 
     """
     Plotting Power Spectral Density for all channels.
@@ -437,6 +437,8 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
         list of channel names
     method : str
         'welch' or 'multitaper' or other method
+    use_logscale : bool
+        use logscale for y axis or not
 
     Returns
     -------
@@ -455,8 +457,12 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
     for col in df_psds:
         fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
 
-    #fig.update_xaxes(type="log")
-    fig.update_yaxes(type="log")
+    if use_logscale is True:
+        #fig.update_xaxes(type="log")
+        fig.update_yaxes(type="log")
+        desc='Log scale is used for y axis, which may make higher frequencies look much more prominent, than they would be in linear scale.'
+    else:
+        desc='Linear scale is used for x and y axis.'
     
     fig.update_layout(
     title={
@@ -477,7 +483,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
     fig_name='PSD_all_data_'+tit
 
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user='Log scale is used for y axis, which may make higher frequencies look much more prominent, than they would be in linear scale.')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user=desc)
 
     return qc_derivative
 
