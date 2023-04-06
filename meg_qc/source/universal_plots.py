@@ -482,7 +482,6 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
     
     fig_name='PSD_all_data_'+tit
 
-
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user=desc)
 
     return qc_derivative

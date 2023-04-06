@@ -240,14 +240,6 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
     # Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
     raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
 
-
-
-    # raw.notch_filter([120])
-    # print('___MEG QC___: ', 'Notch filtering at 120 Hz')
-
-
-
-
     # Loop through different thresholds for muscle artifact detection:
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds

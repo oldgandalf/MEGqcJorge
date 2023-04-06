@@ -343,7 +343,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
     if head_pos.size == 0:
         head_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
         print('___MEG QC___: ', head_str)
-        return [], {}, head_str, None, None
+        return [], {'Head movement artifacts could not be calculated'}, head_str, None, None
 
     # Optional! translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
     # (we assume they are in radients. But in the plot it says they are in quat! 

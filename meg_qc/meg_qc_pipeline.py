@@ -93,6 +93,7 @@ def make_derivative_meg_qc(config_file_path):
 
     # entities = dataset.query_entities()
     # print('___MEG QC___: ', 'entities', entities)
+
     # list_of_subs = list(entities["sub"])
     list_of_subs = sorted(list(dataset.query_entities()["sub"]))
     print('___MEG QC___: ', 'list_of_subs', list_of_subs)
@@ -112,7 +113,7 @@ def make_derivative_meg_qc(config_file_path):
 
         list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-        for fif_ind, data_file in enumerate(list_of_fifs[0:1]): #RUN OVER JUST 1 fif to save time
+        for fif_ind, data_file in enumerate(list_of_fifs[0:3]): #RUN OVER JUST 1 fif to save time
 
             # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
             shielding_str, m_or_g_skipped_str, epoching_str, ecg_str, eog_str, head_str, muscle_str, pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', '', '', '', '', '', '', '', ''
@@ -135,7 +136,7 @@ def make_derivative_meg_qc(config_file_path):
             print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
-            std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, noisy_ecg_derivs, noisy_eog_derivs = [],[],[],[],[], [],  [], [], [], []
+            std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs = [],[],[],[],[], [],  [], []
             simple_metrics_psd, simple_metrics_std, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
             df_head_pos, head_pos, noisy_freqs_global = [], [], []
             # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
@@ -143,39 +144,39 @@ def make_derivative_meg_qc(config_file_path):
             # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
 
 
-            # print('___MEG QC___: ', 'Starting STD...')
-            # start_time = time.time()
-            # std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting STD...')
+            start_time = time.time()
+            std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
  
             print('___MEG QC___: ', 'Starting PSD...')
             start_time = time.time()
             psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=True)
             print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
-            # start_time = time.time()
-            # pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
+            start_time = time.time()
+            pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
-            # start_time = time.time()
-            # pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
+            start_time = time.time()
+            pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
+            print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting ECG...')
-            # start_time = time.time()
-            # ecg_derivs, simple_metrics_ecg, ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting ECG...')
+            start_time = time.time()
+            ecg_derivs, simple_metrics_ecg, ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting EOG...')
-            # start_time = time.time()
-            # eog_derivs, simple_metrics_eog, eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-            # print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting EOG...')
+            start_time = time.time()
+            eog_derivs, simple_metrics_eog, eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+            print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Head movement calculation...')
-            # head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-            # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Head movement calculation...')
+            head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+            print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
             #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
@@ -202,8 +203,8 @@ def make_derivative_meg_qc(config_file_path):
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 
             'Peak-to-Peak auto from MNE': pp_auto_derivs, 
-            'ECG': noisy_ecg_derivs+ecg_derivs, 
-            'EOG': noisy_eog_derivs+eog_derivs,
+            'ECG': ecg_derivs, 
+            'EOG': eog_derivs,
             'Head movement artifacts': head_derivs,
             'Muscle artifacts': muscle_derivs}
 
