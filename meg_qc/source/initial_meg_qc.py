@@ -2,6 +2,8 @@ import mne
 import configparser
 import numpy as np
 
+from IPython.display import display
+
 
 def get_all_config_params(config_file_name: str):
     """
@@ -66,7 +68,7 @@ def get_all_config_params(config_file_name: str):
                 'method': filtering_section['method']})
             all_qc_params['Filtering'] = filtering_params
         else: 
-            all_qc_params['Filtering'] = 'Not apply'
+            all_qc_params['Filtering'] = False
 
 
         epoching_section = config['Epoching']
@@ -278,6 +280,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
         shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
 
+    display(raw)
+
     #crop the data to calculate faster:
     tmax=default_settings['crop_tmax']
     if tmax is None: 
@@ -286,18 +290,26 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Data filtering:
     raw_cropped_filtered = raw_cropped.copy()
-    if filtering_settings != 'Not apply':
-        raw_cropped.load_data(verbose=True) #Data has to be loaded into mememory before filetering:
+    if filtering_settings is not False:
+        raw_cropped.load_data() #Data has to be loaded into mememory before filetering:
         raw_cropped_filtered = raw_cropped.copy()
+
+        #if filtering_settings['h_freq'] is higher than the Nyquist frequency, set it to Nyquist frequency:
+        if filtering_settings['h_freq'] > raw_cropped_filtered.info['sfreq']/2 - 1:
+            filtering_settings['h_freq'] = raw_cropped_filtered.info['sfreq']/2 - 1
+            print('___MEG QC___: ', 'High frequency for filtering is higher than Nyquist frequency. High frequency was set to Nyquist frequency:', filtering_settings['h_freq'])
         raw_cropped_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
+        print('___MEG QC___: ', 'Data filtered from', filtering_settings['l_freq'], 'to', filtering_settings['h_freq'], 'Hz.')
         
         #And downsample:
         raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
         #frequency to resample is 5 times higher than the maximum chosen frequency of the function
+        print('___MEG QC___: ', 'Data resampled to', filtering_settings['h_freq']*5, 'Hz.')
     else:
         raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
         #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
         # because they are used later. Referencing might mess up things, check that.
+        print('___MEG QC___: ', 'Data not filtered.')
     
 
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 

@@ -477,7 +477,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
     fig_name='PSD_all_data_'+tit
 
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user='Log scale is used for y axis, which may make higher frequencies look much more prominent, than they would be in linear scale.')
 
     return qc_derivative
 

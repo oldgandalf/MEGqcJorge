@@ -367,7 +367,11 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
     for fr_b in noisy_freq_bands:
         fig.add_vrect(x0=fr_b[0], x1=fr_b[-1], line_width=1, fillcolor="red", opacity=0.2, layer="below")
     
-    fig.update_layout(title=ch_name+' PSD with noise peaks and split edges', xaxis_title='Frequency', yaxis_title='Amplitude ('+unit+')')
+    fig.update_layout(title=ch_name+' PSD with noise peaks and split edges', xaxis_title='Frequency', yaxis_title='Amplitude ('+unit+')',
+        yaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'))
+    
     if yaxis_log is True:
         fig.update_yaxes(type="log")
     
@@ -504,6 +508,11 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     prominence_pos=(max(one_psd) - min(one_psd)) / prominence_lvl_pos
     noisy_freqs_indexes, _ = find_peaks(one_psd, prominence=prominence_pos)
 
+    print("___prominence_pos: ", prominence_pos, "___", '___prominence_lvl_pos: ', prominence_lvl_pos, "___")
+    print("___noisy_freqs_indexes: ", noisy_freqs_indexes, "___")
+    print(one_psd)
+
+
     if noisy_freqs_indexes.size==0:
 
         if helper_plots is True: #visual
@@ -596,7 +605,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     
     """
 
-    m_or_g_tit, unit = get_tit_and_unit(m_or_g, True)
+    _, unit = get_tit_and_unit(m_or_g, True)
 
     #Total amplitude of the signal together with noise:
     freq_res = freqs[1] - freqs[0]
