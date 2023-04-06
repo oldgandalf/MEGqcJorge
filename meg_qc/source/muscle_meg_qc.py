@@ -161,8 +161,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
 
     noisy_freqs_all = list(set(powerline_freqs+extra_noise_freqs)) #leave only unique values
 
-    # - notch filter the data:
-    raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
+    # - notch filter the data (it has to be preloaded before. done in the parent function):
     if noisy_freqs_all==[]:
         print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
     elif (len(noisy_freqs_all))>0:
@@ -229,10 +228,15 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     muscle_derivs=[]
 
+    raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
+
     # Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
-    raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
+    #raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
 
+    raw.notch_filter([120])
+    print('___MEG QC___: ', 'Notch filtering at 120 Hz')
 
+    # Loop through different thresholds for muscle artifact detection:
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     

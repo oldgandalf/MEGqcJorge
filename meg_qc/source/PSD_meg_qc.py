@@ -523,12 +523,14 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
 
     # It might happen that when the band was created around the noise frequency, it is outside of the freqs range.
     # For example noisy freq is 1Hz, band is -2..+2Hz, freq rage was 0.5...100Hz. 
-    # In this case we need to set the first and last bands to the edge of the freq range:
+    # In this case we need to set the first and last bands to the edge of the freq range
+    # The last element set even before the freqency ramge ends, because the range is up to the value but not including it
+    # and otherwise there might be iteration problems creating noisy_bands_final.
 
     if noisy_bands_indexes[0][0]<freqs[0]/freq_res: #if the first band starts before the first freq in freqs:
         noisy_bands_indexes[0][0]=freqs[0]/freq_res
-    if noisy_bands_indexes[-1][1]>freqs[-1]/freq_res: #if the last band ends after the last freq in freqs:
-        noisy_bands_indexes[-1][1]=freqs[-1]/freq_res
+    if noisy_bands_indexes[-1][1]>freqs[-2]/freq_res: #if the last band ends after the last freq in freqs:
+        noisy_bands_indexes[-1][1]=freqs[-2]/freq_res
     
     # Split the blended freqs if their bands cross:
     noisy_bands_final_indexes, split_indexes = split_blended_freqs_at_the_lowest_point(noisy_bands_indexes, one_psd, noisy_freqs_indexes)
@@ -627,6 +629,9 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
         noise_ampl = noise_ampl_df.iloc[0, :].values.tolist() #take the first and only raw, because there is only one channel calculated by this fucntion
         noise_ampl_relative_to_signal=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
+    else:
+        noise_ampl = []
+        noise_ampl_relative_to_signal = []
 
 
     #noise_ampl_relative_to_signal=[r[0] for r in noise_ampl_relative_to_signal]
@@ -916,7 +921,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
     m_or_g_chosen : list
         list with chosen channel types: 'mag' or/and 'grad'
     helperplots : bool
-        if True, helperplots will be created
+        if True, plots with noisy freq bands for average PSD + for 3 different channels will be created (but not added to report).
 
     Returns
     -------
