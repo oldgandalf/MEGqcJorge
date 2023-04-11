@@ -461,7 +461,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
         #find the highest peak inside the timelimit_min and timelimit_max:
         main_peak_loc, main_peak_magnitude = potentially_affected_channel.get_highest_peak(t, timelimit_min, timelimit_max)
 
-        print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.wave_shape)
+        print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
         
         if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
             if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
@@ -469,7 +469,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_ecg_epochs: list, mean
                 affected_channels.append(potentially_affected_channel)
             else:
                 not_affected_channels.append(potentially_affected_channel)
-                print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Rwave: ', potentially_affected_channel.wave_shape)
+                print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
         else:
             not_affected_channels.append(potentially_affected_channel)
             print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
@@ -829,13 +829,15 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     """
 
     if  ecg_or_eog=='ECG':
-        max_n_peaks_allowed_per_ms=8 
+        max_n_peaks_allowed_for_ch_per_ms=8 #this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
+        max_n_peaks_allowed_for_avg_per_epoch = 3 #this is for the whole averaged over all channels ecg epoch, it should be much smoother - therefore less peaks are allowed.
     elif ecg_or_eog=='EOG':
-        max_n_peaks_allowed_per_ms=5
+        max_n_peaks_allowed_for_ch_per_ms=5
+        max_n_peaks_allowed_for_avg_per_epoch = 3
     else:
         print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
 
-    max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_per_ms)
+    max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_for_ch_per_ms)
     print('___MEG QC___: ', 'max_n_peaks_allowed: '+str(max_n_peaks_allowed))
 
     t = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
@@ -886,7 +888,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     # otherwise - it was not picked up/reconstructed correctly
 
     avg_ecg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_ecg_overall)
-    avg_ecg_overall_obj.get_peaks_wave(max_n_peaks_allowed, thresh_lvl_peakfinder)
+    avg_ecg_overall_obj.get_peaks_wave(max_n_peaks_allowed_for_avg_per_epoch, thresh_lvl_peakfinder)
+
     mean_ecg_magnitude_peak=np.max(avg_ecg_overall_obj.peak_magnitude)
     mean_ecg_loc_peak = avg_ecg_overall_obj.peak_loc[np.argmax(avg_ecg_overall_obj.peak_magnitude)]
     
@@ -894,11 +897,11 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     t0_actual=t[mean_ecg_loc_peak]
 
     if avg_ecg_overall_obj.wave_shape is True:
-        desc = "Good " +ecg_or_eog+ " average."
+        desc = "GOOD " +ecg_or_eog+ " average. Detected " + str(len(avg_ecg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
         print('___MEG QC___: ', desc)
         bad_avg=False
     else:
-        desc = "Bad " +ecg_or_eog+ " average."
+        desc = "BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_ecg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
         print('___MEG QC___: ', desc)
         bad_avg=True
 
@@ -1170,7 +1173,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     
     """
     eog_derivs = []
-    simple_metric_EOG = {'EOG artifacts could not be calculated'}
+    simple_metric_EOG = simple_metric_basic(metric_global_name='EOG artifacts could not be calculated', metric_global_description='', metric_global_content_mag='', metric_global_content_grad='', display_only_global=True)
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     eog_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_EOG]
@@ -1234,7 +1237,5 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
             no_eog_str += ''
 
     simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg)
-
-    print(eog_derivs, simple_metric_EOG, no_eog_str)
 
     return eog_derivs, simple_metric_EOG, no_eog_str
