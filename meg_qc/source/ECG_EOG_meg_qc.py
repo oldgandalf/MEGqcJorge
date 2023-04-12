@@ -1173,7 +1173,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     
     """
     eog_derivs = []
-    simple_metric_EOG = simple_metric_basic(metric_global_name='EOG artifacts could not be calculated', metric_global_description='', metric_global_content_mag='', metric_global_content_grad='', display_only_global=True)
+    simple_metric_EOG = ={'description': 'EOG artifacts could not be calculated'}
 
     picks_EOG = mne.pick_types(raw.info, eog=True)
     eog_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_EOG]
