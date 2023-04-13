@@ -153,26 +153,33 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     
     # - detect power line freqs and their harmonics
     powerline=[50, 60]
-    powerline_freqs = [x for x in powerline if x in np.round(noisy_freqs)]
-    powerline_freqs+=[x*2 for x in powerline_freqs]+[x*3 for x in powerline_freqs]
 
-    # - detect other noisy freqs in range of muscle artifacts:
-    extra_noise_freqs = [x for x in noisy_freqs if muscle_freqs[0]<x<muscle_freqs[1]]
+    #Were the power line freqs found in this data?
+    powerline_found = [x for x in powerline if x in noisy_freqs]
 
-    noisy_freqs_all = list(set(powerline_freqs+extra_noise_freqs)) #leave only unique values
+    # add harmonics of powerline freqs to the list of noisy freqs IF they are in range of muscle artifacts [110-140Hz]:
+    for freq in powerline_found:
+        for i in range(1, 3):
+            if freq*i not in powerline_found and muscle_freqs[0]<freq*i<muscle_freqs[1]:
+                powerline_found.append(freq*i)
 
-    #find Nyquist frequncy for this data to check if the noisy freqs are not higher than it (otherwise filter will fail):
-    nyquist_freq = raw.info['sfreq']/2
+    # DELETE THESE?
+    # - detect other noisy freqs in range of muscle artifacts: DECIDED NOT TO DO IT: MIGHT JUST FILTER OUT MUSCLES THIS WAY.
+    # extra_noise_freqs = [x for x in noisy_freqs if muscle_freqs[0]<x<muscle_freqs[1]]
+    # noisy_freqs_all = list(set(powerline_freqs+extra_noise_freqs)) #leave only unique values
 
-    #remove noisy freqs that are higher than Nyquist freq-1:
-    noisy_freqs_all = [x for x in noisy_freqs_all if x<nyquist_freq-1]
+    noisy_freqs_all = powerline_found
+
+    #(issue almost never happens, but might):
+    # find Nyquist frequncy for this data to check if the noisy freqs are not higher than it (otherwise filter will fail):
+    noisy_freqs_all = [x for x in noisy_freqs_all if x<raw.info['sfreq']/2 - 1]
 
 
     # - notch filter the data (it has to be preloaded before. done in the parent function):
     if noisy_freqs_all==[]:
         print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
     elif (len(noisy_freqs_all))>0:
-        print('___MEG QC___: ', 'Powerline and|or other noise in range of muscle frequencies was found in data. Notch filtering at: ', noisy_freqs_all, ' Hz')
+        print('___MEG QC___: ', 'Powerline noise was found in data. Notch filtering at: ', noisy_freqs_all, ' Hz')
         raw.notch_filter(noisy_freqs_all)
     else:
         print('Something went wrong with powerline frequencies. Notch filtering skipped. Check parameter noisy_freqs_all')
@@ -180,7 +187,47 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     return raw
 
 
-def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False):
+def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
+
+    """
+    Attach a dummy start and end to the data to avoid filtering artifacts at the beginning of the recording.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data.
+    attach_seconds : int
+        The number of seconds to attach to the start and end of the recording.
+        
+    Returns
+    -------
+    raw : mne.io.Raw
+        The raw data with dummy start attached."""
+    
+    print('Duration original: ', raw.n_times / raw.info['sfreq'])
+    # Attach a dummy start to the data to avoid filtering artifacts at the beginning of the recording:
+    raw_dummy_start=raw.copy()
+    raw_dummy_start_data = raw_dummy_start.crop(tmin=0, tmax=attach_seconds-1/raw.info['sfreq']).get_data()
+    inverted_data_start = np.flip(raw_dummy_start_data, axis=1) # Invert the data
+
+    # Attach a dummy end to the data to avoid filtering artifacts at the end of the recording:
+    raw_dummy_end=raw.copy()
+    raw_dummy_end_data = raw_dummy_end.crop(tmin=raw_dummy_end.times[int(-attach_seconds*raw.info['sfreq']-1/raw.info['sfreq'])], tmax=raw_dummy_end.times[-1]).get_data()
+    inverted_data_end = np.flip(raw_dummy_end_data, axis=1) # Invert the data
+
+    # Update the raw object with the inverted data
+    raw_dummy_start._data = inverted_data_start
+    raw_dummy_end._data = inverted_data_end
+    print('Duration of start attached: ', raw_dummy_start.n_times / raw.info['sfreq'])
+    print('Duration of end attached: ', raw_dummy_end.n_times / raw.info['sfreq'])
+
+    # Concatenate the inverted data with the original data
+    raw = mne.concatenate_raws([raw_dummy_start, raw, raw_dummy_end])
+    print('Duration after attaching dummy data: ', raw.n_times / raw.info['sfreq'])
+
+    return raw
+
+def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -237,6 +284,11 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
 
+    attach_sec = 5
+    if attach_dummy is True:
+        print(raw, attach_sec)
+        raw = attach_dummy_data(raw, attach_sec) #attach dummy data to avoid filtering artifacts at the beginning and end of the recording.  
+
     # Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
     raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
 
@@ -255,6 +307,15 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
             raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
             filter_freq=muscle_freqs)
 
+            #cut attached beginning and end from annot_muscle, scores_muscle:
+            if cut_dummy is True:
+                # annot_muscle = annot_muscle[annot_muscle['onset']>attach_sec]
+                # annot_muscle['onset'] = annot_muscle['onset']-attach_sec
+                # annot_muscle['duration'] = annot_muscle['duration']-attach_sec
+                scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
+                raw = raw.crop(tmin=attach_sec, tmax=raw.times[-attach_sec])
+
+
             # Plot muscle z-scores across recording
             peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
 
@@ -272,7 +333,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
             
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict)
 
-    return muscle_derivs, simple_metric, muscle_str
+    return muscle_derivs, simple_metric, muscle_str, scores_muscle
 
 
 
