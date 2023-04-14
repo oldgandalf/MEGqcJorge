@@ -208,11 +208,13 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
     # Attach a dummy start to the data to avoid filtering artifacts at the beginning of the recording:
     raw_dummy_start=raw.copy()
     raw_dummy_start_data = raw_dummy_start.crop(tmin=0, tmax=attach_seconds-1/raw.info['sfreq']).get_data()
+    print('START', raw_dummy_start_data.shape)
     inverted_data_start = np.flip(raw_dummy_start_data, axis=1) # Invert the data
 
     # Attach a dummy end to the data to avoid filtering artifacts at the end of the recording:
     raw_dummy_end=raw.copy()
     raw_dummy_end_data = raw_dummy_end.crop(tmin=raw_dummy_end.times[int(-attach_seconds*raw.info['sfreq']-1/raw.info['sfreq'])], tmax=raw_dummy_end.times[-1]).get_data()
+    print('END', raw_dummy_end_data.shape)
     inverted_data_end = np.flip(raw_dummy_end_data, axis=1) # Invert the data
 
     # Update the raw object with the inverted data
@@ -313,7 +315,13 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
                 # annot_muscle['onset'] = annot_muscle['onset']-attach_sec
                 # annot_muscle['duration'] = annot_muscle['duration']-attach_sec
                 scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
-                raw = raw.crop(tmin=attach_sec, tmax=raw.times[-attach_sec])
+                print('Raw times before', raw.times)
+                print('Raw dur before', raw.n_times / raw.info['sfreq'])
+
+                raw = raw.crop(tmin=attach_sec, tmax=raw.times[int(-attach_sec*raw.info['sfreq'])])
+                print('Raw times after', raw.times)
+                print('Raw dur after', raw.n_times / raw.info['sfreq'])
+
 
 
             # Plot muscle z-scores across recording
@@ -333,7 +341,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
             
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict)
 
-    return muscle_derivs, simple_metric, muscle_str, scores_muscle
+    return muscle_derivs, simple_metric, muscle_str, scores_muscle, raw
 
 
 
