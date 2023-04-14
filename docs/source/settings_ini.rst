@@ -5,6 +5,17 @@ The pipeline settings are stored in the ``settings.ini`` file.
 
 Settings are divided into sections, each corresponding to a different pipeline step.
 
+As the result of analysis will be produced:
+
+- html report for all metrics
+- csv file with the results of the analysis for some of metrics
+- machine readable json file with the results of the analysis for all metrics
+
+In the html report: 
+
+- all the plots produced by MEQ-QC are interactive, they can be scrolled through and enlarged. 
+- a few plots from MNE (in ECG and EOG sections) are not interactive.
+
 Default settings [DEFAULT]
 --------------------------
 - **do_for** (str) : which channels to process. Enter 1 or both values separated by , . Default: *mag, grad*
