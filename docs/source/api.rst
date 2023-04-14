@@ -1,9 +1,10 @@
 """"""""""""""""""
 API documentation
 """"""""""""""""""
-As the result of analysis will be produced:
 
-- html report for all metrics
+As the result of analysis will be produced (for each data file (.fif)):
+
+- html report for all metrics 
 - csv file with the results of the analysis for some of metrics
 - machine readable json file with the results of the analysis for all metrics
 
