@@ -272,14 +272,14 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
-        muscle_str = 'Muscle artifact detection performed on magnetometers, they are more sensitive to muscle activity than gradiometers.'
+        muscle_str = 'Artifact detection was performed on magnetometers, they are more sensitive to muscle activity than gradiometers.'
         print('___MEG QC___: ', muscle_str)
     elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
         m_or_g_decided=['grad']
-        muscle_str = 'Magnetometers are more sensitive to muscle artifacts and are recommended for artifact detection. If you only use gradiometers, some muscle events might not show. This will not be a problem if the data set only contains gradiometers. If it contains both gradiometers and magnetometers, but only gradiometers were chosen for this analysis - the results will not include an extra part of the muscle events present in magnetometers data.'
+        muscle_str = 'Artifact detection was performed on gradiometers, they are less sensitive to muscle activity than magnetometers.'
         print('___MEG QC___: ', muscle_str)
     else:
-        print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Muscle artifact detection skipped.')
+        print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
         return [], []
 
     muscle_derivs=[]

@@ -170,16 +170,16 @@ def make_derivative_meg_qc(config_file_path):
             # head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
             # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-            # print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
-            # #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-            # noisy_freqs_global = {'mag': [50], 'grad': [50]}
-            # raw_cropped_filtered1 = raw_cropped_filtered.copy()
-            # raw_cropped_filtered2 = raw_cropped_filtered.copy()
-            # raw_cropped_filtered3 = raw_cropped_filtered.copy()
-            # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all1, raw1 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered1, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = False, cut_dummy = False)
-            # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all2, raw2 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered2, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = False)
-            # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered3, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = True)
-            # print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+            print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
+            #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+            noisy_freqs_global = {'mag': [50], 'grad': [50]}
+            raw_cropped_filtered1 = raw_cropped_filtered.copy()
+            raw_cropped_filtered2 = raw_cropped_filtered.copy()
+            raw_cropped_filtered3 = raw_cropped_filtered.copy()
+            muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all1, raw1 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered1, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = False, cut_dummy = False)
+            muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all2, raw2 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered2, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = False)
+            muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered3, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = True)
+            print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
             
 
@@ -206,7 +206,7 @@ def make_derivative_meg_qc(config_file_path):
             'ECG': ecg_derivs, 
             'EOG': eog_derivs,
             'Head movement artifacts': head_derivs,
-            'Muscle artifacts': muscle_derivs}
+            'High frequency (Muscle) artifacts': muscle_derivs}
 
             QC_simple={
             'STD': simple_metrics_std, 

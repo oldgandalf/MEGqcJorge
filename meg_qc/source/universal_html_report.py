@@ -38,7 +38,8 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     elif 'Head' in section_name:
         text_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
     elif 'Muscle' in section_name:
-        text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
+        muscle_note = "This metric shows high freq artifacts in range between 110-140 Hz. High signal amplitudes in this frequency band in comprison to the rest of the signal is strongly correlated with muscles artifacts, as suggested by MNE. However, high frequency oscillations may also occure in this range for reasons other than muscle activity (for example, in an empty room recording)."
+        text_section_content="""<p>"""+muscle_note+"""</p>"""+"""<p>"""+report_strings['MUSCLE']+"""</p>"""
     elif 'Standard deviation' in section_name:
         text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
     elif 'Frequency' in section_name:

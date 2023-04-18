@@ -245,7 +245,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
                                             marker=dict(size=5),
                                             text=mag_names,
                                             hovertemplate='%{text}')],
-                                            layout=go.Layout(width=1000, height=1000))
+                                            layout=go.Layout(width=1200, height=1200))
 
         mag_fig.update_layout(
             title={
@@ -288,7 +288,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
                                                 marker=dict(size=5),
                                                 text=grad_names_together,
                                                 hovertemplate='%{text}')],
-                                                layout=go.Layout(width=1000, height=1000))
+                                                layout=go.Layout(width=1200, height=1200))
 
         grad_fig.update_layout(
             title={
