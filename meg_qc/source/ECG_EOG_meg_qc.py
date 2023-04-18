@@ -117,6 +117,66 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
     return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
 
 
+def check_3_conditions_new(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_allowed_per_10min: int = 3, allowed_range_of_peaks_stds: float = 0.05):
+
+    # 1. Check if R peaks (or EOG peaks)  have similar amplitude. If not - data is too noisy:
+    # Find R peaks (or peaks of EOG wave) using find_peaks
+    height = np.mean(ch_data) + 1 * np.std(ch_data)
+    peaks, _ = find_peaks(ch_data, height=height, distance=round(0.5 * fs)) #assume there are no peaks within 0.5 seconds from each other.
+
+
+    # scale ecg data between 0 and 1: here we dont care about the absolute values. important is the pattern: 
+    # are the peak magnitudes the same on average or not? Since absolute values and hence mean and std 
+    # can be different for different data sets, we can just scale everything between 0 and 1 and then
+    # compare the peak magnitudes
+    ch_data_scaled = (ch_data - np.min(ch_data))/(np.max(ch_data) - np.min(ch_data))
+    peak_amplitudes = ch_data_scaled[peaks]
+
+    amplitude_std = np.std(peak_amplitudes)
+
+    if amplitude_std < allowed_range_of_peaks_stds: 
+        similar_ampl = True
+        print("___MEG QC___: Peaks have similar amplitudes, amplitude std: ", amplitude_std)
+    else:
+        similar_ampl = False
+        print("___MEG QC___: Peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
+
+
+    # 2. Calculate RR intervals (time differences between consecutive R peaks)
+    rr_intervals = np.diff(peaks) / fs
+
+    if ecg_or_eog == 'ECG':
+        rr_dist_allowed = [0.6, 1.6] #take possible pulse rate of 100-40 bpm (hense distance between peaks is 0.6-1.6 seconds)
+    elif ecg_or_eog == 'EOG':
+        rr_dist_allowed = [1, 10] #take possible blink rate of 60-5 per minute (hense distance between peaks is 1-10 seconds). Yes, 60 is a very high rate, but I see this in some data sets often.
+
+
+    #Count how many segment there are in rr_intervals with breaks or bursts:
+    n_breaks = 0
+    n_bursts = 0
+    for i in range(len(rr_intervals)):
+        if rr_intervals[i] > rr_dist_allowed[1]:
+            n_breaks += 1
+        if rr_intervals[i] < rr_dist_allowed[0]:
+            n_bursts += 1
+
+    no_breaks, no_bursts = True, True
+    #Check if there are too many breaks:
+    if n_breaks > len(rr_intervals)/60*10/n_breaks_allowed_per_10min:
+        print("___MEG QC___: There are more than 2 breaks in the data, number: ", n_breaks)
+        no_breaks = False
+    if n_bursts > len(rr_intervals)/60*10/n_breaks_allowed_per_10min:
+        print("___MEG QC___: There are more than 2 bursts in the data, number: ", n_bursts)
+        no_bursts = False
+
+
+    # Plot the signal using plotly:
+    fig = plot_channel(ch_data, peaks, ch_name = picked, fs = fs)
+
+    return (similar_ampl, no_breaks, no_bursts), fig
+
+
+
 def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
 
     time = np.arange(len(ch_data))/fs
@@ -187,7 +247,8 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
         # get_data creates list inside of a list becausee expects to create a list for each channel. 
         # but iteration takes 1 ch at a time. this is why [0]
 
-        ecg_eval, fig = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_allowed_per_10min, allowed_range_of_peaks_stds)
+        #ecg_eval, fig = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_allowed_per_10min, allowed_range_of_peaks_stds)
+        ecg_eval, fig = check_3_conditions_new(picked, ch_data, sfreq, ecg_or_eog, n_breaks_allowed_per_10min, allowed_range_of_peaks_stds)
         print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
 
         if all(ecg_eval):
@@ -197,8 +258,10 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],
             print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {picked}')
             bad_ecg_eog[picked] = 'bad'
 
-        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) mean interval between peaks as expected: '+str(ecg_eval[1])+', 3) no or few breaks in the data: '+str(ecg_eval[2]))]
+        #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) mean interval between peaks as expected: '+str(ecg_eval[1])+', 3) no or few breaks in the data: '+str(ecg_eval[2]))]
         
+        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+       
     return noisy_ch_derivs, bad_ecg_eog
 
 
