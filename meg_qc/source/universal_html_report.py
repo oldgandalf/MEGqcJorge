@@ -32,35 +32,35 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
     if 'ECG' in section_name:
-        all_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
     elif 'EOG' in section_name:
-        all_section_content="""<p>"""+report_strings['EOG']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['EOG']+"""</p>"""
     elif 'Head' in section_name:
-        all_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
     elif 'Muscle' in section_name:
-        all_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
     elif 'Standard deviation' in section_name:
-        all_section_content="""<p>"""+report_strings['STD']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
     elif 'Frequency' in section_name:
-        all_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
     elif 'Peak-to-Peak manual' in section_name:
-        all_section_content="""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
     elif 'Peak-to-Peak auto' in section_name:
-        all_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
+        text_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
     elif derivs_section and not fig_derivs_section:
-        all_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
+        text_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
     else:
-        all_section_content="""<p>""""""</p>"""
+        text_section_content="""<p>""""""</p>"""
 
     if fig_derivs_section:
         for f in range(0, len(fig_derivs_section)):
-            all_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
+            text_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
 
     html_section_str="""
         <!-- *** Section *** --->
         <center>
         <h2>"""+section_name+"""</h2>
-        """ + all_section_content+"""
+        """ + text_section_content+"""
         <br></br>
         <br></br>
         </center>"""

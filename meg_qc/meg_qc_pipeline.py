@@ -121,18 +121,8 @@ def make_derivative_meg_qc(config_file_path):
             print('___MEG QC___: ', 'Starting initial processing...')
             start_time = time.time()
             print('___MEG QC___: ', 'data_file', data_file)
-            dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+            dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                 
-            m_or_g_chosen = sanity_check(m_or_g_chosen=all_qc_params['default']['m_or_g_chosen'], channels=channels)
-            if len(m_or_g_chosen) == 0: 
-                m_or_g_skipped_str = '''No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.'''
-                raise ValueError(m_or_g_skipped_str)
-               
-            if 'mag' not in m_or_g_chosen:
-                m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
-            if 'grad' not in m_or_g_chosen:
-                m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
-
             print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
             # QC measurements:
@@ -208,6 +198,7 @@ def make_derivative_meg_qc(config_file_path):
             'SHIELDING': shielding_str,}
 
             QC_derivs={
+            'Sensors locations': sensors_derivs,
             'Standard deviation of the data': std_derivs, 
             'Frequency spectrum': psd_derivs, 
             'Peak-to-Peak manual': pp_manual_derivs, 

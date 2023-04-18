@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import base64
 from io import BytesIO
 import pandas as pd
-import numpy as np
+import mne
 import warnings
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
@@ -174,6 +174,143 @@ class QC_derivative:
         else:  
             warnings.warn("Check description of this QC_derivative instance: " + self.name)
         
+
+def switch_names_on_off(fig: go.Figure):
+
+    """
+    Switches between showing channel names when hovering and always showing channel names.
+    
+    Parameters
+    ----------
+    fig : go.Figure
+        The figure to be modified.
+        
+    Returns
+    -------
+    fig : go.Figure
+        The modified figure.
+        
+    """
+
+    # Define the buttons
+    buttons = [
+    dict(label='Show channel names when hovering',
+         method='update',
+         args=[{'mode': 'markers'}]),
+    dict(label='Always show channel names',
+         method='update',
+         args=[{'mode': 'markers+text'}])
+    ]
+
+    # Add the buttons to the layout
+    fig.update_layout(updatemenus=[dict(type='buttons',
+                                        showactive=True,
+                                        buttons=buttons)])
+
+    return fig
+
+
+def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
+
+    """
+    Plots the 3D locations of the sensors in the raw file.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw file to be plotted.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+    qc_derivative = []
+
+    # Check if there are magnetometers and gradiometers in the raw file:
+    if 'mag' in m_or_g_chosen:
+
+        # Extract the sensor locations and names for magnetometers
+        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_pos = [ch['loc'][:3] for ch in mag_locs]
+        mag_names = [ch['ch_name'] for ch in mag_locs]
+
+        # Create the magnetometer plot with markers only
+
+        mag_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in mag_pos],
+                                            y=[pos[1] for pos in mag_pos],
+                                            z=[pos[2] for pos in mag_pos],
+                                            mode='markers',
+                                            marker=dict(size=5),
+                                            text=mag_names,
+                                            hovertemplate='%{text}')],
+                                            layout=go.Layout(width=1000, height=1000))
+
+        mag_fig.update_layout(
+            title={
+            'text': 'Magnetometers positions',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+
+        mag_fig = switch_names_on_off(mag_fig)
+        mag_fig.show()
+
+        qc_derivative += [QC_derivative(content=mag_fig, name='Magnetometers_positions', content_type='plotly')]
+
+    if 'grad' in m_or_g_chosen:
+
+        # Extract the sensor locations and names for gradiometers
+        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_pos = [ch['loc'][:3] for ch in grad_locs]
+        grad_names = [ch['ch_name'] for ch in grad_locs]
+
+        #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
+
+        grad_pos_together = []
+        grad_names_together = []
+
+        for i in range(len(grad_pos)-1):
+            if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
+                grad_pos_together += [grad_pos[i]]
+                grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
+            else:
+                pass
+
+
+        # Add both sets of gradiometer positions to the plot:
+        grad_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in grad_pos_together],
+                                                y=[pos[1] for pos in grad_pos_together],
+                                                z=[pos[2] for pos in grad_pos_together],
+                                                mode='markers',
+                                                marker=dict(size=5),
+                                                text=grad_names_together,
+                                                hovertemplate='%{text}')],
+                                                layout=go.Layout(width=1000, height=1000))
+
+        grad_fig.update_layout(
+            title={
+            'text': 'Gradiometers positions',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+
+
+        # Add the button to have names show up on hover or always:
+        grad_fig = switch_names_on_off(grad_fig)
+
+        # Show the plots
+
+        grad_fig.show()
+
+        qc_derivative += [QC_derivative(content=grad_fig, name='Gradiometers_positions', content_type='plotly')]
+
+    return qc_derivative
+
+
 
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
 

@@ -20,13 +20,22 @@ from universal_html_report import simple_metric_basic
 # In[42]:
 
 #%%
-def add_log_buttons(fig):
+def add_log_buttons(fig: go.Figure):
 
-    '''
-    Add buttons to switch scale between log and linear
+    """
+    Add buttons to switch scale between log and linear. For some reason only swithcing the Y scale works so far.
 
-    
-    '''
+    Parameters
+    ----------
+    fig : go.Figure
+        The figure to be modified withot buttons
+        
+    Returns
+    -------
+    fig : go.Figure
+        The modified figure with the buttons
+        
+    """
 
     updatemenus = [
     {

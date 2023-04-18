@@ -3,6 +3,7 @@ import configparser
 import numpy as np
 
 from IPython.display import display
+from universal_plots import plot_sensors_3d
 
 
 def get_all_config_params(config_file_name: str):
@@ -325,7 +326,21 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
     channels = {'mag': mag_ch_names, 'grad': grad_ch_names}
 
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str
+    #Check if there are channels to analyze:
+    m_or_g_chosen = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels=channels)
+    m_or_g_skipped_str = ''
+    if len(m_or_g_chosen) == 0: 
+        m_or_g_skipped_str = '''No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.'''
+        raise ValueError(m_or_g_skipped_str)
+    if 'mag' not in m_or_g_chosen:
+        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+    if 'grad' not in m_or_g_chosen:
+        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+
+    #Plot sensors:
+    sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)
+
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str
 
 
 def sanity_check(m_or_g_chosen, channels):
