@@ -12,12 +12,195 @@ from scipy.signal import find_peaks, peak_widths
 from IPython.display import display
 
 
-from universal_plots import Plot_psd, plot_pie_chart_freq, QC_derivative, get_tit_and_unit
+from universal_plots import QC_derivative, get_tit_and_unit
 from universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version
 # In[42]:
+
+#%%
+def add_log_buttons(fig):
+
+    '''
+    Add buttons to switch scale between log and linear
+
+    
+    '''
+
+    updatemenus = [
+    {
+        "buttons": [
+            {
+                "args": [{"xaxis.type": "linear"}],
+                "label": "X linear",
+                "method": "relayout"
+            },
+            {
+                "args": [{"xaxis.type": "X log"}],
+                "label": "X log",
+                "method": "relayout"
+            }
+        ],
+        "direction": "right",
+        "showactive": True,
+        "type": "buttons",
+        "x": 0.15,
+        "y": -0.1
+    },
+    {
+        "buttons": [
+            {
+                "args": [{"yaxis.type": "linear"}],
+                "label": "Y linear",
+                "method": "relayout"
+            },
+            {
+                "args": [{"yaxis.type": "log"}],
+                "label": "Y log",
+                "method": "relayout"
+            }
+        ],
+        "direction": "right",
+        "showactive": True,
+        "type": "buttons",
+        "x": 1,
+        "y": -0.1
+    }]
+
+    fig.update_layout(updatemenus=updatemenus)
+
+    return fig
+
+
+def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, method: str):
+
+    """
+    Plotting Power Spectral Density for all channels.
+
+    Parameters
+    ----------
+    m_or_g : str
+        'mag' or 'grad'
+    freqs : np.ndarray
+        frequencies
+    psds : np.ndarray
+        power spectral density for each channel
+    channels : list
+        list of channel names
+    method : str
+        'welch' or 'multitaper' or other method
+
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+        
+    """
+
+    tit, unit = get_tit_and_unit(m_or_g)
+
+    df_psds=pd.DataFrame(psds.T, columns=channels)
+
+    fig = go.Figure()
+
+    for col in df_psds:
+        fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
+
+    
+    fig.update_layout(
+    title={
+    'text': method[0].upper()+method[1:]+" periodogram for all "+tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'},
+    yaxis_title="Amplitude, "+unit,
+    yaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+    xaxis_title="Frequency (Hz)")
+
+    fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
+
+    #Add buttons to switch scale between log and linear:
+    fig = add_log_buttons(fig)
+
+    fig.show()
+    
+    fig_name='PSD_all_data_'+tit
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
+
+def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str):
+    
+    """
+    Plot pie chart representation of relative amplitude of each frequency band over the entire 
+    times series of mags or grads, not separated by individual channels.
+
+    Parameters
+    ----------
+    freq_amplitudes_relative : list
+        list of relative amplitudes of each frequency band
+    freq_amplitudes_absolute : list
+        list of absolute amplitudes of each frequency band 
+    total_freq_ampl : float
+        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
+    m_or_g : str
+        'mag' or 'grad'
+    bands_names : list
+        list of names of frequency bands
+    fig_tit : str
+        extra title to be added to the plot
+    fig_name : str
+        name of the figure to be saved
+    
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+    all_bands_names=bands_names.copy() 
+    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
+    #To keep them in original state outside the function, they are copied here.
+    all_mean_abs_values=freq_amplitudes_absolute.copy()
+    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
+
+    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
+    all_mean_relative_values=[v * 100 for v in freq_amplitudes_relative]  #in percentage
+    relative_unknown=100-(sum(freq_amplitudes_relative))*100
+    if relative_unknown>0:
+        all_mean_relative_values.append(relative_unknown)
+        all_bands_names.append('unknown')
+        all_mean_abs_values.append(total_freq_ampl - sum(freq_amplitudes_absolute))
+
+    labels=[None]*len(all_bands_names)
+    for n, name in enumerate(all_bands_names):
+        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
+
+    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
+    fig.update_layout(
+    title={
+    'text': fig_tit + ch_type_tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+
+    #fig.show()
+
+    fig_name=fig_name+ch_type_tit
+
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
 
 def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list):
 
@@ -328,7 +511,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd
     return psd_only_peaks_baselined
 
 
-def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str, use_logscale = True):
+def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str):
     
     """
     Plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
@@ -347,8 +530,6 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
         list of lists of indexes of the noisy frequency bands in the psd. Indexes! Not frequency bands themselves. Index is defined by fequency/freq_resolution.
     unit : str
         unit of the psd values. For example 'T/Hz'
-    use_logscale : bool, optional
-        if True, y axis will be log, by default True. If False, y axis will be linear.
 
     Returns
     -------
@@ -372,13 +553,13 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
         showexponent = 'all',
         exponentformat = 'e'))
     
-    if use_logscale is True:
-        fig.update_yaxes(type="log")
+    #Add buttons to switch scale between log and linear:
+    fig = add_log_buttons(fig)
     
     return fig
 
 
-def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, use_logscale: bool):
+def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int):
 
     """
     Detect the frequency band around the noise peaks.
@@ -405,8 +586,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
         'mag' or 'grad' - for plotting purposes only - to get the unit of the psd values
     prominence_lvl_pos : int
         prominence level for peak detection. The higher the value, the more peaks will be detected. 
-    use_logscale : bool
-        if True, in plotting y axis will be log. If False, y axis will be linear.
+
 
     Returns
     -------
@@ -433,7 +613,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
 
         if helper_plots is True: #visual
             _, unit = get_tit_and_unit(m_or_g, True)
-            fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit, use_logscale=use_logscale)
+            fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit)
             fig.show()
 
         return [], [], [], [], [], []
@@ -455,7 +635,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     #print(ch_name, 'LOWEST POINT ', 'noisy_bands_final_indexes: ', noisy_bands_final_indexes, 'split_indexes: ', split_indexes)
 
     if helper_plots is True: #visual of the split
-        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_final_indexes, unit, use_logscale=use_logscale)
+        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_final_indexes, unit)
         fig.show()
 
     #Get actual freq bands from their indexes:
@@ -466,7 +646,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, split_indexes
 
 
-def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_length: float, use_logscale: bool):
+def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_length: float):
     
     """
     Detect the frequency band around the noise peaks.
@@ -491,8 +671,6 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
         prominence level for peak detection. The higher the value, the more peaks will be detected. 
     band_length : float
         length of the frequency band around the noise peak. The band will be created by adding -band_length/2...+band_length/2 Hz around the noise peak.
-    use_logscale : bool
-        if True, in plotting y axis will be log. If False, y axis will be linear.
 
     Returns
     -------
@@ -517,7 +695,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
 
         if helper_plots is True: #visual
             _, unit = get_tit_and_unit(m_or_g, True)
-            fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit, use_logscale=use_logscale)
+            fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit)
             fig.show()
 
         return [], [], [], [], []
@@ -545,7 +723,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     noisy_bands_final_indexes, split_indexes = split_blended_freqs_at_the_lowest_point(noisy_bands_indexes, one_psd, noisy_freqs_indexes)
     if helper_plots is True: #visual of the split
         _, unit = get_tit_and_unit(m_or_g, True)
-        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_final_indexes, unit, use_logscale=use_logscale)
+        fig = plot_one_psd(ch_name, freqs, one_psd, noisy_freqs_indexes, noisy_bands_final_indexes, unit)
         fig.show()
 
     noisy_freqs = freqs[noisy_freqs_indexes]
@@ -555,7 +733,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, split_indexes
 
 
-def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list, pie_plotflag: bool, helper_plots: bool, m_or_g: str, cut_noise_from_psd: bool, prominence_lvl_pos: int, simple_or_complex: str = 'simple', use_logscale: bool = True):
+def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list, pie_plotflag: bool, helper_plots: bool, m_or_g: str, cut_noise_from_psd: bool, prominence_lvl_pos: int, simple_or_complex: str = 'simple'):
 
     """
     The function finds the number and amplitude of noisy frequencies in PSD function in these steps:
@@ -612,9 +790,9 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     total_amplitude = simpson(one_psd, dx=freq_res) 
 
     if simple_or_complex == 'simple':
-        noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos, band_length=1, use_logscale=use_logscale)
+        noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos, band_length=1)
     elif simple_or_complex == 'complex':
-        noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos, use_logscale=use_logscale)
+        noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos)
     else:
         print('simple_or_complex should be either "simple" or "complex"')
         return
@@ -669,7 +847,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
-def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag=True, helperplots=True, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', use_logscale: bool = True):
+def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag=True, helperplots=True, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple'):
 
     """
     Find noisy frequencies, their absolute and relative amplitude for averages over all channel (mag or grad) PSD and for each separate channel.
@@ -698,8 +876,6 @@ def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag
         prominence level of peak detection for finding noisy frequencies in the PSD of each channel
     simple_or_complex : str
         'simple' or 'complex' - method of finding noisy frequencies. see find_number_and_ampl_of_noise_freqs() for details
-    use_logscale : bool
-        if True, plot y axis in log scale
 
     Returns
     -------
@@ -722,7 +898,7 @@ def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag
     """
 
     #Calculate noise freqs globally: on the average psd curve over all channels together:
-    noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global = find_number_and_ampl_of_noise_freqs('Average', freqs, avg_psd, pie_plotflag, helperplots, m_or_g, cut_noise_from_psd, prominence_lvl_pos_avg, simple_or_complex, use_logscale=use_logscale)
+    noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global = find_number_and_ampl_of_noise_freqs('Average', freqs, avg_psd, pie_plotflag, helperplots, m_or_g, cut_noise_from_psd, prominence_lvl_pos_avg, simple_or_complex)
 
 
     #Calculate noise freqs locally: on the psd curve of each channel separately:
@@ -737,7 +913,7 @@ def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag
         else:
             helper_plotflag=False
 
-        _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs, psds[ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd, prominence_lvl_pos_channels, simple_or_complex, use_logscale=use_logscale)
+        _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs, psds[ch_n,:], False, helper_plotflag, m_or_g, cut_noise_from_psd, prominence_lvl_pos_channels, simple_or_complex)
         #here pie_plotflag is set to false, otherwise it ll produce a pie for each channel.
 
     return noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local_all_ch, noise_ampl_relative_to_all_signal_local_all_ch, noisy_freqs_local_all_ch
@@ -967,7 +1143,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
-        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method, use_logscale = psd_params['use_logscale'])
+        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method)
 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
@@ -975,7 +1151,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         pie_wave_bands_derivative, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True)
 
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
-        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', use_logscale = psd_params['use_logscale'])
+        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple')
         
         derivs_psd += [psd_plot_derivative] + [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
 

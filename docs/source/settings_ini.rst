@@ -49,7 +49,6 @@ Power spectral density [PSD]
 - **freq_min** (int or float) : lower frequency for PSD calculation. Unit: seconds. Default: *0.5*
 - **freq_max** (int or float) : higher frequency for PSD calculation. Unit: seconds. Default: *140*. Reason: output of PSD can be used for filtering the data before muscle artifact detection. Musce artifacts are usually around 110-140 Hz, so this setting allows to see if there are extra frequencies which would need to be filtered out
 - **psd_step_size** (float or int) : frequency resolution of the PSD. Unit: Hz. Default: *0.5*
-- **use_logscale** (bool) : if True - will use logscale for the PSD plot. Default: True
 
 
 Peak-to-peak amplitude manual [PTP_manual]
