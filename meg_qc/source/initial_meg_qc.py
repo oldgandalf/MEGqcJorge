@@ -36,15 +36,21 @@ def get_all_config_params(config_file_name: str):
     m_or_g_chosen = m_or_g_chosen.replace(" ", "")
     m_or_g_chosen = m_or_g_chosen.split(",")
 
+    ds_paths = default_section['data_directory']
+    ds_paths = ds_paths.replace(" ", "")
+    ds_paths = ds_paths.split(",")
+    if len(ds_paths) < 1:
+        print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
+        return None
+
+    tmin = default_section['data_crop_tmin']
+    tmax = default_section['data_crop_tmax']
+
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
     try:
-        dataset_path = default_section['data_directory']
-        tmin = default_section['data_crop_tmin']
-        tmax = default_section['data_crop_tmax']
-
         if not tmin: 
             tmin = 0
         else:
@@ -56,7 +62,7 @@ def get_all_config_params(config_file_name: str):
 
         default_params = dict({
             'm_or_g_chosen': m_or_g_chosen, 
-            'dataset_path': dataset_path,
+            'dataset_path': ds_paths,
             'crop_tmin': tmin,
             'crop_tmax': tmax})
         all_qc_params['default'] = default_params

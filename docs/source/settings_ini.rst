@@ -19,7 +19,7 @@ In the html report:
 Default settings [DEFAULT]
 --------------------------
 - **do_for** (str) : which channels to process. Enter 1 or both values separated by , . Default: *mag, grad*
-- **data_directory** (str) : **absolute** path to the data directory . Example: *user/path/to/my/data/ds000000*
+- **data_directory** (str) : **absolute** path to the data directory . Data path can not contain spaces! You can replace them with underscores or remove completely. Possible to also enter several data path separated by coma. Example: *user/path/to/my/data/ds000000, user/path/to/my/data/ds000001*
 - **data_crop_tmin** (int) & data_crop_tmax** (int) : Settings for data crop. If no cropping needed, leave blank. Unit: seconds. Default: *blank*
 
 Filtering [Filtering]
