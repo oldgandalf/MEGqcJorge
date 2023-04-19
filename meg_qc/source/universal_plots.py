@@ -256,7 +256,6 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
             'yanchor': 'top'})
 
         mag_fig = switch_names_on_off(mag_fig)
-        mag_fig.show()
 
         qc_derivative += [QC_derivative(content=mag_fig, name='Magnetometers_positions', content_type='plotly')]
 
@@ -301,10 +300,6 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
 
         # Add the button to have names show up on hover or always:
         grad_fig = switch_names_on_off(grad_fig)
-
-        # Show the plots
-
-        grad_fig.show()
 
         qc_derivative += [QC_derivative(content=grad_fig, name='Gradiometers_positions', content_type='plotly')]
 

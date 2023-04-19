@@ -30,7 +30,7 @@ import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
 from universal_plots import QC_derivative, get_tit_and_unit
 
-def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
+def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict, muscle_str_joined: str):
 
     """
     Make a simple metric dict for muscle events.
@@ -41,6 +41,8 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
         The channel type used for muscle detection: 'mag' or 'grad'.
     z_scores_dict : dict
         The z-score thresholds used for muscle detection.
+    muscle_str_joined : str
+        Notes about muscle detection to use as description.
         
     Returns
     -------
@@ -49,8 +51,12 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict):
         
     """
 
+    #if the string contains <p> or </p> - remove it:
+    muscle_str_joined = muscle_str_joined.replace("<p>", "").replace("</p>", "")
+
+
     simple_metric = {
-    'description': 'Muscle artifact events at different z score thresholds.',
+    'description': muscle_str_joined+'Data below shows detected high frequency events at different z score thresholds.',
     'muscle_calculated_using': m_or_g_decided,
     'unit_muscle_evet_times': 'seconds',
     'unit_muscle_event_zscore': 'z-score',
@@ -272,15 +278,18 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
-        muscle_str = 'Artifact detection was performed on magnetometers, they are more sensitive to muscle activity than gradiometers.'
+        muscle_str = 'For this data file artifact detection was performed on magnetometers, they are more sensitive to muscle activity than gradiometers. '
         print('___MEG QC___: ', muscle_str)
     elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
         m_or_g_decided=['grad']
-        muscle_str = 'Artifact detection was performed on gradiometers, they are less sensitive to muscle activity than magnetometers.'
+        muscle_str = 'For this data file artifact detection was performed on gradiometers, they are less sensitive to muscle activity than magnetometers. '
         print('___MEG QC___: ', muscle_str)
     else:
         print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
         return [], []
+    
+    muscle_note = "This metric shows high frequency artifacts in range between 110-140 Hz. High power in this frequency band compared to the rest of the signal is strongly correlated with muscles artifacts, as suggested by MNE. However, high frequency oscillations may also occure in this range for reasons other than muscle activity (for example, in an empty room recording). "
+    muscle_str_joined=muscle_note+"<p>"+muscle_str+"</p>"
 
     muscle_derivs=[]
 
@@ -339,9 +348,9 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
                 'number_muscle_events': len(muscle_times), 
                 'Details': z_score_details}
             
-        simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict)
+        simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
 
-    return muscle_derivs, simple_metric, muscle_str, scores_muscle, raw
+    return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
 
 
 

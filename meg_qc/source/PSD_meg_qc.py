@@ -46,7 +46,7 @@ def add_log_buttons(fig: go.Figure):
                 "method": "relayout"
             },
             {
-                "args": [{"xaxis.type": "X log"}],
+                "args": [{"xaxis.type": "log"}],
                 "label": "X log",
                 "method": "relayout"
             }
