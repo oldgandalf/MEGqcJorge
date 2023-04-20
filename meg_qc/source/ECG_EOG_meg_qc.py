@@ -885,9 +885,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         Each instance contains info about the average ecg/eog artifact on this channel and the peak amplitude of the artifact.
     affected_derivs : list
         List of instances of QC_deriv with figures for average ecg/eog and affected + not affected channels. Last 2 are optional: oly if average is good.
-    bad_avg: bool
-        True if the average ecg/eog artifact is bad: too noisy. In case of a noisy average ecg/eog artifact, no affected channels should be further detected.
-
+    no_ecg_str: str
+        String about the success of ECG artifact detection, will be added to report.
         
     """
 
@@ -946,37 +945,27 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     # 7. affected channels will be the ones which have peak amplitude over average in limits of -0.05:0.05s from actual t0 """
 
 
-    avg_ecg_overall=np.mean(ecg_epoch_per_ch_only_data, axis=0) 
+    avg_overall=np.mean(ecg_epoch_per_ch_only_data, axis=0) 
     # will show if there is ecg artifact present  on average. should have ecg shape if yes. 
     # otherwise - it was not picked up/reconstructed correctly
 
-    avg_ecg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_ecg_overall)
-    avg_ecg_overall_obj.get_peaks_wave(max_n_peaks_allowed_for_avg_per_epoch, thresh_lvl_peakfinder)
+    avg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_overall)
+    avg_overall_obj.get_peaks_wave(max_n_peaks_allowed_for_avg_per_epoch, thresh_lvl_peakfinder)
 
-    mean_ecg_magnitude_peak=np.max(avg_ecg_overall_obj.peak_magnitude)
-    mean_ecg_loc_peak = avg_ecg_overall_obj.peak_loc[np.argmax(avg_ecg_overall_obj.peak_magnitude)]
+    mean_ecg_magnitude_peak=np.max(avg_overall_obj.peak_magnitude)
+    mean_ecg_loc_peak = avg_overall_obj.peak_loc[np.argmax(avg_overall_obj.peak_magnitude)]
     
     #set t0_actual as the time of the peak of the average ecg artifact:
     t0_actual=t[mean_ecg_loc_peak]
 
-    if avg_ecg_overall_obj.wave_shape is True:
-        desc = "GOOD " +ecg_or_eog+ " average. Detected " + str(len(avg_ecg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
-        print('___MEG QC___: ', desc)
-        bad_avg=False
-    else:
-        desc = "BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_ecg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
-        print('___MEG QC___: ', desc)
-        bad_avg=True
-
     affected_derivs=[]
-    if plotflag is True:
-        fig_avg = go.Figure()
-        avg_ecg_overall_obj.plot_epoch_and_peak(fig_avg, t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
-        fig_avg.show()
-        affected_derivs += [QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly', description_for_user = desc)]
+    artif_affected_channels = []
 
-    #2. and 3.:
-    if bad_avg is False:
+    if avg_overall_obj.wave_shape is True: #if the average ecg artifact is good - do steps 2 and 3:
+        avg_artif_description = "GOOD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
+        print('___MEG QC___: ', avg_artif_description)
+        bad_avg_str = ''
+
         artif_affected_channels, ecg_not_affected_channels, artifact_lvl = detect_channels_above_norm(norm_lvl=norm_lvl, list_mean_ecg_epochs=ecg_epoch_per_ch, mean_ecg_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog)
 
         if plotflag is True:
@@ -985,12 +974,21 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
             affected_derivs += [QC_derivative(fig_affected, ecg_or_eog+'_affected_channels_'+m_or_g, 'plotly')]
             affected_derivs += [QC_derivative(fig_not_affected, ecg_or_eog+'_not_affected_channels_'+m_or_g, 'plotly')]
 
-        if avg_ecg_overall_obj.wave_shape is False and (not ecg_not_affected_channels or len(ecg_not_affected_channels)/len(channels)<0.2):
-            print('___MEG QC___: ', 'Something went wrong! The overall average ' +ecg_or_eog+ ' is  bad, but all  channels are affected by ' +ecg_or_eog+ ' artifact.')
-    else:
-        artif_affected_channels = []
+    else: #if the average artifact is bad - end processing
+        tit, _ = get_tit_and_unit(m_or_g)
+        avg_artif_description = tit+": BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Allowed max: " + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg). Affected channels can not be estimated."
+        bad_avg_str = tit+": "+ ecg_or_eog+ " signal detection/reconstruction did not produce reliable results. Affected channels can not be estimated."
+        print('___MEG QC___: ', bad_avg_str)
 
-    return artif_affected_channels, affected_derivs, bad_avg
+
+    if plotflag is True:
+        fig_avg = go.Figure()
+        avg_overall_obj.plot_epoch_and_peak(fig_avg, t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
+        fig_avg.show()
+        affected_derivs.insert(0, QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly', description_for_user = avg_artif_description))
+        #prepend the avg plot before all other plots. because they will be added to report in the order they are in list.
+
+    return artif_affected_channels, affected_derivs, bad_avg_str
 
 
 
@@ -1036,7 +1034,8 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
     return metric_global_content
 
 
-def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, bad_avg: dict):
+def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, avg_artif_str: dict):
+    
     """
     Make simple metric for ECG/EOG artifacts as a dictionary, which will further be converted into json file.
     
@@ -1050,8 +1049,8 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
         String 'ecg' or 'eog' depending on the artifact type.
     channels : dict
         Dictionary with listds of channels for each channel type.
-    bad_avg : dict
-        Dictionary with boolean values for mag and grad, indicating if the average artifact is bad or not. 
+    avg_artif_str : dict
+        Dict with strings with info about the ECG/EOG channel and average artifact.
         
     Returns
     -------
@@ -1062,12 +1061,14 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
     """
 
     metric_global_name = 'all_'+ecg_or_eog+'_affected_channels'
-    metric_global_content={'mag': None, 'grad': None}
     metric_global_description = 'Affected channels are the channels with average (over '+ecg_or_eog+' epochs of this channel) ' +ecg_or_eog+ ' artifact above the threshold. Channels are listed here in order from the highest to lowest artifact amplitude. Non affected channels are not listed. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Metrci also provides a list of 10 most strongly affected channels + their artfact peaks magnitdes.'
+    metric_global_content = {}
 
     for m_or_g in m_or_g_chosen:
-        if bad_avg[m_or_g] is False:
+        if all_affected_channels[m_or_g]: #if there are affected channels for this channel type
             metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels[m_or_g])
+        else:
+            metric_global_content[m_or_g]= avg_artif_str[m_or_g]
 
     simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], display_only_global=True)
 
@@ -1142,7 +1143,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
         List of all derivatives (plotly figures) as QC_derivative instances
     simple_metric_ECG : dict
         Dictionary with simple metrics for ECG artifacts to be exported into json file.
-    no_ecg_str : str
+    ecg_str_for_report : str
         String with information about ECG channel used in the final report.
         
 
@@ -1160,20 +1161,20 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
         for ch in ecg_ch_name:
             if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy - drop it and  try to reconstruct
                 if ecg_params['drop_bad_ch'] is True:
-                    no_ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device.'
-                    print('___MEG QC___: ', no_ecg_str)
+                    ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device.'
+                    print('___MEG QC___: ', ecg_str)
                     raw.drop_channels(ch)
                 elif ecg_params['drop_bad_ch'] is False:
-                    no_ecg_str = 'ECG channel data is too noisy, still attempt to calculate artifats using this channel. Consider checking the quality of ECG channel on your recording device.'
-                    print('___MEG QC___: ', no_ecg_str)
+                    ecg_str = 'ECG channel data is too noisy, still attempt to calculate artifats using this channel. Consider checking the quality of ECG channel on your recording device.'
+                    print('___MEG QC___: ', ecg_str)
                 else:
                     raise ValueError('drop_bad_ch should be either True or False')
             elif bad_ecg_eog[ch] == 'good': #ecg channel present and good - use it
-                no_ecg_str = ch+' is good and is used to identify hearbeats: '
-                print('___MEG QC___: ', no_ecg_str)
+                ecg_str = ch+' is good and is used to identify hearbeats: '
+                print('___MEG QC___: ', ecg_str)
     else:
-        no_ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data.'
-        print('___MEG QC___: ', no_ecg_str)
+        ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data.'
+        print('___MEG QC___: ', ecg_str)
     
 
     #ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
@@ -1185,7 +1186,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     flip_data=ecg_params['flip_data']
     
     ecg_affected_channels={}
-    bad_avg = {}
+    bad_avg_str = {}
 
     for m_or_g  in m_or_g_chosen:
 
@@ -1193,19 +1194,12 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        ecg_affected_channels[m_or_g], affected_derivs, bad_avg[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += affected_derivs
 
+    simple_metric_ECG = make_simple_metric_ECG_EOG(ecg_affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str)
 
-        if bad_avg[m_or_g] is True:
-            tit, _ = get_tit_and_unit(m_or_g)
-            no_ecg_str += '<br>'+tit+': ECG signal detection/reconstruction did not produce reliable results. Hearbeat artifacts and affected channels can not be estimated. <br>'
-        else:
-            no_ecg_str += ''
-
-    simple_metric_ECG = make_simple_metric_ECG_EOG(ecg_affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg)
-
-    return ecg_derivs, simple_metric_ECG, no_ecg_str
+    return ecg_derivs, simple_metric_ECG, ecg_str
 
 
 #%%
@@ -1231,7 +1225,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
         List of all derivatives (plotly figures) as QC_derivative instances
     simple_metric_EOG : dict
         Dictionary with simple metrics for ECG artifacts to be exported into json file.
-    no_eog_str : str
+    eog_str_for_report : str
         String with information about EOG channel used in the final report.
     
     """
@@ -1241,11 +1235,11 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     picks_EOG = mne.pick_types(raw.info, eog=True)
     eog_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_EOG]
     if picks_EOG.size == 0:
-        no_eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-        print('___MEG QC___: ', no_eog_str)
-        return eog_derivs, simple_metric_EOG, no_eog_str
+        eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
+        print('___MEG QC___: ', eog_str)
+        return eog_derivs, simple_metric_EOG, eog_str
     else:
-        no_eog_str = 'Only blinks can be calculated using MNE, not saccades.'
+        eog_str = 'Only blinks can be calculated using MNE, not saccades.'
         print('___MEG QC___: ', 'EOG channels found: ', eog_ch_name)
 
 
@@ -1282,23 +1276,17 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     flip_data=eog_params['flip_data']
 
     eog_affected_channels={}
-    bad_avg = {}
-    no_eog_str = ''
+    bad_avg_str = {}
+    
     for m_or_g  in m_or_g_chosen:
 
         eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         eog_derivs += affected_derivs
 
-        if bad_avg[m_or_g] is True:
-            tit, _ = get_tit_and_unit(m_or_g)
-            no_eog_str += '<br>'+tit+': EOG signal detection did not produce reliable results. Eyeblink artifacts and affected channels can not be estimated. <br>'
-        else:
-            no_eog_str += ''
+    simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg_str)
 
-    simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg)
-
-    return eog_derivs, simple_metric_EOG, no_eog_str
+    return eog_derivs, simple_metric_EOG, eog_str
