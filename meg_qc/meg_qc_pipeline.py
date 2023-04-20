@@ -117,7 +117,7 @@ def make_derivative_meg_qc(config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            for fif_ind, data_file in enumerate(list_of_fifs[0:10]): 
+            for fif_ind, data_file in enumerate(list_of_fifs[0:1]): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
 
                 # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
@@ -130,15 +130,13 @@ def make_derivative_meg_qc(config_file_path):
                 print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 # QC measurements:
+
+                #predefine in case some metrics are not calculated:
                 std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs = [],[],[],[],[], [],  [], []
                 simple_metrics_psd, simple_metrics_std, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-                df_head_pos, head_pos, noisy_freqs_global = [], [], []
+                df_head_pos, head_pos = [], []
                 scores_muscle_all1, scores_muscle_all2, scores_muscle_all3 = [], [], []
                 raw1, raw2, raw3 = [], [], []
-                # powerline predefined for the the muscle artif function. If powerline noise is present - need to notch filter it first.
-                # For this either need to run psd first, or just guess which powerline freq to use based on the country of the data collection.
-                # USA: 60, Europe 50. NOT save to assume powerline noise in every data set. Some really dont have it.
-
 
                 print('___MEG QC___: ', 'Starting STD...')
                 start_time = time.time()
@@ -184,6 +182,7 @@ def make_derivative_meg_qc(config_file_path):
 
                 
                 report_strings = {
+                'INITIAL_INFO': m_or_g_skipped_str+epoching_str+shielding_str,
                 'TIME_SERIES': time_series_str,
                 'STD': std_str,
                 'PSD': psd_str,
@@ -192,12 +191,10 @@ def make_derivative_meg_qc(config_file_path):
                 'ECG': ecg_str,
                 'EOG': eog_str,
                 'HEAD': head_str,
-                'MUSCLE': muscle_str,
-                'M_OR_G_SKIPPED': m_or_g_skipped_str,
-                'EPOCHING': epoching_str,
-                'SHIELDING': shielding_str}
+                'MUSCLE': muscle_str}
 
                 QC_derivs={
+                'MEG data quality analysis report': [],
                 'Interactive time series': time_series_derivs,
                 'Sensors locations': sensors_derivs,
                 'Standard deviation of the data': std_derivs, 

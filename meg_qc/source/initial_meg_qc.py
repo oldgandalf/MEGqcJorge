@@ -285,7 +285,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         shielding_str = ''
     except: 
         raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
-        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p>'''
 
     display(raw)
 
@@ -337,12 +337,12 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     m_or_g_chosen = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels=channels)
     m_or_g_skipped_str = ''
     if len(m_or_g_chosen) == 0: 
-        m_or_g_skipped_str = '''No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.'''
+        m_or_g_skipped_str = '''<p>No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.</p>'''
         raise ValueError(m_or_g_skipped_str)
     if 'mag' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p>'''
     if 'grad' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p>'''
 
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)

@@ -1,6 +1,6 @@
 
 import mne
-from universal_plots import QC_derivative, get_tit_and_unit
+from universal_plots import get_tit_and_unit
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
 
@@ -30,8 +30,9 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     """
 
     fig_derivs_section = keep_fig_derivs(derivs_section)
-    
-    if 'TIME_SERIES' in section_name:
+    if 'report' in section_name:
+        text_section_content=report_strings['INITIAL_INFO']
+    elif 'Time series' in section_name:
         text_section_content="""<p>"""+report_strings['TIME_SERIES']+"""</p>"""
     elif 'ECG' in section_name:
         text_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
@@ -180,21 +181,8 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict):
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    report.add_raw(raw=raw, title='Raw', psd=False)  # omit PSD plot
+    report.add_raw(raw=raw, title='Raw info from MNE', psd=False)  # omit PSD plot. IDK how to omit the time series plot without omiting the info table
 
-    header_html_string = """
-    <!doctype html>
-        <body style="font-family: Arial">
-            <center>
-            <h1>MEG data quality analysis report</h1>
-            <br></br>
-            """+ report_strings['SHIELDING'] + report_strings['M_OR_G_SKIPPED'] + report_strings['EPOCHING'] + """
-            </center>
-        </body>"""
-
-    report.add_html(header_html_string, title='MEG QC report')
-
-    
     for key in sections:
         if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':
             html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)

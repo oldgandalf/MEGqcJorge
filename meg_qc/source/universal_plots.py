@@ -66,7 +66,7 @@ class QC_derivative:
 
     """
 
-    def __init__(self, content, name, content_type, description_for_user = 'Add measurement description for a user...'):
+    def __init__(self, content, name, content_type, description_for_user = ''):
 
         """
         Constructor method
