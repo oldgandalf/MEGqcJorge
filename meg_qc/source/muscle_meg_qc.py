@@ -235,7 +235,7 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
 
     return raw
 
-def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
+def MUSCLE_meg_qc(muscle_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -252,7 +252,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     muscle_params : dict
         The parameters for muscle artifact detection originally defined in the config file.
-    raw : mne.io.Raw
+    raw_orig : mne.io.Raw
         The raw data.
     noisy_freqs_global : list
         The powerline frequencies found in the data by previously running PSD_meg_qc.
@@ -275,6 +275,7 @@ def MUSCLE_meg_qc(muscle_params: dict, raw: mne.io.Raw, noisy_freqs_global: dict
 
     muscle_freqs = muscle_params['muscle_freqs']
    
+    raw = raw_orig.copy() # make a copy of the raw data, to make sure the original data is not changed while filtering for this metric.
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
