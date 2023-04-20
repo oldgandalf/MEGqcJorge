@@ -1078,7 +1078,7 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     return nfft, nperseg
 
 #%%
-def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: list, helperplots: bool):
+def PSD_meg_qc(psd_params: dict, channels:dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helperplots: bool):
     
     """
     Main psd function. Calculates:
@@ -1112,7 +1112,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
         dictionary with psd parameters originating from config file
     channels : dict
         dictionary with channel names for each channel type: 'mag' or/and 'grad'
-    raw : mne.io.Raw
+    raw_orig : mne.io.Raw
         raw data
     m_or_g_chosen : list
         list with chosen channel types: 'mag' or/and 'grad'
@@ -1132,6 +1132,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw: mne.io.Raw, m_or_g_chosen: 
 
     """
     
+    raw = raw_orig.copy() # make a copy of the raw data, to make sure the original data is not changed while filtering for this metric.
+
     # these parameters will be saved into a dictionary. this allowes to calculate for mag or grad or both:
     freqs = {}
     psds = {}
