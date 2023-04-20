@@ -174,6 +174,66 @@ class QC_derivative:
         else:  
             warnings.warn("Check description of this QC_derivative instance: " + self.name)
         
+def plot_time_series(raw: mne.io.Raw, m_or_g_chosen: str):
+
+    """
+    Plots time series of the chosen channels.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw file to be plotted.
+    m_or_g_chosen : str
+        The type of the channels to be plotted: 'mag' or 'grad'.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+    qc_derivative = []
+    tit, unit = get_tit_and_unit(m_or_g_chosen)
+
+    picked_channels = mne.pick_types(raw.info, meg=m_or_g_chosen)
+
+    # Downsample data
+    raw_resampled = raw.resample(100, npad='auto') #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
+
+    data = raw_resampled.get_data(picks=picked_channels) 
+
+    fig = go.Figure()
+
+    for i in range(data.shape[0]):
+        fig.add_trace(go.Scatter(x=raw.times, y=data[i], mode='lines', name=raw.ch_names[picked_channels[i]]))
+
+    # Add title, x axis title, x axis slider and y axis units+title:
+    fig.update_layout(
+        title={
+            'text': tit+' Time Series',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+
+        xaxis_title='Time (s)',
+
+        xaxis=dict(
+            rangeslider=dict(
+                visible=True
+            ),
+            type="linear"),
+
+        yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title = unit) 
+    
+    qc_derivative += [QC_derivative(content=fig, name=tit+'_time_series', content_type='plotly', description_for_user = 'For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duration.')]
+
+    return qc_derivative
+
+
 
 def switch_names_on_off(fig: go.Figure):
 
@@ -210,7 +270,7 @@ def switch_names_on_off(fig: go.Figure):
     return fig
 
 
-def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
+def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     Plots the 3D locations of the sensors in the raw file.
@@ -219,6 +279,8 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str = 'm'):
     ----------
     raw : mne.io.Raw
         The raw file to be plotted.
+    m_or_g_chosen : str
+        The type of the channels to be plotted: 'mag' or 'grad'.
     
     Returns
     -------
