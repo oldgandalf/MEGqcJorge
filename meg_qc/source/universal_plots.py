@@ -229,7 +229,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g_chosen: str):
                 exponentformat = 'e'),
             yaxis_title = unit) 
     
-    qc_derivative += [QC_derivative(content=fig, name=tit+'_time_series', content_type='plotly', description_for_user = 'For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duration.')]
+    qc_derivative += [QC_derivative(content=fig, name=tit+'_time_series', content_type='plotly')]
 
     return qc_derivative
 

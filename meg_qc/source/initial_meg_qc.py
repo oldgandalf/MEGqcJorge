@@ -347,14 +347,17 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)
 
+    #Plot time series:
     time_series_derivs = []
     if default_settings['plot_interactive_time_series'] is True:
+        time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
         for ch_type in m_or_g_chosen:
             time_series_derivs += plot_time_series(raw_cropped, ch_type)
     else:
+        time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
         
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
 
 
 def sanity_check(m_or_g_chosen, channels):

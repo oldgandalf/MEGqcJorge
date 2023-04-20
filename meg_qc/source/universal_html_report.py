@@ -31,7 +31,9 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
 
     fig_derivs_section = keep_fig_derivs(derivs_section)
     
-    if 'ECG' in section_name:
+    if 'TIME_SERIES' in section_name:
+        text_section_content="""<p>"""+report_strings['TIME_SERIES']+"""</p>"""
+    elif 'ECG' in section_name:
         text_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
     elif 'EOG' in section_name:
         text_section_content="""<p>"""+report_strings['EOG']+"""</p>"""
