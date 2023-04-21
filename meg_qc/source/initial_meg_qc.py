@@ -3,10 +3,11 @@ import configparser
 import numpy as np
 
 from IPython.display import display
-from universal_plots import plot_sensors_3d
+from universal_plots import plot_sensors_3d, plot_time_series
 
 
 def get_all_config_params(config_file_name: str):
+
     """
     Parse all the parameters from config and put into a python dictionary 
     divided by sections. Parsing approach can be changed here, which 
@@ -35,6 +36,9 @@ def get_all_config_params(config_file_name: str):
     m_or_g_chosen = default_section['do_for'] 
     m_or_g_chosen = m_or_g_chosen.replace(" ", "")
     m_or_g_chosen = m_or_g_chosen.split(",")
+    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
+        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
+        return None
 
     ds_paths = default_section['data_directory']
     ds_paths = ds_paths.replace(" ", "")
@@ -45,11 +49,6 @@ def get_all_config_params(config_file_name: str):
 
     tmin = default_section['data_crop_tmin']
     tmax = default_section['data_crop_tmax']
-
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
-        return None
-
     try:
         if not tmin: 
             tmin = 0
@@ -63,6 +62,7 @@ def get_all_config_params(config_file_name: str):
         default_params = dict({
             'm_or_g_chosen': m_or_g_chosen, 
             'dataset_path': ds_paths,
+            'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'crop_tmin': tmin,
             'crop_tmax': tmax})
         all_qc_params['default'] = default_params
@@ -295,6 +295,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         tmax = raw.times[-1] 
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
 
+
     #Data filtering:
     raw_cropped_filtered = raw_cropped.copy()
     if filtering_settings is not False:
@@ -346,7 +347,14 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)
 
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str
+    time_series_derivs = []
+    if default_settings['plot_interactive_time_series'] is True:
+        for ch_type in m_or_g_chosen:
+            time_series_derivs += plot_time_series(raw_cropped, ch_type)
+    else:
+        time_series_derivs = []
+        
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, m_or_g_chosen, m_or_g_skipped_str
 
 
 def sanity_check(m_or_g_chosen, channels):
