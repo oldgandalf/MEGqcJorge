@@ -105,8 +105,11 @@ def make_derivative_meg_qc(config_file_path):
             print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
             return
 
+        avg_ecg=[]
+        avg_eog=[]
+
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especia;ly 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
-        for sid in list_of_subs[0:20]: 
+        for sid in list_of_subs[0:25]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -158,15 +161,18 @@ def make_derivative_meg_qc(config_file_path):
                 # pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
                 # print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                # print('___MEG QC___: ', 'Starting ECG...')
-                # start_time = time.time()
-                # ecg_derivs, simple_metrics_ecg, ecg_str = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-                # print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+                print('___MEG QC___: ', 'Starting ECG...')
+                start_time = time.time()
+                ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+                print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 print('___MEG QC___: ', 'Starting EOG...')
                 start_time = time.time()
-                eog_derivs, simple_metrics_eog, eog_str = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
                 print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+
+                avg_ecg += avg_objects_ecg
+                avg_eog += avg_objects_eog
 
                 # print('___MEG QC___: ', 'Starting Head movement calculation...')
                 # head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
@@ -294,5 +300,5 @@ def make_derivative_meg_qc(config_file_path):
         ancpbids.write_derivative(dataset, derivative) 
 
     #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
-    return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3
+    return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
 

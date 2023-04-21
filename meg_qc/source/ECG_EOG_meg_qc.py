@@ -228,7 +228,7 @@ def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name
                 'x':0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'})
-    fig.show()
+    #fig.show()
 
     return fig
 
@@ -313,7 +313,7 @@ class Avg_artif:
     ----------
     name : str
         name of the channel
-    mean_artifact_epoch : list
+    artif_data : list
         list of floats, average ecg epoch for a particular channel
     peak_loc : int
         locations of peaks inside the artifact epoch
@@ -331,7 +331,7 @@ class Avg_artif:
         
     Methods
     -------
-    __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
+    __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
         Constructor
     __repr__(self)
         Returns a string representation of the object
@@ -339,11 +339,11 @@ class Avg_artif:
         
     """
 
-    def __init__(self, name: str, mean_artifact_epoch:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
+    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None):
         """Constructor"""
         
         self.name =  name
-        self.mean_artifact_epoch = mean_artifact_epoch
+        self.artif_data = artif_data
         self.peak_loc = peak_loc
         self.peak_magnitude = peak_magnitude
         self.wave_shape =  wave_shape
@@ -357,7 +357,7 @@ class Avg_artif:
         
         """
 
-        return 'Mean artifact peak on: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
+        return 'Mean artifact for: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n - wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
     def get_peaks_wave(self, max_n_peaks_allowed, thresh_lvl_peakfinder=None):
 
@@ -391,7 +391,7 @@ class Avg_artif:
             
         """
         
-        peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = find_epoch_peaks(ch_data=self.mean_artifact_epoch, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg = find_epoch_peaks(ch_data=self.artif_data, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
         
         self.peak_loc=np.concatenate((peak_locs_pos, peak_locs_neg), axis=None)
         self.peak_magnitude=np.concatenate((peak_magnitudes_pos, peak_magnitudes_neg), axis=None)
@@ -406,21 +406,19 @@ class Avg_artif:
         return self.peak_loc, self.peak_magnitude, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
 
 
-    def plot_epoch_and_peak(self, fig, t, fig_tit, ch_type):
+    def plot_epoch_and_peak(self, t, fig_tit, ch_type):
 
         """
         Plot the average artifact epoch and the peak inside it.
 
         Parameters
         ----------
-        fig : plotly.graph_objects.Figure
-            figure to plot the epoch and the peak
         t : list
-            time vector
+            time vector as numpy array. It can be created as: t = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
         fig_tit: str
-            title of the figure
+            title of the figure not including ch type.
         ch_type: str
-            type of the channel ('mag, 'grad')
+            type of the channel ('mag, 'grad'). Used only as title of the figure
 
         Returns
         -------
@@ -432,7 +430,9 @@ class Avg_artif:
 
         fig_ch_tit, unit = get_tit_and_unit(ch_type)
 
-        fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.mean_artifact_epoch), name=self.name))
+        fig=go.Figure()
+
+        fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.artif_data), name=self.name))
         fig.add_trace(go.Scatter(x=np.array(t[self.peak_loc]), y=self.peak_magnitude, mode='markers', name='peak: '+self.name));
 
         fig.update_layout(
@@ -484,8 +484,8 @@ class Avg_artif:
         self.main_peak_magnitude = -1000
         for peak_loc in self.peak_loc:
             if timelimit_min<t[peak_loc]<timelimit_max: #if peak is inside the timelimit_min and timelimit_max was found:
-                if self.mean_artifact_epoch[peak_loc] > self.main_peak_magnitude: #if this peak is higher than the previous one:
-                    self.main_peak_magnitude=self.mean_artifact_epoch[peak_loc]
+                if self.artif_data[peak_loc] > self.main_peak_magnitude: #if this peak is higher than the previous one:
+                    self.main_peak_magnitude=self.artif_data[peak_loc]
                     self.main_peak_loc=peak_loc 
   
         if self.main_peak_magnitude == -1000: #if no peak was found inside the timelimit_min and timelimit_max:
@@ -550,7 +550,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
         #find the highest peak inside the timelimit_min and timelimit_max:
         main_peak_loc, main_peak_magnitude = potentially_affected_channel.get_highest_peak(t, timelimit_min, timelimit_max)
 
-        print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+        #print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
         
         if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
             if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
@@ -558,10 +558,10 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
                 affected_channels.append(potentially_affected_channel)
             else:
                 not_affected_channels.append(potentially_affected_channel)
-                print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+                #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
         else:
             not_affected_channels.append(potentially_affected_channel)
-            print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
+            #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
 
     return affected_channels, not_affected_channels, artifact_lvl
 
@@ -599,10 +599,8 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
     fig_ch_tit, unit = get_tit_and_unit(ch_type)
 
-    fig=go.Figure()
-
     for ch in artif_affected_channels:
-        fig=ch.plot_epoch_and_peak(fig, t, 'Channels affected by ECG artifact: ', ch_type)
+        fig=ch.plot_epoch_and_peak(t, 'Channels affected by ECG artifact: ', ch_type)
 
     fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
 
@@ -623,7 +621,7 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
             'yanchor': 'top'})
 
 
-    fig.show()
+    #fig.show()
 
     return fig
 
@@ -709,7 +707,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels: list, max
     ecg_epoch_per_ch=[]
 
     for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
-        ecg_epoch_nonflipped = Avg_artif(name=channels[i], mean_artifact_epoch=ch_data)
+        ecg_epoch_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
         peak_locs, peak_magnitudes, _, _, _, _ = ecg_epoch_nonflipped.get_peaks_wave(max_n_peaks_allowed, thresh_lvl_peakfinder)
         #print('___MEG QC___: ', channels[i], ' peak_locs:', peak_locs)
 
@@ -729,7 +727,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels: list, max
             ecg_epoch_per_ch_only_data[i]=ch_data
             #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
             
-        ecg_epoch_per_ch.append(Avg_artif(name=channels[i], mean_artifact_epoch=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, wave_shape=ecg_epoch_nonflipped.wave_shape))
+        ecg_epoch_per_ch.append(Avg_artif(name=channels[i], artif_data=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, wave_shape=ecg_epoch_nonflipped.wave_shape))
 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
 
@@ -911,22 +909,26 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         Each instance contains info about the average ecg/eog artifact on this channel and the peak amplitude of the artifact.
     affected_derivs : list
         List of instances of QC_deriv with figures for average ecg/eog and affected + not affected channels. Last 2 are optional: oly if average is good.
-    no_ecg_str: str
+    bad_avg_str: str
         String about the success of ECG artifact detection, will be added to report.
+    avg_overall_obj: Avg_artif 
+        Instance of Avg_artif class, has data of average artifact over all channels + peaks detected + plot method. This output is usefull for debugging. 
+        For example if you see that the algorythm doesnt always correctly identify a wave shape, you can collect all these averages in a list from a bunch of data 
+        and rerun a new algorythm on them without rerunning the whole pipeline.
         
     """
 
     if  ecg_or_eog=='ECG':
-        max_n_peaks_allowed_for_ch_per_ms=8 #this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
-        max_n_peaks_allowed_for_avg_per_epoch = 3 #this is for the whole averaged over all channels ecg epoch, it should be much smoother - therefore less peaks are allowed.
+        max_n_peaks_allowed_for_ch=8 #this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
+        max_n_peaks_allowed_for_avg = 3 #this is for the whole averaged over all channels ecg epoch, it should be much smoother - therefore less peaks are allowed.
     elif ecg_or_eog=='EOG':
-        max_n_peaks_allowed_for_ch_per_ms=5
-        max_n_peaks_allowed_for_avg_per_epoch = 3
+        max_n_peaks_allowed_for_ch=5
+        max_n_peaks_allowed_for_avg = 3
     else:
         print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
 
-    max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_for_ch_per_ms)
-    print('___MEG QC___: ', 'max_n_peaks_allowed: '+str(max_n_peaks_allowed))
+    max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_for_ch)
+    print('___MEG QC___: ', 'max_n_peaks_allowed_for_ch: '+str(max_n_peaks_allowed))
 
     t = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
 
@@ -942,7 +944,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     if flip_data is False:
         ecg_epoch_per_ch_only_data=avg_ecg_epochs.data
         for i, ch_data in enumerate(ecg_epoch_per_ch_only_data):
-            artif_epoch_per_ch.append(Avg_artif(name=channels[i], mean_artifact_epoch=ch_data))
+            artif_epoch_per_ch.append(Avg_artif(name=channels[i], artif_data=ch_data))
             artif_epoch_per_ch[i].get_peaks_wave(max_n_peaks_allowed, thresh_lvl_peakfinder)
 
     elif flip_data is True:
@@ -975,8 +977,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
     # will show if there is ecg artifact present  on average. should have wave shape if yes. 
     # otherwise - it was not picked up/reconstructed correctly
 
-    avg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',mean_artifact_epoch=avg_overall)
-    avg_overall_obj.get_peaks_wave(max_n_peaks_allowed_for_avg_per_epoch, thresh_lvl_peakfinder)
+    avg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',artif_data=avg_overall)
+    avg_overall_obj.get_peaks_wave(max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder)
 
     affected_derivs=[]
     artif_affected_channels = []
@@ -988,7 +990,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         #set t0_actual as the time of the peak of the average ecg artifact:
         t0_actual=t[mean_ecg_loc_peak]
 
-        avg_artif_description = tit+": GOOD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Expected 1-" + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg)."
+        tit, _ = get_tit_and_unit(m_or_g)
+        avg_artif_description = tit+": GOOD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Expected 1-" + str(max_n_peaks_allowed_for_avg) + " peaks (pos+neg)."
         print('___MEG QC___: ', avg_artif_description)
         bad_avg_str = ''
 
@@ -1002,19 +1005,18 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
     else: #if the average artifact is bad - end processing
         tit, _ = get_tit_and_unit(m_or_g)
-        avg_artif_description = tit+": BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Expected 1-" + str(max_n_peaks_allowed_for_avg_per_epoch) + " peaks (pos+neg). Affected channels can not be estimated."
+        avg_artif_description = tit+": BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Expected 1-" + str(max_n_peaks_allowed_for_avg) + " peaks (pos+neg). Affected channels can not be estimated."
         bad_avg_str = tit+": "+ ecg_or_eog+ " signal detection/reconstruction did not produce reliable results. Affected channels can not be estimated."
         print('___MEG QC___: ', bad_avg_str)
 
 
     if plotflag is True:
-        fig_avg = go.Figure()
-        avg_overall_obj.plot_epoch_and_peak(fig_avg, t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
+        fig_avg = avg_overall_obj.plot_epoch_and_peak(t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
         fig_avg.show()
         affected_derivs.insert(0, QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly', description_for_user = avg_artif_description))
         #prepend the avg plot before all other plots. because they will be added to report in the order they are in list.
 
-    return artif_affected_channels, affected_derivs, bad_avg_str
+    return artif_affected_channels, affected_derivs, bad_avg_str, avg_overall_obj
 
 
 
@@ -1130,7 +1132,6 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
     # to do them saparetely depending on what was chosen for analysis
     mne_ecg_derivs += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, 'matplotlib')]
-    fig_ecg.show()
 
     #averaging the ECG epochs together:
     avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
@@ -1142,7 +1143,6 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
 
     mne_ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
-    fig_ecg_sensors.show()
 
     return mne_ecg_derivs
 
@@ -1213,6 +1213,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     
     ecg_affected_channels={}
     bad_avg_str = {}
+    avg_objects_ecg =[]
 
     for m_or_g  in m_or_g_chosen:
 
@@ -1220,12 +1221,15 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g]=find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += affected_derivs
+        #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
+        avg_objects_ecg.append(avg_overall_obj)
+
 
     simple_metric_ECG = make_simple_metric_ECG_EOG(ecg_affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str)
 
-    return ecg_derivs, simple_metric_ECG, ecg_str
+    return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
 
 
 #%%
@@ -1263,7 +1267,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     if picks_EOG.size == 0:
         eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
         print('___MEG QC___: ', eog_str)
-        return eog_derivs, simple_metric_EOG, eog_str
+        return eog_derivs, simple_metric_EOG, eog_str, []
     else:
         eog_str = 'Only blinks can be calculated using MNE, not saccades.'
         print('___MEG QC___: ', 'EOG channels found: ', eog_ch_name)
@@ -1303,6 +1307,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
     eog_affected_channels={}
     bad_avg_str = {}
+    avg_objects_eog=[]
     
     for m_or_g  in m_or_g_chosen:
 
@@ -1310,9 +1315,11 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g] = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=2, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=8, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         eog_derivs += affected_derivs
+        avg_objects_eog.append(avg_overall_obj)
 
     simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg_str)
 
-    return eog_derivs, simple_metric_EOG, eog_str
+    return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog
