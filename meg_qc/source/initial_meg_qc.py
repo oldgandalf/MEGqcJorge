@@ -146,7 +146,7 @@ def get_all_config_params(config_file_name: str):
         ecg_section = config['ECG']
         all_qc_params['ECG'] = dict({
         'drop_bad_ch': ecg_section.getboolean('drop_bad_ch'),
-        'n_breaks_allowed_per_10min': ecg_section.getint('n_breaks_allowed_per_10min'),
+        'n_breaks_bursts_allowed_per_10min': ecg_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': ecg_section.getfloat('allowed_range_of_peaks_stds'),
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
@@ -155,7 +155,7 @@ def get_all_config_params(config_file_name: str):
 
         eog_section = config['EOG']
         all_qc_params['EOG'] = dict({
-        'n_breaks_allowed_per_10min': eog_section.getint('n_breaks_allowed_per_10min'),
+        'n_breaks_bursts_allowed_per_10min': eog_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': eog_section.getfloat('allowed_range_of_peaks_stds'),
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
@@ -285,7 +285,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         shielding_str = ''
     except: 
         raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
-        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p><br></br>'''
+        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p>'''
 
     display(raw)
 
@@ -337,24 +337,27 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     m_or_g_chosen = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels=channels)
     m_or_g_skipped_str = ''
     if len(m_or_g_chosen) == 0: 
-        m_or_g_skipped_str = '''No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.'''
+        m_or_g_skipped_str = '''<p>No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.</p>'''
         raise ValueError(m_or_g_skipped_str)
     if 'mag' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p><br></br>'''
+        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p>'''
     if 'grad' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p><br></br>'''
+        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p>'''
 
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)
 
+    #Plot time series:
     time_series_derivs = []
     if default_settings['plot_interactive_time_series'] is True:
+        time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
         for ch_type in m_or_g_chosen:
             time_series_derivs += plot_time_series(raw_cropped, ch_type)
     else:
+        time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
         
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
 
 
 def sanity_check(m_or_g_chosen, channels):
