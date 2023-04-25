@@ -1,8 +1,0 @@
-[build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
-[project]
-name = "MEG_QC"
-authors = [{name = "Evgeniia Gapontseva", email = "evgeniia.gapontseva@uni-oldenburg.de"}]
-dynamic = ["version", "description"]
