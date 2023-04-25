@@ -181,7 +181,7 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict):
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    report.add_raw(raw=raw, title='Raw info from MNE', psd=False)  # omit PSD plot. IDK how to omit the time series plot without omiting the info table
+    report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)  # omit PSD plot. IDK how to omit the time series plot without omiting the info table
 
     for key in sections:
         if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':

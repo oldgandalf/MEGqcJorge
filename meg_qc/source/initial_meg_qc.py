@@ -345,7 +345,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p>'''
 
     #Plot sensors:
-    sensors_derivs = plot_sensors_3d(raw, m_or_g_chosen)
+    sensors_derivs = plot_sensors_3d(raw)
 
     #Plot time series:
     time_series_derivs = []

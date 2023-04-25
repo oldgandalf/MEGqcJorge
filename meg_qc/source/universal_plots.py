@@ -254,10 +254,10 @@ def switch_names_on_off(fig: go.Figure):
 
     # Define the buttons
     buttons = [
-    dict(label='Show channel names when hovering',
+    dict(label='Show channels names on hover',
          method='update',
          args=[{'mode': 'markers'}]),
-    dict(label='Always show channel names',
+    dict(label='Always show channels names',
          method='update',
          args=[{'mode': 'markers+text'}])
     ]
@@ -270,10 +270,11 @@ def switch_names_on_off(fig: go.Figure):
     return fig
 
 
-def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
+def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     Plots the 3D locations of the sensors in the raw file.
+    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis.
 
     Parameters
     ----------
@@ -307,7 +308,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
                                             marker=dict(size=5),
                                             text=mag_names,
                                             hovertemplate='%{text}')],
-                                            layout=go.Layout(width=1200, height=1200))
+                                            layout=go.Layout(width=800, height=800))
 
         mag_fig.update_layout(
             title={
@@ -315,7 +316,8 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
-            'yanchor': 'top'})
+            'yanchor': 'top'},
+            hoverlabel=dict(font=dict(size=10)))
 
         mag_fig = switch_names_on_off(mag_fig)
 
@@ -349,7 +351,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
                                                 marker=dict(size=5),
                                                 text=grad_names_together,
                                                 hovertemplate='%{text}')],
-                                                layout=go.Layout(width=1200, height=1200))
+                                                layout=go.Layout(width=800, height=800))
 
         grad_fig.update_layout(
             title={
@@ -357,7 +359,8 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
-            'yanchor': 'top'})
+            'yanchor': 'top'},
+            hoverlabel=dict(font=dict(size=10)))
 
 
         # Add the button to have names show up on hover or always:
@@ -367,6 +370,116 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
 
     return qc_derivative
 
+
+def plot_sensors_3d(raw: mne.io.Raw):
+
+    """
+    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
+    Can turn mags/grads visialisation on and off.
+    To be addded: separete channels into brain areas by color coding.
+
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw file to be plotted.
+    m_or_g_chosen : str
+        The type of the channels to be plotted: 'mag' or 'grad'.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+    qc_derivative = []
+
+    # Check if there are magnetometers and gradiometers in the raw file:
+    if 'mag' in raw:
+        # Extract the sensor locations and names for magnetometers
+        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_pos = [ch['loc'][:3] for ch in mag_locs]
+        mag_names = [ch['ch_name'] for ch in mag_locs]
+
+        # Create the first scatter trace with blue points and names on the right
+        trace1 = go.Scatter3d(
+        x=[pos[0] for pos in mag_pos],
+        y=[pos[1] for pos in mag_pos],
+        z=[pos[2] for pos in mag_pos],
+        mode='markers',
+        marker=dict(
+            color='blue',
+            size=5,
+            symbol='circle'
+        ),
+        text=mag_names,
+        hoverinfo='text',
+        name='mags',
+        textposition='top right',
+        textfont=dict(size=10, color='blue')
+    )
+    else:
+        trace1 = go.Scatter3d()
+
+
+    if 'grad' in raw:
+        # Extract the sensor locations and names for gradiometers
+        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_pos = [ch['loc'][:3] for ch in grad_locs]
+        grad_names = [ch['ch_name'] for ch in grad_locs]
+
+        #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
+
+        grad_pos_together = []
+        grad_names_together = []
+
+        for i in range(len(grad_pos)-1):
+            if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
+                grad_pos_together += [grad_pos[i]]
+                grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
+            else:
+                pass
+
+        # Create the second scatter trace with red points and names on the left
+        trace2 = go.Scatter3d(
+            x=[pos[0] for pos in grad_pos_together],
+            y=[pos[1] for pos in grad_pos_together],
+            z=[pos[2] for pos in grad_pos_together],
+            mode='markers',
+            marker=dict(
+                color='red',
+                size=5,
+                symbol='circle'
+            ),
+            text=grad_names_together,
+            hoverinfo='text',
+            name='grads',
+            textposition='top left',
+            textfont=dict(size=10, color='red')  #set hover text size. somehow this only works for the "Always show names" option
+        )
+    else:
+        trace2 = go.Scatter3d()
+
+    # Create the figure
+    fig = go.Figure(data=[trace1, trace2])
+
+    fig.update_layout(
+        width=900, height=900,
+        title={
+        'text': 'Sensors positions',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+
+    # Add the button to have names show up on hover or always:
+    fig = switch_names_on_off(fig)
+
+    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #change size of hover text. This works for the "Show names on hover" option, but not for "Always show names"
+
+    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly')]
+
+    return qc_derivative
 
 
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
