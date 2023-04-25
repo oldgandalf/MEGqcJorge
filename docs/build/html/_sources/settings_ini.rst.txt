@@ -5,10 +5,22 @@ The pipeline settings are stored in the ``settings.ini`` file.
 
 Settings are divided into sections, each corresponding to a different pipeline step.
 
+As the result of analysis will be produced (for each data file (.fif)):
+
+- html report for all metrics
+- csv file with the results of the analysis for some of metrics
+- machine readable json file with the results of the analysis for all metrics
+
+In the html report: 
+
+- all the plots produced by MEQ-QC are interactive, they can be scrolled through and enlarged. 
+- a few plots from MNE (in ECG and EOG sections) are not interactive.
+
 Default settings [DEFAULT]
 --------------------------
 - **do_for** (str) : which channels to process. Enter 1 or both values separated by , . Default: *mag, grad*
-- **data_directory** (str) : **absolute** path to the data directory . Example: *user/path/to/my/data/ds000000*
+- **plot_interactive_time_series** (bool) : Plot of the whole time series will be done on the data resampled to 100Hz/sec. Raw data is shown, no filetring applied even if filer is set in the filering section. Benefit: it is interactive (you can see all or 1 or several channels, zoom in), which makes it more informative than built-in mne plot. Downside: This plot may signifcantly increase the time it takes to run the pipeline and the plot itself in html presentation might be slow due to large number of data points. If you want to run it faster, set this to False. Default: *True*
+- **data_directory** (str) : **absolute** path to the data directory . Data path can not contain spaces! You can replace them with underscores or remove completely. Possible to also enter several data path separated by coma. Example: *user/path/to/my/data/ds000000, user/path/to/my/data/ds000001*
 - **data_crop_tmin** (int) & data_crop_tmax** (int) : Settings for data crop. If no cropping needed, leave blank. Unit: seconds. Default: *blank*
 
 Filtering [Filtering]
@@ -38,7 +50,6 @@ Power spectral density [PSD]
 - **freq_min** (int or float) : lower frequency for PSD calculation. Unit: seconds. Default: *0.5*
 - **freq_max** (int or float) : higher frequency for PSD calculation. Unit: seconds. Default: *140*. Reason: output of PSD can be used for filtering the data before muscle artifact detection. Musce artifacts are usually around 110-140 Hz, so this setting allows to see if there are extra frequencies which would need to be filtered out
 - **psd_step_size** (float or int) : frequency resolution of the PSD. Unit: Hz. Default: *0.5*
-- **use_logscale** (bool) : if True - will use logscale for the PSD plot. Default: True
 
 
 Peak-to-peak amplitude manual [PTP_manual]
@@ -65,7 +76,7 @@ Peak-to-peak amplitude auto (based on MNE annotatons) [PTP_auto]
 Heart beat artifacts [ECG]
 --------------------------
 - **drop_bad_ch** (bool) - if True - will drop the bad ECG channel from the data and attempt to reconstruct ECG data on base of magnetometers. If False - will not drop the bad ECG channel and will attempt to calculate ECG events on base of the bad ECG channel. Default: *True*
-- **n_breaks_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for ECG channel only, not for any other channels Used to detect a noisy ECG channel). Default: *3*
+- **n_breaks_bursts_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for ECG channel only, not for any other channels Used to detect a noisy ECG channel). Default: *3*
 - **allowed_range_of_peaks_stds** (float) - the allowed range of peaks in standard deviations. (This setting is for ECG channel only, not for any other channels Used to detect a noisy ECG channel). Defaault: *0.05* (experimentally chosen value). How the setting is used:
     
     - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
@@ -81,7 +92,7 @@ Heart beat artifacts [ECG]
 
 Eye movement artifacts [EOG]
 ----------------------------
-- **n_breaks_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for EOG channel only, not for any other channels Used to detect a noisy EOG channel). Default: *3*
+- **n_breaks_bursts_allowed_per_10min** (int) - number of breaks in ECG channel allowed per 10 minutes of recording. (This setting is for EOG channel only, not for any other channels Used to detect a noisy EOG channel). Default: *3*
 - **allowed_range_of_peaks_stds** (float) - the allowed range of peaks in standard deviations. (This setting is for EOG channel only, not for any other channels Used to detect a noisy EOG channel). Default: *0.15* (experimentally chosen value). How the setting is used:
     
     - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.

@@ -1,0 +1,9 @@
+README.rst
+setup.py
+meg_qc/__init__.py
+meg_qc/__main__.py
+meg_qc/meg_qc_pipeline.py
+meg_qc.egg-info/PKG-INFO
+meg_qc.egg-info/SOURCES.txt
+meg_qc.egg-info/dependency_links.txt
+meg_qc.egg-info/top_level.txt
