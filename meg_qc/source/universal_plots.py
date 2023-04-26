@@ -374,13 +374,17 @@ def keep_unique_locs(ch_list):
 
     channel_names = [ch.name for ch in ch_list]
     channel_locations = [ch.loc for ch in ch_list]
+    channel_colors = [ch.lobe_color for ch in ch_list]
+    channel_lobes = [ch.lobe for ch in ch_list]
 
     # Create dictionaries to store unique locations and combined channel names
     unique_locations = {}
     combined_names = {}
+    unique_colors = {}
+    unique_lobes = {}
 
     # Loop through each channel and its location
-    for i, (name, loc) in enumerate(zip(channel_names, channel_locations)):
+    for i, (name, loc, color, lobe) in enumerate(zip(channel_names, channel_locations, channel_colors, channel_lobes)):
         # Convert location to a tuple for use as a dictionary key
         loc_key = tuple(loc)
         
@@ -391,15 +395,19 @@ def keep_unique_locs(ch_list):
         else:
             unique_locations[loc_key] = i
             combined_names[i] = [name]
+            unique_colors[i] = color
+            unique_lobes[i] = lobe
 
     # Create new lists of unique locations and combined channel names
     new_locations = list(unique_locations.keys())
     new_names = [' & '.join(combined_names[i]) for i in combined_names]
+    new_colors = [unique_colors[i] for i in unique_colors]
+    new_lobes = [unique_lobes[i] for i in unique_lobes]
 
-    return new_locations, new_names
+    return new_locations, new_names, new_colors, new_lobes 
 
 
-def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int, ch_type: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
+def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int, legend_category: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
 
     """ Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels.
 
@@ -440,7 +448,7 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
     ),
     text=names,
     hoverinfo='text',
-    name=ch_type,
+    name=legend_category,
     textposition=textposition,
     textfont=dict(size=textsize, color=color))
 
@@ -489,13 +497,26 @@ def plot_sensors_3d(channels_objs: dict):
     if 'grad' in channels_objs:
         all_channels += channels_objs['grad']
 
-    ch_locs, ch_names = keep_unique_locs(all_channels)
-    trace = make_3d_sensors_trace(ch_locs, ch_names, 'red', 10, 'Lobes', 'circle', 'top left')
+    #put all channels into separate lists based on their lobes:
+    lobes_names=list(set([ch.lobe for ch in all_channels]))
+    
+    lobes_dict = {key: [] for key in lobes_names}
+    #fill the dict with channels:
+    for ch in all_channels:
+        lobes_dict[ch.lobe].append(ch) 
 
+    traces = []
+    for lobe in lobes_dict:
+        ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
+        traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
+        #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
+
+        
+    #trace = make_3d_sensors_trace(ch_locs, ch_names, 'red', 10, 'Lobes', 'circle', 'top left')
 
     # Create the figure
     #fig = go.Figure(data=[trace_mag, trace_grad])
-    fig = go.Figure(data=[trace])
+    fig = go.Figure(data=traces)
 
     fig.update_layout(
         width=900, height=900,
