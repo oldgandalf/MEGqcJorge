@@ -540,30 +540,30 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
 
 
     #Find the channels which got peaks over this mean:
-    affected_channels=[]
-    not_affected_channels=[]
+    affected=[]
+    not_affected=[]
     artifact_lvl=mean_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
-    for potentially_affected_channel in list_mean_artif_epochs:
-        #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
+    for potentially_affected in list_mean_artif_epochs:
+        #if np.max(np.abs(potentially_affected.peak_magnitude))>abs(artifact_lvl) and potentially_affected.wave_shape is True:
 
 
         #find the highest peak inside the timelimit_min and timelimit_max:
-        main_peak_loc, main_peak_magnitude = potentially_affected_channel.get_highest_peak(t, timelimit_min, timelimit_max)
+        main_peak_loc, main_peak_magnitude = potentially_affected.get_highest_peak(t, timelimit_min, timelimit_max)
 
-        #print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+        #print('___MEG QC___: ', potentially_affected.name, ' Main Peak magn: ', potentially_affected.main_peak_magnitude, ', Main peak loc ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
         
         if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
-            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
-                potentially_affected_channel.artif_over_threshold=True
-                affected_channels.append(potentially_affected_channel)
+            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected.wave_shape is True:
+                potentially_affected.artif_over_threshold=True
+                affected.append(potentially_affected)
             else:
-                not_affected_channels.append(potentially_affected_channel)
-                #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+                not_affected.append(potentially_affected)
+                #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: ', potentially_affected.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
         else:
-            not_affected_channels.append(potentially_affected_channel)
-            #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
+            not_affected.append(potentially_affected)
+            #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: NO PEAK in time window')
 
-    return affected_channels, not_affected_channels, artifact_lvl
+    return affected, not_affected, artifact_lvl
 
 
 def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, flip_data: bool or str = 'flip'):
@@ -670,7 +670,7 @@ def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
 
 
 
-def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels_objs: list, max_n_peaks_allowed: int, thresh_lvl_peakfinder: float, t0_estimated_ind_start: int, t0_estimated_ind_end: int, t0_estimated_ind: int):
+def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels: list, max_n_peaks_allowed: int, thresh_lvl_peakfinder: float, t0_estimated_ind_start: int, t0_estimated_ind_end: int, t0_estimated_ind: int):
 
     """
     Flip the channels if the peak of the artifact is negative and located close to the estimated t0.
@@ -707,7 +707,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels_objs: list
     ecg_epoch_per_ch=[]
 
     for i, ch_data in enumerate(avg_ecg_epoch_data_nonflipped): 
-        ecg_epoch_nonflipped = Avg_artif(name=channels_objs[i], artif_data=ch_data)
+        ecg_epoch_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
         peak_locs, peak_magnitudes, _, _, _, _ = ecg_epoch_nonflipped.get_peaks_wave(max_n_peaks_allowed, thresh_lvl_peakfinder)
         #print('___MEG QC___: ', channels[i], ' peak_locs:', peak_locs)
 
@@ -727,7 +727,7 @@ def flip_channels(avg_ecg_epoch_data_nonflipped: np.ndarray, channels_objs: list
             ecg_epoch_per_ch_only_data[i]=ch_data
             #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
             
-        ecg_epoch_per_ch.append(Avg_artif(name=channels_objs[i], artif_data=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, wave_shape=ecg_epoch_nonflipped.wave_shape))
+        ecg_epoch_per_ch.append(Avg_artif(name=channels[i], artif_data=ecg_epoch_per_ch_only_data[i], peak_loc=peak_locs, peak_magnitude=peak_magnitudes, wave_shape=ecg_epoch_nonflipped.wave_shape))
 
     return ecg_epoch_per_ch, ecg_epoch_per_ch_only_data
 
@@ -827,7 +827,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-def find_affected_channels(ecg_epochs: mne.Epochs, channels_objs: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip'):
+def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip'):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -935,7 +935,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels_objs: list, m_or_g: 
 
     #1.:
     #averaging the ECG epochs together:
-    avg_ecg_epochs = ecg_epochs.average(picks=channels_objs)#.apply_baseline((-0.5, -0.2))
+    avg_ecg_epochs = ecg_epochs.average(picks=channels)#.apply_baseline((-0.5, -0.2))
     #avg_ecg_epochs is evoked:Evoked objects typically store EEG or MEG signals that have been averaged over multiple epochs.
     #The data in an Evoked object are stored in an array of shape (n_channels, n_times)
 
@@ -944,7 +944,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels_objs: list, m_or_g: 
     if flip_data is False:
         ecg_epoch_per_ch_only_data=avg_ecg_epochs.data
         for i, ch_data in enumerate(ecg_epoch_per_ch_only_data):
-            artif_epoch_per_ch.append(Avg_artif(name=channels_objs[i], artif_data=ch_data))
+            artif_epoch_per_ch.append(Avg_artif(name=channels[i], artif_data=ch_data))
             artif_epoch_per_ch[i].get_peaks_wave(max_n_peaks_allowed, thresh_lvl_peakfinder)
 
     elif flip_data is True:
@@ -960,7 +960,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels_objs: list, m_or_g: 
         avg_artif_epoch_data_nonflipped=avg_ecg_epochs.data
 
         _, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end = estimate_t0(ecg_or_eog, avg_artif_epoch_data_nonflipped, t)
-        artif_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_artif_epoch_data_nonflipped, channels_objs, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
+        artif_epoch_per_ch, ecg_epoch_per_ch_only_data = flip_channels(avg_artif_epoch_data_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind)
 
       
     else:
@@ -1021,7 +1021,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels_objs: list, m_or_g: 
 
 
 #%%
-def make_dict_global_ECG_EOG(all_affected_channels: list, channels_objs: list):
+def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
     """
     Make a dictionary for the global part of simple metrics for ECG/EOG artifacts.
     For ECG/EOG no local metrics are calculated, so global is the only one.
@@ -1048,7 +1048,7 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels_objs: list):
         #top_10_magnitudes = None
     else:
         number_of_affected_ch = len(all_affected_channels)
-        percent_of_affected_ch = round(len(all_affected_channels)/len(channels_objs)*100, 1)
+        percent_of_affected_ch = round(len(all_affected_channels)/len(channels)*100, 1)
 
         # sort all_affected_channels by main_peak_magnitude:
         all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: ch.main_peak_magnitude, reverse=True)
@@ -1062,7 +1062,7 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels_objs: list):
     return metric_global_content
 
 
-def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels_objs: dict, avg_artif_str: dict):
+def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, avg_artif_str: dict):
     
     """
     Make simple metric for ECG/EOG artifacts as a dictionary, which will further be converted into json file.
@@ -1094,7 +1094,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
     for m_or_g in m_or_g_chosen:
         if all_affected_channels[m_or_g]: #if there are affected channels for this channel type
-            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels_objs[m_or_g])
+            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels[m_or_g])
         else:
             metric_global_content[m_or_g]= avg_artif_str[m_or_g]
 
@@ -1147,7 +1147,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 #%%
-def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels_objs: list, m_or_g_chosen: list):
+def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen: list):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -1217,23 +1217,23 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels_objs: list, m_or_g_ch
 
     for m_or_g  in m_or_g_chosen:
 
-        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels_objs[m_or_g], tmin=tmin, tmax=tmax)
+        ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels_objs[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += affected_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
 
-    simple_metric_ECG = make_simple_metric_ECG_EOG(ecg_affected_channels, m_or_g_chosen, 'ECG', channels_objs, bad_avg_str)
+    simple_metric_ECG = make_simple_metric_ECG_EOG(ecg_affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str)
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels_objs: dict, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen: list):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -1311,15 +1311,15 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels_objs: dict, m_or_g_ch
     
     for m_or_g  in m_or_g_chosen:
 
-        eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels_objs[m_or_g], tmin=tmin, tmax=tmax)
+        eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels_objs[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=8, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=8, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         eog_derivs += affected_derivs
         avg_objects_eog.append(avg_overall_obj)
 
-    simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels_objs, bad_avg_str)
+    simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg_str)
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog

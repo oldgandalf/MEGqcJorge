@@ -691,7 +691,7 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels_objs: list, what_data: str):
+def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -703,7 +703,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels_objs: lis
         list of std values for each channel
     ch_type : str
         'mag' or 'grad'
-    channels_objs : list
+    channels : list
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
@@ -726,8 +726,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels_objs: lis
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_all_data_'+ch_tit
 
-    ch_names=[name for name in channels_objs.name]
-    df = pd.DataFrame (std_data, index=ch_names, columns=[hover_tit])
+    df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
     fig = go.Figure()
 

@@ -261,36 +261,27 @@ def sanity_check(m_or_g_chosen, channels_objs):
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
         m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
+        channels_objs = None
         raise ValueError(m_or_g_skipped_str)
     if channels_objs['mag'] is None and 'mag' in m_or_g_chosen:
         m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
+        channels_objs['mag'] = None
     elif channels_objs['grad'] is None and 'grad' in m_or_g_chosen:
         m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
+        channels_objs['grad'] = None
     elif channels_objs['mag'] is None and channels_objs['grad'] is None:
         m_or_g_chosen = []
         m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
+        channels_objs = None
         raise ValueError(m_or_g_skipped_str)
     else:
         m_or_g_skipped_str = ''
     
     #Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
-
-    if 'mag' in m_or_g_chosen:
-        for ch in channels_objs['mag']:
-            ch.chosen_for_analysis = True
-    else:
-        for ch in channels_objs['mag']:
-            ch.chosen_for_analysis = False
-    if 'grad' in m_or_g_chosen:
-        for ch in channels_objs['grad']:
-            ch.chosen_for_analysis = True
-    else:
-        for ch in channels_objs['grad']:
-            ch.chosen_for_analysis = False
         
     return channels_objs, m_or_g_chosen, m_or_g_skipped_str
 
@@ -314,7 +305,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name, type, lobe_area, color_code, loc, chosen_for_analysis=False):
+    def __init__(self, name, type, lobe_area, color_code, loc):
 
         """
         Constructor method
@@ -337,7 +328,6 @@ class MEG_channels:
         self.lobe_area = lobe_area
         self.color_code = color_code
         self.loc = loc
-        self.chosen_for_analysis = chosen_for_analysis
 
     def __repr__(self):
 
@@ -346,7 +336,7 @@ class MEG_channels:
         
         """
 
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe_area}, color code: {self.color_code}, location: {self.loc}, chosen for analysis: {self.chosen_for_analysis})'
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe_area}, color code: {self.color_code}, location: {self.loc})'
 
 
 
@@ -452,6 +442,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     -------
     dict_epochs_mg : dict
         Dictionary with epochs for each channel type: mag, grad.
+    channels_objs: dict
+        Dictionary with channel objects for each channel type: mag, grad. Each bjc hold info about the channel name, lobe area and color code, locations and (in the future) if it has noise of any sort.
     channels_objs : dict
         Dictionary with channel names for each channel type: mag, grad.
     raw_crop_filtered : mne.io.Raw
@@ -539,4 +531,4 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
         
-    return dict_epochs_mg, channels_objs, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, channels_objs, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
