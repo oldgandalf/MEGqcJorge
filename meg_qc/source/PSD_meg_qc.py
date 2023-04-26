@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from scipy.integrate import simpson
 from scipy.signal import find_peaks, peak_widths
 from IPython.display import display
+from typing import List
 
 
 from universal_plots import QC_derivative, get_tit_and_unit
@@ -353,7 +354,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     return psd_pie_derivative, dfs_with_name, mean_brain_waves_dict
 
 
-def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list, noisy_freqs_indexes:list):
+def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
 
     """
     If there are 2 bands that are blended together, split them at the lowest point between 2 central noise frequencies.
@@ -409,7 +410,7 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
     return noisy_bands_final_indexes, split_indexes
 
 
-def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
+def cut_the_noise_from_psd(noisy_bands_indexes: List[dict], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
 
     """
     Cut the noise peaks out of PSD curve. By default, it is not used, but can be turned on.
@@ -520,7 +521,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[list], freqs: list, one_psd
     return psd_only_peaks_baselined
 
 
-def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str):
+def plot_one_psd(ch_name: str, freqs: List, one_psd: List, peak_indexes: List, noisy_freq_bands_indexes: List[list], unit: str):
     
     """
     Plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
