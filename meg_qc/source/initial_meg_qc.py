@@ -235,7 +235,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     return dict_epochs_mg
 
 
-def sanity_check(m_or_g_chosen, channels):
+def sanity_check(m_or_g_chosen, channels_objs):
     
     """
     Check if the channels which the user gave in config file to analize actually present in the data set.
@@ -244,28 +244,55 @@ def sanity_check(m_or_g_chosen, channels):
     ----------
     m_or_g_chosen : list
         List with channel types to analize: mag, grad. These are theones the user chose.
-    channels : dict
+    channels_objs : dict
         Dictionary with channel names for each channel type: mag, grad. These are the ones present in the data set.
     
     Returns
     -------
+    channels_objs : dict
+        Dictionary with channel objects for each channel type: mag, grad. 
     m_or_g_chosen : list
         List with channel types to analize: mag, grad.
+    m_or_g_skipped_str : str
+        String with information about which channel types were skipped.
         
     """
 
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
-    if channels['mag'] is None and 'mag' in m_or_g_chosen:
-        print('___MEG QC___: ', 'There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
+        m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
+        raise ValueError(m_or_g_skipped_str)
+    if channels_objs['mag'] is None and 'mag' in m_or_g_chosen:
+        m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
+        print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
-    elif channels['grad'] is None and 'grad' in m_or_g_chosen:
-        print('___MEG QC___: ', 'There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
+    elif channels_objs['grad'] is None and 'grad' in m_or_g_chosen:
+        m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
+        print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
-    elif channels['mag'] is None and channels['grad'] is None:
-        print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
+    elif channels_objs['mag'] is None and channels_objs['grad'] is None:
         m_or_g_chosen = []
-    return m_or_g_chosen
+        m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
+        raise ValueError(m_or_g_skipped_str)
+    else:
+        m_or_g_skipped_str = ''
+    
+    #Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
+
+    if 'mag' in m_or_g_chosen:
+        for ch in channels_objs['mag']:
+            ch.chosen_for_analysis = True
+    else:
+        for ch in channels_objs['mag']:
+            ch.chosen_for_analysis = False
+    if 'grad' in m_or_g_chosen:
+        for ch in channels_objs['grad']:
+            ch.chosen_for_analysis = True
+    else:
+        for ch in channels_objs['grad']:
+            ch.chosen_for_analysis = False
+        
+    return channels_objs, m_or_g_chosen, m_or_g_skipped_str
 
 
 class MEG_channels:
@@ -287,7 +314,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name, type, lobe_area, color_code):
+    def __init__(self, name, type, lobe_area, color_code, loc, chosen_for_analysis=False):
 
         """
         Constructor method
@@ -309,6 +336,8 @@ class MEG_channels:
         self.type = type
         self.lobe_area = lobe_area
         self.color_code = color_code
+        self.loc = loc
+        self.chosen_for_analysis = chosen_for_analysis
 
     def __repr__(self):
 
@@ -317,25 +346,84 @@ class MEG_channels:
         
         """
 
-        return self.name, f': type: {self.type}, lobe area: {self.lobe_area}, color code: {self.color_code}'
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe_area}, color code: {self.color_code}, location: {self.loc}, chosen for analysis: {self.chosen_for_analysis})'
 
 
 
-def assign_channels_to_areas(channels):
+def assign_channels_properties(raw: mne.io.Raw):
 
-    if len(channels['mag']) == 102 and len(channels['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
-        #loop over all values in the dictionary:
-        for key, ch in channels.items():
-            pass
-    
-    lobes = {'Left frontal': ['MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612'. 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
-            'Right frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
-            'Left temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
-            'Right temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1333', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+    """
+    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
+
+    Can later try to make this function a method of the MEG_channels class. 
+    At the moment not possible because it needs to know the total number of channels to figure which system to use. And MEG_channels class is created for each channel separately.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data set.
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+
+    """
+    channels_objs={'mag': [], 'grad': []}
+    if 'mag' in raw:
+        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        for ch in mag_locs:
+            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
+    else:
+        channels_objs['mag'] = None
+
+    if 'grad' in raw:
+        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        for ch in grad_locs:
+            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
+    else:
+        channels_objs['grad'] = None
+
+    # for understanding how the locations are obtained. They can be extracted as:
+    # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
+    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+
+    lobes_treux = {
+            'Left Frontal': ['MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+            'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+            'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+            'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1333', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
             'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG061', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
-            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', ],'}
+            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG07333', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023'],
+            'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
+            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543']}
              
-            
+    color_codes = {
+        'Left Frontal': '#FF5733',
+        'Right Frontal': '#33C4FF',
+        'Left Temporal': '#FFC300',
+        'Right Temporal': '#00E5FF',
+        'Left Parietal': '#FF33FF',
+        'Right Parietal': '#33FFB5',
+        'Left Occipital': '#FF5733',
+        'Right Occipital': '#33C4FF'}
+    
+    #assign treux labels to the channels:
+    if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
+        #loop over all values in the dictionary:
+        for key, value in channels_objs.items():
+            for ch in value:
+                for lobe in lobes_treux.keys():
+                    if ch.name in lobes_treux[lobe]:
+                        ch.lobe_area = lobe
+                        ch.color_code = color_codes[lobe]
+
+    #sort channels by name:
+    for key, value in channels_objs.items():
+        channels_objs[key] = sorted(value, key=lambda x: x.name)
+
+    return channels_objs
 
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
@@ -364,7 +452,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     -------
     dict_epochs_mg : dict
         Dictionary with epochs for each channel type: mag, grad.
-    channels : dict
+    channels_objs : dict
         Dictionary with channel names for each channel type: mag, grad.
     raw_crop_filtered : mne.io.Raw
         Filtered and cropped MEG data.
@@ -431,30 +519,15 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
+    #Get channels and their properties:
+    channels_objs = assign_channels_properties(raw)
 
-    mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
-    grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
-
-    channels = {'mag': [MEG_channels(m, 'mag', None, None) for m in mag_ch_names] if mag_ch_names is not None else None,
-                'grad': [MEG_channels(g, 'grad', None, None) for g in grad_ch_names] if grad_ch_names is not None else None}
-
-    #Check if there are channels to analyze:
-    m_or_g_chosen = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels=channels)
-    m_or_g_skipped_str = ''
-    if len(m_or_g_chosen) == 0: 
-        m_or_g_skipped_str = '''<p>No channels to analyze. Check presence of mag and grad in your data set and parameter do_for in settings.</p>'''
-        raise ValueError(m_or_g_skipped_str)
-    if 'mag' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p>'''
-    if 'grad' not in m_or_g_chosen:
-        m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p>'''
-
-
-
-
+    #Check if there are channels to analyze according to info in config file:
+    channels_objs, m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+    channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     #Plot sensors:
-    sensors_derivs = plot_sensors_3d(raw)
+    sensors_derivs = plot_sensors_3d(channels_objs)
 
     #Plot time series:
     time_series_derivs = []
@@ -466,4 +539,4 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
         
-    return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, channels_objs, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str

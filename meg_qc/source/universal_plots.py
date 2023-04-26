@@ -370,8 +370,84 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     return qc_derivative
 
+def keep_unique_locs(ch_list):
 
-def plot_sensors_3d(raw: mne.io.Raw):
+    channel_names = [ch.name for ch in ch_list]
+    channel_locations = [ch.loc for ch in ch_list]
+
+    # Create dictionaries to store unique locations and combined channel names
+    unique_locations = {}
+    combined_names = {}
+
+    # Loop through each channel and its location
+    for i, (name, loc) in enumerate(zip(channel_names, channel_locations)):
+        # Convert location to a tuple for use as a dictionary key
+        loc_key = tuple(loc)
+        
+        # If location is already in the unique_locations dictionary, add channel name to combined_names
+        if loc_key in unique_locations:
+            combined_names[unique_locations[loc_key]].append(name)
+        # Otherwise, add location to unique_locations and channel name to combined_names
+        else:
+            unique_locations[loc_key] = i
+            combined_names[i] = [name]
+
+    # Create new lists of unique locations and combined channel names
+    new_locations = list(unique_locations.keys())
+    new_names = [' & '.join(combined_names[i]) for i in combined_names]
+
+    return new_locations, new_names
+
+
+def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int, ch_type: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
+
+    """ Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels.
+
+    Parameters
+    ----------
+    d3_locs : list
+        A list of 3D locations of the sensors.
+    names : list
+        A list of names of the sensors.
+    color : str
+        A color of the sensors.
+    textsize : int
+        A size of the text.
+    ch_type : str
+        A type of the channels.
+    symbol : str
+        A symbol of the sensors.
+    textposition : str
+        A position of the text.
+    
+    Returns
+    -------
+    trace : plotly.graph_objs._scatter3d.Scatter3d
+        A trace of the sensors.
+    
+    
+    """
+
+    trace = go.Scatter3d(
+    x=[loc[0] for loc in d3_locs],
+    y=[loc[1] for loc in d3_locs],
+    z=[loc[2] for loc in d3_locs],
+    mode='markers',
+    marker=dict(
+        color=color,
+        size=5,
+        symbol=symbol,
+    ),
+    text=names,
+    hoverinfo='text',
+    name=ch_type,
+    textposition=textposition,
+    textfont=dict(size=textsize, color=color))
+
+    return trace
+
+
+def plot_sensors_3d(channels_objs: dict):
 
     """
     Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
@@ -381,10 +457,8 @@ def plot_sensors_3d(raw: mne.io.Raw):
 
     Parameters
     ----------
-    raw : mne.io.Raw
-        The raw file to be plotted.
-    m_or_g_chosen : str
-        The type of the channels to be plotted: 'mag' or 'grad'.
+    channels_objs : dict
+        The dictionary with the channels to be plotted and their locations.
     
     Returns
     -------
@@ -394,74 +468,34 @@ def plot_sensors_3d(raw: mne.io.Raw):
     """
     qc_derivative = []
 
-    # Check if there are magnetometers and gradiometers in the raw file:
-    if 'mag' in raw:
-        # Extract the sensor locations and names for magnetometers
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
-        mag_pos = [ch['loc'][:3] for ch in mag_locs]
-        mag_names = [ch['ch_name'] for ch in mag_locs]
 
-        # Create the first scatter trace with blue points and names on the right
-        trace1 = go.Scatter3d(
-        x=[pos[0] for pos in mag_pos],
-        y=[pos[1] for pos in mag_pos],
-        z=[pos[2] for pos in mag_pos],
-        mode='markers',
-        marker=dict(
-            color='blue',
-            size=5,
-            symbol='circle'
-        ),
-        text=mag_names,
-        hoverinfo='text',
-        name='mags',
-        textposition='top right',
-        textfont=dict(size=10, color='blue')
-    )
-    else:
-        trace1 = go.Scatter3d()
+    # if 'mag' in channels_objs:
+    #     mags_locs, mags_names = keep_unique_locs(channels_objs['mag'])
+    #     trace_mag = make_3d_sensors_trace(mags_locs, mags_names, 'blue', 10, 'mags', 'circle', 'top left')
+    # else:
+    #     trace_mag = go.Scatter3d()
 
 
-    if 'grad' in raw:
-        # Extract the sensor locations and names for gradiometers
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
-        grad_pos = [ch['loc'][:3] for ch in grad_locs]
-        grad_names = [ch['ch_name'] for ch in grad_locs]
+    # if 'grad' in channels_objs:
+    #     grads_locs, grads_names = keep_unique_locs(channels_objs['grad'])
+    #     trace_grad = make_3d_sensors_trace(grads_locs, grads_names, 'red', 10, 'grads', 'circle', 'top right')
+    # else:
+    #     trace_grad = go.Scatter3d()
 
-        #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
+    # Create a list of channels to use
+    all_channels = []
+    if 'mag' in channels_objs:
+        all_channels += channels_objs['mag']
+    if 'grad' in channels_objs:
+        all_channels += channels_objs['grad']
 
-        grad_pos_together = []
-        grad_names_together = []
+    ch_locs, ch_names = keep_unique_locs(all_channels)
+    trace = make_3d_sensors_trace(ch_locs, ch_names, 'red', 10, 'Lobes', 'circle', 'top left')
 
-        for i in range(len(grad_pos)-1):
-            if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
-                grad_pos_together += [grad_pos[i]]
-                grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
-            else:
-                pass
-
-        # Create the second scatter trace with red points and names on the left
-        trace2 = go.Scatter3d(
-            x=[pos[0] for pos in grad_pos_together],
-            y=[pos[1] for pos in grad_pos_together],
-            z=[pos[2] for pos in grad_pos_together],
-            mode='markers',
-            marker=dict(
-                color='red',
-                size=5,
-                symbol='circle'
-            ),
-            text=grad_names_together,
-            hoverinfo='text',
-            name='grads',
-            textposition='top left',
-            textfont=dict(size=10, color='red')  #set hover text size. somehow this only works for the "Always show names" option
-        )
-    else:
-        trace2 = go.Scatter3d()
 
     # Create the figure
-    fig = go.Figure(data=[trace1, trace2])
+    #fig = go.Figure(data=[trace_mag, trace_grad])
+    fig = go.Figure(data=[trace])
 
     fig.update_layout(
         width=900, height=900,
@@ -477,7 +511,7 @@ def plot_sensors_3d(raw: mne.io.Raw):
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #change size of hover text. This works for the "Show names on hover" option, but not for "Always show names"
 
-    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly')]
+    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
 
     return qc_derivative
 
@@ -657,7 +691,7 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
+def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels_objs: list, what_data: str):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -669,7 +703,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         list of std values for each channel
     ch_type : str
         'mag' or 'grad'
-    channels : list
+    channels_objs : list
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
@@ -692,7 +726,8 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_all_data_'+ch_tit
 
-    df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
+    ch_names=[name for name in channels_objs.name]
+    df = pd.DataFrame (std_data, index=ch_names, columns=[hover_tit])
 
     fig = go.Figure()
 
