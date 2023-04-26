@@ -3,7 +3,7 @@
 
 import pandas as pd
 import mne
-from universal_plots import QC_derivative
+from meg_qc.source.universal_plots import QC_derivative
 from typing import List
 from typing import Tuple
 

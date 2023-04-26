@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
-from universal_html_report import simple_metric_basic
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+from meg_qc.source.universal_html_report import simple_metric_basic
 
 # In[2]:
 

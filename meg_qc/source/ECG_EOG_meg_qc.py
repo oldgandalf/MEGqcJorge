@@ -1,7 +1,7 @@
 import mne
 import numpy as np
-from universal_html_report import simple_metric_basic
-from universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.source.universal_html_report import simple_metric_basic
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
 import plotly.graph_objects as go
 from scipy.signal import find_peaks
 from typing import List
