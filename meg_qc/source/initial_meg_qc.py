@@ -235,6 +235,109 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     return dict_epochs_mg
 
 
+def sanity_check(m_or_g_chosen, channels):
+    
+    """
+    Check if the channels which the user gave in config file to analize actually present in the data set.
+    
+    Parameters
+    ----------
+    m_or_g_chosen : list
+        List with channel types to analize: mag, grad. These are theones the user chose.
+    channels : dict
+        Dictionary with channel names for each channel type: mag, grad. These are the ones present in the data set.
+    
+    Returns
+    -------
+    m_or_g_chosen : list
+        List with channel types to analize: mag, grad.
+        
+    """
+
+    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
+        m_or_g_chosen = []
+    if channels['mag'] is None and 'mag' in m_or_g_chosen:
+        print('___MEG QC___: ', 'There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
+        m_or_g_chosen.remove('mag')
+    elif channels['grad'] is None and 'grad' in m_or_g_chosen:
+        print('___MEG QC___: ', 'There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
+        m_or_g_chosen.remove('grad')
+    elif channels['mag'] is None and channels['grad'] is None:
+        print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
+        m_or_g_chosen = []
+    return m_or_g_chosen
+
+
+class MEG_channels:
+
+    """ 
+    Channel with info about it such as name, type, lobe area and color code for plotting.
+
+    Attributes
+    ----------
+    name : str
+        The name of the channel.
+    type : str
+        The type of the channel: 'mag', 'grad'
+    lobe_area : str
+        The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
+    color_code : str
+        The color code for plotting with plotly according to the lobe area of the channel.
+
+
+    """
+
+    def __init__(self, name, type, lobe_area, color_code):
+
+        """
+        Constructor method
+        
+        Parameters
+        ----------
+        name : str
+            The name of the channel.
+        type : str
+            The type of the channel: 'mag', 'grad'
+        lobe_area : str
+            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
+        color_code : str
+            The color code for plotting with plotly according to the lobe area of the channel.
+
+        """
+
+        self.name = name
+        self.type = type
+        self.lobe_area = lobe_area
+        self.color_code = color_code
+
+    def __repr__(self):
+
+        """
+        Returns the string representation of the object.
+        
+        """
+
+        return self.name, f': type: {self.type}, lobe area: {self.lobe_area}, color code: {self.color_code}'
+
+
+
+def assign_channels_to_areas(channels):
+
+    if len(channels['mag']) == 102 and len(channels['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
+        #loop over all values in the dictionary:
+        for key, ch in channels.items():
+            pass
+    
+    lobes = {'Left frontal': ['MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612'. 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+            'Right frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+            'Left temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+            'Right temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1333', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+            'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG061', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
+            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', ],'}
+             
+            
+
+
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
     """
@@ -331,7 +434,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     mag_ch_names = raw.copy().pick_types(meg='mag').ch_names if 'mag' in raw else None
     grad_ch_names = raw.copy().pick_types(meg='grad').ch_names if 'grad' in raw else None
-    channels = {'mag': mag_ch_names, 'grad': grad_ch_names}
+
+    channels = {'mag': [MEG_channels(m, 'mag', None, None) for m in mag_ch_names] if mag_ch_names is not None else None,
+                'grad': [MEG_channels(g, 'grad', None, None) for g in grad_ch_names] if grad_ch_names is not None else None}
 
     #Check if there are channels to analyze:
     m_or_g_chosen = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels=channels)
@@ -343,6 +448,10 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         m_or_g_skipped_str = ''' <p>This data set contains no magnetometers or they were not chosen for analysis. Quality measurements were performed only on gradiometers.</p>'''
     if 'grad' not in m_or_g_chosen:
         m_or_g_skipped_str = ''' <p>This data set contains no gradiometers or they were not chosen for analysis. Quality measurements were performed only on magnetometers.</p>'''
+
+
+
+
 
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(raw)
@@ -358,38 +467,3 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         time_series_derivs = []
         
     return dict_epochs_mg, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
-
-
-def sanity_check(m_or_g_chosen, channels):
-    
-    """
-    Check if the channels which the user gave in config file to analize actually present in the data set.
-    
-    Parameters
-    ----------
-    m_or_g_chosen : list
-        List with channel types to analize: mag, grad. These are theones the user chose.
-    channels : dict
-        Dictionary with channel names for each channel type: mag, grad. These are the ones present in the data set.
-    
-    Returns
-    -------
-    m_or_g_chosen : list
-        List with channel types to analize: mag, grad.
-        
-    """
-
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        m_or_g_chosen = []
-    if channels['mag'] is None and 'mag' in m_or_g_chosen:
-        print('___MEG QC___: ', 'There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.')
-        m_or_g_chosen.remove('mag')
-    elif channels['grad'] is None and 'grad' in m_or_g_chosen:
-        print('___MEG QC___: ', 'There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.')
-        m_or_g_chosen.remove('grad')
-    elif channels['mag'] is None and channels['grad'] is None:
-        print ('There are no magnetometers or gradiometers in this data set. Analysis will not be done.')
-        m_or_g_chosen = []
-    return m_or_g_chosen
-
-
