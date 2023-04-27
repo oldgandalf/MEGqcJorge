@@ -491,11 +491,16 @@ def plot_sensors_3d(channels_objs: dict):
     for ch in all_channels:
         lobes_dict[ch.lobe].append(ch) 
 
+    #sort the dict by lobes names:
+    lobes_dict = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+
     traces = []
     for lobe in lobes_dict:
+        print(lobe)
         ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
         traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
         #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
+        # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
 
 
     fig = go.Figure(data=traces)
@@ -512,7 +517,7 @@ def plot_sensors_3d(channels_objs: dict):
     # Add the button to have names show up on hover or always:
     fig = switch_names_on_off(fig)
 
-    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #change size of hover text. This works for the "Show names on hover" option, but not for "Always show names"
+    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
 
     qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
 
