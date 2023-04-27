@@ -3,7 +3,7 @@ import configparser
 import numpy as np
 
 from IPython.display import display
-from universal_plots import plot_sensors_3d, plot_time_series
+from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series
 
 
 def get_all_config_params(config_file_name: str):

@@ -28,7 +28,7 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
-from universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
 
 def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict, muscle_str_joined: str):
 

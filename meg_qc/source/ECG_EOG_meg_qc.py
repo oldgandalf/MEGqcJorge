@@ -1,9 +1,10 @@
 import mne
 import numpy as np
-from universal_html_report import simple_metric_basic
-from universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.source.universal_html_report import simple_metric_basic
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
 import plotly.graph_objects as go
 from scipy.signal import find_peaks
+from typing import List
 
 
 def check_3_conditions_old(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int = 3, allowed_range_of_peaks_stds: float = 0.05):
@@ -232,7 +233,7 @@ def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name
 
     return fig
 
-def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list[str],  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
+def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: List[str],  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
     """
     Detects noisy ecg or eog channels.
 

@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import mne
-from universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
-from universal_html_report import simple_metric_basic
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+from meg_qc.source.universal_html_report import simple_metric_basic
 
 # In[2]:
 
@@ -315,7 +315,12 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
 
 
-def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], std_or_ptp: str):
+# def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], std_or_ptp: str):
+
+from typing import List
+
+def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], std_or_ptp: str):
+    # rest of the code here
 
     """Make a dictionary with global metric content for std or ptp metric.
     Global means that it is calculated over entire data series, not over epochs.
@@ -402,7 +407,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
 
 
 
-def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: list):
+def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: List[dict]):
 
     """Make simple metric for STD.
 
