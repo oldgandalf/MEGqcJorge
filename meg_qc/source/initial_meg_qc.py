@@ -40,6 +40,19 @@ def get_all_config_params(config_file_name: str):
         print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
+    subjects = default_section['subjects']
+    subjects = subjects.replace(" ", "")
+    subjects = subjects.split(",")
+
+    run_STD = default_section.getboolean('STD')
+    run_PSD = default_section.getboolean('PSD')
+    run_PTP_manual = default_section.getboolean('PTP_manual')
+    run_PTP_auto_mne = default_section.getboolean('PTP_auto_mne')
+    run_ECG = default_section.getboolean('ECG')
+    run_EOG = default_section.getboolean('EOG')
+    run_Head = default_section.getboolean('Head')
+    run_Muscle = default_section.getboolean('Muscle')
+
     ds_paths = default_section['data_directory']
     ds_paths = ds_paths.replace(" ", "")
     ds_paths = ds_paths.split(",")
@@ -61,6 +74,15 @@ def get_all_config_params(config_file_name: str):
 
         default_params = dict({
             'm_or_g_chosen': m_or_g_chosen, 
+            'subjects': subjects,
+            'run_STD': run_STD,
+            'run_PSD': run_PSD,
+            'run_PTP_manual': run_PTP_manual,
+            'run_PTP_auto_mne': run_PTP_auto_mne,
+            'run_ECG': run_ECG,
+            'run_EOG': run_EOG,
+            'run_Head': run_Head,
+            'run_Muscle': run_Muscle,
             'dataset_path': ds_paths,
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'crop_tmin': tmin,

@@ -99,11 +99,16 @@ def make_derivative_meg_qc(config_file_path):
         # print('___MEG QC___: ', 'entities', entities)
 
         # list_of_subs = list(entities["sub"])
-        list_of_subs = sorted(list(dataset.query_entities()["sub"]))
-        print('___MEG QC___: ', 'list_of_subs', list_of_subs)
-
-        if not list_of_subs:
-            print('___MEG QC___: ', 'No subjects found. Check your data set and directory path in config.')
+        if all_qc_params['default']['subjects'][0] != 'all':
+            list_of_subs = all_qc_params['default']['subjects']
+        elif all_qc_params['default']['subjects'][0] == 'all':
+            list_of_subs = sorted(list(dataset.query_entities()["sub"]))
+            print('___MEG QC___: ', 'list_of_subs', list_of_subs)
+            if not list_of_subs:
+                print('___MEG QC___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
+                return
+        else:
+            print('___MEG QC___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
             return
 
         avg_ecg=[]
@@ -142,50 +147,58 @@ def make_derivative_meg_qc(config_file_path):
                 scores_muscle_all1, scores_muscle_all2, scores_muscle_all3 = [], [], []
                 raw1, raw2, raw3 = [], [], []
 
-                print('___MEG QC___: ', 'Starting STD...')
-                start_time = time.time()
-                std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-                print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_STD'] is True:
+                    print('___MEG QC___: ', 'Starting STD...')
+                    start_time = time.time()
+                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+                    print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
     
-                print('___MEG QC___: ', 'Starting PSD...')
-                start_time = time.time()
-                psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=False)
-                print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_PSD'] is True:
+                    print('___MEG QC___: ', 'Starting PSD...')
+                    start_time = time.time()
+                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, raw_cropped_filtered, m_or_g_chosen, helperplots=False)
+                    print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
-                start_time = time.time()
-                pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-                print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_PTP_manual'] is True:
+                    print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
+                    start_time = time.time()
+                    pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
+                    print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
-                start_time = time.time()
-                pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-                print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_PTP_auto_mne'] is True:
+                    print('___MEG QC___: ', 'Starting Peak-to-Peak auto...')
+                    start_time = time.time()
+                    pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
+                    print('___MEG QC___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                print('___MEG QC___: ', 'Starting ECG...')
-                start_time = time.time()
-                ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
-                print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_ECG'] is True:
+                    print('___MEG QC___: ', 'Starting ECG...')
+                    start_time = time.time()
+                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+                    print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                print('___MEG QC___: ', 'Starting EOG...')
-                start_time = time.time()
-                eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
-                print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_EOG'] is True:
+                    print('___MEG QC___: ', 'Starting EOG...')
+                    start_time = time.time()
+                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                    print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                avg_ecg += avg_objects_ecg
-                avg_eog += avg_objects_eog
+                    avg_ecg += avg_objects_ecg
+                    avg_eog += avg_objects_eog
 
-                # print('___MEG QC___: ', 'Starting Head movement calculation...')
-                # head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
-                # print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_Head'] is True:
+                    print('___MEG QC___: ', 'Starting Head movement calculation...')
+                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_with_lines=True, plot_annotations=False)
+                    print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
-                #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
-                #noisy_freqs_global = {'mag': [50], 'grad': [50]}
-                # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all1, raw1 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = False, cut_dummy = False)
-                # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all2, raw2 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = False)
-                muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = True)
-                print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
+                if all_qc_params['default']['run_Muscle'] is True:
+                    print('___MEG QC___: ', 'Starting Muscle artifacts calculation...')
+                    #use the same form of raw as in the PSD func! Because psd func calculates first if there are powerline noise freqs.
+                    #noisy_freqs_global = {'mag': [50], 'grad': [50]}
+                    # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all1, raw1 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = False, cut_dummy = False)
+                    # muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all2, raw2 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = False)
+                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, interactive_matplot=False, attach_dummy = True, cut_dummy = True)
+                    print('___MEG QC___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 
                 report_strings = {

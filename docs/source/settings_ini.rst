@@ -19,6 +19,18 @@ In the html report:
 Default settings [DEFAULT]
 --------------------------
 - **do_for** (str) : which channels to process. Enter 1 or both values separated by , . Default: *mag, grad*
+- **subjects** (str) - all or list of subjects separated by , - which subjects to process. If all chosen - all subjects in data set will be processed. Default: *all*
+
+- Metrics to run:
+    - **STD** (bool) : Standard deviation. Default: *True*
+    - **PSD** (bool) : Power spectral density. Default: *True*
+    - **PTP_manual** (bool) : Peak-to-peak amplitude manual. Default: *True*
+    - **PTP_auto_mne** (bool) : Peak-to-peak amplitude automatic (MNE). Default: *True*
+    - **ECG** (bool) : ECG: heart beat artifacts. Default: *True*
+    - **EOG** (bool) : EOG: oculart artifacs. Default: *True*
+    - **Head** (bool) : Head movement artifacts. Default: *True*
+    - **Muscle** (bool) : High frequency (110-140Hz) noise strongy correlated with (but not limited to) Muscle artifacts. Default: *True*
+
 - **plot_interactive_time_series** (bool) : Plot of the whole time series will be done on the data resampled to 100Hz/sec. Raw data is shown, no filetring applied even if filer is set in the filering section. Benefit: it is interactive (you can see all or 1 or several channels, zoom in), which makes it more informative than built-in mne plot. Downside: This plot may signifcantly increase the time it takes to run the pipeline and the plot itself in html presentation might be slow due to large number of data points. If you want to run it faster, set this to False. Default: *True*
 - **data_directory** (str) : **absolute** path to the data directory . Data path can not contain spaces! You can replace them with underscores or remove completely. Possible to also enter several data path separated by coma. Example: *user/path/to/my/data/ds000000, user/path/to/my/data/ds000001*
 - **data_crop_tmin** (int) & data_crop_tmax** (int) : Settings for data crop. If no cropping needed, leave blank. Unit: seconds. Default: *blank*
