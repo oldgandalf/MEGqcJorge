@@ -274,7 +274,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     Plots the 3D locations of the sensors in the raw file.
-    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis.
+    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis. Also it doesnt care for the lobe areas.
 
     Parameters
     ----------
@@ -476,20 +476,6 @@ def plot_sensors_3d(channels_objs: dict):
     """
     qc_derivative = []
 
-
-    # if 'mag' in channels_objs:
-    #     mags_locs, mags_names = keep_unique_locs(channels_objs['mag'])
-    #     trace_mag = make_3d_sensors_trace(mags_locs, mags_names, 'blue', 10, 'mags', 'circle', 'top left')
-    # else:
-    #     trace_mag = go.Scatter3d()
-
-
-    # if 'grad' in channels_objs:
-    #     grads_locs, grads_names = keep_unique_locs(channels_objs['grad'])
-    #     trace_grad = make_3d_sensors_trace(grads_locs, grads_names, 'red', 10, 'grads', 'circle', 'top right')
-    # else:
-    #     trace_grad = go.Scatter3d()
-
     # Create a list of channels to use
     all_channels = []
     if 'mag' in channels_objs:
@@ -511,11 +497,7 @@ def plot_sensors_3d(channels_objs: dict):
         traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
         #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
 
-        
-    #trace = make_3d_sensors_trace(ch_locs, ch_names, 'red', 10, 'Lobes', 'circle', 'top left')
 
-    # Create the figure
-    #fig = go.Figure(data=[trace_mag, trace_grad])
     fig = go.Figure(data=traces)
 
     fig.update_layout(
