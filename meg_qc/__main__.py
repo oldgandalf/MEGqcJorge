@@ -1,3 +1,5 @@
+import sys
+sys.path.append('./')
 from meg_qc.meg_qc_pipeline import make_derivative_meg_qc
 
 #Add initial setup here (offer to install dependencies, etc.)
@@ -19,7 +21,11 @@ def main():
     
     print("\n\n Running MEG QC...\n")
 
-    raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos = make_derivative_meg_qc(config_file_path)
+    make_derivative_meg_qc(config_file_path)
+
+    #note: even though there are no outputs, it will for now still try to output a bunch of plotly and mne figures and open all of them in the browser. 
+    #This will later be suppressed, but so far I need for runnin the pipeline in the notebook and seeing the figures there.
 
 if __name__ == "__main__":
     main()
+    
