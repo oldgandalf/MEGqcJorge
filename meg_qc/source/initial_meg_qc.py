@@ -34,15 +34,13 @@ def get_all_config_params(config_file_name: str):
     default_section = config['DEFAULT']
 
     m_or_g_chosen = default_section['do_for'] 
-    m_or_g_chosen = m_or_g_chosen.replace(" ", "")
-    m_or_g_chosen = m_or_g_chosen.split(",")
+    m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
     subjects = default_section['subjects']
-    subjects = subjects.replace(" ", "")
-    subjects = subjects.split(",")
+    subjects = [sub.strip() for sub in subjects.split(",")]
 
     run_STD = default_section.getboolean('STD')
     run_PSD = default_section.getboolean('PSD')
@@ -54,8 +52,7 @@ def get_all_config_params(config_file_name: str):
     run_Muscle = default_section.getboolean('Muscle')
 
     ds_paths = default_section['data_directory']
-    ds_paths = ds_paths.replace(" ", "")
-    ds_paths = ds_paths.split(",")
+    ds_paths = [path.strip() for path in ds_paths.split(",")]
     if len(ds_paths) < 1:
         print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
         return None

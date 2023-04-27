@@ -496,7 +496,6 @@ def plot_sensors_3d(channels_objs: dict):
 
     traces = []
     for lobe in lobes_dict:
-        print(lobe)
         ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
         traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
         #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
