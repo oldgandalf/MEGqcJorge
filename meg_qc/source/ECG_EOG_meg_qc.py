@@ -409,7 +409,7 @@ class Avg_artif:
         return self.peak_loc, self.peak_magnitude, peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
 
 
-    def plot_epoch_and_peak(self, t, fig_tit, ch_type):
+    def plot_epoch_and_peak(self, t: np.ndarray, fig_tit: str, ch_type: str, fig: go.Figure):
 
         """
         Plot the average artifact epoch and the peak inside it.
@@ -422,6 +422,11 @@ class Avg_artif:
             title of the figure not including ch type.
         ch_type: str
             type of the channel ('mag, 'grad'). Used only as title of the figure
+        fig: plotly.graph_objects.Figure
+            (Empty) plotly figure to be filled. If set to None - figure will be created inside this function. 
+            Giving figure is useful if you want to plot more traces on top of the figure you already have using this function.
+            But! If you plot into the same figure on the loop - create the figure first. 
+            And then input same figure into this function on every iteration. If you ll input None, figure will be overwritten on every itertion.
 
         Returns
         -------
@@ -430,10 +435,10 @@ class Avg_artif:
         
         
         """
+        if fig is None: #if no figure is provided - create figure. Otherwise it will only create the data for figure, and figure would need to be made before.
+            fig=go.Figure()
 
         fig_ch_tit, unit = get_tit_and_unit(ch_type)
-
-        fig=go.Figure()
 
         fig.add_trace(go.Scatter(x=np.array(t), y=np.array(self.artif_data), name=self.name))
         fig.add_trace(go.Scatter(x=np.array(t[self.peak_loc]), y=self.peak_magnitude, mode='markers', name='peak: '+self.name));
@@ -599,32 +604,28 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
         
     """
-
-    fig_ch_tit, unit = get_tit_and_unit(ch_type)
-
-    for ch in artif_affected_channels:
-        fig=ch.plot_epoch_and_peak(t, 'Channels affected by ECG artifact: ', ch_type)
-
-    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl'))
-
-    if flip_data == 'False':
-        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
-
-    fig.update_layout(
-        xaxis_title='Time in seconds',
-        yaxis = dict(
-            showexponent = 'all',
-            exponentformat = 'e'),
-        yaxis_title='Mean artifact magnitude in '+unit,
-        title={
-            'text': fig_tit+str(len(artif_affected_channels))+' '+fig_ch_tit,
-            'y':0.85,
-            'x':0.5,
+    fig=go.Figure()
+    if artif_affected_channels: #if affected channels present:
+        title = fig_tit+str(len(artif_affected_channels))+' '
+        for ch in artif_affected_channels:
+            fig=ch.plot_epoch_and_peak(t, title, ch_type, fig)
+    else:
+        fig_ch_tit, _ = get_tit_and_unit(ch_type)
+        title=title=fig_tit+'0 ' +fig_ch_tit
+        fig.update_layout(
+            title={
+            'text': title,
+            'x': 0.5,
+            'y': 0.9,
             'xanchor': 'center',
             'yanchor': 'top'})
+        
+    #in any case - add the threshold on the plot
+    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl')) #add threshold level
+    fig.show()
 
-
-    #fig.show()
+    if flip_data is False: 
+        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
 
     return fig
 
@@ -1014,7 +1015,7 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
 
 
     if plotflag is True:
-        fig_avg = avg_overall_obj.plot_epoch_and_peak(t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g)
+        fig_avg = avg_overall_obj.plot_epoch_and_peak(t, 'Mean '+ecg_or_eog+' artifact over all data: ', m_or_g, None)
         fig_avg.show()
         affected_derivs.insert(0, QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly', description_for_user = avg_artif_description))
         #prepend the avg plot before all other plots. because they will be added to report in the order they are in list.
