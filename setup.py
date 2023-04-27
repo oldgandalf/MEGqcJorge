@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='meg_qc',
-    version='0.0.0',
+    version= versioneer.get_version(),
     packages=['meg_qc'],
     url='https://github.com/ANCPLabOldenburg/MEG-QC-code',
     license='MIT',
