@@ -254,10 +254,10 @@ def switch_names_on_off(fig: go.Figure):
 
     # Define the buttons
     buttons = [
-    dict(label='Show channel names when hovering',
+    dict(label='Show channels names on hover',
          method='update',
          args=[{'mode': 'markers'}]),
-    dict(label='Always show channel names',
+    dict(label='Always show channels names',
          method='update',
          args=[{'mode': 'markers+text'}])
     ]
@@ -270,10 +270,11 @@ def switch_names_on_off(fig: go.Figure):
     return fig
 
 
-def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
+def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     Plots the 3D locations of the sensors in the raw file.
+    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis.
 
     Parameters
     ----------
@@ -307,7 +308,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
                                             marker=dict(size=5),
                                             text=mag_names,
                                             hovertemplate='%{text}')],
-                                            layout=go.Layout(width=1200, height=1200))
+                                            layout=go.Layout(width=800, height=800))
 
         mag_fig.update_layout(
             title={
@@ -315,7 +316,8 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
-            'yanchor': 'top'})
+            'yanchor': 'top'},
+            hoverlabel=dict(font=dict(size=10)))
 
         mag_fig = switch_names_on_off(mag_fig)
 
@@ -349,7 +351,7 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
                                                 marker=dict(size=5),
                                                 text=grad_names_together,
                                                 hovertemplate='%{text}')],
-                                                layout=go.Layout(width=1200, height=1200))
+                                                layout=go.Layout(width=800, height=800))
 
         grad_fig.update_layout(
             title={
@@ -357,7 +359,8 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
-            'yanchor': 'top'})
+            'yanchor': 'top'},
+            hoverlabel=dict(font=dict(size=10)))
 
 
         # Add the button to have names show up on hover or always:
@@ -367,6 +370,171 @@ def plot_sensors_3d(raw: mne.io.Raw, m_or_g_chosen: str):
 
     return qc_derivative
 
+def keep_unique_locs(ch_list):
+
+    channel_names = [ch.name for ch in ch_list]
+    channel_locations = [ch.loc for ch in ch_list]
+    channel_colors = [ch.lobe_color for ch in ch_list]
+    channel_lobes = [ch.lobe for ch in ch_list]
+
+    # Create dictionaries to store unique locations and combined channel names
+    unique_locations = {}
+    combined_names = {}
+    unique_colors = {}
+    unique_lobes = {}
+
+    # Loop through each channel and its location
+    for i, (name, loc, color, lobe) in enumerate(zip(channel_names, channel_locations, channel_colors, channel_lobes)):
+        # Convert location to a tuple for use as a dictionary key
+        loc_key = tuple(loc)
+        
+        # If location is already in the unique_locations dictionary, add channel name to combined_names
+        if loc_key in unique_locations:
+            combined_names[unique_locations[loc_key]].append(name)
+        # Otherwise, add location to unique_locations and channel name to combined_names
+        else:
+            unique_locations[loc_key] = i
+            combined_names[i] = [name]
+            unique_colors[i] = color
+            unique_lobes[i] = lobe
+
+    # Create new lists of unique locations and combined channel names
+    new_locations = list(unique_locations.keys())
+    new_names = [' & '.join(combined_names[i]) for i in combined_names]
+    new_colors = [unique_colors[i] for i in unique_colors]
+    new_lobes = [unique_lobes[i] for i in unique_lobes]
+
+    return new_locations, new_names, new_colors, new_lobes 
+
+
+def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int, legend_category: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
+
+    """ Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels.
+
+    Parameters
+    ----------
+    d3_locs : list
+        A list of 3D locations of the sensors.
+    names : list
+        A list of names of the sensors.
+    color : str
+        A color of the sensors.
+    textsize : int
+        A size of the text.
+    ch_type : str
+        A type of the channels.
+    symbol : str
+        A symbol of the sensors.
+    textposition : str
+        A position of the text.
+    
+    Returns
+    -------
+    trace : plotly.graph_objs._scatter3d.Scatter3d
+        A trace of the sensors.
+    
+    
+    """
+
+    trace = go.Scatter3d(
+    x=[loc[0] for loc in d3_locs],
+    y=[loc[1] for loc in d3_locs],
+    z=[loc[2] for loc in d3_locs],
+    mode='markers',
+    marker=dict(
+        color=color,
+        size=5,
+        symbol=symbol,
+    ),
+    text=names,
+    hoverinfo='text',
+    name=legend_category,
+    textposition=textposition,
+    textfont=dict(size=textsize, color=color))
+
+    return trace
+
+
+def plot_sensors_3d(channels_objs: dict):
+
+    """
+    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
+    Can turn mags/grads visialisation on and off.
+    To be addded: separete channels into brain areas by color coding.
+
+
+    Parameters
+    ----------
+    channels_objs : dict
+        The dictionary with the channels to be plotted and their locations.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+    qc_derivative = []
+
+
+    # if 'mag' in channels_objs:
+    #     mags_locs, mags_names = keep_unique_locs(channels_objs['mag'])
+    #     trace_mag = make_3d_sensors_trace(mags_locs, mags_names, 'blue', 10, 'mags', 'circle', 'top left')
+    # else:
+    #     trace_mag = go.Scatter3d()
+
+
+    # if 'grad' in channels_objs:
+    #     grads_locs, grads_names = keep_unique_locs(channels_objs['grad'])
+    #     trace_grad = make_3d_sensors_trace(grads_locs, grads_names, 'red', 10, 'grads', 'circle', 'top right')
+    # else:
+    #     trace_grad = go.Scatter3d()
+
+    # Create a list of channels to use
+    all_channels = []
+    if 'mag' in channels_objs:
+        all_channels += channels_objs['mag']
+    if 'grad' in channels_objs:
+        all_channels += channels_objs['grad']
+
+    #put all channels into separate lists based on their lobes:
+    lobes_names=list(set([ch.lobe for ch in all_channels]))
+    
+    lobes_dict = {key: [] for key in lobes_names}
+    #fill the dict with channels:
+    for ch in all_channels:
+        lobes_dict[ch.lobe].append(ch) 
+
+    traces = []
+    for lobe in lobes_dict:
+        ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
+        traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
+        #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
+
+        
+    #trace = make_3d_sensors_trace(ch_locs, ch_names, 'red', 10, 'Lobes', 'circle', 'top left')
+
+    # Create the figure
+    #fig = go.Figure(data=[trace_mag, trace_grad])
+    fig = go.Figure(data=traces)
+
+    fig.update_layout(
+        width=900, height=900,
+        title={
+        'text': 'Sensors positions',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+
+    # Add the button to have names show up on hover or always:
+    fig = switch_names_on_off(fig)
+
+    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #change size of hover text. This works for the "Show names on hover" option, but not for "Always show names"
+
+    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
+
+    return qc_derivative
 
 
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):

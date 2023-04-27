@@ -541,30 +541,30 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
 
 
     #Find the channels which got peaks over this mean:
-    affected_channels=[]
-    not_affected_channels=[]
+    affected=[]
+    not_affected=[]
     artifact_lvl=mean_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
-    for potentially_affected_channel in list_mean_artif_epochs:
-        #if np.max(np.abs(potentially_affected_channel.peak_magnitude))>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
+    for potentially_affected in list_mean_artif_epochs:
+        #if np.max(np.abs(potentially_affected.peak_magnitude))>abs(artifact_lvl) and potentially_affected.wave_shape is True:
 
 
         #find the highest peak inside the timelimit_min and timelimit_max:
-        main_peak_loc, main_peak_magnitude = potentially_affected_channel.get_highest_peak(t, timelimit_min, timelimit_max)
+        main_peak_loc, main_peak_magnitude = potentially_affected.get_highest_peak(t, timelimit_min, timelimit_max)
 
-        #print('___MEG QC___: ', potentially_affected_channel.name, ' Main Peak magn: ', potentially_affected_channel.main_peak_magnitude, ', Main peak loc ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+        #print('___MEG QC___: ', potentially_affected.name, ' Main Peak magn: ', potentially_affected.main_peak_magnitude, ', Main peak loc ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
         
         if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
-            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected_channel.wave_shape is True:
-                potentially_affected_channel.artif_over_threshold=True
-                affected_channels.append(potentially_affected_channel)
+            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected.wave_shape is True:
+                potentially_affected.artif_over_threshold=True
+                affected.append(potentially_affected)
             else:
-                not_affected_channels.append(potentially_affected_channel)
-                #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: ', potentially_affected_channel.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected_channel.main_peak_loc, ' Wave shape: ', potentially_affected_channel.wave_shape)
+                not_affected.append(potentially_affected)
+                #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: ', potentially_affected.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
         else:
-            not_affected_channels.append(potentially_affected_channel)
-            #print('___MEG QC___: ', potentially_affected_channel.name, ' Peak magn over th: NO PEAK in time window')
+            not_affected.append(potentially_affected)
+            #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: NO PEAK in time window')
 
-    return affected_channels, not_affected_channels, artifact_lvl
+    return affected, not_affected, artifact_lvl
 
 
 def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, flip_data: bool or str = 'flip'):

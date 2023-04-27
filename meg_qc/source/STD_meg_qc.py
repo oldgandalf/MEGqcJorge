@@ -260,8 +260,6 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     
     """
 
-
-
     epochs = df_std.columns.tolist() #get epoch numbers
     epochs = [int(ep) for ep in epochs]
 
@@ -276,13 +274,16 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     # Now see which channles in epoch are over std_level or under -std_level:
     
     #append raws to df_noisy_epoch to hold the % of noisy/flat channels in each epoch:
-    df_noisy_epoch.loc['number noisy channels'] = None
-    df_noisy_epoch.loc['% noisy channels'] = None
-    df_noisy_epoch.loc['noisy > %s perc' % percent_noisy_flat_allowed] = None
 
-    df_flat_epoch.loc['number flat channels'] = None
-    df_flat_epoch.loc['% flat channels'] = None
-    df_flat_epoch.loc['flat < %s perc' % percent_noisy_flat_allowed] = None
+
+    df_noisy_epoch.loc['number noisy channels'] = np.nan
+    df_noisy_epoch.loc['% noisy channels'] = np.nan
+    df_noisy_epoch.loc['noisy > %s perc' % percent_noisy_flat_allowed] = np.nan
+
+    df_flat_epoch.loc['number flat channels'] = np.nan
+    df_flat_epoch.loc['% flat channels'] = np.nan
+    df_flat_epoch.loc['flat < %s perc' % percent_noisy_flat_allowed] = np.nan
+
 
     for ep in epochs:  
 
@@ -290,7 +291,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
         df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] > noisy_channel_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
         df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std_with_mean.iloc[:, -1] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
-        
+
         # Calculate the number of noisy/flat channels in this epoch:
         df_noisy_epoch.iloc[-3,ep] = df_noisy_epoch.iloc[:-3,ep].sum()
         df_flat_epoch.iloc[-3,ep] = df_flat_epoch.iloc[:-3,ep].sum()
@@ -513,7 +514,6 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
-
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
@@ -534,7 +534,8 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
         std_str = 'STD per epoch can not be calculated because no events are present. Check stimulus channel.'
         print('___MEG QC___: ', std_str)
 
+
     simple_metric_std = make_simple_metric_std(std_params, big_std_with_value_all_data, small_std_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
-    
+
     derivs_std += fig_std_epoch + fig_std_epoch2 + derivs_list 
     return derivs_std, simple_metric_std, std_str
