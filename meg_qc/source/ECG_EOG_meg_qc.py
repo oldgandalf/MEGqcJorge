@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 from typing import List
 
+import matplotlib
+#matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
 def check_3_conditions_old(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int = 3, allowed_range_of_peaks_stds: float = 0.05):
 

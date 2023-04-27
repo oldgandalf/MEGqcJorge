@@ -24,7 +24,9 @@ def main():
     make_derivative_meg_qc(config_file_path)
 
     #note: even though there are no outputs, it will for now still try to output a bunch of plotly and mne figures and open all of them in the browser. 
-    #This will later be suppressed, but so far I need for runnin the pipeline in the notebook and seeing the figures there.
+    #This will later be suppressed, but so far I need for running the pipeline in the notebook and seeing the figures there.
+    #to suppress ECG/EOG figure from mne go to ECG module and uncomment the line matplotlib.use('Agg') at the top of the file.
+    #to suppress all plotly figure - comment all the fig.show() lines in the plotly modules
 
 if __name__ == "__main__":
     main()
