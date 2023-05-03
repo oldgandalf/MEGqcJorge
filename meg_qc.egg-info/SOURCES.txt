@@ -1,7 +1,11 @@
 README.rst
+pyproject.toml
+setup.cfg
 setup.py
+versioneer.py
 meg_qc/__init__.py
 meg_qc/__main__.py
+meg_qc/_version.py
 meg_qc/meg_qc_pipeline.py
 meg_qc.egg-info/PKG-INFO
 meg_qc.egg-info/SOURCES.txt
