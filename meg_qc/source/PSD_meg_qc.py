@@ -13,7 +13,7 @@ from IPython.display import display
 from typing import List
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, get_ch_color_knowing_name
 from meg_qc.source.universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
@@ -83,7 +83,7 @@ def add_log_buttons(fig: go.Figure):
     return fig
 
 
-def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, method: str):
+def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs_by_lobe: dict, method: str):
 
     """
     Plotting Power Spectral Density for all channels.
@@ -98,6 +98,8 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
         power spectral density for each channel
     channels : list
         list of channel names
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
     method : str
         'welch' or 'multitaper' or other method
 
@@ -115,11 +117,21 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
 
     fig = go.Figure()
 
-    
-    for col in df_psds:
-        fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
+    for lobe, ch_list in chs_by_lobe.items():
+        
+        #Add lobe as a category to the plot
+        #No unfortunatelly you can make it so when you click on lobe you activate/hide all related channels. It is not a proper category in plotly, it is in fact just one more trace.
+        fig.add_trace(go.Scatter(x=freqs, y=[None]*len(freqs), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), showlegend=True, name=lobe.upper()))
 
-    
+        for ch_obj in ch_list:
+            if ch_obj.name in df_psds.columns:
+                psd_ch_data=df_psds[ch_obj.name].values
+                color = ch_obj.lobe_color 
+                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
+                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
+
+                fig.add_trace(go.Scatter(x=freqs, y=psd_ch_data, line=dict(color=color), name=ch_obj.name))
+
     fig.update_layout(
     title={
     'text': method[0].upper()+method[1:]+" periodogram for all "+tit,
@@ -1080,7 +1092,7 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     return nfft, nperseg
 
 #%%
-def PSD_meg_qc(psd_params: dict, channels:dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helperplots: bool):
+def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helperplots: bool):
     
     """
     Main psd function. Calculates:
@@ -1114,6 +1126,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw_orig: mne.io.Raw, m_or_g_cho
         dictionary with psd parameters originating from config file
     channels : dict
         dictionary with channel names for each channel type: 'mag' or/and 'grad'
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by ch type and lobe
     raw_orig : mne.io.Raw
         raw data
     m_or_g_chosen : list
@@ -1156,7 +1170,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, raw_orig: mne.io.Raw, m_or_g_cho
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
-        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], method)
+        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method)
 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         

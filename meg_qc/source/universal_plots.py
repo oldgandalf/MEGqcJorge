@@ -45,6 +45,35 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
     return m_or_g_tit, unit
 
+def get_ch_color_knowing_name(ch_name: str, chs_by_lobe: dict):
+
+    """
+    Get channel color from chs_by_lobe knowing its name.
+    Currently not used in pipeline. Might be useful later.
+
+    Parameters
+    ----------
+    ch_name : str
+        channel name
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
+    
+    Returns
+    -------
+    color : str
+        color of the channel
+
+    """
+
+    color = 'black'
+    for lobe, ch_obj_list in chs_by_lobe.items():
+        for ch_obj in ch_obj_list:
+            if ch_obj.name == ch_name:
+                color = ch_obj.lobe_color
+                break
+
+    return color
+
 class QC_derivative:
 
     """ 
