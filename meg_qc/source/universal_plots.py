@@ -5,6 +5,8 @@ from io import BytesIO
 import pandas as pd
 import mne
 import warnings
+from IPython.display import display
+
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
@@ -202,8 +204,48 @@ class QC_derivative:
             return 'MUSCLE'
         else:  
             warnings.warn("Check description of this QC_derivative instance: " + self.name)
+
+def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
+
+    """
+    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with lobes as keys and lists of channels as values.
+    df_data : pd.DataFrame
+        Data frame with data to plot.
+    x_values : list
+        List of x values for the plot.
+    
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure.
+
+    """
+
+    fig = go.Figure()
+
+    for lobe, ch_list in chs_by_lobe.items():
         
-def plot_time_series(raw: mne.io.Raw, m_or_g_chosen: str):
+        #Add lobe as a category to the plot
+        #No unfortunatelly you can make it so when you click on lobe you activate/hide all related channels. It is not a proper category in plotly, it is in fact just one more trace.
+        fig.add_trace(go.Scatter(x=x_values, y=[None]*len(x_values), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), showlegend=True, name=lobe.upper()))
+
+        for ch_obj in ch_list:
+            if ch_obj.name in df_data.columns:
+                ch_data=df_data[ch_obj.name].values
+                color = ch_obj.lobe_color 
+                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
+                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
+
+                fig.add_trace(go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=ch_obj.name))
+
+    return fig
+        
+def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
 
     """
     Plots time series of the chosen channels.
@@ -214,6 +256,8 @@ def plot_time_series(raw: mne.io.Raw, m_or_g_chosen: str):
         The raw file to be plotted.
     m_or_g_chosen : str
         The type of the channels to be plotted: 'mag' or 'grad'.
+    chs_by_lobe : dict
+        A dictionary with the keys as the names of the lobes and the values as the lists of the channels in the lobe.
     
     Returns
     -------
@@ -222,19 +266,24 @@ def plot_time_series(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     qc_derivative = []
-    tit, unit = get_tit_and_unit(m_or_g_chosen)
+    tit, unit = get_tit_and_unit(m_or_g)
 
-    picked_channels = mne.pick_types(raw.info, meg=m_or_g_chosen)
+    picked_channels = mne.pick_types(raw.info, meg=m_or_g)
 
     # Downsample data
     raw_resampled = raw.resample(100, npad='auto') #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
 
     data = raw_resampled.get_data(picks=picked_channels) 
 
-    fig = go.Figure()
-
+    ch_names=[]
     for i in range(data.shape[0]):
-        fig.add_trace(go.Scatter(x=raw.times, y=data[i], mode='lines', name=raw.ch_names[picked_channels[i]]))
+        ch_names.append(raw.ch_names[picked_channels[i]])
+
+
+    #put data in data frame with ch_names as columns:
+    df_data=pd.DataFrame(data.T, columns=ch_names)
+
+    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw.times)
 
     # Add title, x axis title, x axis slider and y axis units+title:
     fig.update_layout(

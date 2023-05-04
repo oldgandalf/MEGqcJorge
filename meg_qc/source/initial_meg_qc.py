@@ -580,8 +580,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     time_series_derivs = []
     if default_settings['plot_interactive_time_series'] is True:
         time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
-        for ch_type in m_or_g_chosen:
-            time_series_derivs += plot_time_series(raw_cropped, ch_type)
+        for m_or_g in m_or_g_chosen:
+            time_series_derivs += plot_time_series(raw_cropped, m_or_g, chs_by_lobe[m_or_g])
     else:
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
