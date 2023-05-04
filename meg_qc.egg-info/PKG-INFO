@@ -1,10 +1,7 @@
-Metadata-Version: 1.0
+Metadata-Version: 2.1
 Name: meg-qc
-Version: 0.0.0
-Summary: UNKNOWN
+Version: 0.0.1+4.g243f96b.dirty
 Home-page: https://github.com/ANCPLabOldenburg/MEG-QC-code
 Author: ANCP
-Author-email: UNKNOWN
+Author-email: 
 License: MIT
-Description: UNKNOWN
-Platform: UNKNOWN
