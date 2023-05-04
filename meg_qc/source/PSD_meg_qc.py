@@ -13,7 +13,7 @@ from IPython.display import display
 from typing import List
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, get_ch_color_knowing_name
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
 from meg_qc.source.universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
@@ -111,27 +111,11 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
         
     """
 
-    tit, unit = get_tit_and_unit(m_or_g)
-
     df_psds=pd.DataFrame(psds.T, columns=channels)
 
-    fig = go.Figure()
+    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds, freqs)
 
-    for lobe, ch_list in chs_by_lobe.items():
-        
-        #Add lobe as a category to the plot
-        #No unfortunatelly you can make it so when you click on lobe you activate/hide all related channels. It is not a proper category in plotly, it is in fact just one more trace.
-        fig.add_trace(go.Scatter(x=freqs, y=[None]*len(freqs), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), showlegend=True, name=lobe.upper()))
-
-        for ch_obj in ch_list:
-            if ch_obj.name in df_psds.columns:
-                psd_ch_data=df_psds[ch_obj.name].values
-                color = ch_obj.lobe_color 
-                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
-                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
-
-                fig.add_trace(go.Scatter(x=freqs, y=psd_ch_data, line=dict(color=color), name=ch_obj.name))
-
+    tit, unit = get_tit_and_unit(m_or_g)
     fig.update_layout(
     title={
     'text': method[0].upper()+method[1:]+" periodogram for all "+tit,
