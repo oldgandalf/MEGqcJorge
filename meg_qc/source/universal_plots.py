@@ -454,6 +454,42 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
 
     return trace
 
+def sort_channel_by_lobe(channels_objs: dict):
+
+    """ Sorts channels by lobes.
+
+    Parameters
+    ----------
+    channels_objs : dict
+        A dictionary of channel objects.
+    
+    Returns
+    -------
+    lobes_dict : dict
+        A dictionary of channels sorted by lobes.
+
+    """
+
+    # Create a list of channels to use
+    all_channels = []
+    if 'mag' in channels_objs:
+        all_channels += channels_objs['mag']
+    if 'grad' in channels_objs:
+        all_channels += channels_objs['grad']
+
+    #put all channels into separate lists based on their lobes:
+    lobes_names=list(set([ch.lobe for ch in all_channels]))
+    
+    lobes_dict = {key: [] for key in lobes_names}
+    #fill the dict with channels:
+    for ch in all_channels:
+        lobes_dict[ch.lobe].append(ch) 
+
+    #sort the dict by lobes names:
+    lobes_dict = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+
+    return lobes_dict
+
 
 def plot_sensors_3d(channels_objs: dict):
 
@@ -475,24 +511,8 @@ def plot_sensors_3d(channels_objs: dict):
 
     """
     qc_derivative = []
-
-    # Create a list of channels to use
-    all_channels = []
-    if 'mag' in channels_objs:
-        all_channels += channels_objs['mag']
-    if 'grad' in channels_objs:
-        all_channels += channels_objs['grad']
-
-    #put all channels into separate lists based on their lobes:
-    lobes_names=list(set([ch.lobe for ch in all_channels]))
     
-    lobes_dict = {key: [] for key in lobes_names}
-    #fill the dict with channels:
-    for ch in all_channels:
-        lobes_dict[ch.lobe].append(ch) 
-
-    #sort the dict by lobes names:
-    lobes_dict = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+    lobes_dict = sort_channel_by_lobe(channels_objs)
 
     traces = []
     for lobe in lobes_dict:
