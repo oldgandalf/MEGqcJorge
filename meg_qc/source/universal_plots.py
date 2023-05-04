@@ -454,44 +454,8 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
 
     return trace
 
-def sort_channel_by_lobe(channels_objs: dict):
 
-    """ Sorts channels by lobes.
-
-    Parameters
-    ----------
-    channels_objs : dict
-        A dictionary of channel objects.
-    
-    Returns
-    -------
-    lobes_dict : dict
-        A dictionary of channels sorted by lobes.
-
-    """
-
-    # Create a list of channels to use
-    all_channels = []
-    if 'mag' in channels_objs:
-        all_channels += channels_objs['mag']
-    if 'grad' in channels_objs:
-        all_channels += channels_objs['grad']
-
-    #put all channels into separate lists based on their lobes:
-    lobes_names=list(set([ch.lobe for ch in all_channels]))
-    
-    lobes_dict = {key: [] for key in lobes_names}
-    #fill the dict with channels:
-    for ch in all_channels:
-        lobes_dict[ch.lobe].append(ch) 
-
-    #sort the dict by lobes names:
-    lobes_dict = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
-
-    return lobes_dict
-
-
-def plot_sensors_3d(channels_objs: dict):
+def plot_sensors_3d(chs_by_lobe: dict):
 
     """
     Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
@@ -501,8 +465,8 @@ def plot_sensors_3d(channels_objs: dict):
 
     Parameters
     ----------
-    channels_objs : dict
-        The dictionary with the channels to be plotted and their locations.
+    chs_by_lobe : dict
+        A dictionary of channels by ch type and lobe.
     
     Returns
     -------
@@ -511,8 +475,15 @@ def plot_sensors_3d(channels_objs: dict):
 
     """
     qc_derivative = []
-    
-    lobes_dict = sort_channel_by_lobe(channels_objs)
+
+    # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
+    lobes_dict = {}
+    for ch_type in chs_by_lobe:
+        for lobe in chs_by_lobe[ch_type]:
+            if lobe not in lobes_dict:
+                lobes_dict[lobe] = chs_by_lobe[ch_type][lobe]
+            else:
+                lobes_dict[lobe] += chs_by_lobe[ch_type][lobe]
 
     traces = []
     for lobe in lobes_dict:

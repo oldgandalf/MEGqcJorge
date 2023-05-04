@@ -115,6 +115,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, met
 
     fig = go.Figure()
 
+    
     for col in df_psds:
         fig.add_trace(go.Scatter(x=freqs, y=df_psds[col].values, name=df_psds[col].name));
 

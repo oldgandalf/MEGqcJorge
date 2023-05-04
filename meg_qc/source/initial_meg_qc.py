@@ -434,6 +434,37 @@ def assign_channels_properties(raw: mne.io.Raw):
 
     return channels_objs
 
+def sort_channel_by_lobe(channels_objs: dict):
+
+    """ Sorts channels by lobes.
+
+    Parameters
+    ----------
+    channels_objs : dict
+        A dictionary of channel objects.
+    
+    Returns
+    -------
+    chs_by_lobe : dict
+        A dictionary of channels sorted by ch type and lobe.
+
+    """
+    chs_by_lobe = {}
+    for m_or_g in channels_objs:
+
+        #put all channels into separate lists based on their lobes:
+        lobes_names=list(set([ch.lobe for ch in channels_objs[m_or_g]]))
+        
+        lobes_dict = {key: [] for key in lobes_names}
+        #fill the dict with channels:
+        for ch in channels_objs[m_or_g]:
+            lobes_dict[ch.lobe].append(ch) 
+
+        #sort the dict by lobes names:
+        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+
+    return chs_by_lobe
+
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
@@ -461,10 +492,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     -------
     dict_epochs_mg : dict
         Dictionary with epochs for each channel type: mag, grad.
-    channels_objs: dict
-        Dictionary with channel objects for each channel type: mag, grad. Each bjc hold info about the channel name, lobe area and color code, locations and (in the future) if it has noise of any sort.
-    channels_objs : dict
-        Dictionary with channel names for each channel type: mag, grad.
+    chs_by_lobe : dict
+        Dictionary with channel objects for each channel type: mag, grad. And by lobe. Each obj hold info about the channel name, 
+        lobe area and color code, locations and (in the future) pther info, like: if it has noise of any sort.
     raw_crop_filtered : mne.io.Raw
         Filtered and cropped MEG data.
     raw_crop_filtered_resampled : mne.io.Raw
@@ -530,15 +560,21 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
             
-    #Get channels and their properties:
+    #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
+    #In this dict channels are separated by mag/grads. not by lobes.
     channels_objs = assign_channels_properties(raw)
 
     #Check if there are channels to analyze according to info in config file:
     channels_objs, m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+
+    #Sort channels by lobe - this will be used often for plotting
+    chs_by_lobe = sort_channel_by_lobe(channels_objs)
+
+    #Get channels names - thos wi be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     #Plot sensors:
-    sensors_derivs = plot_sensors_3d(channels_objs)
+    sensors_derivs = plot_sensors_3d(chs_by_lobe)
 
     #Plot time series:
     time_series_derivs = []
@@ -550,4 +586,4 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
         
-    return dict_epochs_mg, channels_objs, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
