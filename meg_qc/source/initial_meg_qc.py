@@ -526,6 +526,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if tmax is None: 
         tmax = raw.times[-1] 
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
+    #When resampling for plotting, cropping or anything else you don't need permanent in raw inside any functions - always do raw_new=raw.copy() not just raw_new=raw. The last command doesn't create a new object, the whole raw will be changed and this will also be passed to other functions even if you don't return the raw.
 
 
     #Data filtering:

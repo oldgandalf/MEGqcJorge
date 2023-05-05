@@ -271,7 +271,8 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     picked_channels = mne.pick_types(raw.info, meg=m_or_g)
 
     # Downsample data
-    raw_resampled = raw.resample(100, npad='auto') #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
+    raw_resampled = raw.copy().resample(100, npad='auto') 
+    #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
 
     data = raw_resampled.get_data(picks=picked_channels) 
 
@@ -283,7 +284,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     #put data in data frame with ch_names as columns:
     df_data=pd.DataFrame(data.T, columns=ch_names)
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw.times)
+    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
 
     # Add title, x axis title, x axis slider and y axis units+title:
     fig.update_layout(
@@ -805,6 +806,83 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
 
     fig = go.Figure()
+
+    fig.add_trace(go.Box(x=df[hover_tit],
+    name="",
+    text=df[hover_tit].index, 
+    opacity=0.7, 
+    boxpoints="all", 
+    pointpos=0,
+    marker_size=5,
+    line_width=1))
+    fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
+        
+
+    fig.update_layout(
+        yaxis={'visible': False, 'showticklabels': False},
+        xaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+        xaxis_title=y_ax_and_fig_title+" in "+unit,
+        title={
+        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+        
+    #fig.show()
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
+
+def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: list, what_data: str):
+
+    """
+    Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
+    each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
+
+    Parameters
+    ----------
+    std_data : list
+        list of std values for each channel
+    ch_type : str
+        'mag' or 'grad'
+    channels : list
+        list of channel names
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='PP_Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_all_data_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_all_data_'+ch_tit
+
+    df = pd.DataFrame (std_data, index=[hover_tit], columns=channels)
+
+    # create box plot trace
+    box_trace = go.Box(x=df['values'], y=df.index, orientation='h', name='')
+
+    fig = go.Figure(data=[box_trace])
+
+    for v in df['values']:
+        fig.add_trace(go.Scatter(x=[v], y=[hover_tit], mode='markers', marker=dict(size=5, color='yellow'), name='Scatter Plot', hovertext=df.index))
+
 
     fig.add_trace(go.Box(x=df[hover_tit],
     name="",
