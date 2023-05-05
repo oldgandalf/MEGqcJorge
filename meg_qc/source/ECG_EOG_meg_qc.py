@@ -1,10 +1,12 @@
 import mne
 import numpy as np
+import pandas as pd
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
 import plotly.graph_objects as go
 from scipy.signal import find_peaks
 from typing import List
+from universal_plots import plot_df_of_channels_data_as_lines_by_lobe
 
 import matplotlib
 #matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
@@ -448,7 +450,7 @@ class Avg_artif:
             yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-            yaxis_title='Mean artifact magnitude in '+unit,
+            yaxis_title='Artifact magnitude in '+unit,
             title={
                 'text': fig_tit+fig_ch_tit,
                 'y':0.85,
@@ -574,7 +576,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
     return affected, not_affected, artifact_lvl
 
 
-def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, flip_data: bool or str = 'flip'):
+def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, chs_by_lobe: dict, flip_data: bool or str = 'flip'):
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
@@ -591,6 +593,8 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
         Either 'mag' or 'grad'.
     fig_tit: str
         The title of the figure.
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
     flip_data : bool
         If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
         'flip' means that the data will be flipped if the peak of the artifact is negative. 
@@ -604,14 +608,44 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
         
     """
-    fig=go.Figure()
+    
     if artif_affected_channels: #if affected channels present:
-        title = fig_tit+str(len(artif_affected_channels))+' '
+
+        #plot channels separated by lobes:
+        affected_names_list = []
+        affected_data_list = []
         for ch in artif_affected_channels:
-            fig=ch.plot_epoch_and_peak(t, title, ch_type, fig)
+            affected_names_list.append(ch.name)
+            affected_data_list.append(ch.artif_data)
+        affected_data_arr = np.array(affected_data_list)
+        df_affected=pd.DataFrame(affected_data_arr.T, columns=affected_names_list)
+        fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_affected, t)
+
+        #decorate the plot:
+        ch_type_tit, unit = get_tit_and_unit(ch_type)
+        fig.update_layout(
+            xaxis_title='Time in seconds',
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title='Mean artifact magnitude in '+unit,
+            title={
+                'text': fig_tit+str(len(artif_affected_channels))+' '+ch_type_tit,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+
+        # OR old way (no separation by lobes):
+        # fig=go.Figure()
+        # for ch in artif_affected_channels:
+        #     fig=ch.plot_epoch_and_peak(t, title, ch_type, fig)
+
+
     else:
-        fig_ch_tit, _ = get_tit_and_unit(ch_type)
-        title=title=fig_tit+'0 ' +fig_ch_tit
+        fig=go.Figure()
+        ch_type_tit, _ = get_tit_and_unit(ch_type)
+        title=fig_tit+'0 ' +ch_type_tit
         fig.update_layout(
             title={
             'text': title,
@@ -621,11 +655,11 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
             'yanchor': 'top'})
         
     #in any case - add the threshold on the plot
-    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), name='Thres=mean_peak/norm_lvl')) #add threshold level
+    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
     fig.show()
 
     if flip_data is False: 
-        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), name='-Thres=mean_peak/norm_lvl'))
+        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), line=dict(color='black'), name='-Thres=mean_peak/norm_lvl'))
 
     return fig
 
@@ -831,7 +865,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip'):
+def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip'):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -883,6 +917,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         ECG epochs.
     channels : list
         List of channels to use.
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
     m_or_g : str
         'mag' or 'grad'.
     norm_lvl : float
@@ -1002,8 +1038,8 @@ def find_affected_channels(ecg_epochs: mne.Epochs, channels: list, m_or_g: str, 
         artif_affected_channels, ecg_not_affected_channels, artifact_lvl = detect_channels_above_norm(norm_lvl=norm_lvl, list_mean_artif_epochs=artif_epoch_per_ch, mean_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog)
 
         if plotflag is True:
-            fig_affected = plot_affected_channels(artif_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', flip_data=flip_data)
-            fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', flip_data=flip_data)
+            fig_affected = plot_affected_channels(artif_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', chs_by_lobe=chs_by_lobe, flip_data=flip_data)
+            fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', chs_by_lobe=chs_by_lobe, flip_data=flip_data)
             affected_derivs += [QC_derivative(fig_affected, ecg_or_eog+'_affected_channels_'+m_or_g, 'plotly')]
             affected_derivs += [QC_derivative(fig_not_affected, ecg_or_eog+'_not_affected_channels_'+m_or_g, 'plotly')]
 
@@ -1151,7 +1187,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 #%%
-def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen: list):
+def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: dict, m_or_g_chosen: list):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -1163,7 +1199,9 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
     raw : mne.io.Raw
         Raw data.
     channels : dict
-        Dictionary with listds of channels for each channel type (typer mag and grad).
+        Dictionary with listds of channels for each channel type (mag and grad).
+    chs_by_lobe : dict
+        Dictionary with lists of channels by lobe.
     m_or_g_chosen : list
         List of channel types chosen for the analysis.
         
@@ -1225,7 +1263,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], chs_by_lobe[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=6, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         ecg_derivs += affected_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
@@ -1237,7 +1275,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, m_or_g_chosen:
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: dict, m_or_g_chosen: list):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -1249,7 +1287,9 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
     raw : mne.io.Raw
         Raw MEG data.
     channels : dict
-        Dictionary with listds of channels for each channel type (typer mag and grad).
+        Dictionary with listds of channels for each channel type (mag and grad).
+    chs_by_lobe : dict
+        Dictionary with lists of channels separated by lobe.
     m_or_g_chosen : list
         List of channel types chosen for the analysis.
         
@@ -1319,7 +1359,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, m_or_g_chosen:
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=8, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
+        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], chs_by_lobe[m_or_g],  m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=8, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data)
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         eog_derivs += affected_derivs
         avg_objects_eog.append(avg_overall_obj)

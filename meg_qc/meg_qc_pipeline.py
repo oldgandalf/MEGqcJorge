@@ -115,7 +115,7 @@ def make_derivative_meg_qc(config_file_path):
         avg_eog=[]
 
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especia;ly 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
-        for sid in list_of_subs[0:1]: 
+        for sid in list_of_subs[4:5]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -175,13 +175,13 @@ def make_derivative_meg_qc(config_file_path):
                 if all_qc_params['default']['run_ECG'] is True:
                     print('___MEG QC___: ', 'Starting ECG...')
                     start_time = time.time()
-                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels,  m_or_g_chosen)
+                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen)
                     print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_EOG'] is True:
                     print('___MEG QC___: ', 'Starting EOG...')
                     start_time = time.time()
-                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels,  m_or_g_chosen)
+                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen)
                     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                     avg_ecg += avg_objects_ecg
