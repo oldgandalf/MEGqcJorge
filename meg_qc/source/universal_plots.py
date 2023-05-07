@@ -6,6 +6,7 @@ import pandas as pd
 import mne
 import warnings
 from IPython.display import display
+import random
 
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
@@ -205,7 +206,7 @@ class QC_derivative:
         else:  
             warnings.warn("Check description of this QC_derivative instance: " + self.name)
 
-def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
+def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
@@ -244,7 +245,62 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
                 fig.add_trace(go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=ch_obj.name))
 
     return fig
+
+def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
+
+    """
+    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with lobes as keys and lists of channels as values.
+    df_data : pd.DataFrame
+        Data frame with data to plot.
+    x_values : list
+        List of x values for the plot.
+    
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure.
+
+    """
+
+    fig = go.Figure()
+    traces_lobes=[]
+    traces_chs=[]
+    for lobe, ch_list in chs_by_lobe.items():
         
+        #Add lobe as a category to the plot
+        #No unfortunatelly you can make it so when you click on lobe you activate/hide all related channels. It is not a proper category in plotly, it is in fact just one more trace.
+        # fig.add_trace(go.Scatter(x=x_values, y=[None]*len(x_values), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), legendgroup=ch_list[0].lobe, showlegend=True, name=lobe.upper()))
+
+        traces_lobes += [go.Scatter(x=x_values, y=[None]*len(x_values), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), legendgroup=ch_list[0].lobe, showlegend=True, name=lobe.upper())]
+        for ch_obj in ch_list:
+            if ch_obj.name in df_data.columns:
+                ch_data=df_data[ch_obj.name].values
+                color = ch_obj.lobe_color 
+                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
+                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
+
+                traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=ch_obj.name, legendgroup=ch_obj.lobe)]
+
+    # sort traces in random order:
+    # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
+    # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
+    traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
+
+    # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
+    # Also we onlu mix and sort the channels. The order of lobes we keep the same. If not - the lobe legend will pop up 
+    # in random places of the legen insted of on top of the channels of the lobe.
+    fig = go.Figure(data=traces)
+
+    fig.update_layout(legend_traceorder='grouped')
+    
+    return fig
+        
+
 def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
 
     """
