@@ -82,6 +82,7 @@ def get_all_config_params(config_file_name: str):
             'run_Muscle': run_Muscle,
             'dataset_path': ds_paths,
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
+            'verbose_plots': default_section.getboolean('verbose_plots'),
             'crop_tmin': tmin,
             'crop_tmax': tmax})
         all_qc_params['default'] = default_params
@@ -308,23 +309,11 @@ def sanity_check(m_or_g_chosen, channels_objs):
 class MEG_channels:
 
     """ 
-    Channel with info about it such as name, type, lobe area and color code for plotting.
-
-    Attributes
-    ----------
-    name : str
-        The name of the channel.
-    type : str
-        The type of the channel: 'mag', 'grad'
-    lobe : str
-        The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
-    lobe_color : str
-        The color code for plotting with plotly according to the lobe area of the channel.
-
+    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
 
     """
 
-    def __init__(self, name, type, lobe, lobe_color, loc):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
 
         """
         Constructor method
@@ -339,6 +328,20 @@ class MEG_channels:
             The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
         lobe_color : str
             The color code for plotting with plotly according to the lobe area of the channel.
+        loc : list
+            The location of the channel on the helmet.
+        time_series : array
+            The time series of the channel.
+        std_overall : float
+            The standard deviation of the channel time series.
+        std_epoch : array
+            The standard deviation of the channel time series per epochs.
+        psd : array
+            The power spectral density of the channel.
+        mean_ecg : float
+            The mean ECG artifact of the channel.
+        mean_eog : float
+            The mean EOG artifact of the channel.
 
         """
 
@@ -347,6 +350,12 @@ class MEG_channels:
         self.lobe = lobe
         self.lobe_color = lobe_color
         self.loc = loc
+        self.time_series = time_series
+        self.std_overall = std_overall
+        self.std_epoch = std_epoch
+        self.psd = psd
+        self.mean_ecg = mean_ecg
+        self.mean_eog = mean_eog
 
     def __repr__(self):
 
@@ -586,5 +595,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     else:
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
         time_series_derivs = []
+
+    verbose_plots = default_settings['verbose_plots']
         
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, verbose_plots

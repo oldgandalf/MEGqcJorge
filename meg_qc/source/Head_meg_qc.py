@@ -6,6 +6,7 @@ import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
 from meg_qc.source.universal_plots import QC_derivative
+import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
 mne.viz.set_browser_backend('matplotlib')
 
@@ -119,7 +120,7 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
     return simple_metric
 
 
-def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
+def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool = False):
 
     """ 
     Plot positions and rotations of the head.
@@ -130,6 +131,8 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
         Raw data.
     head_pos : np.ndarray
         Head positions and rotations.
+    verbose_plots : bool
+        True for showing plot in notebook.
         
     Returns
     -------
@@ -145,6 +148,9 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
         raw.info['dev_head_t'])
     average_head_dev_t = mne.transforms.invert_transform(
         compute_average_dev_head_t(raw, head_pos))
+
+    if verbose_plots is False:
+        matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
     #plot using MNE:
     fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
@@ -199,7 +205,10 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
-    fig1p.show()
+
+    if verbose_plots is True:
+        fig1p.show()
+
     head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
     return head_derivs, head_pos_baselined
@@ -209,6 +218,7 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
     """
     Plot raw data with annotated head movement. Currently not used.
+
     
     Parameters
     ----------
@@ -306,7 +316,7 @@ def get_head_positions(raw: mne.io.Raw):
 
 
 
-def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_annotations: bool =False):
+def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: bool =True, plot_annotations: bool =False):
 
     """
     Main function for head movement. Calculates:
@@ -322,6 +332,8 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
     ----------
     raw : mne.io.Raw
         Raw data.
+    verbose_plots : bool
+        True for showing plot in notebook.
     plot_with_lines : bool
         If True, plot head movement with lines.
     plot_annotations : bool
@@ -363,7 +375,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, plot_with_lines: bool =True, plot_anno
         head_pos_derivs = []
 
     if plot_annotations is True:
-        plot_annot_derivs = make_head_annots_plot(raw, head_pos)
+        plot_annot_derivs = make_head_annots_plot(raw, head_pos, verbose_plots=verbose_plots)
     else:
         plot_annot_derivs = []
 

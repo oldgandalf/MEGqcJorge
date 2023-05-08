@@ -91,7 +91,7 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict, muscle_s
     return simple_metric
 
 
-def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, threshold_muscle: float, muscle_times: np.ndarray, high_scores_muscle: np.ndarray, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
+def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, threshold_muscle: float, muscle_times: np.ndarray, high_scores_muscle: np.ndarray, verbose_plots: bool, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
 
     """
     Plot the muscle events with the z-scores and the threshold.
@@ -110,6 +110,8 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
         The times of the muscle events.
     high_scores_muscle : np.ndarray
         The z-scores of the muscle events over the threshold.
+    verbose_plots : bool
+        True for showing plot in notebook.
     annot_muscle : mne.Annotations
         The annotations of the muscle events. Used only for interactive_matplot.
     interactive_matplot : bool
@@ -134,7 +136,9 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
     'x':0.5,
     'xanchor': 'center',
     'yanchor': 'top'})
-    fig.show()
+
+    if verbose_plots is True:
+        fig.show()
 
     fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit+'_threshold_zscore_'+str(threshold_muscle), 'plotly')]
 
@@ -144,6 +148,10 @@ def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, thresho
         raw.set_annotations(annot_muscle)
         fig2=raw.plot(start=5, duration=20, order=order)
         #Change settings to show all channels!
+
+        # No suppressing of plots should be done here. This one is matplotlib interactive plot, so it ll only work with %matplotlib qt.
+        # Makes no sense to suppress it. Also, adding to QC_derivative is just formal, cos whe extracting to html it s not interactive any more. 
+        # Should not be added to report. Kept here in case mne will allow to extract interactive later.
 
         fig_derivs += [QC_derivative(fig2, 'muscle_annotations_'+tit, 'matplotlib')]
 
@@ -261,7 +269,7 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
 
     return raw
 
-def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
+def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, verbose_plots: bool, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -286,9 +294,15 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
         The powerline frequencies found in the data by previously running PSD_meg_qc.
     m_or_g_chosen : list
         The channel types chosen for the analysis: 'mag' or 'grad'.
+    verbose_plots : bool
+        True for showing plot in notebook.
     interactive_matplot : bool
         Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report. 
         But might just be useful for beter undertanding while maintaining this function.
+    attach_dummy : bool
+        Whether to attach dummy data to the start and end of the recording to avoid filtering artifacts. Default is True.
+    cut_dummy : bool
+        Whether to cut the dummy data after filtering. Default is True.
 
     Returns
     -------
@@ -375,7 +389,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
             muscle_times = raw.times[peak_locs_pos]
             high_scores_muscle=scores_muscle[peak_locs_pos]
 
-            muscle_derivs += plot_muscle(m_or_g, raw, scores_muscle, threshold_muscle, muscle_times, high_scores_muscle, interactive_matplot, annot_muscle)
+            muscle_derivs += plot_muscle(m_or_g, raw, scores_muscle, threshold_muscle, muscle_times, high_scores_muscle, verbose_plots, interactive_matplot, annot_muscle)
 
             # collect all details for simple metric:
             z_score_details['muscle_event_times'] = muscle_times.tolist()

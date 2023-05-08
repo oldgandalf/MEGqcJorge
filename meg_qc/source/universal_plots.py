@@ -298,6 +298,10 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
     #But then you cant see individual channels, it turn on/off the whole group. There is no option to tun group off by clicking on group title. Grup title and group items behave the same.
 
+    #to see the legend: there is really nothing to sort here. The legend is sorted by default by the order of the traces in the figure. The onl way is to group the traces by lobe.
+    #print(fig['layout'])
+
+    #https://plotly.com/python/reference/?_ga=2.140286640.2070772584.1683497503-1784993506.1683497503#layout-legend-traceorder
     
     return fig
         
@@ -596,7 +600,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
     """
     Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
     Can turn mags/grads visialisation on and off.
-    To be addded: separete channels into brain areas by color coding.
+    Separete channels into brain areas by color coding.
 
 
     Parameters
@@ -650,7 +654,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
     return qc_derivative
 
 
-def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
+def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str, verbose_plots: bool):
 
     """
     Creates representation of calculated data as multiple boxplots. Used in RMSE and PtP_manual measurements. 
@@ -669,6 +673,8 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
         Type of the data: 'peaks' or 'stds'
     x_axis_boxes : str
         What to plot as boxplot on x axis: 'channels' or 'epochs'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -739,14 +745,15 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             'yanchor': 'top'},
         legend_title=legend_title)
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return fig_deriv
 
 
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
+def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool) -> QC_derivative:
 
     """
     Create representation of calculated data as multiple boxplots: 
@@ -762,6 +769,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
         title, like "Magnetometers", or "Gradiometers", 
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -818,14 +827,15 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
             'yanchor': 'top'},
         legend_title="Epochs")
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
+def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -841,6 +851,8 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -888,14 +900,15 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: list, what_data: str):
+def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -911,6 +924,8 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -932,23 +947,25 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
 
     df = pd.DataFrame (std_data, index=[hover_tit], columns=channels)
 
+    display(df)
+
     # create box plot trace
     box_trace = go.Box(x=df['values'], y=df.index, orientation='h', name='')
 
     fig = go.Figure(data=[box_trace])
 
     for v in df['values']:
-        fig.add_trace(go.Scatter(x=[v], y=[hover_tit], mode='markers', marker=dict(size=5, color='yellow'), name='Scatter Plot', hovertext=df.index))
+        fig.add_trace(go.Scatter(x=[v], y=[hover_tit], mode='markers', marker=dict(size=5, color='yellow'), name='', hovertext=df.index))
 
 
-    fig.add_trace(go.Box(x=df[hover_tit],
-    name="",
-    text=df[hover_tit].index, 
-    opacity=0.7, 
-    boxpoints="all", 
-    pointpos=0,
-    marker_size=5,
-    line_width=1))
+    # fig.add_trace(go.Box(x=df[hover_tit],
+    # name="",
+    # text=df[hover_tit].index, 
+    # opacity=0.7, 
+    # boxpoints="all", 
+    # pointpos=0,
+    # marker_size=5,
+    # line_width=1))
     fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
         
 
@@ -965,7 +982,8 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 

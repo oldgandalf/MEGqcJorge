@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_std_hovering_plotly_lobes, boxplot_epochs, QC_derivative, boxplot_epochs
 from meg_qc.source.universal_html_report import simple_metric_basic
 
 # In[2]:
@@ -463,7 +463,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
 
     """
     Main STD function. Calculates:
@@ -484,6 +484,8 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
         raw data
     m_or_g_chosen : list
         list of strings with channel types chosen by user: ['mag', 'grad'] or ['mag'] or ['grad']
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -510,15 +512,15 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
     for m_or_g in m_or_g_chosen:
 
         std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
-        derivs_std += [boxplot_std_hovering_plotly(std_data=std_all_data[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds')]
+        derivs_std += [boxplot_std_hovering_plotly(std_data=std_all_data[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
-            fig_std_epoch += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels')]
-            fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs')]
+            fig_std_epoch += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)]
+            fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
             #deriv_epoch_std[m_or_g] = get_big_small_std_ptp_epochs(df_std, m_or_g, std_params['std_lvl'], 'std') 
             #derivs_list += deriv_epoch_std[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_std list at the next line.
