@@ -2,12 +2,36 @@ import plotly
 import plotly.graph_objects as go
 import base64
 from io import BytesIO
+import numpy as np
 import pandas as pd
 import mne
 import warnings
 from IPython.display import display
 import random
+import copy
 
+def check_num_channels_correct(chs_by_lobe: dict, note: str):
+
+    """ 
+    Print total number of channels in all lobes for 1 ch type (must be 102 mag and 204 grad in Elekta/Neuromag)
+    
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        A dictionary of channels sorted by ch type and lobe.
+    note : str
+        A note to print with the total number of channels.
+    
+    Returns
+    -------
+    
+    """
+    for m_or_g in ['mag', 'grad']:
+        total_number = sum([len(chs_by_lobe[m_or_g][key]) for key in chs_by_lobe[m_or_g].keys()])
+        print("_______"+note+"_______total number in " + m_or_g, total_number)
+        print("_______"+note+"_______must be 102 mag and 204 grad in Elekta/Neuromag")
+
+    return 
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
@@ -303,6 +327,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 
     #https://plotly.com/python/reference/?_ga=2.140286640.2070772584.1683497503-1784993506.1683497503#layout-legend-traceorder
     
+
     return fig
         
 
@@ -614,16 +639,20 @@ def plot_sensors_3d(chs_by_lobe: dict):
         A list of QC_derivative objects containing the plotly figures with the sensor locations.
 
     """
+
+    chs_by_lobe_copy = copy.deepcopy(chs_by_lobe)
+    #otherwise we will change the original dict here and keep it messed up for the next function
+
     qc_derivative = []
 
     # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
     lobes_dict = {}
-    for ch_type in chs_by_lobe:
-        for lobe in chs_by_lobe[ch_type]:
+    for ch_type in chs_by_lobe_copy:
+        for lobe in chs_by_lobe_copy[ch_type]:
             if lobe not in lobes_dict:
-                lobes_dict[lobe] = chs_by_lobe[ch_type][lobe]
+                lobes_dict[lobe] = chs_by_lobe_copy[ch_type][lobe]
             else:
-                lobes_dict[lobe] += chs_by_lobe[ch_type][lobe]
+                lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
 
     traces = []
     for lobe in lobes_dict:
@@ -643,6 +672,9 @@ def plot_sensors_3d(chs_by_lobe: dict):
         'x':0.5,
         'xanchor': 'center',
         'yanchor': 'top'})
+
+    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
+
 
     # Add the button to have names show up on hover or always:
     fig = switch_names_on_off(fig)
@@ -835,16 +867,17 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbos
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
+def boxplot_std_hovering_plotly_OLD(std_data_named: dict, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
     each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
+    OLD but still working version, currently not used. Other principal than the current one so left for reference.
 
     Parameters
     ----------
-    std_data : list
-        list of std values for each channel
+    std_data_named : dict
+        std values for each channel
     ch_type : str
         'mag' or 'grad'
     channels : list
@@ -860,6 +893,8 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         QC_derivative object with plotly figure as content
 
     """
+    # Put all values in 1 array from the dictionsry:
+    std_data = np.array(list(std_data_named.values()))
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -908,7 +943,7 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
+def boxplot_std_hovering_plotly(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -916,8 +951,8 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
 
     Parameters
     ----------
-    std_data : list
-        list of std values for each channel
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
     ch_type : str
         'mag' or 'grad'
     channels : list
@@ -944,32 +979,35 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_all_data_'+ch_tit
+    else:
+        raise ValueError('what_data must be set to "stds" or "peaks"')
 
-    df = pd.DataFrame (std_data, index=[hover_tit], columns=channels)
-
-    display(df)
+    boxwidth=0.4
 
     # create box plot trace
-    box_trace = go.Box(x=df['values'], y=df.index, orientation='h', name='')
+    # Put all values in 1 array from the dictionary:
+    values_all=[]
+    traces = []
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            if what_data == 'stds':
+                data = ch.std_overall
+            elif what_data == 'peaks':
+                data = ch.ptp_overall
+            values_all += [data]
 
-    fig = go.Figure(data=[box_trace])
+            y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) #here create randow y values, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
 
-    for v in df['values']:
-        fig.add_trace(go.Scatter(x=[v], y=[hover_tit], mode='markers', marker=dict(size=5, color='yellow'), name='', hovertext=df.index))
+    box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)
+    all_traces = [box_trace]+traces
+    fig = go.Figure(data=all_traces)
 
-
-    # fig.add_trace(go.Box(x=df[hover_tit],
-    # name="",
-    # text=df[hover_tit].index, 
-    # opacity=0.7, 
-    # boxpoints="all", 
-    # pointpos=0,
-    # marker_size=5,
-    # line_width=1))
-    fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
+    fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
         
 
     fig.update_layout(
+        yaxis_range=[-0.5,0.5],
         yaxis={'visible': False, 'showticklabels': False},
         xaxis = dict(
         showexponent = 'all',

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_std_hovering_plotly_lobes, boxplot_epochs, QC_derivative, boxplot_epochs
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
 from meg_qc.source.universal_html_report import simple_metric_basic
 
 # In[2]:
@@ -61,7 +61,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
     Returns
     -------
-    np.ndarray
+    dict
         rmse/std for each channel
     
     """
@@ -70,10 +70,15 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
     #std_channels = RMSE(data_channels)
     std_channels = np.std(data_channels, axis=1)
 
-    return std_channels
+    #add channel name for every std value:
+    std_channels_named = {}
+    for i, ch in enumerate(channels):
+        std_channels_named[ch] = std_channels[i]
+
+    return std_channels_named
 
 
-def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: list, std_multiplier: float):
+def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: list, std_multiplier: float):
 
     """
     Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
@@ -88,7 +93,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
 
     Parameters
     ----------
-    ptp_or_std_channels : np.ndarray
+    ptp_or_std_channels_named : dict
         peak-to-peak amplitude or std for each channel
     channels : list
         list of channel names
@@ -103,7 +108,9 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels: np.ndarray, channels: li
         dictionary with channel names and their stds/ptp values. Flat channels.
 
     """
-    
+    # Put all values in 1 array from the dictionsry:
+    ptp_or_std_channels = np.array(list(ptp_or_std_channels_named.values()))
+
     ## Check if channel data is within std level of PtP/std.
     std_of_measure_channels=np.std(ptp_or_std_channels)
     mean_of_measure_channels=np.mean(ptp_or_std_channels)
@@ -463,7 +470,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
+def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
 
     """
     Main STD function. Calculates:
@@ -478,6 +485,8 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
         dictionary with parameters for std metric, originally from config file
     channels : dict
         dictionary with channel names for each channel type: channels['mag'] or channels['grad']
+    chs_by_lobe : dict
+        dictionary with channels grouped first by ch type and then by lobe: chs_by_lobe['mag']['Left Occipital'] or chs_by_lobe['grad']['Left Occipital']
     dict_epochs_mg : dict
         dictionary with epochs for each channel type: dict_epochs_mg['mag'] or dict_epochs_mg['grad']
     data : mne.io.Raw
@@ -506,13 +515,25 @@ def STD_meg_qc(std_params: dict, channels: dict, dict_epochs_mg: dict, data: mne
     fig_std_epoch = []
     fig_std_epoch2 = []
     derivs_list = []
-    deriv_epoch_std={}
     noisy_flat_epochs_derivs={}
+
+    chs_by_lobe_copy=chs_by_lobe.copy()
+    # copy here, because want to keep original dict unchanged. 
+    # In principal it s good to collect all data about channel metrics there BUT if the metrics are run in parallel this might produce conflicts 
+    # (without copying  dict can be chanaged both inside+outside this function even when it is not returned.)
 
     for m_or_g in m_or_g_chosen:
 
         std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
-        derivs_std += [boxplot_std_hovering_plotly(std_data=std_all_data[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='stds', verbose_plots=verbose_plots)]
+
+        #Add std data into channel object inside the chs_by_lobe dictionary:
+        
+        for lobe in chs_by_lobe_copy[m_or_g]:
+            for ch in chs_by_lobe_copy[m_or_g][lobe]:
+                ch.std_overall = std_all_data[m_or_g][ch.name]
+                #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
+
+        derivs_std += [boxplot_std_hovering_plotly(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 

@@ -101,8 +101,8 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
 
     Returns:
     --------
-    peak_ampl_channels : list
-        List of peak-to-peak amplitude values for each channel in the same order as in channels list.
+    peak_ampl_channels : dict
+        Peak-to-peak amplitude values for each channel.
 
     """
         
@@ -119,8 +119,13 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
 
         pp_ampl, _ = neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         peak_ampl_channels.append(pp_ampl)
+
+    #add channel name for every std value:
+    peak_ampl_channels_named = {}
+    for i, ch in enumerate(channels):
+        peak_ampl_channels_named[ch] = peak_ampl_channels[i]
         
-    return peak_ampl_channels
+    return peak_ampl_channels_named
 
 
 # In[7]:

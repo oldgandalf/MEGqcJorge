@@ -281,29 +281,25 @@ def sanity_check(m_or_g_chosen, channels_objs):
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
         m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
-        channels_objs = None
         raise ValueError(m_or_g_skipped_str)
     if channels_objs['mag'] is None and 'mag' in m_or_g_chosen:
         m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
-        channels_objs['mag'] = None
     elif channels_objs['grad'] is None and 'grad' in m_or_g_chosen:
         m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
-        channels_objs['grad'] = None
     elif channels_objs['mag'] is None and channels_objs['grad'] is None:
         m_or_g_chosen = []
         m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
-        channels_objs = None
         raise ValueError(m_or_g_skipped_str)
     else:
         m_or_g_skipped_str = ''
     
     #Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
         
-    return channels_objs, m_or_g_chosen, m_or_g_skipped_str
+    return m_or_g_chosen, m_or_g_skipped_str
 
 
 class MEG_channels:
@@ -313,7 +309,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
 
         """
         Constructor method
@@ -336,6 +332,10 @@ class MEG_channels:
             The standard deviation of the channel time series.
         std_epoch : array
             The standard deviation of the channel time series per epochs.
+        ptp_overall : float
+            The peak-to-peak amplitude of the channel time series.
+        ptp_epoch : array
+            The peak-to-peak amplitude of the channel time series per epochs.
         psd : array
             The power spectral density of the channel.
         mean_ecg : float
@@ -353,6 +353,8 @@ class MEG_channels:
         self.time_series = time_series
         self.std_overall = std_overall
         self.std_epoch = std_epoch
+        self.ptp_overall = ptp_overall
+        self.ptp_epoch = ptp_epoch
         self.psd = psd
         self.mean_ecg = mean_ecg
         self.mean_eog = mean_eog
@@ -364,8 +366,11 @@ class MEG_channels:
         
         """
 
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc})'
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
+        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
 
 
 def assign_channels_properties(raw: mne.io.Raw):
@@ -374,7 +379,7 @@ def assign_channels_properties(raw: mne.io.Raw):
     Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
 
     Can later try to make this function a method of the MEG_channels class. 
-    At the moment not possible because it needs to know the total number of channels to figure which system to use. And MEG_channels class is created for each channel separately.
+    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
 
     Parameters
     ----------
@@ -473,7 +478,7 @@ def sort_channel_by_lobe(channels_objs: dict):
         chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
 
     return chs_by_lobe
-
+    
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
@@ -574,13 +579,16 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #In this dict channels are separated by mag/grads. not by lobes.
     channels_objs = assign_channels_properties(raw)
 
+
     #Check if there are channels to analyze according to info in config file:
-    channels_objs, m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+    m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channel_by_lobe(channels_objs)
 
-    #Get channels names - thos wi be used all over the pipeline. Holds only names of channels that are to be analyzed:
+
+    #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     #Plot sensors:
