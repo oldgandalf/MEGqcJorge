@@ -413,10 +413,10 @@ def assign_channels_properties(raw: mne.io.Raw):
         'Right Frontal': '#ff7f0e',
         'Left Temporal': '#2ca02c',
         'Right Temporal': '#9467bd',
-        'Left Parietal': '#e55c5c',
-        'Right Parietal': '#17becf',
-        'Left Occipital': '#ffbb78',
-        'Right Occipital': '#e377c2'}
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf'}
     
     #assign treux labels to the channels:
     if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
