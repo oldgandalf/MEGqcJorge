@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs_lobes
 from meg_qc.source.universal_html_report import simple_metric_basic
 
 # In[2]:
@@ -539,16 +539,23 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
+
+            #Add std epoch data into channel object inside the chs_by_lobe dictionary:
+            for lobe in chs_by_lobe_copy[m_or_g]:
+                for ch in chs_by_lobe_copy[m_or_g][lobe]:
+                    ch.std_epoch = df_std.loc[ch.name].values
+                    #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
+
+            epochs_names = df_std.columns.tolist()
+            fig_std_epoch += [boxplot_epochs_lobes(chs_by_lobe_copy[m_or_g], epochs_names, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
             fig_std_epoch += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)]
             fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
-            #deriv_epoch_std[m_or_g] = get_big_small_std_ptp_epochs(df_std, m_or_g, std_params['std_lvl'], 'std') 
-            #derivs_list += deriv_epoch_std[m_or_g] # dont delete/change line, otherwise it will mess up the order of df_epoch_std list at the next line.
 
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_std, m_or_g, 'std', std_params['noisy_channel_multiplier'], std_params['flat_multiplier'], std_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
-            #df_epoch_std[0].content - df with stds per channel per epoch, other 2 dfs have True/False values calculated on base of 1st df.
         metric_local=True
         std_str = ''
     else:

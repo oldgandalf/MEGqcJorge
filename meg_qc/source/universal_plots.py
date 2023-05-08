@@ -689,7 +689,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str, verbose_plots: bool):
 
     """
-    Creates representation of calculated data as multiple boxplots. Used in RMSE and PtP_manual measurements. 
+    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
 
     - If x_axis_boxes is 'channels', each box represents 1 epoch, each dot is std of 1 channel for this epoch
     - If x_axis_boxes is 'epochs', each box represents 1 channel, each dot is std of 1 epoch for this channel
@@ -776,6 +776,112 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             'xanchor': 'center',
             'yanchor': 'top'},
         legend_title=legend_title)
+        
+    if verbose_plots is True:
+        fig.show()
+
+    fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return fig_deriv
+
+
+def boxplot_epochs_lobes(chs_by_lobe: dict, epochs_names: list, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
+    Color tagged channels by lobes. 
+    
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with channel objects sorted by lobe.
+    epochs_names : list
+        List of epoch names like [0, 1, 2, 3...]
+    ch_type : str
+        Type of the channel: 'mag', 'grad'
+    what_data : str
+        Type of the data: 'peaks' or 'stds'
+    x_axis_boxes : str
+        What to plot as boxplot on x axis: 'channels' or 'epochs'
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    fig_deriv : QC_derivative 
+        derivative containing plotly figure
+    
+    """
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+    else:
+        print('what_data should be either peaks or stds')
+
+    x_axis_boxes = 'channels'
+    if x_axis_boxes=='channels':
+        hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
+    elif x_axis_boxes=='epochs':
+        #legend_title = 'Epochs'
+        hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
+    else:
+        print('x_axis_boxes should be either channels or epochs')
+
+
+    fig = go.Figure()
+
+    boxes_names = []
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            if what_data == 'stds':
+                data = ch.std_epoch
+            elif what_data == 'peaks':
+                data = ch.ptp_epoch
+            
+            boxes_names += [ch.name]
+
+            fig.add_trace(go.Box(y=data, 
+            name=ch.name, 
+            opacity=0.7, 
+            boxpoints="all", 
+            pointpos=0,
+            marker_color=ch.lobe_color,
+            marker_size=3,
+            legendgroup=ch.lobe, 
+            legendgrouptitle=dict(text=lobe.upper()),
+            line_width=0.8,
+            line_color=ch.lobe_color,
+            text=epochs_names))
+
+
+    fig.update_traces(hovertemplate=hovertemplate)
+
+    
+    fig.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(boxes_names))],
+            ticktext = boxes_names,
+            rangeslider=dict(visible=True)),
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},)
+        #legend_title=legend_title)
         
     if verbose_plots is True:
         fig.show()
