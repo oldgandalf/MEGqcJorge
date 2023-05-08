@@ -233,7 +233,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     return simple_metric
 
 
-def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
+def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
 
     """
     Main Peak to peak amplitude function. Calculates:
@@ -250,6 +250,8 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
         Dictionary containing the parameters for the metric
     channels : dict
         Dict (mag, grad) with all channel names
+    chs_by_lobe : dict
+        dictionary with channels grouped first by ch type and then by lobe: chs_by_lobe['mag']['Left Occipital'] or chs_by_lobe['grad']['Left Occipital']
     dict_epochs_mg : dict
         Dict (mag, grad) with epochs for each channel. Should be the same for both channels. Used only to check if epochs are present.
     data : mne.io.Raw
@@ -282,11 +284,21 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, dict_epochs_mg: di
     peak_ampl = {}
     noisy_flat_epochs_derivs = {}
 
-    # will run for both if mag+grad are chosen,otherwise just for one of them:
+    chs_by_lobe_copy=chs_by_lobe.copy()
+    # copy here, because want to keep original dict unchanged. 
+    # In principal it s good to collect all data about channel metrics there BUT if the metrics are run in parallel this might produce conflicts 
+    # (without copying  dict can be chanaged both inside+outside this function even when it is not returned.)
+
     for m_or_g in m_or_g_chosen:
 
         peak_ampl[m_or_g] = get_ptp_all_data(data, channels[m_or_g], sfreq, ptp_thresh_lvl=ptp_manual_params['ptp_thresh_lvl'], max_pair_dist_sec=ptp_manual_params['max_pair_dist_sec'])
-        derivs_ptp += [boxplot_std_hovering_plotly(peak_ampl[m_or_g], ch_type=m_or_g, channels=channels[m_or_g], what_data='peaks', verbose_plots=verbose_plots)]
+        
+        #Add ptp data into channel object inside the chs_by_lobe dictionary:
+        for lobe in chs_by_lobe_copy[m_or_g]:
+            for ch in chs_by_lobe_copy[m_or_g][lobe]:
+                ch.ptp_overall = peak_ampl[m_or_g][ch.name]
+        
+        derivs_ptp += [boxplot_std_hovering_plotly(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
         big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
 

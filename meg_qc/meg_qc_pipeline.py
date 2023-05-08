@@ -163,7 +163,7 @@ def make_derivative_meg_qc(config_file_path):
                 if all_qc_params['default']['run_PTP_manual'] is True:
                     print('___MEG QC___: ', 'Starting Peak-to-Peak manual...')
                     start_time = time.time()
-                    pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
+                    pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_PTP_auto_mne'] is True:

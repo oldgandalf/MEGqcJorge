@@ -527,7 +527,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
 
         #Add std data into channel object inside the chs_by_lobe dictionary:
-        
         for lobe in chs_by_lobe_copy[m_or_g]:
             for ch in chs_by_lobe_copy[m_or_g][lobe]:
                 ch.std_overall = std_all_data[m_or_g][ch.name]
