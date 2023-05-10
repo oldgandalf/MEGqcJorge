@@ -348,7 +348,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     Returns
     -------
     qc_derivative : list
-        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+        A list of QC_derivative objects containing the plotly figure with interactive time series of each channel.
 
     """
     qc_derivative = []
@@ -375,7 +375,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     # Add title, x axis title, x axis slider and y axis units+title:
     fig.update_layout(
         title={
-            'text': tit+' Time Series',
+            'text': tit+' time series per channel',
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
@@ -398,6 +398,69 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
 
     return qc_derivative
 
+
+def plot_time_series_avg(raw: mne.io.Raw, m_or_g: str):
+
+    """
+    Plots time series of the chosen channels.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw file to be plotted.
+    m_or_g_chosen : str
+        The type of the channels to be plotted: 'mag' or 'grad'.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figure with interactive average time series.
+
+    """
+    qc_derivative = []
+    tit, unit = get_tit_and_unit(m_or_g)
+
+    picked_channels = mne.pick_types(raw.info, meg=m_or_g)
+
+    # Downsample data
+    raw_resampled = raw.copy().resample(100, npad='auto') 
+    #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
+
+    t = raw_resampled.times
+    data = raw_resampled.get_data(picks=picked_channels) 
+
+    #average the data over all channels:
+    data_avg = np.mean(data, axis = 0)
+
+    #plot:
+    trace = go.Scatter(x=t, y=data_avg, mode='lines', name=tit)
+    fig = go.Figure(data=trace)
+
+    # Add title, x axis title, x axis slider and y axis units+title:
+    fig.update_layout(
+        title={
+            'text': tit+': time series averaged over all channels',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+
+        xaxis_title='Time (s)',
+
+        xaxis=dict(
+            rangeslider=dict(
+                visible=True
+            ),
+            type="linear"),
+
+        yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title = unit) 
+    
+    qc_derivative += [QC_derivative(content=fig, name=tit+'_time_series_avg', content_type='plotly')]
+
+    return qc_derivative
 
 
 def switch_names_on_off(fig: go.Figure):

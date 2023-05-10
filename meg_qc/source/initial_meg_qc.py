@@ -3,7 +3,7 @@ import configparser
 import numpy as np
 
 from IPython.display import display
-from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series
+from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
 
 
 def get_all_config_params(config_file_name: str):
@@ -82,6 +82,7 @@ def get_all_config_params(config_file_name: str):
             'run_Muscle': run_Muscle,
             'dataset_path': ds_paths,
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
+            'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
             'verbose_plots': default_section.getboolean('verbose_plots'),
             'crop_tmin': tmin,
             'crop_tmax': tmax})
@@ -594,16 +595,22 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(chs_by_lobe)
 
+
     #Plot time series:
     time_series_derivs = []
-    if default_settings['plot_interactive_time_series'] is True:
-        time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
-        for m_or_g in m_or_g_chosen:
-            time_series_derivs += plot_time_series(raw_cropped, m_or_g, chs_by_lobe[m_or_g])
-    else:
-        time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series to True in settings.'
-        time_series_derivs = []
+    
+    for m_or_g in m_or_g_chosen:
+        if default_settings['plot_interactive_time_series'] is True:
+            time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
+        if default_settings['plot_interactive_time_series_average'] is True:
+            time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
 
-    verbose_plots = default_settings['verbose_plots']
+    if time_series_derivs:
+        time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
+    else:
+        time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series or(and) plot_interactive_time_series_average to True in settings.'
+
+
+    verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
         
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, verbose_plots
