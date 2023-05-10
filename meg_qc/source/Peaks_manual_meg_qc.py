@@ -5,10 +5,10 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs
+from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs_lobes
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.STD_meg_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
-
+from IPython.display import display
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
 
@@ -278,7 +278,8 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
     big_ptp_with_value_all_data = {}
     small_ptp_with_value_all_data = {}
     derivs_ptp = []
-    fig_ptp_epoch = []
+    fig_ptp_epoch0 = []
+    fig_ptp_epoch1 = []
     fig_ptp_epoch2 = []
     derivs_list = []
     peak_ampl = {}
@@ -302,17 +303,25 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
 
         big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
 
-
-    if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None:
+    if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None: #if epochs are present
         for m_or_g in m_or_g_chosen:
-            df_pp_ampl=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
-            #deriv_epoch_ptp[m_or_g] = get_big_small_std_ptp_epochs(df_pp_ampl, m_or_g, ptp_manual_params['std_lvl'], 'ptp') 
-            #derivs_list += deriv_epoch_ptp[m_or_g]
+            df_ptp=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
+            
+            #display (df_ptp)
 
-            fig_ptp_epoch += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels', verbose_plots=verbose_plots)]
-            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_pp_ampl, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+            #Add std epoch data into channel object inside the chs_by_lobe dictionary:
+            for lobe in chs_by_lobe_copy[m_or_g]:
+                for ch in chs_by_lobe_copy[m_or_g][lobe]:
+                    ch.ptp_epoch = df_ptp.loc[ch.name].values
+                    #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
-            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_pp_ampl, m_or_g, 'ptp', ptp_manual_params['noisy_channel_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
+            epochs_names = df_ptp.columns.tolist()
+            fig_ptp_epoch0 += [boxplot_epochs_lobes(chs_by_lobe_copy[m_or_g], epochs_names, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
+
+            fig_ptp_epoch1 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels', verbose_plots=verbose_plots)]
+            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+
+            noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_ptp, m_or_g, 'ptp', ptp_manual_params['noisy_channel_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
 
             metric_local=True
@@ -323,7 +332,10 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
         pp_manual_str = 'Peak-to-Peak amplitude per epoch can not be calculated because no events are present. Check stimulus channel.'
         print('___MEG QC___: ', pp_manual_str)
         
-    derivs_ptp += fig_ptp_epoch + fig_ptp_epoch2 + derivs_list
+    derivs_ptp += fig_ptp_epoch0+fig_ptp_epoch1 + fig_ptp_epoch2 + derivs_list
+    #each of them saved into a separate list and only at the end put together because this way they keep the right order: 
+    #first everything about mags, then everything about grads. - in this ordr they ll be added to repot. 
+    #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
     simple_metric_ptp_manual = make_simple_metric_ptp_manual(ptp_manual_params, big_ptp_with_value_all_data, small_ptp_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
 
