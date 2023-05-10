@@ -9,6 +9,5 @@ setup(
     url='https://github.com/ANCPLabOldenburg/MEG-QC-code',
     license='MIT',
     author='ANCP',
-    author_email='',
-    description=''
+    author_email='aaron.reer@uol.de',
 )
