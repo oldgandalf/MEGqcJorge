@@ -156,7 +156,7 @@ def make_joined_report(sections: dict, report_strings: dict):
     return html_string
 
 
-def make_joined_report_mne(raw, sections:dict, report_strings: dict):
+def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_settings: dict):
 
     """
     Create report as html string with all sections and embed the sections into MNE report object.
@@ -170,6 +170,8 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict):
     report_strings : dict
         A dictionary with strings to be added to the report: general notes + notes about every measurement (when it was not calculated, for example). 
         This is not a detailed description of the measurement.
+    default_settings : dict
+        A dictionary with default settings.
     
 
     Returns
@@ -181,9 +183,11 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict):
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
-    # omit PSD plot. IDK how to omit the time series plot without omiting the info table
-    # butterfly sets the mne plot of butterfly time series, stim channel, etc...
+    if default_settings['plot_mne_butterfly'] is True:
+        report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
+    else:
+        report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
+    # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
 
     for key in sections:
         if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':

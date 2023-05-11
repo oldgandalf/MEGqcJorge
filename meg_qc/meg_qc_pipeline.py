@@ -115,7 +115,7 @@ def make_derivative_meg_qc(config_file_path):
         avg_eog=[]
 
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especia;ly 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
-        for sid in list_of_subs[4:5]: 
+        for sid in list_of_subs[16:22]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -178,13 +178,14 @@ def make_derivative_meg_qc(config_file_path):
                     ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
+                    avg_ecg += avg_objects_ecg
+
                 if all_qc_params['default']['run_EOG'] is True:
                     print('___MEG QC___: ', 'Starting EOG...')
                     start_time = time.time()
                     eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
-                    avg_ecg += avg_objects_ecg
                     avg_eog += avg_objects_eog
 
                 if all_qc_params['default']['run_Head'] is True:
@@ -247,7 +248,7 @@ def make_derivative_meg_qc(config_file_path):
                 # report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_str)
                 # QC_derivs['Report']= [QC_derivative(report_html_string, 'Report', 'report')]
 
-                report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings)
+                report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
                 QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORTmne', 'report mne')]
 
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
