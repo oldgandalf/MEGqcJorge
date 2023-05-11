@@ -2,12 +2,36 @@ import plotly
 import plotly.graph_objects as go
 import base64
 from io import BytesIO
+import numpy as np
 import pandas as pd
 import mne
 import warnings
 from IPython.display import display
 import random
+import copy
 
+def check_num_channels_correct(chs_by_lobe: dict, note: str):
+
+    """ 
+    Print total number of channels in all lobes for 1 ch type (must be 102 mag and 204 grad in Elekta/Neuromag)
+    
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        A dictionary of channels sorted by ch type and lobe.
+    note : str
+        A note to print with the total number of channels.
+    
+    Returns
+    -------
+    
+    """
+    for m_or_g in ['mag', 'grad']:
+        total_number = sum([len(chs_by_lobe[m_or_g][key]) for key in chs_by_lobe[m_or_g].keys()])
+        print("_______"+note+"_______total number in " + m_or_g, total_number)
+        print("_______"+note+"_______must be 102 mag and 204 grad in Elekta/Neuromag")
+
+    return 
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
@@ -298,7 +322,12 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
     #But then you cant see individual channels, it turn on/off the whole group. There is no option to tun group off by clicking on group title. Grup title and group items behave the same.
 
+    #to see the legend: there is really nothing to sort here. The legend is sorted by default by the order of the traces in the figure. The onl way is to group the traces by lobe.
+    #print(fig['layout'])
+
+    #https://plotly.com/python/reference/?_ga=2.140286640.2070772584.1683497503-1784993506.1683497503#layout-legend-traceorder
     
+
     return fig
         
 
@@ -319,7 +348,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     Returns
     -------
     qc_derivative : list
-        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+        A list of QC_derivative objects containing the plotly figure with interactive time series of each channel.
 
     """
     qc_derivative = []
@@ -346,7 +375,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     # Add title, x axis title, x axis slider and y axis units+title:
     fig.update_layout(
         title={
-            'text': tit+' Time Series',
+            'text': tit+' time series per channel',
             'y':0.85,
             'x':0.5,
             'xanchor': 'center',
@@ -369,6 +398,69 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
 
     return qc_derivative
 
+
+def plot_time_series_avg(raw: mne.io.Raw, m_or_g: str):
+
+    """
+    Plots time series of the chosen channels.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw file to be plotted.
+    m_or_g_chosen : str
+        The type of the channels to be plotted: 'mag' or 'grad'.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figure with interactive average time series.
+
+    """
+    qc_derivative = []
+    tit, unit = get_tit_and_unit(m_or_g)
+
+    picked_channels = mne.pick_types(raw.info, meg=m_or_g)
+
+    # Downsample data
+    raw_resampled = raw.copy().resample(100, npad='auto') 
+    #downsample the data to 100 Hz. The `npad` parameter is set to `'auto'` to automatically determine the amount of padding to use during the resampling process
+
+    t = raw_resampled.times
+    data = raw_resampled.get_data(picks=picked_channels) 
+
+    #average the data over all channels:
+    data_avg = np.mean(data, axis = 0)
+
+    #plot:
+    trace = go.Scatter(x=t, y=data_avg, mode='lines', name=tit)
+    fig = go.Figure(data=trace)
+
+    # Add title, x axis title, x axis slider and y axis units+title:
+    fig.update_layout(
+        title={
+            'text': tit+': time series averaged over all channels',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+
+        xaxis_title='Time (s)',
+
+        xaxis=dict(
+            rangeslider=dict(
+                visible=True
+            ),
+            type="linear"),
+
+        yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title = unit) 
+    
+    qc_derivative += [QC_derivative(content=fig, name=tit+'_time_series_avg', content_type='plotly')]
+
+    return qc_derivative
 
 
 def switch_names_on_off(fig: go.Figure):
@@ -596,7 +688,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
     """
     Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
     Can turn mags/grads visialisation on and off.
-    To be addded: separete channels into brain areas by color coding.
+    Separete channels into brain areas by color coding.
 
 
     Parameters
@@ -610,16 +702,20 @@ def plot_sensors_3d(chs_by_lobe: dict):
         A list of QC_derivative objects containing the plotly figures with the sensor locations.
 
     """
+
+    chs_by_lobe_copy = copy.deepcopy(chs_by_lobe)
+    #otherwise we will change the original dict here and keep it messed up for the next function
+
     qc_derivative = []
 
     # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
     lobes_dict = {}
-    for ch_type in chs_by_lobe:
-        for lobe in chs_by_lobe[ch_type]:
+    for ch_type in chs_by_lobe_copy:
+        for lobe in chs_by_lobe_copy[ch_type]:
             if lobe not in lobes_dict:
-                lobes_dict[lobe] = chs_by_lobe[ch_type][lobe]
+                lobes_dict[lobe] = chs_by_lobe_copy[ch_type][lobe]
             else:
-                lobes_dict[lobe] += chs_by_lobe[ch_type][lobe]
+                lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
 
     traces = []
     for lobe in lobes_dict:
@@ -640,6 +736,9 @@ def plot_sensors_3d(chs_by_lobe: dict):
         'xanchor': 'center',
         'yanchor': 'top'})
 
+    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
+
+
     # Add the button to have names show up on hover or always:
     fig = switch_names_on_off(fig)
 
@@ -650,10 +749,10 @@ def plot_sensors_3d(chs_by_lobe: dict):
     return qc_derivative
 
 
-def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
+def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str, verbose_plots: bool):
 
     """
-    Creates representation of calculated data as multiple boxplots. Used in RMSE and PtP_manual measurements. 
+    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
 
     - If x_axis_boxes is 'channels', each box represents 1 epoch, each dot is std of 1 channel for this epoch
     - If x_axis_boxes is 'epochs', each box represents 1 channel, each dot is std of 1 epoch for this channel
@@ -669,6 +768,8 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
         Type of the data: 'peaks' or 'stds'
     x_axis_boxes : str
         What to plot as boxplot on x axis: 'channels' or 'epochs'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -739,14 +840,121 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             'yanchor': 'top'},
         legend_title=legend_title)
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return fig_deriv
 
 
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
+def boxplot_epochs_lobes(chs_by_lobe: dict, epochs_names: list, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
+    Color tagged channels by lobes. 
+    
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with channel objects sorted by lobe.
+    epochs_names : list
+        List of epoch names like [0, 1, 2, 3...]
+    ch_type : str
+        Type of the channel: 'mag', 'grad'
+    what_data : str
+        Type of the data: 'peaks' or 'stds'
+    x_axis_boxes : str
+        What to plot as boxplot on x axis: 'channels' or 'epochs'
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    fig_deriv : QC_derivative 
+        derivative containing plotly figure
+    
+    """
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+    else:
+        print('what_data should be either peaks or stds')
+
+    x_axis_boxes = 'channels'
+    if x_axis_boxes=='channels':
+        hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
+    elif x_axis_boxes=='epochs':
+        #legend_title = 'Epochs'
+        hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
+    else:
+        print('x_axis_boxes should be either channels or epochs')
+
+
+    fig = go.Figure()
+
+    boxes_names = []
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            if what_data == 'stds':
+                data = ch.std_epoch
+            elif what_data == 'peaks':
+                data = ch.ptp_epoch
+            
+            boxes_names += [ch.name]
+
+            fig.add_trace(go.Box(y=data, 
+            name=ch.name, 
+            opacity=0.7, 
+            boxpoints="all", 
+            pointpos=0,
+            marker_color=ch.lobe_color,
+            marker_size=3,
+            legendgroup=ch.lobe, 
+            legendgrouptitle=dict(text=lobe.upper()),
+            line_width=0.8,
+            line_color=ch.lobe_color,
+            text=epochs_names))
+
+
+    fig.update_traces(hovertemplate=hovertemplate)
+
+    
+    fig.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(boxes_names))],
+            ticktext = boxes_names,
+            rangeslider=dict(visible=True)),
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},)
+        #legend_title=legend_title)
+        
+    if verbose_plots is True:
+        fig.show()
+
+    fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return fig_deriv
+
+
+def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool) -> QC_derivative:
 
     """
     Create representation of calculated data as multiple boxplots: 
@@ -762,6 +970,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
         title, like "Magnetometers", or "Gradiometers", 
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -818,29 +1028,33 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
             'yanchor': 'top'},
         legend_title="Epochs")
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, what_data: str):
+def boxplot_std_hovering_plotly_OLD(std_data_named: dict, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
     each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
+    OLD but still working version, currently not used. Other principal than the current one so left for reference.
 
     Parameters
     ----------
-    std_data : list
-        list of std values for each channel
+    std_data_named : dict
+        std values for each channel
     ch_type : str
         'mag' or 'grad'
     channels : list
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -848,6 +1062,8 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         QC_derivative object with plotly figure as content
 
     """
+    # Put all values in 1 array from the dictionsry:
+    std_data = np.array(list(std_data_named.values()))
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -888,14 +1104,15 @@ def boxplot_std_hovering_plotly(std_data: list, ch_type: str, channels: list, wh
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: list, what_data: str):
+def boxplot_std_hovering_plotly(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -903,14 +1120,16 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
 
     Parameters
     ----------
-    std_data : list
-        list of std values for each channel
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
     ch_type : str
         'mag' or 'grad'
     channels : list
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
 
     Returns
     -------
@@ -929,30 +1148,35 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_all_data_'+ch_tit
+    else:
+        raise ValueError('what_data must be set to "stds" or "peaks"')
 
-    df = pd.DataFrame (std_data, index=[hover_tit], columns=channels)
+    boxwidth=0.4
 
     # create box plot trace
-    box_trace = go.Box(x=df['values'], y=df.index, orientation='h', name='')
+    # Put all values in 1 array from the dictionary:
+    values_all=[]
+    traces = []
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            if what_data == 'stds':
+                data = ch.std_overall
+            elif what_data == 'peaks':
+                data = ch.ptp_overall
+            values_all += [data]
 
-    fig = go.Figure(data=[box_trace])
+            y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) #here create randow y values, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
 
-    for v in df['values']:
-        fig.add_trace(go.Scatter(x=[v], y=[hover_tit], mode='markers', marker=dict(size=5, color='yellow'), name='Scatter Plot', hovertext=df.index))
+    box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)
+    all_traces = [box_trace]+traces
+    fig = go.Figure(data=all_traces)
 
-
-    fig.add_trace(go.Box(x=df[hover_tit],
-    name="",
-    text=df[hover_tit].index, 
-    opacity=0.7, 
-    boxpoints="all", 
-    pointpos=0,
-    marker_size=5,
-    line_width=1))
-    fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
+    fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
         
 
     fig.update_layout(
+        yaxis_range=[-0.5,0.5],
         yaxis={'visible': False, 'showticklabels': False},
         xaxis = dict(
         showexponent = 'all',
@@ -965,7 +1189,8 @@ def boxplot_std_hovering_plotly_lobes(std_data: list, ch_type: str, channels: li
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    #fig.show()
+    if verbose_plots is True:
+        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
