@@ -43,7 +43,7 @@ def get_config():
     # _version.py
     cfg = VersioneerConfig()
     cfg.VCS = "git"
-    cfg.style = "pep440"
+    cfg.style = "PEP440-pre"
     cfg.tag_prefix = ""
     cfg.parentdir_prefix = ""
     cfg.versionfile_source = "meg_qc/_version.py"
