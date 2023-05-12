@@ -81,6 +81,7 @@ def get_all_config_params(config_file_name: str):
             'run_Head': run_Head,
             'run_Muscle': run_Muscle,
             'dataset_path': ds_paths,
+            'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
             'verbose_plots': default_section.getboolean('verbose_plots'),
@@ -172,7 +173,9 @@ def get_all_config_params(config_file_name: str):
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
-        'flip_data': ecg_section.getboolean('flip_data')})
+        'flip_data': ecg_section.getboolean('flip_data'),
+        'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
+        'thresh_lvl_peakfinder': ecg_section.getfloat('thresh_lvl_peakfinder'),})
 
         eog_section = config['EOG']
         all_qc_params['EOG'] = dict({
@@ -181,7 +184,9 @@ def get_all_config_params(config_file_name: str):
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),
-        'flip_data': eog_section.getboolean('flip_data')})
+        'flip_data': eog_section.getboolean('flip_data'),
+        'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
+        'thresh_lvl_peakfinder': eog_section.getfloat('thresh_lvl_peakfinder'),})
 
         head_section = config['Head_movement']
         all_qc_params['Head'] = dict({})

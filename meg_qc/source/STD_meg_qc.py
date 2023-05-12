@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, QC_derivative, boxplot_epochs_lobes
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, QC_derivative, boxplot_epochs_lobes
 from meg_qc.source.universal_html_report import simple_metric_basic
 from IPython.display import display
 
@@ -534,7 +534,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
                 ch.std_overall = std_all_data[m_or_g][ch.name]
                 #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
-        derivs_std += [boxplot_std_hovering_plotly(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+        derivs_std += [boxplot_all_time(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 

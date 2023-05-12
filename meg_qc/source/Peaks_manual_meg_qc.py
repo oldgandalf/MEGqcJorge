@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_std_hovering_plotly, boxplot_epochs, boxplot_epochs_lobes
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epochs_lobes
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.STD_meg_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 from IPython.display import display
@@ -299,7 +299,7 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
             for ch in chs_by_lobe_copy[m_or_g][lobe]:
                 ch.ptp_overall = peak_ampl[m_or_g][ch.name]
         
-        derivs_ptp += [boxplot_std_hovering_plotly(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
+        derivs_ptp += [boxplot_all_time(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
         big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(peak_ampl[m_or_g], channels[m_or_g], ptp_manual_params['std_lvl'])
 
