@@ -8,6 +8,7 @@ from copy import deepcopy
 from scipy.ndimage import gaussian_filter
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from IPython.display import display
 
 def check_3_conditions_old(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int = 3, allowed_range_of_peaks_stds: float = 0.05):
 
@@ -301,6 +302,49 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg
        
     return noisy_ch_derivs, bad_ecg_eog
 
+def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
+    
+    """
+    Find the peaks in the epoch data using the peakfinder algorithm.
+
+    Parameters
+    ----------
+    ch_data : np.ndarray
+        The data of the channel.
+    thresh_lvl_peakfinder : float
+        The threshold for the peakfinder algorithm.
+
+    Returns
+    -------
+    peak_locs_pos : np.ndarray
+        The locations of the positive peaks.
+    peak_locs_neg : np.ndarray
+        The locations of the negative peaks.
+    peak_magnitudes_pos : np.ndarray
+        The magnitudes of the positive peaks.
+    peak_magnitudes_neg : np.ndarray
+        The magnitudes of the negative peaks.
+
+        
+    """
+
+
+    thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
+    peak_locs_pos, _ = find_peaks(ch_data, prominence=thresh_mean)
+    peak_locs_neg, _ = find_peaks(-ch_data, prominence=thresh_mean)
+
+    try:
+        peak_magnitudes_pos=ch_data[peak_locs_pos]
+    except:
+        peak_magnitudes_pos=np.empty(0)
+
+    try:
+        peak_magnitudes_neg=ch_data[peak_locs_neg]
+    except:
+        peak_magnitudes_neg=np.empty(0)
+
+    return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
+
 
 class Avg_artif:
     
@@ -385,18 +429,17 @@ class Avg_artif:
 
         return 'Mean artifact for: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n - wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n'
     
-    def get_peaks_wave(self, on_original: bool, on_smoothed: bool, gaussian_sigma: int = 6, max_n_peaks_allowed_on_original: int = 3, max_n_peaks_allowed_on_smoothed: int = 3, thresh_lvl_peakfinder_on_original: float = 8, thresh_lvl_peakfinder_on_smoothed: float = 5):
+
+
+    def get_peaks_wave(self, max_n_peaks_allowed: int = 3, thresh_lvl_peakfinder: float = 8):
 
         """
         Find peaks in the average artifact epoch and decide if the epoch has wave shape: 
         few peaks (different number allowed for ECG and EOG) - wave shape, many or no peaks - not.
-        Allows to do it on smoothed or non smoothed data!
+        On non smoothed data!
         
         Parameters
         ----------
-        use_smoothed: bool
-            This the KEY argument! If True, first smooth data. Then perform for peak finding. If False, perform peak finding on the original data. 
-            Hence, threshold_lvl_peakfinder should be adjusted accordingly for smoothed or non smoothed data.
         max_n_peaks_allowed : int
             maximum number of peaks allowed in the average artifact epoch
         thresh_lvl_peakfinder : float
@@ -418,6 +461,42 @@ class Avg_artif:
             magnitudes of positive peaks inside the artifact epoch
         peak_magnitudes_neg : list
             magnitudes of negative peaks inside the artifact epoch
+        
+            
+        """
+
+        peak_locs_pos_orig, peak_locs_neg_orig, peak_magnitudes_pos_orig, peak_magnitudes_neg_orig = find_epoch_peaks(ch_data=self.artif_data, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        
+        self.peak_loc=np.concatenate((peak_locs_pos_orig, peak_locs_neg_orig), axis=None)
+        self.peak_magnitude=np.concatenate((peak_magnitudes_pos_orig, peak_magnitudes_neg_orig), axis=None)
+
+        if np.size(self.peak_loc)==0: #no peaks found
+            self.wave_shape=False
+        elif 1<=len(self.peak_loc)<=max_n_peaks_allowed:
+            self.wave_shape=True
+        elif len(self.peak_loc)>max_n_peaks_allowed:
+            self.wave_shape=False
+        else:
+            print('Something went wrong with peak detection')
+
+
+    def get_peaks_wave_smoothed(self, gaussian_sigma: int = 3, max_n_peaks_allowed: int = 3, thresh_lvl_peakfinder: float = 8):
+
+        """
+        Find peaks in the average artifact epoch and decide if the epoch has wave shape: 
+        few peaks (different number allowed for ECG and EOG) - wave shape, many or no peaks - not.
+        On smoothed data! If it was not smoothed yet - it will be smoothed inside this function
+        
+        Parameters
+        ----------
+        max_n_peaks_allowed : int
+            maximum number of peaks allowed in the average artifact epoch
+        thresh_lvl_peakfinder : float
+            threshold for peakfinder function.
+
+        
+        Returns
+        -------
         self.peak_loc_smoothed : list
             locations of peaks inside the artifact epoch calculated on smoothed data
         self.peak_magnitudes_smoothed : list
@@ -430,45 +509,26 @@ class Avg_artif:
             magnitudes of positive peaks inside the artifact epoch calculated on smoothed data
         peak_magnitudes_neg_smoothed : list
             magnitudes of negative peaks inside the artifact epoch calculated on smoothed data
+
         
-            
         """
-        if on_original is True:
 
-            peak_locs_pos_orig, peak_locs_orig, peak_magnitudes_pos_orig, peak_magnitudes_neg_orig = find_epoch_peaks(ch_data=self.artif_data, thresh_lvl_peakfinder=thresh_lvl_peakfinder_on_original)
-            
-            self.peak_loc=np.concatenate((peak_locs_pos_orig, peak_locs_orig), axis=None)
-            self.peak_magnitude=np.concatenate((peak_magnitudes_pos_orig, peak_magnitudes_neg_orig), axis=None)
-
-            if np.size(self.peak_loc)==0: #no peaks found
-                self.wave_shape=False
-            elif 1<=len(self.peak_loc)<=max_n_peaks_allowed_on_original:
-                self.wave_shape=True
-            elif len(self.peak_loc)>max_n_peaks_allowed_on_original:
-                self.wave_shape=False
-        else:
-            self.peak_loc, self.peak_magnitude, peak_locs_pos_orig, peak_locs_orig, peak_magnitudes_pos_orig, peak_magnitudes_neg_orig = None, None, None, None, None, None
-
-        if on_smoothed is True:
-
+        if self.artif_data_smoothed is None: #if no smoothed data available yet
             self.smooth_artif(gaussian_sigma) 
 
-            peak_locs_pos_smoothed, peak_locs_smoothed, peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed = find_epoch_peaks(ch_data=self.artif_data_smoothed, thresh_lvl_peakfinder=thresh_lvl_peakfinder_on_smoothed)
-            
-            self.peak_loc_smoothed=np.concatenate((peak_locs_pos_smoothed, peak_locs_smoothed), axis=None)
-            self.peak_magnitude_smoothed=np.concatenate((peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed), axis=None)
+        peak_locs_pos_smoothed, peak_locs_neg_smoothed, peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed = find_epoch_peaks(ch_data=self.artif_data_smoothed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        
+        self.peak_loc_smoothed=np.concatenate((peak_locs_pos_smoothed, peak_locs_neg_smoothed), axis=None)
+        self.peak_magnitude_smoothed=np.concatenate((peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed), axis=None)
 
-            if np.size(self.peak_loc_smoothed)==0:
-                self.wave_shape_smoothed=False
-            elif 1<=len(self.peak_loc_smoothed)<=max_n_peaks_allowed_on_smoothed:
-                self.wave_shape_smoothed=True
-            elif len(self.peak_loc_smoothed)>max_n_peaks_allowed_on_smoothed:
-                self.wave_shape_smoothed=False
-
+        if np.size(self.peak_loc_smoothed)==0:
+            self.wave_shape_smoothed=False
+        elif 1<=len(self.peak_loc_smoothed)<=max_n_peaks_allowed:
+            self.wave_shape_smoothed=True
+        elif len(self.peak_loc_smoothed)>max_n_peaks_allowed:
+            self.wave_shape_smoothed=False
         else:
-            self.peak_loc_smoothed, self.peak_magnitude_smoothed, peak_locs_pos_smoothed, peak_locs_smoothed, peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed = None, None, None, None, None, None
-
-        return self.peak_loc, self.peak_magnitude, peak_locs_pos_orig, peak_locs_orig, peak_magnitudes_pos_orig, peak_magnitudes_neg_orig, self.peak_loc_smoothed, self.peak_magnitude_smoothed, peak_locs_pos_smoothed, peak_locs_smoothed, peak_magnitudes_pos_smoothed, peak_magnitudes_neg_smoothed
+            print('Something went wrong with peak detection')
 
 
     def plot_epoch_and_peak(self, t: np.ndarray, fig_tit: str, ch_type: str, fig: go.Figure = None, plot_original: bool = True, plot_smoothed: bool = True):
@@ -540,7 +600,7 @@ class Avg_artif:
         return fig
 
 
-    def get_highest_peak(self, on_orig: bool, on_smoothed: bool, t: np.ndarray, timelimit_min: float, timelimit_max: float):
+    def get_highest_peak(self, t: np.ndarray, timelimit_min: float, timelimit_max: float):
 
         """
         Find the highest peak of the artifact epoch inside the give time window. 
@@ -574,10 +634,10 @@ class Avg_artif:
         
         """
 
-        if self.peak_loc is None and on_orig is True: #if no peaks were found on original data:
+        if self.peak_loc is None: #if no peaks were found on original data:
             self.main_peak_magnitude=None
             self.main_peak_loc=None
-        elif self.peak_loc is not None and on_orig is True: #if peaks were found on original data:
+        elif self.peak_loc is not None: #if peaks were found on original data:
             self.main_peak_magnitude = -1000
             for peak_loc in self.peak_loc:
                 if timelimit_min<t[peak_loc]<timelimit_max: #if peak is inside the timelimit_min and timelimit_max was found:
@@ -591,25 +651,55 @@ class Avg_artif:
         else:
             self.main_peak_loc, self.main_peak_magnitude = None, None
 
-        if self.peak_loc_smoothed is None and on_smoothed is True: #if no peaks were found on smoothed data:
-            self.main_peak_magnitude_smoothed = None
-            self.main_peak_loc_smoothed = None
-        elif self.peak_loc_smoothed is not None and on_smoothed is True: #if peaks were found on smoothed data:
+
+        return self.main_peak_loc, self.main_peak_magnitude
+    
+    def get_highest_peak_smoothed(self, t: np.ndarray, timelimit_min: float, timelimit_max: float):
+
+        """
+        Find the highest peak of the artifact epoch inside the give time window on SMOOTHED data.
+        Time window is centered around the t0 of the ecg/eog event and limited by timelimit_min and timelimit_max.
+        
+        
+        Parameters
+        ----------
+        t : list
+            time vector
+        timelimit_min : float
+            minimum time limit for the peak
+        timelimit_max : float
+            maximum time limit for the peak
+            
+        Returns
+        -------
+        main_peak_magnitude_smoothed : float
+            magnitude of the main peak on smoothed data
+        main_peak_loc_smoothed : int
+            location of the main peak on smoothed data
+        
+        
+        """
+
+        if self.peak_loc_smoothed is None:
+            self.main_peak_magnitude_smoothed=None
+            self.main_peak_loc_smoothed=None
+        elif self.peak_loc_smoothed is not None:
             self.main_peak_magnitude_smoothed = -1000
             for peak_loc in self.peak_loc_smoothed:
                 if timelimit_min<t[peak_loc]<timelimit_max:
                     if self.artif_data_smoothed[peak_loc] > self.main_peak_magnitude_smoothed:
                         self.main_peak_magnitude_smoothed=self.artif_data_smoothed[peak_loc]
-                        self.main_peak_loc_smoothed=peak_loc
-            
+                        self.main_peak_loc_smoothed=peak_loc 
+    
             if self.main_peak_magnitude_smoothed == -1000:
-                self.main_peak_magnitude_smoothed = None
-                self.main_peak_loc_smoothed = None
+                self.main_peak_magnitude_smoothed=None
+                self.main_peak_loc_smoothed=None
 
-        else:
+        else:    
             self.main_peak_loc_smoothed, self.main_peak_magnitude_smoothed = None, None
 
-        return self.main_peak_loc, self.main_peak_magnitude, self.main_peak_loc_smoothed, self.main_peak_magnitude_smoothed
+
+        return self.main_peak_loc_smoothed, self.main_peak_magnitude_smoothed
     
     
     def smooth_artif(self, gauss_sigma: int = 6):
@@ -627,7 +717,7 @@ class Avg_artif:
         Returns
         -------
         self
-            MeanArtifactEpoch object with smoothed artifact epoch in self.artif_data_smoothed
+            Avg_artif object with smoothed artifact epoch in self.artif_data_smoothed
         
         """
 
@@ -635,9 +725,127 @@ class Avg_artif:
         self.artif_data_smoothed = gaussian_filter(data_copy, gauss_sigma)
 
         return self
+    
+    def flip_artif(self):
+            
+        """
+        Flip the artifact epoch upside down on original (non smoothed) data.
+        This is only done if the need to flip was detected in flip_channels() function.
+        
+        Returns
+        -------
+        self
+            Avg_artif object with flipped artifact epoch in self.artif_data and self.peak_magnitude
+        
+        """
+
+        if self.artif_data is not None:
+            self.artif_data = -self.artif_data
+        if self.peak_magnitude is not None:
+            self.peak_magnitude = -self.peak_magnitude
+
+        return self
+    
+
+    def flip_artif_smoothed(self):
+            
+        """
+        Flip the SMOOTHED artifact epoch upside down.
+        This is only done if the need to flip was detected in flip_channels() function.
+        
+        Returns
+        -------
+        self
+            Avg_artif object with flipped smoothed artifact epoch in self.artif_data_smoothed and self.peak_magnitude_smoothed
+        
+        """
+
+        if self.artif_data_smoothed is not None:
+            self.artif_data_smoothed = -self.artif_data_smoothed
+        
+        if self.peak_magnitude_smoothed is not None:
+            self.peak_magnitude_smoothed = -self.peak_magnitude_smoothed
+
+        return self
+
+    def detect_artif_above_threshold(self, artif_threshold_lvl: float, t: np.ndarray, timelimit_min: float, timelimit_max: float):
+
+        """
+        Detect if the highest peak of the artifact epoch is above a given threshold.
+        Time window is centered around the t0 of the ecg/eog event and limited by timelimit_min and timelimit_max.
+
+        Parameters
+        ----------
+        artif_threshold_lvl : float
+            threshold level
+        t : list
+            time vector
+        timelimit_min : float
+            minimum time limit for the peak
+        timelimit_max : float
+            maximum time limit for the peak
+
+        Returns
+        -------
+        self.artif_over_threshold : bool
+            True if the highest peak is above the threshold, False otherwise
+
+        """
+
+        if self.artif_data is not None:
+            #find the highest peak inside the timelimit_min and timelimit_max:
+            _, main_peak_magnitude_orig = self.get_highest_peak(t=t, timelimit_min=timelimit_min, timelimit_max=timelimit_max)
+            if main_peak_magnitude_orig is not None:
+                if main_peak_magnitude_orig>abs(artif_threshold_lvl) and self.wave_shape is True:
+                    self.artif_over_threshold=True
+                else:
+                    self.artif_over_threshold=False
+            else:
+                self.artif_over_threshold=False
+        
+        return self.artif_over_threshold
 
 
-def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, mean_magnitude_peak: float, t: np.ndarray, t0_actual: float, ecg_or_eog: str):
+    def detect_artif_above_threshold_smoothed(self, artif_threshold_lvl: float, t: np.ndarray, timelimit_min: float, timelimit_max: float):
+
+        """
+        Detect if the highest peak of the artifact epoch is above a given threshold for SMOOTHED data.
+        Time window is centered around the t0 of the ecg/eog event and limited by timelimit_min and timelimit_max.
+
+        Parameters
+        ----------
+        artif_threshold_lvl : float
+            threshold level
+        t : list
+            time vector
+        timelimit_min : float
+            minimum time limit for the peak
+        timelimit_max : float
+            maximum time limit for the peak
+
+        Returns
+        -------
+        self.artif_over_threshold : bool
+            True if the highest peak is above the threshold, False otherwise
+
+        """
+
+        if self.artif_data_smoothed is not None:
+            #find the highest peak inside the timelimit_min and timelimit_max:
+            _, main_peak_magnitude_smoothed = self.get_highest_peak(t=t, timelimit_min=timelimit_min, timelimit_max=timelimit_max)
+            if main_peak_magnitude_smoothed is not None:
+                if main_peak_magnitude_smoothed>abs(artif_threshold_lvl) and self.wave_shape_smoothed is True:
+                    self.artif_over_threshold_smoothed=True
+                else:
+                    self.artif_over_threshold_smoothed=False
+            else:
+                self.artif_over_threshold_smoothed=False
+
+        return self.artif_over_threshold_smoothed
+
+
+def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, mean_magnitude_peak: float, t: np.ndarray, t0_actual: float, ecg_or_eog: str, mean_magnitude_peak_smoothed: float = None, t0_actual_smoothed: float = None):
+
 
     """
     Find the channels which got average artifact amplitude higher than the average over all channels*norm_lvl.
@@ -659,13 +867,18 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
 
     Returns
     -------
-    affected_channels : list
-        List of channels which got average artifact amplitude higher than the average over all channels*norm_lvl. -> affected by ECG/EOG artifact
-    not_affected_channels : list
-        List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl. -> not affected by ECG/EOG artifact
-    artifact_lvl : float
-        The threshold for the artifact amplitude: average over all channels*norm_lvl.
-    
+    affected_orig : list
+        List of channels which got average artifact amplitude higher than the average over all channels*norm_lvl.
+    not_affected_orig : list
+        List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl.
+    artif_threshold_lvl : float
+        The threshold level for the artifact amplitude.
+    affected_smoothed : list
+        List of channels which got average artifact amplitude higher than the average over all channels*norm_lvl for SMOOTHED data.
+    not_affected_smoothed : list 
+        List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl for SMOOTHED data.
+    artif_threshold_lvl_smoothed : float
+        The threshold level for the artifact amplitude for SMOOTHED data.
     
     """
 
@@ -682,33 +895,39 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
 
 
     #Find the channels which got peaks over this mean:
-    affected=[]
-    not_affected=[]
-    artifact_lvl=mean_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
+    affected_orig=[]
+    not_affected_orig=[]
+    affected_smoothed=[]
+    not_affected_smoothed=[]
+
+    artif_threshold_lvl=mean_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
+
+    if mean_magnitude_peak_smoothed is None or t0_actual_smoothed is None:
+        print('___MEG QC___: ', 'mean_magnitude_peak_smoothed and t0_actual_smoothed should be provided')
+    else:
+        artifact_lvl_smoothed=mean_magnitude_peak_smoothed/norm_lvl  #SO WHEN USING SMOOTHED CHANNELS - USE SMOOTHED AVERAGE TOO!
+        timelimit_min_smoothed=-window_size+t0_actual_smoothed
+        timelimit_max_smoothed=window_size+t0_actual_smoothed
+
+
     for potentially_affected in list_mean_artif_epochs:
-        #if np.max(np.abs(potentially_affected.peak_magnitude))>abs(artifact_lvl) and potentially_affected.wave_shape is True:
 
-
-        #find the highest peak inside the timelimit_min and timelimit_max:
-        main_peak_loc, main_peak_magnitude, main_peak_loc_smoothed, main_peak_magnitude_smoothed = potentially_affected.get_highest_peak(on_orig = True, on_smoothed = True, t=t, timelimit_min=timelimit_min, timelimit_max=timelimit_max)
-
-        #print('___MEG QC___: ', potentially_affected.name, ' Main Peak magn: ', potentially_affected.main_peak_magnitude, ', Main peak loc ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
-        
-        if main_peak_magnitude is not None: #if there is a peak in time window of artifact - check if it s high enough and has right shape
-            if main_peak_magnitude>abs(artifact_lvl) and potentially_affected.wave_shape is True:
-                potentially_affected.artif_over_threshold=True
-                affected.append(potentially_affected)
-            else:
-                not_affected.append(potentially_affected)
-                #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: ', potentially_affected.main_peak_magnitude>abs(artifact_lvl), ', in the time window: ', potentially_affected.main_peak_loc, ' Wave shape: ', potentially_affected.wave_shape)
+        result = potentially_affected.detect_artif_above_threshold(artif_threshold_lvl, t, timelimit_min, timelimit_max)
+        if result is True:
+            affected_orig.append(potentially_affected)
         else:
-            not_affected.append(potentially_affected)
-            #print('___MEG QC___: ', potentially_affected.name, ' Peak magn over th: NO PEAK in time window')
+            not_affected_orig.append(potentially_affected)
+        
+        result_smoothed = potentially_affected.detect_artif_above_threshold_smoothed(artifact_lvl_smoothed, t, timelimit_min_smoothed, timelimit_max_smoothed)
+        if result_smoothed is True:
+            affected_smoothed.append(potentially_affected)
+        else:
+            not_affected_smoothed.append(potentially_affected)
 
-    return affected, not_affected, artifact_lvl
+    return affected_orig, not_affected_orig, artif_threshold_lvl, affected_smoothed, not_affected_smoothed, artifact_lvl_smoothed
 
 
-def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, chs_by_lobe: dict, flip_data: bool or str = 'flip', verbose_plots: bool = True):
+def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, chs_by_lobe: dict, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
@@ -732,6 +951,8 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
         'flip' means that the data will be flipped if the peak of the artifact is negative. 
         This is donr to get the same sign of the artifact for all channels, then to get the mean artifact amplitude over all channels and the threshold for the artifact amplitude onbase of this mean
         And also for the reasons of visualization: the artifact amplitude is always positive.
+    smoothed: bool
+        Plot smoothed data (true) or nonrmal (false)
     verbose_plots : bool
         True for showing plot in notebook.
 
@@ -742,7 +963,7 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
         
     """
-    
+
     if artif_affected_channels: #if affected channels present:
 
         #plot channels separated by lobes:
@@ -750,9 +971,15 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
         affected_data_list = []
         for ch in artif_affected_channels:
             affected_names_list.append(ch.name)
-            affected_data_list.append(ch.artif_data)
+            if smoothed is True:
+                affected_data_list.append(ch.artif_data_smoothed)
+            else:
+                affected_data_list.append(ch.artif_data)
+
         affected_data_arr = np.array(affected_data_list)
+
         df_affected=pd.DataFrame(affected_data_arr.T, columns=affected_names_list)
+
         fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_affected, t)
 
         #decorate the plot:
@@ -795,49 +1022,6 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
     return fig
 
 
-def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
-    
-    """
-    Find the peaks in the epoch data using the peakfinder algorithm.
-
-    Parameters
-    ----------
-    ch_data : np.ndarray
-        The data of the channel.
-    thresh_lvl_peakfinder : float
-        The threshold for the peakfinder algorithm.
-
-    Returns
-    -------
-    peak_locs_pos : np.ndarray
-        The locations of the positive peaks.
-    peak_locs_neg : np.ndarray
-        The locations of the negative peaks.
-    peak_magnitudes_pos : np.ndarray
-        The magnitudes of the positive peaks.
-    peak_magnitudes_neg : np.ndarray
-        The magnitudes of the negative peaks.
-
-        
-    """
-
-
-    thresh_mean=(max(ch_data) - min(ch_data)) / thresh_lvl_peakfinder
-    peak_locs_pos, _ = find_peaks(ch_data, prominence=thresh_mean)
-    peak_locs_neg, _ = find_peaks(-ch_data, prominence=thresh_mean)
-
-    try:
-        peak_magnitudes_pos=ch_data[peak_locs_pos]
-    except:
-        peak_magnitudes_pos=np.empty(0)
-
-    try:
-        peak_magnitudes_neg=ch_data[peak_locs_neg]
-    except:
-        peak_magnitudes_neg=np.empty(0)
-
-    return peak_locs_pos, peak_locs_neg, peak_magnitudes_pos, peak_magnitudes_neg
-
 
 
 def flip_channels(avg_artif_nonflipped: list, channels: list, max_n_peaks_allowed: int, thresh_lvl_peakfinder: float, t0_estimated_ind_start: int, t0_estimated_ind_end: int, t0_estimated_ind: int, gaussian_sigma: int = 6):
@@ -877,33 +1061,28 @@ def flip_channels(avg_artif_nonflipped: list, channels: list, max_n_peaks_allowe
 
     artifacts_only_data=[]
     artifacts_flipped=[]
+    artifacts_only_data_smoothed=[]
 
-    for i, artif_nonflipped in enumerate(avg_artif_nonflipped): 
+    for ch_artif in avg_artif_nonflipped: #for each channel:
 
-        #find peak_locs which is located the closest to t0_estimated_ind:
-        artif_data_nonflipped = artif_nonflipped.artif_data
-        peak_loc = artif_nonflipped.peak_loc
-        peak_magnitude = artif_nonflipped.peak_magnitude
-        wave_shape = artif_nonflipped.wave_shape
-
-        if peak_loc.size>0:
-            peak_loc_closest_to_t0=peak_loc[np.argmin(np.abs(peak_loc-t0_estimated_ind))]
+        if ch_artif.peak_loc.size>0: #if there are any peaks - find peak_locs which is located the closest to t0_estimated_ind:
+            peak_loc_closest_to_t0=ch_artif.peak_loc[np.argmin(np.abs(ch_artif.peak_loc-t0_estimated_ind))]
 
             #if peak_loc_closest_t0 is negative and is located in the estimated time window of the wave - flip the data:
-            if (artif_data_nonflipped[peak_loc_closest_to_t0]<0) & (peak_loc_closest_to_t0>t0_estimated_ind_start) & (peak_loc_closest_to_t0<t0_estimated_ind_end):
-                artifacts_only_data.append(-artif_data_nonflipped)
-                peak_magnitude=-peak_magnitude
-                #print('___MEG QC___: ', channels[i]+' was flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
+            if (ch_artif.artif_data[peak_loc_closest_to_t0]<0) & (peak_loc_closest_to_t0>t0_estimated_ind_start) & (peak_loc_closest_to_t0<t0_estimated_ind_end):
+                ch_artif.flip_artif()
+                if ch_artif.artif_data_smoothed is not None: #if there is also smoothed data present - flip it as well:
+                    ch_artif.flip_artif_smoothed()
             else:
-                artifacts_only_data.append(artif_data_nonflipped)
-                #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
+                pass
         else:
-            artifacts_only_data.append(artif_data_nonflipped)
-            #print('___MEG QC___: ', channels[i]+' was NOT flipped: peak_loc_near_t0: ', peak_loc_closest_to_t0, t[peak_loc_closest_to_t0], ', peak_magn:', ch_data[peak_loc_closest_to_t0], ', t0_estimated_ind_start: ', t0_estimated_ind_start, t[t0_estimated_ind_start], 't0_estimated_ind_end: ', t0_estimated_ind_end, t[t0_estimated_ind_end])
-            
-        artifacts_flipped.append(Avg_artif(name=channels[i], artif_data=artifacts_only_data[i], peak_loc=peak_loc, peak_magnitude=peak_magnitude, wave_shape=wave_shape))
+            pass
 
-    return artifacts_flipped, artifacts_only_data
+        artifacts_flipped.append(ch_artif)
+        artifacts_only_data.append(ch_artif.artif_data)
+        artifacts_only_data_smoothed.append(ch_artif.artif_data_smoothed)
+
+    return artifacts_flipped, artifacts_only_data, artifacts_only_data_smoothed
 
 
 def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndarray):
@@ -998,7 +1177,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag=True, flip_data='flip', gaussian_sigma: int = 6, verbose_plots: bool = False):
+def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag: bool =True, flip_data: bool =True, gaussian_sigma: int = 6, verbose_plots: bool = False):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -1118,33 +1297,30 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
 
     artif_per_ch=[]
 
+
     if flip_data is False:
         artif_per_ch_only_data=avg_epochs.data
-        for i, ch_data in enumerate(artif_per_ch_only_data):
-            artif_per_ch.append(Avg_artif(name=channels[i], artif_data=ch_data))
-            artif_per_ch[i].get_peaks_wave(on_original=True, on_smoothed = True, gaussian_sigma=gaussian_sigma, max_n_peaks_allowed_on_original=max_n_peaks_allowed, max_n_peaks_allowed_on_smoothed=max_n_peaks_allowed, thresh_lvl_peakfinder_on_original=thresh_lvl_peakfinder, thresh_lvl_peakfinder_on_smoothed=thresh_lvl_peakfinder)
-
+        artif_per_ch = all_artifs_nonflipped
     elif flip_data is True:
 
-        # New ecg flip approach:
-
-        # 1. find maxima on all channels (absolute values) in time frame around -0.02<t[peak_loc]<0.012 (here R wave is typicaly dettected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
+        # 1. find maxima on all channels (absolute values) in time frame around -0.02<t[peak_loc]<0.012 (here R wave is typicaly detected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
         # 2. take 5 channels with most prominent peak 
         # 3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate
 
-        avg_artif_data_nonflipped=avg_epochs.data
-        _, t0_estimated_ind, t0_estimated_ind_start, t0_estimated_ind_end = estimate_t0(ecg_or_eog, avg_artif_data_nonflipped, t)
+        avg_artif_data_nonflipped=avg_epochs.data #shape (n_channels, n_times)
+        _, t0_estimated_ind, t0_window_estimated_ind_start, t0_window_estimated_ind_end = estimate_t0(ecg_or_eog, avg_artif_data_nonflipped, t)
 
         # 4. detect peaks on channels and flip all channels with negative peak around estimated t0 
-       
         all_artifs_nonflipped = []
         for i, ch_data in enumerate(avg_artif_data_nonflipped):  # find peaks and estimate detect wave shape on all channels
             artif_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
-            artif_nonflipped.get_peaks_wave(on_original=True, on_smoothed = True, gaussian_sigma = gaussian_sigma, max_n_peaks_allowed_on_original=max_n_peaks_allowed, max_n_peaks_allowed_on_smoothed=max_n_peaks_allowed, thresh_lvl_peakfinder_on_original=thresh_lvl_peakfinder, thresh_lvl_peakfinder_on_smoothed=thresh_lvl_peakfinder)
+            artif_nonflipped.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+            artif_nonflipped.get_peaks_wave_smoothed(gaussian_sigma = gaussian_sigma, max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
             all_artifs_nonflipped.append(artif_nonflipped)
 
-        artif_per_ch, artif_per_ch_only_data = flip_channels(all_artifs_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_estimated_ind_start, t0_estimated_ind_end, t0_estimated_ind, gaussian_sigma)
-
+        artif_per_ch, artif_per_ch_only_data, artif_per_ch_only_data_smoothed = flip_channels(all_artifs_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_window_estimated_ind_start, t0_window_estimated_ind_end, t0_estimated_ind, gaussian_sigma)
+        # will flip the original artifact data for each channels + also smoothed data (if present) 
+        # and return it as a list of instances of Avg_artif class + list of data only
       
     else:
         print('___MEG QC___: ', 'Wrong set variable: flip_data=', flip_data)
@@ -1162,19 +1338,29 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
 
     avg_overall_obj=Avg_artif(name='Mean_'+ecg_or_eog+'_overall',artif_data=avg_overall)
 
-    #detect peaks and wave for the average over all artifact:
-    avg_overall_obj.get_peaks_wave(on_original=True, on_smoothed = True, gaussian_sigma=gaussian_sigma, max_n_peaks_allowed_on_original=max_n_peaks_allowed_for_avg, max_n_peaks_allowed_on_smoothed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder_on_original=thresh_lvl_peakfinder, thresh_lvl_peakfinder_on_smoothed=thresh_lvl_peakfinder)
+    #detect peaks and wave for the average overall artifact:
+    avg_overall_obj.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+    avg_overall_obj.get_peaks_wave_smoothed(gaussian_sigma = gaussian_sigma, max_n_peaks_allowed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
 
     affected_derivs=[]
-    artif_affected_channels = []
+    affected_channels = []
 
     if avg_overall_obj.wave_shape is True or avg_overall_obj.wave_shape_smoothed is True: #if the average ecg artifact is good - do steps 2 and 3:
 
-        mean_ecg_magnitude_peak=np.max(avg_overall_obj.peak_magnitude)
+        mean_magnitude_peak=np.max(avg_overall_obj.peak_magnitude)
         mean_ecg_loc_peak = avg_overall_obj.peak_loc[np.argmax(avg_overall_obj.peak_magnitude)]
-        #set t0_actual as the time of the peak of the average ecg artifact:
         t0_actual=t[mean_ecg_loc_peak]
-
+        #set t0_actual as the time of the peak of the average ecg artifact
+        
+        if avg_overall_obj.wave_shape_smoothed is not None: #if smoothed average and its peaks were also calculated:
+            mean_magnitude_peak_smoothed=np.max(avg_overall_obj.peak_magnitude_smoothed)
+            mean_ecg_loc_peak_smoothed = avg_overall_obj.peak_loc_smoothed[np.argmax(avg_overall_obj.peak_magnitude_smoothed)]
+            t0_actual_smoothed=t[mean_ecg_loc_peak_smoothed]
+        else:
+            mean_magnitude_peak_smoothed=None
+            t0_actual_smoothed=None
+            
+        
         tit, _ = get_tit_and_unit(m_or_g)
         
         if avg_overall_obj.wave_shape is True:
@@ -1194,13 +1380,19 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
 
         bad_avg_str = ''
 
-        artif_affected_channels, ecg_not_affected_channels, artifact_lvl = detect_channels_above_norm(norm_lvl=norm_lvl, list_mean_artif_epochs=artif_per_ch, mean_magnitude_peak=mean_ecg_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog)
+        # detect channels which are over the threshold defined by mean_magnitude_peak (average overall artifact) and norm_lvl (set in config):
+        affected_channels, not_affected_channels, artifact_lvl, affected_channels_smoothed, not_affected_channels_smoothed, artifact_lvl_smoothed = detect_channels_above_norm(norm_lvl=norm_lvl, list_mean_artif_epochs=artif_per_ch, mean_magnitude_peak=mean_magnitude_peak, t=t, t0_actual=t0_actual, ecg_or_eog=ecg_or_eog, mean_magnitude_peak_smoothed=mean_magnitude_peak_smoothed, t0_actual_smoothed=t0_actual_smoothed)
 
         if plotflag is True:
-            fig_affected = plot_affected_channels(artif_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels: ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, verbose_plots=verbose_plots)
-            fig_not_affected = plot_affected_channels(ecg_not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels: ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, verbose_plots=verbose_plots)
+            fig_affected = plot_affected_channels(affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels (orig): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = False, verbose_plots=verbose_plots)
+            fig_affected_smoothed = plot_affected_channels(affected_channels_smoothed, artifact_lvl_smoothed, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=verbose_plots)
+            fig_not_affected = plot_affected_channels(not_affected_channels, artifact_lvl, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels (orig): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = False, verbose_plots=verbose_plots)
+            fig_not_affected_smoothed = plot_affected_channels(not_affected_channels_smoothed, artifact_lvl_smoothed, t, ch_type=m_or_g, fig_tit=ecg_or_eog+' not affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=verbose_plots)
+            
             affected_derivs += [QC_derivative(fig_affected, ecg_or_eog+'_affected_channels_'+m_or_g, 'plotly')]
-            affected_derivs += [QC_derivative(fig_not_affected, ecg_or_eog+'_not_affected_channels_'+m_or_g, 'plotly')]
+            affected_derivs += [QC_derivative(fig_not_affected, ecg_or_eog+'_not_affected_channels_smooth'+m_or_g, 'plotly')]
+            affected_derivs += [QC_derivative(fig_affected_smoothed, ecg_or_eog+'_affected_channels_'+m_or_g, 'plotly')]
+            affected_derivs += [QC_derivative(fig_not_affected_smoothed, ecg_or_eog+'_not_affected_channels_smooth'+m_or_g, 'plotly')]
 
     else: #if the average artifact is bad - end processing
         tit, _ = get_tit_and_unit(m_or_g)
@@ -1217,7 +1409,7 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
         affected_derivs.insert(0, QC_derivative(fig_avg, 'overall_average_ECG_epoch_'+m_or_g, 'plotly', description_for_user = avg_artif_description))
         #prepend the avg plot before all other plots. because they will be added to report in the order they are in list.
 
-    return artif_affected_channels, affected_derivs, bad_avg_str, avg_overall_obj
+    return affected_channels, affected_derivs, bad_avg_str, avg_overall_obj
 
 
 
