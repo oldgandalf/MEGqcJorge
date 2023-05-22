@@ -19,7 +19,7 @@ sys.path.append('../../../meg_qc/source/')
 sys.path.append('../../../../meg_qc/source/')
 
 
-from meg_qc.source.initial_meg_qc import get_all_config_params, sanity_check, initial_processing
+from meg_qc.source.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
 from meg_qc.source.STD_meg_qc import STD_meg_qc
 from meg_qc.source.PSD_meg_qc import PSD_meg_qc
 from meg_qc.source.Peaks_manual_meg_qc import PP_manual_meg_qc
@@ -30,7 +30,7 @@ from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
 from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.source.universal_plots import QC_derivative
 
-def make_derivative_meg_qc(config_file_path):
+def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     """ 
     Main function of MEG QC:
@@ -45,6 +45,8 @@ def make_derivative_meg_qc(config_file_path):
     ----------
     config_file_path : str
         Path the config file with all the parameters for the QC analysis and data directory path.
+    internal_config_file_path : str
+        Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
         
     Returns
     -------
@@ -54,6 +56,7 @@ def make_derivative_meg_qc(config_file_path):
     """
 
     all_qc_params = get_all_config_params(config_file_path)
+    internal_qc_params = get_internal_config_params(internal_config_file_path)
 
     if all_qc_params is None:
         return
@@ -175,7 +178,7 @@ def make_derivative_meg_qc(config_file_path):
                 if all_qc_params['default']['run_ECG'] is True:
                     print('___MEG QC___: ', 'Starting ECG...')
                     start_time = time.time()
-                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
+                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], internal_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                     avg_ecg += avg_objects_ecg
@@ -183,7 +186,7 @@ def make_derivative_meg_qc(config_file_path):
                 if all_qc_params['default']['run_EOG'] is True:
                     print('___MEG QC___: ', 'Starting EOG...')
                     start_time = time.time()
-                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
+                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], internal_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                     avg_eog += avg_objects_eog

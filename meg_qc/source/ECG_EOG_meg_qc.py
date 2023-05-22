@@ -1176,8 +1176,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-
-def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, plotflag: bool =True, flip_data: bool =True, gaussian_sigma: int = 6, verbose_plots: bool = False):
+def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, m_or_g: str, norm_lvl: float, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, max_n_peaks_allowed_for_ch: int, max_n_peaks_allowed_for_ch_avg: int, plotflag: bool =True, flip_data: bool =True, gaussian_sigma: int = 6, verbose_plots: bool = False):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -1245,6 +1244,10 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
         Start time.
     tmax : float
         End time.
+    max_n_peaks_allowed_for_ch : int
+        Max number of peaks allowed for channel. (different for ECG and EOG)
+    max_n_peaks_allowed_for_ch_avg : int
+        Max number of peaks allowed for average over all channels. (different for ECG and EOG). smaller number here as average is usually less noisy.
     plotflag : bool, optional
         Plot flag. The default is True.
     flip_data : bool, optional    
@@ -1273,15 +1276,6 @@ def find_affected_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe
         and rerun a new algorythm on them without rerunning the whole pipeline.
         
     """
-
-    if  ecg_or_eog=='ECG':
-        max_n_peaks_allowed_for_ch=8 #this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
-        max_n_peaks_allowed_for_avg = 3 #this is for the whole averaged over all channels ecg epoch, it should be much smoother - therefore less peaks are allowed.
-    elif ecg_or_eog=='EOG':
-        max_n_peaks_allowed_for_ch=5
-        max_n_peaks_allowed_for_avg = 3
-    else:
-        print('___MEG QC___: ', 'Choose ecg_or_eog input correctly!')
 
     max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_for_ch)
     print('___MEG QC___: ', 'max_n_peaks_allowed_for_ch: '+str(max_n_peaks_allowed))
@@ -1540,7 +1534,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 #%%
-def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
+def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -1549,6 +1543,8 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: d
     ----------
     ecg_params : dict
         Dictionary with ECG parameters originating from config file.
+    ecg_params_internal : dict
+        Dictionary with ECG parameters originating from config file preset, not to be changed by user.
     raw : mne.io.Raw
         Raw data.
     channels : dict
@@ -1606,12 +1602,14 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: d
     #ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
     
     sfreq=raw.info['sfreq']
-    tmin=ecg_params['ecg_epoch_tmin']
-    tmax=ecg_params['ecg_epoch_tmax']
+    tmin=ecg_params_internal['ecg_epoch_tmin']
+    tmax=ecg_params_internal['ecg_epoch_tmax']
     norm_lvl=ecg_params['norm_lvl']
     flip_data=ecg_params['flip_data']
     gaussian_sigma=ecg_params['gaussian_sigma']
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
+    max_n_peaks_allowed_for_ch=ecg_params_internal['max_n_peaks_allowed_for_ch']
+    max_n_peaks_allowed_for_ch_avg=ecg_params_internal['max_n_peaks_allowed_for_ch_avg']
     
     ecg_affected_channels={}
     bad_avg_str = {}
@@ -1623,7 +1621,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: d
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], chs_by_lobe[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data, gaussian_sigma=gaussian_sigma, verbose_plots=verbose_plots)
+        ecg_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj =find_affected_channels(ecg_epochs, channels[m_or_g], chs_by_lobe[m_or_g], m_or_g, norm_lvl, ecg_or_eog='ECG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, max_n_peaks_allowed_for_ch = max_n_peaks_allowed_for_ch, max_n_peaks_allowed_for_ch_avg=max_n_peaks_allowed_for_ch_avg, plotflag=True, sfreq=sfreq, flip_data=flip_data, gaussian_sigma=gaussian_sigma, verbose_plots=verbose_plots)
         ecg_derivs += affected_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
@@ -1635,7 +1633,7 @@ def ECG_meg_qc(ecg_params: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: d
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
+def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -1644,6 +1642,8 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: d
     ----------
     eog_params : dict
         Dictionary with EOG parameters originating from the config file.
+    eog_params_internal : dict
+        Dictionary with EOG parameters originating from the config file - preset for internal use, not to be changed by the user.
     raw : mne.io.Raw
         Raw MEG data.
     channels : dict
@@ -1698,12 +1698,14 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: d
     #eog_events_times  = (eog_events[:, 0] - raw.first_samp) / raw.info['sfreq']
 
     sfreq=raw.info['sfreq']
-    tmin=eog_params['eog_epoch_tmin']
-    tmax=eog_params['eog_epoch_tmax']
+    tmin=eog_params_internal['eog_epoch_tmin']
+    tmax=eog_params_internal['eog_epoch_tmax']
     norm_lvl=eog_params['norm_lvl']
     flip_data=eog_params['flip_data']
     gaussian_sigma=eog_params['gaussian_sigma']
     thresh_lvl_peakfinder=eog_params['thresh_lvl_peakfinder']
+    max_n_peaks_allowed_for_ch = eog_params_internal['max_n_peaks_allowed_for_ch'] 
+    max_n_peaks_allowed_for_ch_avg=eog_params_internal['max_n_peaks_allowed_for_ch_avg']
 
     eog_affected_channels={}
     bad_avg_str = {}
@@ -1715,7 +1717,7 @@ def EOG_meg_qc(eog_params: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: d
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], chs_by_lobe[m_or_g],  m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, plotflag=True, sfreq=sfreq, flip_data=flip_data, gaussian_sigma=gaussian_sigma, verbose_plots=verbose_plots)
+        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], chs_by_lobe[m_or_g],  m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, max_n_peaks_allowed_for_ch = max_n_peaks_allowed_for_ch, max_n_peaks_allowed_for_ch_avg=max_n_peaks_allowed_for_ch_avg, plotflag=True, sfreq=sfreq, flip_data=flip_data, gaussian_sigma=gaussian_sigma, verbose_plots=verbose_plots)
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         eog_derivs += affected_derivs
         avg_objects_eog.append(avg_overall_obj)

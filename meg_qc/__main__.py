@@ -21,7 +21,7 @@ def main():
     
     print("\n\n Running MEG QC...\n")
 
-    make_derivative_meg_qc(config_file_path)
+    make_derivative_meg_qc(config_file_path, internal_config_file_path='meg_qc/settings_internal.ini')
 
     #note: even though there are no outputs, it will for now still try to output a bunch of plotly and mne figures and open all of them in the browser. 
     #This will later be suppressed, but so far I need for running the pipeline in the notebook and seeing the figures there.

@@ -170,8 +170,6 @@ def get_all_config_params(config_file_name: str):
         'drop_bad_ch': ecg_section.getboolean('drop_bad_ch'),
         'n_breaks_bursts_allowed_per_10min': ecg_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': ecg_section.getfloat('allowed_range_of_peaks_stds'),
-        'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
-        'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
         'flip_data': ecg_section.getboolean('flip_data'),
         'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
@@ -181,8 +179,6 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['EOG'] = dict({
         'n_breaks_bursts_allowed_per_10min': eog_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': eog_section.getfloat('allowed_range_of_peaks_stds'),
-        'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
-        'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),
         'flip_data': eog_section.getboolean('flip_data'),
         'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
@@ -208,6 +204,48 @@ def get_all_config_params(config_file_name: str):
         return None
 
     return all_qc_params
+
+def get_internal_config_params(config_file_name: str):
+    
+    """
+    Parse all the parameters from config and put into a python dictionary 
+    divided by sections. Parsing approach can be changed here, which 
+    will not affect working of other fucntions.
+    These are interanl parameters, NOT to be changed by the user.
+    
+
+    Parameters
+    ----------
+    config_file_name: str
+        The name of the config file.
+
+    Returns
+    -------
+    internal_qc_params: dict
+        A dictionary with all the parameters.
+
+    """
+    
+    internal_qc_params = {}
+
+    config = configparser.ConfigParser()
+    config.read(config_file_name)
+
+    ecg_section = config['ECG']
+    internal_qc_params['ECG'] = dict({
+        'max_n_peaks_allowed_for_ch': ecg_section.getint('max_n_peaks_allowed_for_ch'),
+        'max_n_peaks_allowed_for_avg': ecg_section.getint('max_n_peaks_allowed_for_avg'),
+        'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
+        'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax')})
+    
+    eog_section = config['EOG']
+    internal_qc_params['EOG'] = dict({
+        'max_n_peaks_allowed_for_ch': eog_section.getint('max_n_peaks_allowed_for_ch'),
+        'max_n_peaks_allowed_for_avg': eog_section.getint('max_n_peaks_allowed_for_avg'),
+        'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
+        'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax')})
+    
+    return internal_qc_params
 
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):

@@ -553,7 +553,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
             epochs_names = df_std.columns.tolist()
             fig_std_epoch0 += [boxplot_epochs_lobes(chs_by_lobe_copy[m_or_g], epochs_names, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
-            fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)]
+            #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
             fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
 
