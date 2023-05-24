@@ -2,4 +2,4 @@
 Installation
 """"""""""""
 
-Coming soon...
+https://pypi.org/project/meg-qc/

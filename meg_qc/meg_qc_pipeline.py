@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            for fif_ind, data_file in enumerate(list_of_fifs[0:1]): 
+            for fif_ind, data_file in enumerate(list_of_fifs[0:10]): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
 
                 # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
