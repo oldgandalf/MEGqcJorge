@@ -117,8 +117,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         avg_ecg=[]
         avg_eog=[]
 
-        #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especia;ly 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
-        for sid in list_of_subs[0:1]: 
+        #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
+        for sid in list_of_subs[1:2]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            for fif_ind, data_file in enumerate(list_of_fifs[0:10]): 
+            for fif_ind, data_file in enumerate(list_of_fifs[0:1]): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
 
                 # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
