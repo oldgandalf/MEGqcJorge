@@ -1,6 +1,7 @@
 import mne
 import configparser
 import numpy as np
+import random
 
 from IPython.display import display
 from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
@@ -451,6 +452,12 @@ def assign_channels_properties(raw: mne.io.Raw):
     else:
         channels_objs['grad'] = None
 
+    #remove spaces from channels names in channels_objs - so that they always match the names in channels variable and recognised correctly for color coding
+    for ch_type in channels_objs:
+        if channels_objs[ch_type] is not None:
+            for ch in channels_objs[ch_type]:
+                ch.name = ch.name.replace(' ', '')
+
     # for understanding how the locations are obtained. They can be extracted as:
     # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
     # mag_pos = [ch['loc'][:3] for ch in mag_locs]
@@ -479,18 +486,31 @@ def assign_channels_properties(raw: mne.io.Raw):
     #assign treux labels to the channels:
     if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
         #loop over all values in the dictionary:
+        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
         for key, value in channels_objs.items():
             for ch in value:
                 for lobe in lobes_treux.keys():
                     if ch.name in lobes_treux[lobe]:
                         ch.lobe = lobe
                         ch.lobe_color = lobe_colors[lobe]
+    else:
+        lobes_color_coding_str='For MEG system other than Treux color coding by lobe is not applied.'
+        print(lobes_color_coding_str)
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.lobe = 'All lobes'
+                #take random color from lobe_colors:
+                ch.lobe_color = random.choice(list(lobe_colors.values()))
+
+    print('HERE')
+    print(len(channels_objs['mag']), len(channels_objs['grad']))
+    print(channels_objs['mag'])
 
     #sort channels by name:
     for key, value in channels_objs.items():
         channels_objs[key] = sorted(value, key=lambda x: x.name)
 
-    return channels_objs
+    return channels_objs, lobes_color_coding_str
 
 def sort_channel_by_lobe(channels_objs: dict):
 
@@ -621,7 +641,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
             
     #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
     #In this dict channels are separated by mag/grads. not by lobes.
-    channels_objs = assign_channels_properties(raw)
+    channels_objs, lobes_color_coding_str = assign_channels_properties(raw)
 
 
     #Check if there are channels to analyze according to info in config file:
@@ -634,6 +654,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
+    #remove spaces from channel names - done so that color coding by lobe will recognise the names:
+    channels['mag'] = [ch.replace(' ', '') for ch in channels['mag']]
+    channels['grad'] = [ch.replace(' ', '') for ch in channels['grad']]
 
     #Plot sensors:
     sensors_derivs = plot_sensors_3d(chs_by_lobe)
@@ -656,4 +679,4 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
         
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, verbose_plots
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, verbose_plots
