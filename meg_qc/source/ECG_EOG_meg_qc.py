@@ -1046,7 +1046,7 @@ def flip_channels(avg_artif_nonflipped: list, channels: list, max_n_peaks_allowe
     t0_estimated_ind : int
         The index of the estimated t0.
     gaussian_sigma : int, optional
-        The sigma for the gaussian filter. The default is 6. Used for smoothing the data if desired. If not desired, leave defaul, it will just not b used.
+        The sigma for the gaussian filter. The default is 6. Used for smoothing the data if desired. If not desired, leave defaul, it will just not be used.
 
 
     Returns

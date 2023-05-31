@@ -725,6 +725,15 @@ def plot_sensors_3d(chs_by_lobe: dict):
         # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
 
 
+    colors = ['#1f77b4','#ff7f0e','#2ca02c','#9467bd','#e377c2','#d62728','#bcbd22','#17becf']
+    ##if there was no separation by lobe - give random colors to all traces:
+    if len(lobes_dict)==1:
+
+        for tr in traces:
+            tr['marker']['color'] = random.choice(colors)
+
+    print(traces)
+
     fig = go.Figure(data=traces)
 
     fig.update_layout(
