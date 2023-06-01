@@ -1166,6 +1166,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     # Put all data dots in a list of traces groupped by lobe:
     values_all=[]
     traces = []
+
     for lobe,  ch_list in chs_by_lobe.items():
         for ch in ch_list:
             if what_data == 'stds':
@@ -1178,6 +1179,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
             #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
             
             traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+
 
     # create box plot trace
     box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)

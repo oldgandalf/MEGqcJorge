@@ -66,6 +66,11 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
         rmse/std for each channel
     
     """
+
+    print('HERE')
+    print(channels)
+
+    
     data_channels=data.get_data(picks = channels)
 
     #std_channels = RMSE(data_channels)
