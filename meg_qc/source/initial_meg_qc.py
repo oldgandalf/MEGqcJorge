@@ -1,6 +1,7 @@
 import mne
 import configparser
 import numpy as np
+import random
 
 from IPython.display import display
 from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
@@ -442,14 +443,15 @@ def assign_channels_properties(raw: mne.io.Raw):
         for ch in mag_locs:
             channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
     else:
-        channels_objs['mag'] = None
+        channels_objs['mag'] = []
 
     if 'grad' in raw:
         grad_locs = raw.copy().pick_types(meg='grad').info['chs']
         for ch in grad_locs:
             channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
     else:
-        channels_objs['grad'] = None
+        channels_objs['grad'] = []
+
 
     # for understanding how the locations are obtained. They can be extracted as:
     # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
@@ -465,7 +467,12 @@ def assign_channels_properties(raw: mne.io.Raw):
             'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
             'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
             'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133']}
-             
+
+
+    #Now add to lobes_treux also the name of each channel with space in the middle:
+    for lobe in lobes_treux.keys():
+        lobes_treux[lobe] += [channel[:-4]+' '+channel[-4:] for channel in lobes_treux[lobe]]
+
     lobe_colors = {
         'Left Frontal': '#1f77b4',
         'Right Frontal': '#ff7f0e',
@@ -479,18 +486,28 @@ def assign_channels_properties(raw: mne.io.Raw):
     #assign treux labels to the channels:
     if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
         #loop over all values in the dictionary:
+        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
         for key, value in channels_objs.items():
             for ch in value:
                 for lobe in lobes_treux.keys():
                     if ch.name in lobes_treux[lobe]:
                         ch.lobe = lobe
                         ch.lobe_color = lobe_colors[lobe]
+    else:
+        lobes_color_coding_str='For MEG system other than Treux color coding by lobe is not applied.'
+        print('___MEG QC___: ' + lobes_color_coding_str)
+
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.lobe = 'All lobes'
+                #take random color from lobe_colors:
+                ch.lobe_color = random.choice(list(lobe_colors.values()))
 
     #sort channels by name:
     for key, value in channels_objs.items():
         channels_objs[key] = sorted(value, key=lambda x: x.name)
 
-    return channels_objs
+    return channels_objs, lobes_color_coding_str
 
 def sort_channel_by_lobe(channels_objs: dict):
 
@@ -621,7 +638,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
             
     #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
     #In this dict channels are separated by mag/grads. not by lobes.
-    channels_objs = assign_channels_properties(raw)
+    channels_objs, lobes_color_coding_str = assign_channels_properties(raw)
 
 
     #Check if there are channels to analyze according to info in config file:
@@ -655,5 +672,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 
     verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
+
+    print(channels)
         
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, verbose_plots
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, verbose_plots
