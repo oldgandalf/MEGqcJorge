@@ -499,7 +499,7 @@ def assign_channels_properties(raw: mne.io.Raw):
 
         for key, value in channels_objs.items():
             for ch in value:
-                ch.lobe = 'All lobes'
+                ch.lobe = 'All channels'
                 #take random color from lobe_colors:
                 ch.lobe_color = random.choice(list(lobe_colors.values()))
 
