@@ -727,12 +727,10 @@ def plot_sensors_3d(chs_by_lobe: dict):
             #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
             # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
 
-    else: #if there are no lobes - we use random colors, channel names will be used instead of lobe names in make_3d_trace function
+    else: #if there are no lobes - we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
         ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
-        colors = ['#1f77b4','#ff7f0e','#2ca02c','#9467bd','#e377c2','#d62728','#bcbd22','#17becf']
         for i, _ in enumerate(ch_locs):
-            color=random.choice(colors)
-            traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], color, 10, ch_names[i], 'circle', 'top left'))
+            traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
 
 
     fig = go.Figure(data=traces)
