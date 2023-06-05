@@ -502,7 +502,8 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     """
     Plots the 3D locations of the sensors in the raw file.
-    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis. Also it doesnt care for the lobe areas.
+    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis. 
+    Also it doesnt care for the lobe areas.
 
     Parameters
     ----------
@@ -718,21 +719,19 @@ def plot_sensors_3d(chs_by_lobe: dict):
                 lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
 
     traces = []
-    for lobe in lobes_dict:
+
+    if len(lobes_dict)>1: #if there are lobes - we use color coding: one clor pear each lobe
+        for lobe in lobes_dict:
+            ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
+            traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
+            #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
+            # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
+
+    else: #if there are no lobes - we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
         ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
-        traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
-        #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
-        # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
+        for i, _ in enumerate(ch_locs):
+            traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
 
-
-    colors = ['#1f77b4','#ff7f0e','#2ca02c','#9467bd','#e377c2','#d62728','#bcbd22','#17becf']
-    ##if there was no separation by lobe - give random colors to all traces:
-    if len(lobes_dict)==1:
-
-        for tr in traces:
-            tr['marker']['color'] = random.choice(colors)
-
-    print(traces)
 
     fig = go.Figure(data=traces)
 
@@ -1165,6 +1164,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     # Put all data dots in a list of traces groupped by lobe:
     values_all=[]
     traces = []
+
     for lobe,  ch_list in chs_by_lobe.items():
         for ch in ch_list:
             if what_data == 'stds':
@@ -1177,6 +1177,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
             #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
             
             traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+
 
     # create box plot trace
     box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)

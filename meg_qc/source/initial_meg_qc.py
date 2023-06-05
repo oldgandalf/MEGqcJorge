@@ -327,15 +327,15 @@ def sanity_check(m_or_g_chosen, channels_objs):
         m_or_g_chosen = []
         m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
         raise ValueError(m_or_g_skipped_str)
-    if channels_objs['mag'] is None and 'mag' in m_or_g_chosen:
+    if len(channels_objs['mag']) == 0 and 'mag' in m_or_g_chosen:
         m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
-    elif channels_objs['grad'] is None and 'grad' in m_or_g_chosen:
+    elif len(channels_objs['grad']) == 0 and 'grad' in m_or_g_chosen:
         m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
         print('___MEG QC___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
-    elif channels_objs['mag'] is None and channels_objs['grad'] is None:
+    elif len(channels_objs['mag']) == 0 and len(channels_objs['grad']) == 0:
         m_or_g_chosen = []
         m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
         raise ValueError(m_or_g_skipped_str)
@@ -499,7 +499,7 @@ def assign_channels_properties(raw: mne.io.Raw):
 
         for key, value in channels_objs.items():
             for ch in value:
-                ch.lobe = 'All lobes'
+                ch.lobe = 'All channels'
                 #take random color from lobe_colors:
                 ch.lobe_color = random.choice(list(lobe_colors.values()))
 
@@ -672,7 +672,5 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 
     verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
-
-    print(channels)
         
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, verbose_plots
