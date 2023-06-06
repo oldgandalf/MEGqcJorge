@@ -212,7 +212,7 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
     # Plot the signal using plotly:
     fig = plot_channel(ch_data, peaks, ch_name = picked, fs = fs)
 
-    return (similar_ampl, no_breaks, no_bursts), fig
+    return (similar_ampl, no_breaks, no_bursts), fig, peaks
 
 
 
@@ -282,28 +282,37 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg
 
     bad_ecg_eog = {}
     noisy_ch_derivs=[]
-    for picked in picked_channels_ecg_or_eog:
+    all_ch_data = []
+    Rpeaks = []
 
-        ch_data=raw.get_data(picks=picked)[0] 
+    if len(picked_channels_ecg_or_eog) == 0 and ecg_or_eog == 'EOG':
+        return noisy_ch_derivs, bad_ecg_eog, ch_data, Rpeaks
+    elif len(picked_channels_ecg_or_eog) == 0 and ecg_or_eog == 'ECG':
+        peaks, ch_ecg, pulse, all_ch_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
+        #here ch_data will be the RECONSTRUCTED DATA, not the raw data
+    elif len(picked_channels_ecg_or_eog) > 0:
+        all_ch_data.append(raw.get_data(picks=picked_channels_ecg_or_eog)[0]) #here ch_data will be the RAW DATA
         # get_data creates list inside of a list becausee expects to create a list for each channel. 
         # but iteration takes 1 ch at a time. this is why [0]
 
-        #ecg_eval, fig = check_3_condition_old(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
-        ecg_eval, fig = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
-        print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
 
-        if all(ecg_eval):
-            print(f'___MEG QC___: Overall good {ecg_or_eog} channel: {picked}')
-            bad_ecg_eog[picked] = 'good'
-        else:
-            print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {picked}')
-            bad_ecg_eog[picked] = 'bad'
+        for ch_data, picked in zip(all_ch_data, picked_channels_ecg_or_eog):
 
-        #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) mean interval between peaks as expected: '+str(ecg_eval[1])+', 3) no or few breaks in the data: '+str(ecg_eval[2]))]
-        
-        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+            #ecg_eval, fig = check_3_condition_old(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
+            ecg_eval, fig, Rpeaks = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
+            print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
+
+            if all(ecg_eval):
+                print(f'___MEG QC___: Overall good {ecg_or_eog} channel: {picked}')
+                bad_ecg_eog[picked] = 'good'
+            else:
+                print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {picked}')
+                bad_ecg_eog[picked] = 'bad'
+            
+            noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
        
-    return noisy_ch_derivs, bad_ecg_eog, ch_data
+    return noisy_ch_derivs, bad_ecg_eog, all_ch_data, Rpeaks
+
 
 def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
     
@@ -404,7 +413,7 @@ class Avg_artif:
         
     """
 
-    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None):
+    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None):
         """Constructor"""
         
         self.name =  name
@@ -422,6 +431,8 @@ class Avg_artif:
         self.artif_over_threshold_smoothed = artif_over_threshold_smoothed
         self.main_peak_loc_smoothed = main_peak_loc_smoothed
         self.main_peak_magnitude_smoothed = main_peak_magnitude_smoothed
+        self.corr_coef = corr_coef
+        self.p_value = p_value
 
 
     def __repr__(self):
@@ -1320,49 +1331,52 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ec
     return artif_per_ch, artif_time_vector
 
 
-def find_mean_ecg_epoch(ecg_ch_name, raw):
+def find_mean_ecg_epoch(ch_data, event_indexes):
 
 
-    # Extract the ECG channel data
-    ecg_data, times = raw.get_data(ecg_ch_name, return_times=True)
+    # Define the time window of interest
+    time_window = [0.2, 0.2]  # in seconds
 
-    # Detect the R-wave peaks in the filtered ECG channel data
-    r_peaks, _, _ = mne.preprocessing.find_ecg_events(raw)
+    # Convert time window to samples
+    sfreq = 1000  # sampling frequency of your data
+    time_window_samples = np.round(np.array(time_window) * sfreq).astype(int)
 
-    # Calculate the time difference between each R-wave peak and the first R-wave peak
-    r_wave_epochs = (r_peaks - r_peaks[0]) / raw.info['sfreq']
+    # Initialize an empty array to store the extracted epochs
+    epochs = np.zeros((len(event_indexes), np.sum(time_window_samples)))
 
-    # Calculate the average R-wave epoch
-    avg_r_wave_epoch = np.mean(r_wave_epochs)
+    # Loop through each ECG event and extract the corresponding epoch
+    for i, event in enumerate(event_indexes):
+        start = event - time_window_samples[0]
+        end = event + time_window_samples[1]
+        epochs[i, :] = ch_data[start:end]
 
-    # Use the average R-wave epoch to extract a segment of data from the ECG channel
-    avg_r_wave_data = ecg_data[:, int(avg_r_wave_epoch * raw.info['sfreq']) : int((avg_r_wave_epoch + 0.2) * raw.info['sfreq'])]
+    #average all epochs:
+    avg_ecg=np.mean(epochs, axis=0)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=times, y=avg_r_wave_data[0], mode='lines', name='ECG'))
-    fig.update_layout(title='Average R-wave epoch', xaxis_title='Time (s)', yaxis_title='ECG (mV)')
+    #create time vector based on time window and sampling frequency:
+    times= np.arange(-time_window_samples[0], time_window_samples[1])/fs
+    fig.add_trace(go.Scatter(x=times, y=avg_ecg, mode='lines', name='ECG'))
     fig.show()
 
-    return avg_r_wave_data, times
+    return avg_ecg, times
 
-def find_affected_by_correlation(ch_data, raw, artif_per_ch, ecg_or_eog, plotflag, verbose_plots, m_or_g, chs_by_lobe, t):
 
-    if ch_data: #if ecg/eog channels is present - calculate average wave over all ecg/og events and correlate the result with each channels average event:
-        
-        avg_r_wave_data, times = find_mean_ecg_epoch(ecg_or_eog, raw)
+def find_affected_by_correlation(ch_name, raw, artif_per_ch, plotflag, verbose_plots, m_or_g, chs_by_lobe, t):
 
-        for ch in artif_per_ch:  # find peaks and estimate detect wave shape on all channels
-            # Calculate the Pearson correlation coefficient and p-value
+    
+    avg_r_wave_data, avg_r_wave_data_rec, times = find_mean_ecg_epoch(ch_name, raw)
 
-            if ch.artif_data_smoothed is not None:
-                ch_data=ch.artif_data_smoothed
-            else:
-                ch_data=ch.artif_data
+    # Calculate the correlation coefficient between the ECG channel data and the average ecg epoch of each channel:
 
-            corr_coef, p_value = pearsonr(avg_r_wave_data, ch_data)
+    print('HERE len')
+    print(ch.artif_data.shape, avg_r_wave_data.shape, avg_r_wave_data_rec.shape)
 
-            # Print the results
-            print(ch.name, "Pearson correlation coefficient:", corr_coef, ", p-value:", p_value)
+    for ch in artif_per_ch:
+        if avg_r_wave_data:
+            ch.corr_coef, ch.p_value = pearsonr(ch.artif_data, avg_r_wave_data)
+        else:
+            ch.corr_coef, ch.p_value = pearsonr(ch.artif_data, avg_r_wave_data_rec)
 
 
 
@@ -1627,7 +1641,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     ecg_derivs = []
 
-    noisy_ch_derivs, bad_ecg_eog, ecg_data = detect_noisy_ecg_eog(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
+    noisy_ch_derivs, bad_ecg_eog, ecg_data, Rpeaks = detect_noisy_ecg_eog(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
 
     ecg_derivs += noisy_ch_derivs
     if ecg_ch_name:
