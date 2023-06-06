@@ -2,6 +2,7 @@ import mne
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from scipy.signal import find_peaks
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 from copy import deepcopy
@@ -237,7 +238,7 @@ def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name
 
     return fig
 
-def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
+def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int =3, allowed_range_of_peaks_stds: float = 0.05):
     """
     Detects noisy ecg or eog channels.
 
@@ -310,8 +311,13 @@ def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg
                 bad_ecg_eog[picked] = 'bad'
             
             noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
-       
-    return noisy_ch_derivs, bad_ecg_eog, all_ch_data, Rpeaks
+    
+    #The idea was to use this function to detect bith noisy ECG and EOG, but it is hard ti ue for EOG, it s much moe random.
+    #This is why theer is a loop, because EOG has 2 channel.
+    #In fact this fucntion is only used for ECG now, so it outpus all_ch_data[0] - the ECG data for 1 channel.
+    #kept as a lopp still, in case we want to use it for EOG in the future.
+
+    return noisy_ch_derivs, bad_ecg_eog, all_ch_data[0], Rpeaks
 
 
 def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
@@ -1301,26 +1307,24 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ec
 
     artif_per_ch=[]
 
+    # 1. find maxima on all channels (absolute values) in time frame around -0.02<t[peak_loc]<0.012 (here R wave is typicaly detected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
+    # 2. take 5 channels with most prominent peak 
+    # 3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate
+
+    avg_artif_data_nonflipped=avg_epochs.data #shape (n_channels, n_times)
+    _, t0_estimated_ind, t0_window_estimated_ind_start, t0_window_estimated_ind_end = estimate_t0(ecg_or_eog, avg_artif_data_nonflipped, artif_time_vector)
+
+    # 4. detect peaks on channels and flip all channels with negative peak around estimated t0 
+    all_artifs_nonflipped = []
+    for i, ch_data in enumerate(avg_artif_data_nonflipped):  # find peaks and estimate detect wave shape on all channels
+        artif_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
+        artif_nonflipped.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        artif_nonflipped.get_peaks_wave_smoothed(gaussian_sigma = gaussian_sigma, max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
+        all_artifs_nonflipped.append(artif_nonflipped)
 
     if flip_data is False:
         artif_per_ch = all_artifs_nonflipped
     elif flip_data is True:
-
-        # 1. find maxima on all channels (absolute values) in time frame around -0.02<t[peak_loc]<0.012 (here R wave is typicaly detected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
-        # 2. take 5 channels with most prominent peak 
-        # 3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate
-
-        avg_artif_data_nonflipped=avg_epochs.data #shape (n_channels, n_times)
-        _, t0_estimated_ind, t0_window_estimated_ind_start, t0_window_estimated_ind_end = estimate_t0(ecg_or_eog, avg_artif_data_nonflipped, artif_time_vector)
-
-        # 4. detect peaks on channels and flip all channels with negative peak around estimated t0 
-        all_artifs_nonflipped = []
-        for i, ch_data in enumerate(avg_artif_data_nonflipped):  # find peaks and estimate detect wave shape on all channels
-            artif_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
-            artif_nonflipped.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
-            artif_nonflipped.get_peaks_wave_smoothed(gaussian_sigma = gaussian_sigma, max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
-            all_artifs_nonflipped.append(artif_nonflipped)
-
         artif_per_ch = flip_channels(all_artifs_nonflipped, channels, max_n_peaks_allowed, thresh_lvl_peakfinder, t0_window_estimated_ind_start, t0_window_estimated_ind_end, t0_estimated_ind, gaussian_sigma)
         # will flip the original artifact data for each channels + also smoothed data (if present) 
         # and return it as a list of instances of Avg_artif class + list of data only
@@ -1331,52 +1335,107 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ec
     return artif_per_ch, artif_time_vector
 
 
-def find_mean_ecg_epoch(ch_data, event_indexes):
-
-
-    # Define the time window of interest
-    time_window = [0.2, 0.2]  # in seconds
-
-    # Convert time window to samples
-    sfreq = 1000  # sampling frequency of your data
-    time_window_samples = np.round(np.array(time_window) * sfreq).astype(int)
+def find_mean_rwave(ch_data, event_indexes, tmin, tmax, sfreq):
 
     # Initialize an empty array to store the extracted epochs
-    epochs = np.zeros((len(event_indexes), np.sum(time_window_samples)))
+    epochs = np.zeros((len(event_indexes), int((tmax-tmin)*sfreq)+1))
 
     # Loop through each ECG event and extract the corresponding epoch
     for i, event in enumerate(event_indexes):
-        start = event - time_window_samples[0]
-        end = event + time_window_samples[1]
+        start = np.round(event + tmin*sfreq).astype(int)
+        end = np.round(event + tmax*sfreq).astype(int)+1
         epochs[i, :] = ch_data[start:end]
 
     #average all epochs:
-    avg_ecg=np.mean(epochs, axis=0)
+    mean_rwave=np.mean(epochs, axis=0)
 
-    fig = go.Figure()
-    #create time vector based on time window and sampling frequency:
-    times= np.arange(-time_window_samples[0], time_window_samples[1])/fs
-    fig.add_trace(go.Scatter(x=times, y=avg_ecg, mode='lines', name='ECG'))
-    fig.show()
-
-    return avg_ecg, times
+    return mean_rwave
 
 
-def find_affected_by_correlation(ch_name, raw, artif_per_ch, plotflag, verbose_plots, m_or_g, chs_by_lobe, t):
+def find_affected_by_correlation(mean_rwave, artif_per_ch, tmin, tmax, sfreq):
 
-    
-    avg_r_wave_data, avg_r_wave_data_rec, times = find_mean_ecg_epoch(ch_name, raw)
+    #here we assume that both vectors have sme length! these are defined by tmin and tmax which are set in config and propageted in this script. 
+    # Keep n mind if changing anything with tmin and tmax
 
-    # Calculate the correlation coefficient between the ECG channel data and the average ecg epoch of each channel:
-
-    print('HERE len')
-    print(ch.artif_data.shape, avg_r_wave_data.shape, avg_r_wave_data_rec.shape)
+    if len(mean_rwave) != len(artif_per_ch[0].artif_data):
+        print(len(mean_rwave), len(artif_per_ch[0].artif_data))
+        print('___MEG QC___: ', 'mean_rwave and artif_per_ch.artif_data have different length! Both are defined by tmin and tmax in config.py and are use to cut the data. Keep in mind if changing anything with tmin and tmax')
+        print('len(mean_rwave): ', len(mean_rwave), 'len(artif_per_ch[0].artif_data): ', len(artif_per_ch[0].artif_data))
+        return
 
     for ch in artif_per_ch:
-        if avg_r_wave_data:
-            ch.corr_coef, ch.p_value = pearsonr(ch.artif_data, avg_r_wave_data)
-        else:
-            ch.corr_coef, ch.p_value = pearsonr(ch.artif_data, avg_r_wave_data_rec)
+        ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
+
+    #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
+    artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
+
+    return artif_per_ch
+
+def plot_artif_per_ch_correlated_lobes(artif_per_ch, mean_rwave, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots, plotflag):
+
+    #collect artif_per_ch into 3 lists:
+    # - a third of all channels that are the most correlated with mean_rwave
+    # - a third of all channels that are the least correlated with mean_rwave
+    # - a third of all channels that are in the middle of the correlation with mean_rwave
+
+    most_correlated = artif_per_ch[:int(len(artif_per_ch)/3)]
+    least_correlated = artif_per_ch[-int(len(artif_per_ch)/3):]
+    middle_correlated = artif_per_ch[int(len(artif_per_ch)/3):-int(len(artif_per_ch)/3)]
+
+    #plot using plotly as 4 subplots: 
+    # 1. mean_rwave, 
+    # 2. artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
+    # 3. artif_per_ch.artif_data - a third of all channels that are the less with mean_rwave, 
+    # 4. artif_per_ch.artif_data - a third of all channels that are the least correlated with mean_rwave
+
+    artif_time_vector = np.linspace(tmin, tmax, len(mean_rwave))
+
+    affected_derivs=[]
+    if plotflag is True:
+        fig_mean_rwave = go.Figure()
+        fig_mean_rwave.add_trace(go.Scatter(x=artif_time_vector, y=mean_rwave, mode='lines', name='Mean Rwave'))
+        fig_mean_rwave.update_layout(title='Mean Rwave', xaxis_title='Time (s)', yaxis_title='Amplitude (?)')
+        fig_mean_rwave.show()
+
+        fig_most_affected = plot_affected_channels(most_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' most affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=verbose_plots)
+        fig_middle_affected = plot_affected_channels(middle_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' middle affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=verbose_plots)
+        fig_least_affected = plot_affected_channels(least_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' least affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=verbose_plots)
+        
+        affected_derivs += [QC_derivative(fig_mean_rwave, 'Mean_artifact'+ecg_or_eog, 'plotly')]
+        affected_derivs += [QC_derivative(fig_most_affected, ecg_or_eog+'most_affected_channels_'+m_or_g, 'plotly')]
+        affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
+        affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
+        
+    return most_correlated, affected_derivs
+
+def plot_artif_per_ch_correlated(artif_per_ch, mean_rwave, tmin, tmax, sfreq, channels, fig_path, fig_name):
+
+    #plot using plotly as 4 subplots: 
+    # 1. mean_rwave, 
+    # 2. artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
+    # 3. artif_per_ch.artif_data - a third of all channels that are the less with mean_rwave, 
+    # 4. artif_per_ch.artif_data - a third of all channels that are the least correlated with mean_rwave
+
+    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02, subplot_titles=("mean_rwave", "most correlated", "middle correlated", "least correlated"))
+
+
+    times = np.arange(tmin, tmax, 1/sfreq)
+
+    fig.add_trace(go.Scatter(x=times, y=mean_rwave, mode='lines', name='mean_rwave'), row=1, col=1)
+
+    for i, ch in enumerate(artif_per_ch[:int(len(artif_per_ch)/3)]):
+        fig.add_trace(go.Scatter(x=times, y=ch.artif_data_smoothed, mode='lines', name=ch.name), row=2, col=1)
+
+    for i, ch in enumerate(artif_per_ch[int(len(artif_per_ch)/3):int(len(artif_per_ch)*2/3)]):
+        fig.add_trace(go.Scatter(x=times, y=ch.artif_data_smoothed, mode='lines', name=ch.name), row=3, col=1)
+    
+    for i, ch in enumerate(artif_per_ch[int(len(artif_per_ch)*2/3):]):
+        fig.add_trace(go.Scatter(x=times, y=ch.artif_data_smoothed, mode='lines', name=ch.name), row=4, col=1)
+
+    fig.update_layout(height=1000, width=1000, title_text="ECG artifact correlation with channels")
+    fig.show()
+
+    return artif_per_ch
 
 
 
@@ -1473,7 +1532,7 @@ def find_affected_over_mean(artif_per_ch, ecg_or_eog, max_n_peaks_allowed_for_av
 
 
 #%%
-def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
+def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list, use_method: str):
     """
     Make a dictionary for the global part of simple metrics for ECG/EOG artifacts.
     For ECG/EOG no local metrics are calculated, so global is the only one.
@@ -1503,8 +1562,14 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
         percent_of_affected_ch = round(len(all_affected_channels)/len(channels)*100, 1)
 
         # sort all_affected_channels by main_peak_magnitude:
-        all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: ch.main_peak_magnitude, reverse=True)
-        affected_chs = {ch.name: ch.main_peak_magnitude for ch in all_affected_channels_sorted}
+        if use_method == 'mean_threshold':
+            all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: ch.main_peak_magnitude, reverse=True)
+            affected_chs = {ch.name: ch.main_peak_magnitude for ch in all_affected_channels_sorted}
+        elif use_method == 'correlation':
+            all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: abs(ch.corr_coef), reverse=True)
+            affected_chs = {ch.name: ch.corr_coef for ch in all_affected_channels_sorted}
+        else:
+            raise ValueError('Unknown method_used: ', use_method)
 
     metric_global_content = {
         'number_of_affected_ch': number_of_affected_ch,
@@ -1514,7 +1579,7 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list):
     return metric_global_content
 
 
-def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, avg_artif_str: dict):
+def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, avg_artif_str: dict, use_method: str):
     
     """
     Make simple metric for ECG/EOG artifacts as a dictionary, which will further be converted into json file.
@@ -1546,7 +1611,7 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
     for m_or_g in m_or_g_chosen:
         if all_affected_channels[m_or_g]: #if there are affected channels for this channel type
-            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels[m_or_g])
+            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels[m_or_g], use_method)
         else:
             metric_global_content[m_or_g]= avg_artif_str[m_or_g]
 
@@ -1641,7 +1706,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     ecg_derivs = []
 
-    noisy_ch_derivs, bad_ecg_eog, ecg_data, Rpeaks = detect_noisy_ecg_eog(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
+    noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
 
     ecg_derivs += noisy_ch_derivs
     if ecg_ch_name:
@@ -1693,20 +1758,24 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         #1. find channels with peaks above threshold defined by average over all channels+multiplier set by user
         #2. find channels that have highest Pearson correlation with average R wave shape (from this subject, if the ECG channel is present) or from the average R wave shape from the database (if the ECG channel is not present)
         
-        use_method = 'mean_threshold'
+        use_method = 'correlation'
 
         if use_method == 'mean_threshold':
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag=True, verbose_plots=verbose_plots, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=flip_data, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
         elif use_method == 'correlation':
-            affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_by_correlation(artif_per_ch, artif_per_ch_only_data, ecg_or_eog, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag, verbose_plots, m_or_g, chs_by_lobe, norm_lvl, flip_data, gaussian_sigma, artif_time_vector)
-
+            mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)
+            artif_per_ch=find_affected_by_correlation(mean_rwave, artif_per_ch, tmin, tmax, sfreq)
+            affected_channels[m_or_g], affected_derivs = plot_artif_per_ch_correlated_lobes(artif_per_ch, mean_rwave, tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data, verbose_plots, plotflag=True)
+            #affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_by_correlation(artif_per_ch, artif_per_ch_only_data, ecg_or_eog, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag, verbose_plots, m_or_g, chs_by_lobe, norm_lvl, flip_data, gaussian_sigma, artif_time_vector)
+            bad_avg_str[m_or_g] = 'No average R wave shape was calculated, correlation method was used.'
+            avg_overall_obj = None
 
         ecg_derivs += affected_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
 
-    simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str)
+    simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str, use_method)
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
 
