@@ -419,7 +419,7 @@ class Avg_artif:
         
     """
 
-    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None):
+    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, lobe: str = None, color: str = None):
         """Constructor"""
         
         self.name =  name
@@ -439,6 +439,8 @@ class Avg_artif:
         self.main_peak_magnitude_smoothed = main_peak_magnitude_smoothed
         self.corr_coef = corr_coef
         self.p_value = p_value
+        self.lobe = lobe
+        self.color = color
 
 
     def __repr__(self):
@@ -1192,7 +1194,7 @@ def estimate_t0(ecg_or_eog: str, avg_ecg_epoch_data_nonflipped: list, t: np.ndar
 
 
 
-def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ecg_or_eog: str, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, max_n_peaks_allowed_for_ch: int, flip_data: bool =True, gaussian_sigma: int = 6):
+def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ecg_or_eog: str, chs_by_lobe: dict, thresh_lvl_peakfinder: float, sfreq:float, tmin: float, tmax: float, max_n_peaks_allowed_for_ch: int, flip_data: bool =True, gaussian_sigma: int = 6):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -1322,6 +1324,9 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ec
         artif_nonflipped.get_peaks_wave_smoothed(gaussian_sigma = gaussian_sigma, max_n_peaks_allowed=max_n_peaks_allowed, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
         all_artifs_nonflipped.append(artif_nonflipped)
 
+    # assign lobe to each channel right away (for plotting)
+    all_artifs_nonflipped = assign_lobe_to_artifacts(all_artifs_nonflipped, chs_by_lobe)
+
     if flip_data is False:
         artif_per_ch = all_artifs_nonflipped
     elif flip_data is True:
@@ -1351,8 +1356,29 @@ def find_mean_rwave(ch_data, event_indexes, tmin, tmax, sfreq):
 
     return mean_rwave
 
+def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
 
-def find_affected_by_correlation(mean_rwave, artif_per_ch, chs_by_lobe):
+    #loop over all channels in chs_by_lobe and assign corr_coef and p_value to each channel 
+    # if the name of this channels is same as in artif_per_ch:
+    # artif_per_ch is a list of instances of Avg_artif class
+    # chs_by_lobe is a dict of lists of channels separated by lobes for plotting with color codes.
+
+    for lobe,  ch_list in chs_by_lobe.items(): #loop over dict of channels for plotting
+        for ch_for_plot in ch_list: #same, level deeper
+            for ch_artif in artif_per_ch: #loop over list of instances of Avg_artif class
+                if ch_artif.name == ch_for_plot.name:
+                    ch_artif.lobe = ch_for_plot.lobe
+                    ch_artif.color = ch_for_plot.lobe_color
+                    break
+
+    #Check that all channels have been assigned a lobe:
+    for ch_artif in artif_per_ch:
+        if ch_artif.lobe is None or ch_artif.color is None:
+            print('___MEG QC___: ', 'Channel ', ch_artif.name, ' has not been assigned a lobe or color for plotting. Check assign_lobe_to_artifacts().')
+
+    return artif_per_ch
+
+def find_affected_by_correlation(mean_rwave, artif_per_ch):
 
     #here we assume that both vectors have sme length! these are defined by tmin and tmax which are set in config and propageted in this script. 
     # Keep n mind if changing anything with tmin and tmax
@@ -1366,46 +1392,45 @@ def find_affected_by_correlation(mean_rwave, artif_per_ch, chs_by_lobe):
     for ch in artif_per_ch:
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
 
-    #loop over all channels in chs_by_lobe and assign corr_coef and p_value to each channel 
-    # if the name of this channels is same as in artif_per_ch:
-    # artif_per_ch is a list of instances of Avg_artif class
-    # chs_by_lobe is a dict of lists of channels separated by lobes for plotting with color codes.
+    return artif_per_ch
 
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch_for_plot in ch_list:
-            for ch in artif_per_ch:
-                if ch.name == ch_for_plot.name:
-                    ch_for_plot.ecg_corr_value = ch.corr_coef
-                    ch_for_plot.ecg_corr_p = ch.p_value
-                    break
-
-    return artif_per_ch, chs_by_lobe
-
-def plot_correlation(artif_per_ch, ecg_or_eog, chs_by_lobe):
-
-    corr_coef = [ch.corr_coef for ch in artif_per_ch]
-    p_value = [ch.p_value for ch in artif_per_ch]
-    ch_names = [ch.name for ch in artif_per_ch]
-
-    # plot with plotly:
-    # fig = go.Figure()
-    # for i in range(len(corr_coef)):
-    #     fig.add_trace(go.Scatter(x=[corr_coef[i]], y=[p_value[i]], name=ch_names[i], mode='markers'))
-
-    # fig.show()
+def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
 
     traces = []
 
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch in ch_list:
-            traces += [go.Scatter(x=[ch.ecg_corr_value], y=[ch.ecg_corr_p], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+    tit, _ = get_tit_and_unit(m_or_g)
+
+    for ch in artif_per_ch:
+        traces += [go.Scatter(x=[ch.corr_coef], y=[ch.p_value], mode='markers', marker=dict(size=5, color=ch.color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=ch.lobe.upper()), hovertemplate='Corr coef: '+str(ch.corr_coef)+'<br>p-value: '+str(ch.p_value))]
 
     fig = go.Figure(data=traces)
 
-    #Add hover text to the dots, remove too many digits after coma.
-    #fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
+    #add rectamgles to the plot to separate most correlated (red), middle (yellow) and least correlated (green) channels:
+    #separate rage -1 to 1 into 6 equal parts:
+    ranges=np.linspace(-1, 1, 7)
+    x_most=[ranges[0], ranges[1]]
+    x_most2=[ranges[-1], ranges[-2]]
+    x_middle=[ranges[1], ranges[2]]
+    x_middle2=[ranges[-2], ranges[-3]]
+    x_least=[ranges[2], ranges[4]]
 
-    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly')]
+    fig.add_shape(type="rect", xref="x", yref="y", x0=x_most[0], y0=-0.1, x1=x_most[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=x_most2[0], y0=-0.1, x1=x_most2[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle[0], y0=-0.1, x1=x_middle[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle2[0], y0=-0.1, x1=x_middle2[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=x_least[0], y0=-0.1, x1=x_least[1], y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+
+    #set axis titles:
+    fig.update_xaxes(title_text='Correlation coefficient')
+    fig.update_yaxes(title_text='P-value')
+
+    #set title:
+    fig.update_layout(title_text=tit+': Pearson correlation between average '+ecg_or_eog+' recorded and average artifact for each channel')
+
+    if verbose_plots is True:
+        fig.show()
+
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Sign of a correlation value only indicates the position of a channel relative to the magnetic field. Therefore, the absolute value of the correlation coefficient should be considered. <br> Red area represents the 1/3 of channels with the highest correlation. Green area: 1/3 of channels with the lowest correlation.')]
 
     return corr_derivs
 
@@ -1796,7 +1821,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
-        artif_per_ch, artif_time_vector = calculate_artifacts_on_channels(ecg_epochs, channels[m_or_g], ecg_or_eog='ECG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, sfreq=sfreq, tmin=tmin, tmax=tmax, max_n_peaks_allowed_for_ch = max_n_peaks_allowed_for_ch, flip_data=flip_data, gaussian_sigma=gaussian_sigma)
+        artif_per_ch, artif_time_vector = calculate_artifacts_on_channels(ecg_epochs, channels[m_or_g], ecg_or_eog='ECG', chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, sfreq=sfreq, tmin=tmin, tmax=tmax, max_n_peaks_allowed_for_ch = max_n_peaks_allowed_for_ch, flip_data=flip_data, gaussian_sigma=gaussian_sigma)
 
         # 5. find affected channels:
         #2 options:
@@ -1809,9 +1834,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag=True, verbose_plots=verbose_plots, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=flip_data, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
         elif use_method == 'correlation':
             mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)         
-            artif_per_ch, chs_by_lobe[m_or_g]=find_affected_by_correlation(mean_rwave, artif_per_ch, chs_by_lobe[m_or_g])
+            artif_per_ch =find_affected_by_correlation(mean_rwave, artif_per_ch)
+            artif_per_ch = assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe[m_or_g])
             affected_channels[m_or_g], affected_derivs = plot_artif_per_ch_correlated_lobes(artif_per_ch, mean_rwave, tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data, verbose_plots, plotflag=True)
-            correlation_derivs = plot_correlation(artif_per_ch, 'ECG', chs_by_lobe[m_or_g])
+            correlation_derivs = plot_correlation(artif_per_ch, 'ECG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = 'No average R wave shape was calculated, correlation method was used.'
             avg_overall_obj = None
 

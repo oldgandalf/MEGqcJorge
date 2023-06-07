@@ -354,7 +354,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None, ecg_corr_value: float = None, eog_corr_value: float = None, ecg_corr_p: float = None, eog_corr_p: float = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
 
         """
         Constructor method
@@ -403,10 +403,7 @@ class MEG_channels:
         self.psd = psd
         self.mean_ecg = mean_ecg
         self.mean_eog = mean_eog
-        self.ecg_corr_value = ecg_corr_value
-        self.eog_corr_value = eog_corr_value
-        self.ecg_corr_p = ecg_corr_p
-        self.eog_corr_p = eog_corr_p
+
 
     def __repr__(self):
 
