@@ -1352,11 +1352,11 @@ def find_mean_rwave(ch_data, event_indexes, tmin, tmax, sfreq):
     return mean_rwave
 
 
-def find_affected_by_correlation(mean_rwave, artif_per_ch, tmin, tmax, sfreq):
+def find_affected_by_correlation(mean_rwave, artif_per_ch, chs_by_lobe):
 
     #here we assume that both vectors have sme length! these are defined by tmin and tmax which are set in config and propageted in this script. 
     # Keep n mind if changing anything with tmin and tmax
-
+    
     if len(mean_rwave) != len(artif_per_ch[0].artif_data):
         print(len(mean_rwave), len(artif_per_ch[0].artif_data))
         print('___MEG QC___: ', 'mean_rwave and artif_per_ch.artif_data have different length! Both are defined by tmin and tmax in config.py and are use to cut the data. Keep in mind if changing anything with tmin and tmax')
@@ -1366,12 +1366,55 @@ def find_affected_by_correlation(mean_rwave, artif_per_ch, tmin, tmax, sfreq):
     for ch in artif_per_ch:
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
 
-    #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
-    artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
+    #loop over all channels in chs_by_lobe and assign corr_coef and p_value to each channel 
+    # if the name of this channels is same as in artif_per_ch:
+    # artif_per_ch is a list of instances of Avg_artif class
+    # chs_by_lobe is a dict of lists of channels separated by lobes for plotting with color codes.
 
-    return artif_per_ch
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch_for_plot in ch_list:
+            for ch in artif_per_ch:
+                if ch.name == ch_for_plot.name:
+                    ch_for_plot.ecg_corr_value = ch.corr_coef
+                    ch_for_plot.ecg_corr_p = ch.p_value
+                    break
+
+    return artif_per_ch, chs_by_lobe
+
+def plot_correlation(artif_per_ch, ecg_or_eog, chs_by_lobe):
+
+    corr_coef = [ch.corr_coef for ch in artif_per_ch]
+    p_value = [ch.p_value for ch in artif_per_ch]
+    ch_names = [ch.name for ch in artif_per_ch]
+
+    # plot with plotly:
+    # fig = go.Figure()
+    # for i in range(len(corr_coef)):
+    #     fig.add_trace(go.Scatter(x=[corr_coef[i]], y=[p_value[i]], name=ch_names[i], mode='markers'))
+
+    # fig.show()
+
+    traces = []
+
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            traces += [go.Scatter(x=[ch.ecg_corr_value], y=[ch.ecg_corr_p], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+
+    fig = go.Figure(data=traces)
+
+    #Add hover text to the dots, remove too many digits after coma.
+    #fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
+
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly')]
+
+    return corr_derivs
+
+
 
 def plot_artif_per_ch_correlated_lobes(artif_per_ch, mean_rwave, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots, plotflag):
+
+    #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
+    artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
 
     #collect artif_per_ch into 3 lists:
     # - a third of all channels that are the most correlated with mean_rwave
@@ -1664,7 +1707,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 #%%
-def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: list, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
+def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: list, chs_by_lobe_orig: dict, m_or_g_chosen: list, verbose_plots: bool):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -1697,6 +1740,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         
 
     """
+
+    chs_by_lobe = deepcopy(chs_by_lobe_orig)
 
     if verbose_plots is False:
         matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
@@ -1758,19 +1803,19 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         #1. find channels with peaks above threshold defined by average over all channels+multiplier set by user
         #2. find channels that have highest Pearson correlation with average R wave shape (from this subject, if the ECG channel is present) or from the average R wave shape from the database (if the ECG channel is not present)
         
-        use_method = 'correlation'
+        use_method = 'correlation' #'correlation'
 
         if use_method == 'mean_threshold':
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag=True, verbose_plots=verbose_plots, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=flip_data, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
         elif use_method == 'correlation':
-            mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)
-            artif_per_ch=find_affected_by_correlation(mean_rwave, artif_per_ch, tmin, tmax, sfreq)
+            mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)         
+            artif_per_ch, chs_by_lobe[m_or_g]=find_affected_by_correlation(mean_rwave, artif_per_ch, chs_by_lobe[m_or_g])
             affected_channels[m_or_g], affected_derivs = plot_artif_per_ch_correlated_lobes(artif_per_ch, mean_rwave, tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data, verbose_plots, plotflag=True)
-            #affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_by_correlation(artif_per_ch, artif_per_ch_only_data, ecg_or_eog, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag, verbose_plots, m_or_g, chs_by_lobe, norm_lvl, flip_data, gaussian_sigma, artif_time_vector)
+            correlation_derivs = plot_correlation(artif_per_ch, 'ECG', chs_by_lobe[m_or_g])
             bad_avg_str[m_or_g] = 'No average R wave shape was calculated, correlation method was used.'
             avg_overall_obj = None
 
-        ecg_derivs += affected_derivs
+        ecg_derivs += affected_derivs+correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
