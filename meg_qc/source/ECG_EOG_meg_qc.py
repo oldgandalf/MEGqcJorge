@@ -1453,7 +1453,7 @@ def plot_mean_rwave(tmin, tmax, mean_rwave, ecg_or_eog, use_method, verbose_plot
         'xanchor': 'center',
         'yanchor': 'top'},
         xaxis_title='Time (s)', 
-        yaxis_title='Amplitude (?)')
+        yaxis_title='Amplitude (V)')
     
     fig_derivs = [QC_derivative(fig_mean_rwave, 'Mean_artifact'+ecg_or_eog, 'plotly')]
 
@@ -1872,7 +1872,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     tmin=ecg_params_internal['ecg_epoch_tmin']
     tmax=ecg_params_internal['ecg_epoch_tmax']
 
-    #WROTE THI NOTE BEFORE, BUT ACTUALLY NEED TO CHECK IF IT S STILL TRUE OR THE PROBLEM WAS SOLVED FRO THRESHOLD METHOD:
+    #WROTE THIS BEFORE, BUT ACTUALLY NEED TO CHECK IF IT S STILL TRUE OR THE PROBLEM WAS SOLVED FRO THRESHOLD METHOD:
     #tmin, tmax can be anything from -0.1/0.1 to -0.04/0.04. for CORRELATION method. But if we do mean and threshold - time best has to be -0.04/0.04. 
     # For this method number of peaks in particular time frame is calculated and based on that good/bad rwave is decided.
     norm_lvl=ecg_params['norm_lvl']
@@ -1885,13 +1885,14 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
 
+
     ecg_derivs = []
     use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = choose_method_ECG(raw, ecg_ch_name, ecg_params)
     ecg_derivs += noisy_ch_derivs
 
     mean_good, ecg_str_checked, mean_rwave = check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder)
 
-    if mean_rwave:
+    if mean_rwave.size > 0:
         rwave_derivs= plot_mean_rwave(tmin, tmax, mean_rwave, 'ECG', use_method, verbose_plots=verbose_plots)
         ecg_derivs += rwave_derivs
 
