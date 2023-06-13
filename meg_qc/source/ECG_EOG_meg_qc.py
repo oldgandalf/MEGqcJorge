@@ -1715,7 +1715,38 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 
-def choose_method_ECG(raw, ecg_ch_name, ecg_params):
+def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
+
+    """
+    Choose the method of finding affected channels based on the presense and quality of ECG channel.
+
+    Options:
+    - Channel present and good: correlation with ECG channel
+    - Channel present and bad or missing:correlation with reconstructed channel
+    - Use mean ECG artifact as threshold (currrently not used)
+    
+    Parameters
+    ----------
+    ecg_params : dict
+        Dictionary with ECG parameters originating from config file.
+    raw : mne.io.Raw
+        Raw data.
+    
+        
+    Returns
+    -------
+    use_method : str
+        String with the method chosen for the analysis.
+    ecg_str : str
+        String with info about the ECG channel presense.
+    noisy_ch_derivs : list
+        List of QC_derivative objects with plot of the ECG channel
+    ecg_data:
+        ECG channel data.
+    event_indexes:
+        Indexes of the ECG events.
+
+    """
 
     #Old way:
     # if ecg_ch_name: #ecg channel present
@@ -1744,6 +1775,10 @@ def choose_method_ECG(raw, ecg_ch_name, ecg_params):
 
 
     #New way:
+
+    picks_ECG = mne.pick_types(raw.info, ecg=True)
+    ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
+
     if ecg_ch_name: #ecg channel present
 
         noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
@@ -1766,6 +1801,43 @@ def choose_method_ECG(raw, ecg_ch_name, ecg_params):
 
 
 def check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder):
+
+    """
+    Calculate mean R wave based on either real ECG channel data or on reconstructed data (depends on the method used) 
+    and check if it has an R wave shape.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    use_method : str
+        String with the method chosen for the analysis.
+    ecg_data:
+        ECG channel data. If it s empty, it will be reconstructed here
+    event_indexes:
+        Indexes of the ECG events.
+    tmin : float
+        Epoch start time before event (negative value)
+    tmax : float
+        Epoch end time after event (positive value)
+    sfreq : float
+        Sampling frequency
+    max_n_peaks_allowed_for_avg : int
+        Maximum number of peaks allowed for average R wave calculation.
+    thresh_lvl_peakfinder : float
+        Threshold level for peakfinder function.
+    
+    Returns
+    -------
+    mean_rwave_obj.wave_shape: bool
+        True if the mean R wave shape is good, False if not.
+    ecg_str_checked: str
+        String with info about the ECG channel quality (after checking)
+    mean_rwave: np.array
+        Mean R wave (1 dimentional).
+    
+    
+    """
 
     if use_method == 'correlation_reconstructed':
         _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
@@ -1856,24 +1928,22 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     max_n_peaks_allowed_for_ch=ecg_params_internal['max_n_peaks_allowed_for_ch']
     max_n_peaks_allowed_for_avg=ecg_params_internal['max_n_peaks_allowed_for_avg']
 
-    picks_ECG = mne.pick_types(raw.info, ecg=True)
-    ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
-
 
     ecg_derivs = []
-    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = choose_method_ECG(raw, ecg_ch_name, ecg_params)
+    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = choose_method_ECG(raw, ecg_params)
     ecg_derivs += noisy_ch_derivs
 
     mean_good, ecg_str_checked, mean_rwave = check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder)
+    ecg_str += ecg_str_checked
+    simple_metric_ECG = {'description': ecg_str}
 
     if mean_rwave.size > 0:
         rwave_derivs= plot_mean_rwave(tmin, tmax, mean_rwave, 'ECG', use_method, verbose_plots=verbose_plots)
         ecg_derivs += rwave_derivs
-
-    ecg_str += ecg_str_checked
+    else:
+        return ecg_derivs, simple_metric_ECG, ecg_str, []
 
     if mean_good is False:
-        simple_metric_ECG = {'description': ecg_str}
         return ecg_derivs, simple_metric_ECG, ecg_str, []
     
     #ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
