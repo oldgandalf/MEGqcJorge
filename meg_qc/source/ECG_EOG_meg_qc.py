@@ -118,7 +118,7 @@ def check_3_conditions_old(picked: str, ch_data: list or np.ndarray, fs: int, ec
 
 
     # Plot the signal using plotly:
-    fig = plot_channel(ch_data, peaks, ch_name = picked, fs = fs)
+    fig = plot_ECG_channel(ch_data, peaks, ch_name = picked, fs = fs)
 
     return (similar_ampl, mean_rr_interval_ok, no_breaks), fig
 
@@ -211,13 +211,34 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
 
 
     # Plot the signal using plotly:
-    fig = plot_channel(ch_data, peaks, ch_name = picked, fs = fs)
+    fig = plot_ECG_channel(ch_data, peaks, ch_name = picked, fs = fs)
 
     return (similar_ampl, no_breaks, no_bursts), fig, peaks
 
 
 
-def plot_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
+def plot_ECG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
+
+    """
+    Plot the ECG channel data and detected peaks
+    
+    Parameters
+    ----------
+    ch_data : list or np.ndarray
+        Data of the channel
+    peaks : list or np.ndarray
+        Indices of the peaks in the data
+    ch_name : str
+        Name of the channel
+    fs : int
+        Sampling frequency of the data
+        
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plot of the channel data and detected peaks
+        
+    """
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
@@ -273,6 +294,9 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
         List of figures (requested channels plots)  as QC_derivative instances.
     bad_ecg_eog : dict
         Dictionary with channel names as keys and 'good' or 'bad' as values.
+    all_ch_data[0] : list
+        data of the ECG channel recorded.
+
 
         
     """
@@ -286,16 +310,12 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
     all_ch_data = []
     Rpeaks = []
 
-    if len(picked_channels_ecg_or_eog) == 0 and ecg_or_eog == 'EOG':
+    if len(picked_channels_ecg_or_eog) == 0: 
         return noisy_ch_derivs, bad_ecg_eog, ch_data, Rpeaks
-    elif len(picked_channels_ecg_or_eog) == 0 and ecg_or_eog == 'ECG':
-        peaks, ch_ecg, pulse, all_ch_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
-        #here ch_data will be the RECONSTRUCTED DATA, not the raw data
-    elif len(picked_channels_ecg_or_eog) > 0:
+    else:
         all_ch_data.append(raw.get_data(picks=picked_channels_ecg_or_eog)[0]) #here ch_data will be the RAW DATA
         # get_data creates list inside of a list becausee expects to create a list for each channel. 
         # but iteration takes 1 ch at a time. this is why [0]
-
 
         for ch_data, picked in zip(all_ch_data, picked_channels_ecg_or_eog):
 
@@ -312,8 +332,8 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
             
             noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[picked]+' '+picked, 'plotly', description_for_user = picked+' is '+ bad_ecg_eog[picked]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
     
-    #The idea was to use this function to detect bith noisy ECG and EOG, but it is hard ti ue for EOG, it s much moe random.
-    #This is why theer is a loop, because EOG has 2 channel.
+    #The idea was to use this function to detect bith noisy ECG and EOG, but it is hard to use for EOG, it s much more random.
+    #This is why there is a loop, because EOG has 2 channels.
     #In fact this fucntion is only used for ECG now, so it outpus all_ch_data[0] - the ECG data for 1 channel.
     #kept as a lopp still, in case we want to use it for EOG in the future.
 
@@ -406,6 +426,15 @@ class Avg_artif:
         location of the main peak inside the artifact epoch. Calculated on smoothed data
     main_peak_magnitude_smoothed : float
         magnitude of the main peak inside the artifact epoch. Calculated on smoothed data
+    corr_coef : float
+        correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
+    p_value : float
+        p-value of the correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
+    lobe: str
+        which lobe his channel belongs to
+    color: str
+        color code for this channel according to the lobe it belongs to
+    
 
 
         
@@ -466,23 +495,6 @@ class Avg_artif:
             maximum number of peaks allowed in the average artifact epoch
         thresh_lvl_peakfinder : float
             threshold for peakfinder function.
-            
-        Returns
-        -------
-        self.peak_loc : list
-            locations of peaks inside the artifact epoch
-        self.peak_magnitudes : list
-            magnitudes of peaks inside the artifact epoch
-        gaussian_sigma : int, optional
-            sigma for Gaussian filter. 
-        peak_locs_pos : list
-            locations of positive peaks inside the artifact epoch
-        peak_locs_neg : list
-            locations of negative peaks inside the artifact epoch
-        peak_magnitudes_pos : list
-            magnitudes of positive peaks inside the artifact epoch
-        peak_magnitudes_neg : list
-            magnitudes of negative peaks inside the artifact epoch
         
             
         """
@@ -511,26 +523,12 @@ class Avg_artif:
         
         Parameters
         ----------
+        gaussian_sigma : int
+            sigma for gaussian smoothing
         max_n_peaks_allowed : int
             maximum number of peaks allowed in the average artifact epoch
         thresh_lvl_peakfinder : float
             threshold for peakfinder function.
-
-        
-        Returns
-        -------
-        self.peak_loc_smoothed : list
-            locations of peaks inside the artifact epoch calculated on smoothed data
-        self.peak_magnitudes_smoothed : list
-            magnitudes of peaks inside the artifact epoch calculated on smoothed data
-        peak_locs_pos_smoothed : list
-            locations of positive peaks inside the artifact epoch calculated on smoothed data
-        peak_locs_neg_smoothed : list
-            locations of negative peaks inside the artifact epoch calculated on smoothed data
-        peak_magnitudes_pos_smoothed : list
-            magnitudes of positive peaks inside the artifact epoch calculated on smoothed data
-        peak_magnitudes_neg_smoothed : list
-            magnitudes of negative peaks inside the artifact epoch calculated on smoothed data
 
         
         """
@@ -631,10 +629,6 @@ class Avg_artif:
 
         Parameters
         ----------
-        on_orig : bool
-            find on original data
-        on_smoothed : bool
-            fund on smoothed data
         t : list
             time vector
         timelimit_min : float
@@ -644,15 +638,10 @@ class Avg_artif:
             
         Returns
         -------
-        main_peak_magnitude : float
-            magnitude of the main peak
         main_peak_loc : int
             location of the main peak
-        main_peak_magnitude_smoothed : float
-            magnitude of the main peak on smoothed data
-        main_peak_loc_smoothed : int
-            location of the main peak on smoothed data
-        
+        main_peak_magnitude : float
+            magnitude of the main peak
         
         """
 
@@ -748,6 +737,7 @@ class Avg_artif:
 
         return self
     
+
     def flip_artif(self):
             
         """
@@ -886,6 +876,10 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
         The time of the ecg/eog event.
     ecg_or_eog : str
         Either 'ECG' or 'EOG'.
+    mean_magnitude_peak_smoothed : float, optional
+        The magnitude the mean artifact amplitude over all channels for SMOOTHED data. The default is None.
+    t0_actual_smoothed : float, optional
+        The time of the ecg/eog event for SMOOTHED data. The default is None.
 
     Returns
     -------
@@ -1046,7 +1040,7 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
 
 
-def flip_channels(artif_per_ch_nonflipped: list, tmin, tmax, sfreq, ecg_or_eog):
+def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq: int, ecg_or_eog: str):
 
     """
     Flip the channels if the peak of the artifact is negative and located close to the estimated t0.
@@ -1055,28 +1049,22 @@ def flip_channels(artif_per_ch_nonflipped: list, tmin, tmax, sfreq, ecg_or_eog):
     ----------
     avg_artif_nonflipped : list
         List of Avg_artif objects with not flipped data.
-    channels : list
-        The list of the channels.
-    max_n_peaks_allowed : int
-        The maximum number of peaks allowed in the epoch.
-    thresh_lvl_peakfinder : float
-        The threshold for the peakfinder algorithm.
-    t0_estimated_ind_start : int
-        The start index of the time window for the estimated t0.
-    t0_estimated_ind_end : int
-        The end index of the time window for the estimated t0.
-    t0_estimated_ind : int
-        The index of the estimated t0.
-    gaussian_sigma : int, optional
-        The sigma for the gaussian filter. The default is 6. Used for smoothing the data if desired. If not desired, leave defaul, it will just not be used.
+    tmin : float
+        time in sec before the peak of the artifact (negative number).
+    tmax : float
+        time in sec after the peak of the artifact (positive number).
+    sfreq : int
+        Sampling frequency.
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
 
 
     Returns
     -------
     artifacts_flipped : list
         The list of the ecg epochs.
-    artifacts_flipped_only_data : list
-        The data of the channels after flipping.
+    artif_time_vector : np.ndarray
+        The time vector for the ecg epoch (for plotting further).
 
 
     """
@@ -1278,26 +1266,12 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
         Use absolute value of all data. The default is 'flip'.
     gaussian_sigma : int, optional
         Sigma for gaussian filter. The default is 6. Usually for EOG need higher (6-7), t s more noisy, for ECG - lower (4-5).
-    verbose_plots : bool, optional
-        True for showing plot in notebook.
 
         
     Returns 
     -------
-    artif_affected_channels : list
-        List of instances of Mean_artif_peak_on_channel. The list of channels affected by ecg.eog artifact.
-        Each instance contains info about the average ecg/eog artifact on this channel and the peak amplitude of the artifact.
-    ecg_not_affected_channels : list
-        List of instances of Mean_artif_peak_on_channel. The list of channels not affected by ecg.eog artifact.
-        Each instance contains info about the average ecg/eog artifact on this channel and the peak amplitude of the artifact.
-    affected_derivs : list
-        List of instances of QC_deriv with figures for average ecg/eog and affected + not affected channels. Last 2 are optional: oly if average is good.
-    bad_avg_str: str
-        String about the success of ECG artifact detection, will be added to report.
-    avg_overall_obj: Avg_artif 
-        Instance of Avg_artif class, has data of average artifact over all channels + peaks detected + plot method. This output is usefull for debugging. 
-        For example if you see that the algorythm doesnt always correctly identify a wave shape, you can collect all these averages in a list from a bunch of data 
-        and rerun a new algorythm on them without rerunning the whole pipeline.
+    all_artifs_nonflipped : list
+        List of channels with Avg_artif objects, data in these is not flipped yet.
         
     """
 
@@ -1743,9 +1717,6 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
 
 def choose_method_ECG(raw, ecg_ch_name, ecg_params):
 
-    noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
-
-
     #Old way:
     # if ecg_ch_name: #ecg channel present
     #     for ch in ecg_ch_name:
@@ -1774,6 +1745,9 @@ def choose_method_ECG(raw, ecg_ch_name, ecg_params):
 
     #New way:
     if ecg_ch_name: #ecg channel present
+
+        noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
+
         ch=ecg_ch_name[0]
         if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. '
@@ -2007,7 +1981,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     #plot EOG channels
     for ch_eog in eog_ch_name:
         ch_data = raw.get_data(picks=ch_eog)[0]
-        fig_ch = plot_channel(ch_data, peaks = [], ch_name = ch_eog, fs = raw.info['sfreq'])
+        fig_ch = plot_ECG_channel(ch_data, peaks = [], ch_name = ch_eog, fs = raw.info['sfreq'])
         eog_derivs += [QC_derivative(fig_ch, ch_eog, 'plotly')]
 
     #eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
