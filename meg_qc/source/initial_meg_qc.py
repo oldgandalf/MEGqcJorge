@@ -404,6 +404,7 @@ class MEG_channels:
         self.mean_ecg = mean_ecg
         self.mean_eog = mean_eog
 
+
     def __repr__(self):
 
         """
@@ -672,5 +673,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 
     verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
-        
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, verbose_plots
+    
+    clicking_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
+
+
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, verbose_plots

@@ -137,7 +137,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     
                 print('___MEG QC___: ', 'Starting initial processing...')
                 start_time = time.time()
-                dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, verbose_plots = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+                dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, verbose_plots = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
                     
                 print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
@@ -206,7 +206,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 
                 report_strings = {
-                'INITIAL_INFO': m_or_g_skipped_str+epoching_str+shielding_str+lobes_color_coding_str,
+                'INITIAL_INFO': m_or_g_skipped_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
                 'TIME_SERIES': time_series_str,
                 'STD': std_str,
                 'PSD': psd_str,

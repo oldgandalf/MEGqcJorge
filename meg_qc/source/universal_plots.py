@@ -1208,7 +1208,8 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     if verbose_plots is True:
         fig.show()
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
 
     return qc_derivative
 
