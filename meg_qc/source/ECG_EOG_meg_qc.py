@@ -1045,6 +1045,19 @@ def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq
     """
     Flip the channels if the peak of the artifact is negative and located close to the estimated t0.
 
+    Flip approach: 
+
+    - define  a window around the ecg/eog event deteceted by mne. This is not the real t0, but  an approximation. 
+        The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
+        So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
+    - take 5 channels with the largest peak in this window - assume these peaks are the actual artifact.
+    - find the average of these 5 peaks - this is the new estimated_t0 (but still not the real t0)
+    - create a new window around this new t0 - in this time window all the artifact wave shapes should be located on all channels.
+    - flip the channels, if they have a peak inside of this new window, but the peak is negative and it is the closest peak to estimated t0. 
+        if the peak is positive - do not flip.
+    - collect all final flipped+unflipped eppochs of these channels 
+
+    
     Parameters
     ----------
     avg_artif_nonflipped : list
@@ -1193,46 +1206,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     """
     Find channels that are affected by ECG or EOG events.
     The function calculates average ECG epoch for each channel and then finds the peak of the wave on each channel.
-    Then it compares the peak amplitudes across channels to decide which channels are affected the most.
-    The function returns a list of channels that are affected by ECG or EOG events.
-
-    0. For each separate channel get the average ECG epoch. If needed, flip this average epoch to make it's main peak positive.
-    Flip approach: 
-
-    - define  a window around the ecg/eog event deteceted by mne. This is not the real t0, but  an approximation. 
-        The size of the window defines by how large on average the error of mne is when mne algorythm estimates even time. 
-        So for example if mne is off by 0.05s on average, then the window should be -0.05 to 0.05s. 
-    - take 5 channels with the largest peak in this window - assume these peaks are the actual artifact.
-    - find the average of these 5 peaks - this is the new estimated_t0 (but still not the real t0)
-    - create a new window around this new t0 - in this time window all the artifact wave shapes should be located on all channels.
-    - flip the channels, if they have a peak inside of this new window, but the peak is negative and it is the closest peak to estimated t0. 
-        if the peak is positive - do not flip.
-    - collect all final flipped+unflipped eppochs of these channels 
-        
-    1. Then, for each chennel make a check if the epoch has a typical wave shape. This is the first step to detect affected channels. 
-    If no wave shape - it s automatically a not affected channel. If it has - check further.
-    It could make sense to do this step after the next one, but actually check for wave shape is done together with peak detection in step 0. Hence this order)
-
-    2. Calculate average ECG epoch on the collected epochs from all channels. Check if average has a wave shape. 
-    If no wave shape - no need to check for affected channels further.
-    If it has - check further
-
-    3. Set a threshold which defines a high amplitude of ECG event. (All above this threshold counted as potential ECG peak.)
-    Threshold is the magnitude of the peak of the average ECG/EOG epoch multiplued by norm_lvl. 
-    norl_lvl is chosen by user in config file
-    
-    4. Find all peaks above this threshold.
-    Finding approach:
-
-    - again, set t0 actual as the time point of the peak of an average artifact (over all channels)
-    - again, set a window around t0_actual. this new window is defined by how long the wave of the artifact normally is. 
-        The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
-    - find one main peak of the epoch for each channel which would be inside this window and closest to t0.
-    - if this peaks magnitude is over the threshold - this channels is considered to be affected by ECG or EOG. Otherwise - not affected.
-        (The epoch has to have a wave shape).
-
-    5. Affected and non affected channels will be plotted and added to the dictionary for final report and json file.
-
+   
 
     Parameters
     ----------
@@ -1290,7 +1264,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
 
     avg_artif_data_nonflipped=avg_epochs.data #shape (n_channels, n_times)
 
-    # 4. detect peaks on channels and flip all channels with negative peak around estimated t0 
+    # 4. detect peaks on channels 
     all_artifs_nonflipped = []
     for i, ch_data in enumerate(avg_artif_data_nonflipped):  # find peaks and estimate detect wave shape on all channels
         artif_nonflipped = Avg_artif(name=channels[i], artif_data=ch_data)
@@ -1304,7 +1278,32 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     return all_artifs_nonflipped
 
 
-def find_mean_rwave(ch_data, event_indexes, tmin, tmax, sfreq):
+def find_mean_rwave(ch_data: np.ndarray or list, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int):
+
+    """
+    Calculate mean R wave on the data of either original ECG channel or reconstructed ECG channel.
+    In some cases (for reconstructed) there are no events, so mean Rwave cant be estimated.
+    This usually does not happen for real ECG channel. Because real ECG channel passes the check even earlier in the code. (see check_3_conditions())
+
+    Parameters
+    ----------
+    ch_data : np.ndarray
+        Data of the channel (real or reconstructed).
+    event_indexes : array
+        Array of event indexes (R wave peaks).
+    tmin : float
+        Start time of ECG epoch (negative value).
+    tmax : float
+        End time of ECG epoch (positive value).
+    sfreq : int
+        Sampling frequency.
+
+    Returns
+    -------
+    mean_rwave : np.ndarray
+        Mean R wave (1 dimentional).
+    
+    """
 
     # Initialize an empty array to store the extracted epochs
     epochs = np.zeros((len(event_indexes), int((tmax-tmin)*sfreq)+1))
@@ -1330,10 +1329,22 @@ def find_mean_rwave(ch_data, event_indexes, tmin, tmax, sfreq):
 
 def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
 
-    #loop over all channels in chs_by_lobe and assign corr_coef and p_value to each channel 
-    # if the name of this channels is same as in artif_per_ch:
-    # artif_per_ch is a list of instances of Avg_artif class
-    # chs_by_lobe is a dict of lists of channels separated by lobes for plotting with color codes.
+    """ Loop over all channels in artif_per_ch and assign lobe and lobe color to each channel for plotting purposes.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of channels with Avg_artif objects.
+    chs_by_lobe : dict
+        Dictionary of channels grouped by lobe with color codes.
+
+    Returns
+    -------
+    artif_per_ch : list
+        List of channels with Avg_artif objects, now with assigned lobe and color for plotting. 
+
+    """
+    
 
     for lobe,  ch_list in chs_by_lobe.items(): #loop over dict of channels for plotting
         for ch_for_plot in ch_list: #same, level deeper
@@ -1351,13 +1362,32 @@ def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
     return artif_per_ch
 
 
-def find_affected_by_correlation(mean_rwave, artif_per_ch):
+def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
-    #here we assume that both vectors have sme length! these are defined by tmin and tmax which are set in config and propageted in this script. 
-    # Keep n mind if changing anything with tmin and tmax
+    """"
+    
+    Calculate correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    Higher correlation coefficient means that the channel is more likely to be affected by ECG artifact.
+
+    Here we assume that both vectors have sme length! these are defined by tmin and tmax which are set in config and propageted in this script. 
+    Keep in mind if changing anything with tmin and tmax
+    
+    Parameters
+    ----------
+    mean_rwave : np.ndarray
+        Mean R wave (1 dimentional).
+    artif_per_ch : list
+        List of channels with Avg_artif objects.
+
+    Returns
+    -------
+    artif_per_ch : list
+        List of channels with Avg_artif objects, now with assigned correlation coefficient and p-value.
+    
+    """
+
     
     if len(mean_rwave) != len(artif_per_ch[0].artif_data):
-        print(len(mean_rwave), len(artif_per_ch[0].artif_data))
         print('___MEG QC___: ', 'mean_rwave and artif_per_ch.artif_data have different length! Both are defined by tmin and tmax in config.py and are use to cut the data. Keep in mind if changing anything with tmin and tmax')
         print('len(mean_rwave): ', len(mean_rwave), 'len(artif_per_ch[0].artif_data): ', len(artif_per_ch[0].artif_data))
         return
@@ -1369,6 +1399,27 @@ def find_affected_by_correlation(mean_rwave, artif_per_ch):
 
 
 def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
+
+    """
+    Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of channels with Avg_artif objects.
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
+    m_or_g : str
+        Either 'mag' or 'grad'.
+    verbose_plots : bool
+        If True, plot will be displayed in a notebook.
+
+    Returns
+    -------
+    corr_derivs : list
+        List with 1 QC_derivative instance: Figure with correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    
+    """
 
     traces = []
 
@@ -1408,7 +1459,16 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
 
     return corr_derivs
 
+
 def plot_mean_rwave(tmin, tmax, mean_rwave, ecg_or_eog, use_method, verbose_plots):
+
+    """
+    Plot mean Rwave
+
+    Parameters
+
+    
+    """
 
     if use_method == 'correlation_reconstructed':
         title = 'Mean RECONSTRUCTED '+ecg_or_eog+' epoch'
@@ -1491,13 +1551,67 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_
 
 
 
-def find_affected_over_mean(artif_per_ch, ecg_or_eog, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, plotflag, verbose_plots, m_or_g, chs_by_lobe, norm_lvl, flip_data, gaussian_sigma, artif_time_vector):
+def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, max_n_peaks_allowed_for_avg: int, thresh_lvl_peakfinder: float, plotflag: bool, verbose_plots: bool, m_or_g: str, chs_by_lobe: dict, norm_lvl: float, flip_data: bool, gaussian_sigma: float, artif_time_vector: np.ndarray):
     
     """
-    # Find affected channels after flipping:
-    # 5. calculate average of all channels
-    # 6. find peak on average channel and set it as actual t0
-    # 7. affected channels will be the ones which have peak amplitude over average in limits of -0.05:0.05s from actual t0 
+    1. Calculate average ECG epoch on the epochs from all channels. Check if average has a wave shape. 
+    If no wave shape - no need to check for affected channels further.
+    If it has - check further
+
+    2. Set a threshold which defines a high amplitude of ECG event. (All above this threshold counted as potential ECG peak.)
+    Threshold is the magnitude of the peak of the average ECG/EOG epoch multiplued by norm_lvl. 
+    norl_lvl is chosen by user in config file
+    
+    3. Find all peaks above this threshold.
+    Finding approach:
+
+    - again, set t0 actual as the time point of the peak of an average artifact (over all channels)
+    - again, set a window around t0_actual. this new window is defined by how long the wave of the artifact normally is. 
+        The window is centered around t0 and for ECG it will be -0.-02 to 0.02s, for EOG it will be -0.1 to 0.1s.
+    - find one main peak of the epoch for each channel which would be inside this window and closest to t0.
+    - if this peaks magnitude is over the threshold - this channels is considered to be affected by ECG or EOG. Otherwise - not affected.
+        (The epoch has to have a wave shape).
+
+    4. Affected and non affected channels will be plotted and outputted as lists for adding tothe json on the next step.
+
+    Parameters
+    ----------
+    artif_per_ch : list 
+        list of Avg_artif objects
+    ecg_or_eog : str
+        'ECG' or 'EOG'
+    max_n_peaks_allowed_for_avg : int
+        max number of peaks allowed for the average artifact. If more - the average artifact is not considered to be a wave shape
+    thresh_lvl_peakfinder : float
+        threshold for peakfinder. Defines the magnitude of the peak of the average ECG/EOG epoch multiplued by norm_lvl.
+    plotflag : bool
+        if True - plots will be made
+    verbose_plots : bool
+        if True - plots will be shown in notebook
+    m_or_g : str
+        'mag' or 'grad'
+    chs_by_lobe : dict
+        dictionary with channels grouped by lobes
+    norm_lvl : float
+        defines the threshold for peakfinder. Threshold = mean overall artifact poch magnitude * norm_lvl
+    flip_data : bool
+        ifo for plotting. If data was flipped - only upper threshold will be shown on the plot, if not - both upper and lower
+    gaussian_sigma : float
+        sigma for gaussian smoothing
+    artif_time_vector : np.ndarray
+        time vector for the artifact epoch
+
+    Returns
+    -------
+    affected_channels: list
+        list of affected channels
+    affected_derivs: list
+        list of QC_derivative objects with figures for affected and not affected channels (smoothed and not soothed versions)
+    bad_avg_str : str
+        string about the average artifact: if it was not considered to be a wave shape
+    avg_overall_obj : Avg_artif
+        Avg_artif object with the average artifact
+
     """
 
     artif_per_ch_only_data = [ch.artif_data for ch in artif_per_ch] # USE NON SMOOTHED data. If needed, can be changed to smoothed data
@@ -1594,10 +1708,13 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list, use_me
         List of all affected channels.
     channels : list
         List of all channels.
+    use_method : str
+        Method used for detection of ECG/EOG artifacts: correlation, correlation_reconstructed or mean_threshold.
+        Depending in this the dictionary will have difefrent structure and descriptions.
         
     Returns
     -------
-    dict_global_ECG_EOG : dict
+    metric_global_content : dict
         Dictionary with simple metrics for ECG/EOG artifacts.
 
         
@@ -1647,6 +1764,9 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
         Dictionary with listds of channels for each channel type.
     avg_artif_str : dict
         Dict with strings with info about the ECG/EOG channel and average artifact.
+    use_method : str
+        Method used for detection of ECG/EOG artifacts: correlation, correlation_reconstructed or mean_threshold.
+        Depending in this the dictionary will have difefrent structure and descriptions.
         
     Returns
     -------
