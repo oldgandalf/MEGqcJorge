@@ -1935,9 +1935,10 @@ def check_mean_rwave(raw, use_method, ecg_data, ecg_or_eog, event_indexes, tmin,
     #Calculate average over the whole reconstrcted channels and check if it has an R wave shape:
 
     if len(event_indexes) <1:
-        ecg_str_checked = 'Reconstructed EG data can not be used for artifact detection: no R waves were found.'
+        ecg_str_checked = 'Reconstructed ECG data can not be used for artifact detection: no R waves were found.'
         print('___MEG QC___: ', ecg_str_checked)
-        return False, ecg_str_checked, np.empty((0, 0))
+        
+        return False, ecg_str_checked, np.empty((0, 0)), []
 
     mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)  
 
@@ -2039,6 +2040,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_rwave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, verbose_plots)
     ecg_str += ecg_str_checked
     simple_metric_ECG = {'description': ecg_str}
+
+    ecg_derivs += rwave_derivs
 
     if mean_good is False:
         return ecg_derivs, simple_metric_ECG, ecg_str, []
