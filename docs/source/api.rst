@@ -23,6 +23,7 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
    :caption: Modules:
 
    settings_ini
+   settings_internal_ini
    main
    initial_processing
    std
