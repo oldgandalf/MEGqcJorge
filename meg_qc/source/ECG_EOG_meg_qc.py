@@ -1420,7 +1420,7 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     
     """
 
-    _, _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups(artif_per_ch)
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups(artif_per_ch)
 
     print('least', corr_val_of_last_least_correlated)
     print('middle', corr_val_of_last_middle_correlated)
@@ -1520,7 +1520,7 @@ def split_correlated_artifacts_into_3_groups(artif_per_ch):
     corr_val_of_last_middle_correlated = max(all_middle_correlated)
     corr_val_of_last_least_correlated = max(all_least_correlated)
 
-    return artif_per_ch, most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
 
 
 
@@ -1551,8 +1551,8 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch: list, tmin: float, tmax: fl
 
     Returns
     -------
-    artif_per_ch_ranked : list
-        List of objects of class Avg_artif, ranked by correlation coefficient
+    artif_per_ch : list
+        List of objects of class Avg_artif
     affected_derivs : list
         List of objects of class QC_derivative (plots)
     
@@ -1560,7 +1560,7 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch: list, tmin: float, tmax: fl
     """
 
 
-    artif_per_ch_ranked, most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
+    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
 
     #plot using plotly: 
     # artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
@@ -1599,7 +1599,7 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch: list, tmin: float, tmax: fl
     affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
     affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
         
-    return artif_per_ch_ranked, affected_derivs
+    return affected_derivs
 
 
 
@@ -1749,17 +1749,15 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, max_n_peaks_all
 
 
 #%%
-def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list, use_method: str):
+def make_dict_global_ECG_EOG(channels_ranked: list, use_method: str):
     """
     Make a dictionary for the global part of simple metrics for ECG/EOG artifacts.
     For ECG/EOG no local metrics are calculated, so global is the only one.
     
     Parameters
     ----------
-    all_affected_channels : list
-        List of all affected channels.
-    channels : list
-        List of all channels.
+    channels_ranked : list
+        List of all affected channels
     use_method : str
         Method used for detection of ECG/EOG artifacts: correlation, correlation_reconstructed or mean_threshold.
         Depending in this the dictionary will have difefrent structure and descriptions.
@@ -1768,52 +1766,41 @@ def make_dict_global_ECG_EOG(all_affected_channels: list, channels: list, use_me
     -------
     metric_global_content : dict
         Dictionary with simple metrics for ECG/EOG artifacts.
-
-        
+   
     """
 
-    if not all_affected_channels:
-        number_of_affected_ch = 0
-        percent_of_affected_ch = 0
-        affected_chs = None
-        #top_10_magnitudes = None
-    else:
-        number_of_affected_ch = len(all_affected_channels)
-        percent_of_affected_ch = round(len(all_affected_channels)/len(channels)*100, 1)
-
-        # sort all_affected_channels by main_peak_magnitude:
-        if use_method == 'mean_threshold':
-            all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: ch.main_peak_magnitude, reverse=True)
+    # sort all_affected_channels by main_peak_magnitude:
+    if use_method == 'mean_threshold':
+        if channels_ranked:
+            all_affected_channels_sorted = sorted(channels_ranked, key=lambda ch: ch.main_peak_magnitude, reverse=True)
             affected_chs = {ch.name: ch.main_peak_magnitude for ch in all_affected_channels_sorted}
-        elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
-            all_affected_channels_sorted = sorted(all_affected_channels, key=lambda ch: abs(ch.corr_coef), reverse=True)
-            affected_chs = {ch.name: ch.corr_coef for ch in all_affected_channels_sorted}
         else:
-            raise ValueError('Unknown method_used: ', use_method)
+            metric_global_content = {'details':  None}
+    elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+        all_affected_channels_sorted = sorted(channels_ranked, key=lambda ch: abs(ch.corr_coef), reverse=True)
+        affected_chs = {ch.name: [ch.corr_coef, ch.p_value] for ch in all_affected_channels_sorted}
+        metric_global_content = {'details':  affected_chs}
+    else:
+        raise ValueError('Unknown method_used: ', use_method)
 
-    metric_global_content = {
-        'number_of_affected_ch': number_of_affected_ch,
-        'percent_of_affected_ch': percent_of_affected_ch, 
-        'details':  affected_chs}
+    
 
     return metric_global_content
 
 
-def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list, ecg_or_eog: str, channels: dict, avg_artif_str: dict, use_method: str):
+def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_or_eog: str, avg_artif_str: dict, use_method: str):
     
     """
     Make simple metric for ECG/EOG artifacts as a dictionary, which will further be converted into json file.
     
     Parameters
     ----------
-    all_affected_channels : dict
-        Dictionary with listds of affected channels for each channel type.
+    channels_ranked : dict
+        Dictionary with lists of channels.
     m_or_g_chosen : list
         List of channel types chosen for the analysis. 
     ecg_or_eog : str
         String 'ecg' or 'eog' depending on the artifact type.
-    channels : dict
-        Dictionary with listds of channels for each channel type.
     avg_artif_str : dict
         Dict with strings with info about the ECG/EOG channel and average artifact.
     use_method : str
@@ -1828,13 +1815,17 @@ def make_simple_metric_ECG_EOG(all_affected_channels: dict, m_or_g_chosen: list,
 
     """
 
-    metric_global_name = 'all_'+ecg_or_eog+'_affected_channels'
-    metric_global_description = 'Affected channels are the channels with average (over '+ecg_or_eog+' epochs of this channel) ' +ecg_or_eog+ ' artifact above the threshold. Channels are listed here in order from the highest to lowest artifact amplitude. Non affected channels are not listed. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Metrci also provides a list of 10 most strongly affected channels + their artfact peaks magnitdes.'
+    metric_global_name = 'all_channels_raned_by_'+ecg_or_eog+'_contamination_level'
     metric_global_content = {'mag': None, 'grad': None}
 
+    if use_method == 'mean_threshold':
+        metric_global_description = 'Here presented the channels with average (over '+ecg_or_eog+' epochs of this channel) ' +ecg_or_eog+ ' artifact above the threshold. Channels are listed here in order from the highest to lowest artifact amplitude. Non affected channels are not listed. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Channels are presented in the form: ch.name: ch.main_peak_magnitude.'
+    elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+        metric_global_description = 'Here the channels are ranked by correlation coefficient between the channel and the averaged '+ecg_or_eog+' channel (recorded or reconstructed). Channels are listed here in order from the highest to lowest correlation coefficient. Channels are presented in the form: ch.name: [ch.corr_coef, ch.p_value]. Sign of the correlation value is kept to reflect the position of the channel toward the magnetic fild omly, it does not reflect the level of contamination (absolute value should be considered for this).'
+
     for m_or_g in m_or_g_chosen:
-        if all_affected_channels[m_or_g]: #if there are affected channels for this channel type
-            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(all_affected_channels[m_or_g], channels[m_or_g], use_method)
+        if channels_ranked[m_or_g]: #if there are affected channels for this channel type
+            metric_global_content[m_or_g]= make_dict_global_ECG_EOG(channels_ranked[m_or_g], use_method)
         else:
             metric_global_content[m_or_g]= avg_artif_str[m_or_g]
 
@@ -2164,9 +2155,9 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             #artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, 'ECG')
             # we might wanna still flip the channels here, but it's not necessary? just for visual, no influence on calsulation.
 
-            artif_per_ch = find_affected_by_correlation(mean_rwave, artif_per_ch)
-            affected_channels[m_or_g], affected_derivs = plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
-            correlation_derivs = plot_correlation(artif_per_ch, 'ECG', m_or_g, verbose_plots=verbose_plots)
+            affected_channels[m_or_g] = find_affected_by_correlation(mean_rwave, artif_per_ch)
+            affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation(affected_channels[m_or_g], 'ECG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2179,7 +2170,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         avg_objects_ecg.append(avg_overall_obj)
 
 
-    simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', channels, bad_avg_str, use_method)
+    simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', bad_avg_str, use_method)
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
 
