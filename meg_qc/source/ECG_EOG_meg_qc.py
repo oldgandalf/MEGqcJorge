@@ -1913,6 +1913,7 @@ def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
             ecg_str = ch+' is good and is used to identify hearbeats. '
             use_method = 'correlation'
     else: #no ecg channel present
+        noisy_ch_derivs, ecg_data, event_indexes = [], [], []
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. '
         use_method = 'correlation_reconstructed'
         print('___MEG QC___: ', ecg_str)
@@ -1971,7 +1972,7 @@ def check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq
     if len(event_indexes) <1:
         ecg_str_checked = 'Reconstructed EG data can not be used for artifact detection: no R waves were found.'
         print('___MEG QC___: ', ecg_str_checked)
-        return False, ecg_str_checked, []
+        return False, ecg_str_checked, np.empty((0, 0))
 
     mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)  
 
