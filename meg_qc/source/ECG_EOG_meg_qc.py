@@ -1365,7 +1365,6 @@ def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
 def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
     """"
-    
     Calculate correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
     Higher correlation coefficient means that the channel is more likely to be affected by ECG artifact.
 
@@ -1421,7 +1420,7 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     
     """
 
-    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups(artif_per_ch)
+    _, _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups(artif_per_ch)
 
     print('least', corr_val_of_last_least_correlated)
     print('middle', corr_val_of_last_middle_correlated)
@@ -1479,6 +1478,26 @@ def split_correlated_artifacts_into_3_groups(artif_per_ch):
     - a third of all channels that are in the middle of the correlation with mean_rwave
 
     Parameters
+    ----------
+    artif_per_ch : list
+        List of objects of class Avg_artif
+
+    Returns
+    -------
+    artif_per_ch : list
+        List of objects of class Avg_artif, ranked by correlation coefficient
+    most_correlated : list
+        List of objects of class Avg_artif that are the most correlated with mean_rwave
+    least_correlated : list
+        List of objects of class Avg_artif that are the least correlated with mean_rwave
+    middle_correlated : list
+        List of objects of class Avg_artif that are in the middle of the correlation with mean_rwave
+    corr_val_of_last_least_correlated : float
+        Correlation value of the last channel in the list of the least correlated channels
+    corr_val_of_last_middle_correlated : float
+        Correlation value of the last channel in the list of the middle correlated channels
+    corr_val_of_last_most_correlated : float
+        Correlation value of the last channel in the list of the most correlated channels
 
 
     """
@@ -1501,13 +1520,47 @@ def split_correlated_artifacts_into_3_groups(artif_per_ch):
     corr_val_of_last_middle_correlated = max(all_middle_correlated)
     corr_val_of_last_least_correlated = max(all_least_correlated)
 
-    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+    return artif_per_ch, most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
 
 
 
-def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots):
+def plot_artif_per_ch_correlated_lobes(artif_per_ch: list, tmin: float, tmax: float, m_or_g: str, ecg_or_eog: str, chs_by_lobe: dict, flip_data: bool, verbose_plots: bool):
 
-    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
+    """
+    Plot average artifact for each channel, colored by lobe, 
+    channels are split into 3 separate plots, based on their correlation with mean_rwave: equal number of channels in each group.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of objects of class Avg_artif
+    tmin : float
+        Start time of the epoch (negative value)
+    tmax : float
+        End time of the epoch
+    m_or_g : str
+        Type of the channel: mag or grad
+    ecg_or_eog : str
+        Type of the artifact: ECG or EOG
+    chs_by_lobe : dict
+        Dictionary with channels split by lobe
+    flip_data : bool
+        Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
+    verbose_plots : bool
+        If True, plots are shown in the notebook.
+
+    Returns
+    -------
+    artif_per_ch_ranked : list
+        List of objects of class Avg_artif, ranked by correlation coefficient
+    affected_derivs : list
+        List of objects of class QC_derivative (plots)
+    
+
+    """
+
+
+    artif_per_ch_ranked, most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
 
     #plot using plotly: 
     # artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
@@ -1546,7 +1599,7 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_
     affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
     affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
         
-    return most_correlated, affected_derivs
+    return artif_per_ch_ranked, affected_derivs
 
 
 
