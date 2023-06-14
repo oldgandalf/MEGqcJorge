@@ -209,7 +209,6 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
 
         for ch_data, picked in zip(all_ch_data, picked_channels_ecg_or_eog):
 
-            #ecg_eval, fig = check_3_condition_old(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
             ecg_eval, fig, Rpeaks = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
             print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
 
@@ -1800,34 +1799,6 @@ def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
         Indexes of the ECG events.
 
     """
-
-    #Old way:
-    # if ecg_ch_name: #ecg channel present
-    #     for ch in ecg_ch_name:
-    #         if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy:
-    #             if ecg_params['drop_bad_ch'] is True:
-    #                 ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device.'
-    #                 print('___MEG QC___: ', ecg_str)
-    #                 raw.drop_channels(ch)
-    #                 use_method = 'mean_threshold'
-    #             elif ecg_params['drop_bad_ch'] is False:
-    #                 ecg_str = 'ECG channel data is too noisy, still attempt to calculate artifacts using this channel. Consider checking the quality of ECG channel on your recording device.'
-    #                 print('___MEG QC___: ', ecg_str)
-    #                 use_method = 'correlation'
-    #             else:
-    #                 raise ValueError('drop_bad_ch should be either True or False')
-    #             use_method = 'correlation_reconstructed'
-    #         elif bad_ecg_eog[ch] == 'good': #ecg channel present and good - use it
-    #             ecg_str = ch+' is good and is used to identify hearbeats: '
-    #             print('___MEG QC___: ', ecg_str)
-    #             use_method = 'correlation'
-    # else: #no ecg channel present
-    #     ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data.'
-    #     use_method = 'mean_threshold'
-    #     print('___MEG QC___: ', ecg_str)
-
-
-    #New way:
 
     picks_ECG = mne.pick_types(raw.info, ecg=True)
     ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
