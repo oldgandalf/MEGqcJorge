@@ -69,6 +69,9 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     elif m_or_g == 'ECG':
         m_or_g_tit = 'ECG channel'
         unit = 'V'
+    elif m_or_g == 'EOG':
+        m_or_g_tit = 'EOG channel'
+        unit = 'V'
     else:
         m_or_g_tit = '?'
         unit='?'

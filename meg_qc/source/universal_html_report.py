@@ -197,7 +197,7 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
     return report
 
 
-def simple_metric_basic(metric_global_name: str, metric_global_description: str, metric_global_content_mag: dict, metric_global_content_grad: dict, metric_local_name: str =None, metric_local_description: str =None, metric_local_content_mag: dict =None, metric_local_content_grad: dict =None, display_only_global: bool =False, psd: bool=False):
+def simple_metric_basic(metric_global_name: str, metric_global_description: str, metric_global_content_mag: dict, metric_global_content_grad: dict, metric_local_name: str =None, metric_local_description: str =None, metric_local_content_mag: dict =None, metric_local_content_grad: dict =None, display_only_global: bool =False, psd: bool=False, measurement_units: bool = True):
     
     """
     Basic structure of simple metric for all measurements.
@@ -231,6 +231,8 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
         this parameter is set to False and metric_local_description should contain that notification and metric_local_name - the name of missing local metric.
     psd : bool, optional
         If True, the metric is done for PSD and the units are changed accordingly, by default False
+    measurement_units : bool, optional
+        If True, the measurement units are added to the metric, by default True
 
     Returns
     -------
@@ -249,13 +251,24 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     else:
         m_local = {}
 
-    simple_metric={
-        'measurement_unit_mag': unit_mag,
-        'measurement_unit_grad': unit_grad,
-        metric_global_name: {
-            'description': metric_global_description,
-            "mag": metric_global_content_mag,
-            "grad": metric_global_content_grad}}
+
+    if measurement_units is True:
+
+        simple_metric={
+            'measurement_unit_mag': unit_mag,
+            'measurement_unit_grad': unit_grad,
+            metric_global_name: {
+                'description': metric_global_description,
+                "mag": metric_global_content_mag,
+                "grad": metric_global_content_grad}
+            }
+    else:
+        simple_metric={
+            metric_global_name: {
+                'description': metric_global_description,
+                "mag": metric_global_content_mag,
+                "grad": metric_global_content_grad}
+            }
 
     #merge local and global metrics:
     simple_metric.update(m_local)

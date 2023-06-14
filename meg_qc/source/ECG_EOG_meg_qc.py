@@ -100,13 +100,13 @@ def check_3_conditions(picked: str, ch_data: list or np.ndarray, fs: int, ecg_or
 
 
     # Plot the signal using plotly:
-    fig = plot_ECG_channel(ch_data, peaks, ch_name = picked, fs = fs)
+    fig = plot_ECG_EOG_channel(ch_data, peaks, ch_name = picked, fs = fs)
 
     return (similar_ampl, no_breaks, no_bursts), fig, peaks
 
 
 
-def plot_ECG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
+def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
 
     """
     Plot the ECG channel data and detected peaks
@@ -1136,7 +1136,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     return all_artifs_nonflipped
 
 
-def find_mean_rwave(ch_data: np.ndarray or list, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int):
+def find_mean_rwave_blink(ch_data: np.ndarray or list, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int):
 
     """
     Calculate mean R wave on the data of either original ECG channel or reconstructed ECG channel.
@@ -1691,7 +1691,12 @@ def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_o
         else:
             metric_global_content[m_or_g]= avg_artif_str[m_or_g]
 
-    simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], display_only_global=True)
+    if use_method == 'mean_threshold':
+        measurement_units = True
+    else:
+        measurement_units = False
+
+    simple_metric = simple_metric_basic(metric_global_name, metric_global_description, metric_global_content['mag'], metric_global_content['grad'], display_only_global=True, measurement_units = measurement_units)
 
     return simple_metric
 
@@ -1740,7 +1745,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 
-def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
+def get_ECG_data_and_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     """
     Choose the method of finding affected channels based on the presense and quality of ECG channel.
@@ -1796,6 +1801,64 @@ def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
         print('___MEG QC___: ', ecg_str)
 
     return use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes
+
+def get_EOG_data(raw: mne.io.Raw):
+
+    """
+    Find if the EOG channel is present anfd get its data.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    
+        
+    Returns
+    -------
+    eog_str : str
+        String with info about the EOG channel presense.
+    eog_data:
+        EOG channel data.
+    event_indexes:
+        Indexes of the ECG events.
+    eog_ch_name: str
+        Name of the EOG channel.
+
+    """
+
+    
+    # Find EOG events in your data and get the name of the EOG channel
+
+    # Select the EOG channels
+    eog_channels = mne.pick_types(raw.info, meg=False, eeg=False, stim=False, eog=True)
+
+    # Get the names of the EOG channels
+    eog_channel_names = [raw.ch_names[ch] for ch in eog_channels]
+
+    print('___MEG QC___: EOG channel names:', eog_channel_names)
+
+    try:
+        eog_events = mne.preprocessing.find_eog_events(raw)
+        #eog_events_times  = (eog_events[:, 0] - raw.first_samp) / raw.info['sfreq']
+
+        #even if 2 EOG channels are present, MNE can only detect blinks!
+    except:
+        noisy_ch_derivs, eog_data, event_indexes = [], [], []
+        eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
+        print('___MEG QC___: ', eog_str)
+        return eog_str, noisy_ch_derivs, eog_data, event_indexes
+
+    blinks_ch_name = eog_channel_names[0]
+    # Get the data of the EOG channel as an array. MNE only sees blinks, not saccades.
+    eog_data = raw.get_data(picks=blinks_ch_name)[0]
+
+    eog_str = 'EOG channel '+blinks_ch_name+' is used to identify eye blinks. '
+
+    height = np.mean(eog_data) + 1 * np.std(eog_data)
+    fs=raw.info['sfreq']
+    event_indexes, _ = find_peaks(eog_data, height=height, distance=round(0.5 * fs)) #assume there are no peaks within 0.5 seconds from each other.
+
+    return eog_str, eog_data, event_indexes, blinks_ch_name
 
 
 def check_mean_rwave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float, verbose_plots: bool):
@@ -1855,7 +1918,7 @@ def check_mean_rwave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg
 
         return False, ecg_str_checked, np.empty((0, 0)), []
 
-    mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)  
+    mean_rwave = find_mean_rwave_blink(ecg_data, event_indexes, tmin, tmax, sfreq)  
 
     mean_rwave_obj=Avg_artif(name='Mean_rwave',artif_data=mean_rwave)
 
@@ -1863,10 +1926,10 @@ def check_mean_rwave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg
     mean_rwave_obj.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
 
     if mean_rwave_obj.wave_shape is True:
-        ecg_str_checked = 'Mean R wave is good enough to use for artifact detection'
+        ecg_str_checked = 'Mean wave is good enough to use for artifact detection'
         print('___MEG QC___: ', ecg_str_checked)
     else:
-        ecg_str_checked = 'Mean Rwave is not good enough to use for artifact detection. Artifact detection was not performed.'
+        ecg_str_checked = 'Mean wave is not good enough to use for artifact detection. Artifact detection was not performed.'
         print('___MEG QC___: ', ecg_str_checked)
 
 
@@ -1877,8 +1940,10 @@ def check_mean_rwave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg
             title = 'Mean data of the RECONSTRUCTED '
         elif use_method == 'correlation':
             title = 'Mean data of the RECORDED '
+        else:
+            title = 'Mean data of '
 
-        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, 'ECG', fig = None, plot_original = True, plot_smoothed = False)
+        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
         if verbose_plots is True:
                 mean_rwave_fig.show()
 
@@ -1941,25 +2006,22 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     #tmin, tmax can be anything from -0.1/0.1 to -0.04/0.04. for CORRELATION method. But if we do mean and threshold - time best has to be -0.04/0.04. 
     # For this method number of peaks in particular time frame is calculated and based on that good/bad rwave is decided.
     norm_lvl=ecg_params['norm_lvl']
-    #flip_data=ecg_params['flip_data']
     gaussian_sigma=ecg_params['gaussian_sigma']
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
 
 
     ecg_derivs = []
-    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = choose_method_ECG(raw, ecg_params)
+    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_and_choose_method(raw, ecg_params)
     ecg_derivs += noisy_ch_derivs
 
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_rwave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
     ecg_str += ecg_str_checked
-    simple_metric_ECG = {'description': ecg_str}
 
     ecg_derivs += rwave_derivs
 
     if mean_good is False:
+        simple_metric_ECG = {'description': ecg_str}
         return ecg_derivs, simple_metric_ECG, ecg_str, []
-    
-    #ecg_events_times  = (ecg_events[:, 0] - raw.first_samp) / raw.info['sfreq']
 
     
     affected_channels={}
@@ -1986,8 +2048,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             correlation_derivs = []
 
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
-            #artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, 'ECG')
-            # we might wanna still flip the channels here, but it's not necessary? just for visual, no influence on calsulation.
 
             affected_channels[m_or_g] = find_affected_by_correlation(mean_rwave, artif_per_ch)
             affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
@@ -2010,7 +2070,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe: dict, m_or_g_chosen: list, verbose_plots: bool):
+def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe_orig: dict, m_or_g_chosen: list, verbose_plots: bool):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -2043,48 +2103,48 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     
     """
 
+    chs_by_lobe = deepcopy(chs_by_lobe_orig) 
+    #in case we will change this variable in any way. If not copied it might introduce errors in parallel processing. 
+    # This variable is used in all modules
+
     if verbose_plots is False:
         import matplotlib
         matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
-    eog_derivs = []
-    simple_metric_EOG = {'description': 'EOG artifacts could not be calculated'}
-
-    picks_EOG = mne.pick_types(raw.info, eog=True)
-    eog_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_EOG]
-    if picks_EOG.size == 0:
-        eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-        print('___MEG QC___: ', eog_str)
-        return eog_derivs, simple_metric_EOG, eog_str, []
-    else:
-        eog_str = 'Only blinks can be calculated using MNE, not saccades.'
-        print('___MEG QC___: ', 'EOG channels found: ', eog_ch_name)
-
-
-    #plot EOG channels
-    for ch_eog in eog_ch_name:
-        ch_data = raw.get_data(picks=ch_eog)[0]
-        fig_ch = plot_ECG_channel(ch_data, peaks = [], ch_name = ch_eog, fs = raw.info['sfreq'])
-        eog_derivs += [QC_derivative(fig_ch, ch_eog, 'plotly')]
-
-    #eog_events=mne.preprocessing.find_eog_events(raw, thresh=None, ch_name=None)
-    # ch_name: This doesn’t have to be a channel of eog type; it could, for example, also be an ordinary 
-    # EEG channel that was placed close to the eyes, like Fp1 or Fp2.
-    # or just use none as channel, so the eog will be found automatically
-
-    #eog_events_times  = (eog_events[:, 0] - raw.first_samp) / raw.info['sfreq']
-
     sfreq=raw.info['sfreq']
     tmin=eog_params_internal['eog_epoch_tmin']
     tmax=eog_params_internal['eog_epoch_tmax']
+
     norm_lvl=eog_params['norm_lvl']
-    flip_data=eog_params['flip_data']
     gaussian_sigma=eog_params['gaussian_sigma']
     thresh_lvl_peakfinder=eog_params['thresh_lvl_peakfinder']
-    max_n_peaks_allowed_for_ch = eog_params_internal['max_n_peaks_allowed_for_ch'] 
-    max_n_peaks_allowed_for_avg=eog_params_internal['max_n_peaks_allowed_for_avg']
 
-    eog_affected_channels={}
+    eog_derivs = []
+    eog_str, eog_data, event_indexes, eog_ch_name = get_EOG_data(raw)
+
+    if len(eog_data) == 0:
+        simple_metric_EOG = {'description': eog_str}
+        return eog_derivs, simple_metric_EOG, eog_str, []
+    
+    use_method = 'correlation' #'mean_threshold' 
+    #no need to choose method in EOG because we cant reconstruct channel, always correlaion (if channel present) or fail.
+
+    mean_good, eog_str_checked, mean_blink, blink_derivs = check_mean_rwave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    eog_str += eog_str_checked
+
+    eog_derivs += blink_derivs
+
+    if mean_good is False:
+        simple_metric_EOG = {'description': eog_str}
+        return eog_derivs, simple_metric_EOG, eog_str, []
+
+    fs = raw.info['sfreq']
+    fig = plot_ECG_EOG_channel(eog_data, [], eog_ch_name, fs)
+    noisy_ch_derivs = [QC_derivative(fig, eog_ch_name+' data', 'plotly')]
+    eog_derivs += noisy_ch_derivs
+
+
+    affected_channels={}
     bad_avg_str = {}
     avg_objects_eog=[]
     
@@ -2094,11 +2154,34 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
 
         eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
-        eog_affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_channels(eog_epochs, channels[m_or_g], chs_by_lobe[m_or_g],  m_or_g, norm_lvl, ecg_or_eog='EOG', thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, max_n_peaks_allowed_for_ch = max_n_peaks_allowed_for_ch, max_n_peaks_allowed_for_avg=max_n_peaks_allowed_for_avg, plotflag=True, sfreq=sfreq, flip_data=flip_data, gaussian_sigma=gaussian_sigma, use_method = 'mean_threshold', verbose_plots=verbose_plots)
+        artif_per_ch = calculate_artifacts_on_channels(eog_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=eog_params_internal, gaussian_sigma=gaussian_sigma)
+
+        #2 options:
+        #1. find channels with peaks above threshold defined by average over all channels+multiplier set by user
+        #2. find channels that have highest Pearson correlation with average R wave shape (if the ECG channel is present)
+
+        if use_method == 'mean_threshold':
+            artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, eog_params_internal)
+            affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'EOG', eog_params_internal, thresh_lvl_peakfinder, plotflag=True, verbose_plots=verbose_plots, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
+            correlation_derivs = []
+
+        elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+            
+            affected_channels[m_or_g] = find_affected_by_correlation(mean_blink, artif_per_ch)
+            affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'EOG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation(affected_channels[m_or_g], 'EOG', m_or_g, verbose_plots=verbose_plots)
+            bad_avg_str[m_or_g] = ''
+            avg_overall_obj = None
+
+        else:
+            raise ValueError('use_method should be either mean_threshold or correlation')
+        
+
+        eog_derivs += affected_derivs+correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
-        eog_derivs += affected_derivs
         avg_objects_eog.append(avg_overall_obj)
 
-    simple_metric_EOG=make_simple_metric_ECG_EOG(eog_affected_channels, m_or_g_chosen, 'EOG', channels, bad_avg_str)
+
+    simple_metric_EOG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'EOG', bad_avg_str, use_method)
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog

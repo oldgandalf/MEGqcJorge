@@ -172,7 +172,6 @@ def get_all_config_params(config_file_name: str):
         'n_breaks_bursts_allowed_per_10min': ecg_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': ecg_section.getfloat('allowed_range_of_peaks_stds'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
-        'flip_data': ecg_section.getboolean('flip_data'),
         'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
         'thresh_lvl_peakfinder': ecg_section.getfloat('thresh_lvl_peakfinder'),})
 
@@ -181,7 +180,6 @@ def get_all_config_params(config_file_name: str):
         'n_breaks_bursts_allowed_per_10min': eog_section.getint('n_breaks_bursts_allowed_per_10min'),
         'allowed_range_of_peaks_stds': eog_section.getfloat('allowed_range_of_peaks_stds'),
         'norm_lvl': eog_section.getfloat('norm_lvl'),
-        'flip_data': eog_section.getboolean('flip_data'),
         'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
         'thresh_lvl_peakfinder': eog_section.getfloat('thresh_lvl_peakfinder'),})
 

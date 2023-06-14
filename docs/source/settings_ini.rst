@@ -103,7 +103,6 @@ Heart beat artifacts [ECG]
 - **ecg_epoch_tmin** (float) : time in seconds before the event. Unit: seconds. Dont set smaller than -0.03. Default: *-0.04*
 - **ecg_epoch_tmax** (float) : time in seconds after the event. Unit: seconds. Dont set smaller than 0.03. Default: *0.04*
 - **norm_lvl** (int) : The norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*
-- **flip_data** (bool) : if True, then the data will be flipped if some epochs are negative due to magnetic fields orintation. If False the data will not be flipped and results might be less accurate. Default: *True*
 - **gaussian_sigma** (int) - The sigma of the gaussian kernel used to smooth the data. The higher the sigma, the more smoothing. Typically ECG data is less noisy than EOG nd requires smaller sigma. Default: 4
 
 
@@ -121,7 +120,6 @@ Eye movement artifacts [EOG]
 - **eog_epoch_tmin** (float) : time in seconds before the event. Unit: seconds. Default: *-0.2*
 - **eog_epoch_tmax** (float) : time in seconds after the event. Unit: seconds. Default: *0.4*
 - **norm_lvl** (int) : the norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*
-- **flip_data** (bool) : if True, then the data will be flipped if some epochs are negative due to magnetic fields orintation. If False the data will not be flipped and results might be less accurate. Default: *True*
 - **gaussian_sigma** (int) - The sigma of the gaussian kernel used to smooth the data. The higher the sigma, the more smoothing. Typically EOG data is more noisy than EG nd requires larger sigma. Default: 6
 
 Head_movement artifacts [Head_movement]
