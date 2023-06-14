@@ -1,7 +1,7 @@
 Internal Pipeline Settings
 ==========================
 
-These are internal settings stored in the ``settings.ini`` file. 
+These are internal settings stored in the ``internal_settings.ini`` file. 
 They have been experimentally found and should not be changed by a user.
 
 
@@ -11,12 +11,12 @@ They have been experimentally found and should not be changed by a user.
 - **ecg_epoch_tmin** (float) - time in seconds before the event. Unit: seconds. Default: -0.04 seconds. Dont set smaller than -0.03. 
 - **ecg_epoch_tmax** (float) - time in seconds after the event. Unit: seconds. Default: 0.04 seconds. Dont set larger than 0.05.
 
-ALL BELOW PARAMETERS ARE FOR THE mean_threshold METOD:
 
 - **max_n_peaks_allowed_for_ch** (int) - this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
 - **timelimit_min=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
 - **timelimit_max=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
 - **window_size_for_mean_threshold_method** (float) - this value will be taken before and after the t0_actual in detect_channels_above_norm(). It defines the time window in which the peak of artifact on the channel has to present to be counted as artifact peak and compared t the threshold. Unit: seconds. Default: 0.02 seconds.
+
 
 For the 3 time windows above:
 
@@ -31,12 +31,13 @@ For the 3 time windows above:
 - **eog_epoch_tmin** (float) - time in seconds before the event. Unit: seconds. Default: -0.04 seconds. Dont set smaller than -0.03. 
 - **eog_epoch_tmax** (float) - time in seconds after the event. Unit: seconds. Default: 0.04 seconds. Dont set larger than 0.05.
 
-ALL BELOW PARAMETERS ARE FOR THE mean_threshold METOD:
+
 
 - **max_n_peaks_allowed_for_ch** (int) - this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
 - **timelimit_min=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
 - **timelimit_max=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
 - **window_size_for_mean_threshold_method** (float) - this value will be taken before and after the t0_actual in detect_channels_above_norm(). It defines the time window in which the peak of artifact on the channel has to present to be counted as artifact peak and compared t the threshold. Unit: seconds. Default: 0.02 seconds.
+
 
 For the 3 time windows above:
 
