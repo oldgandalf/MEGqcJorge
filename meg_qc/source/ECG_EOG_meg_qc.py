@@ -1421,29 +1421,39 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     
     """
 
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups(artif_per_ch)
+
+    print('least', corr_val_of_last_least_correlated)
+    print('middle', corr_val_of_last_middle_correlated)
+    print('most', corr_val_of_last_most_correlated)
+
     traces = []
 
     tit, _ = get_tit_and_unit(m_or_g)
 
     for ch in artif_per_ch:
-        traces += [go.Scatter(x=[ch.corr_coef], y=[ch.p_value], mode='markers', marker=dict(size=5, color=ch.color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=ch.lobe.upper()), hovertemplate='Corr coef: '+str(ch.corr_coef)+'<br>p-value: '+str(ch.p_value))]
+        traces += [go.Scatter(x=[abs(ch.corr_coef)], y=[ch.p_value], mode='markers', marker=dict(size=5, color=ch.color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=ch.lobe.upper()), hovertemplate='Corr coef: '+str(ch.corr_coef)+'<br>p-value: '+str(abs(ch.p_value)))]
 
     fig = go.Figure(data=traces)
 
-    #add rectamgles to the plot to separate most correlated (red), middle (yellow) and least correlated (green) channels:
+    #add rectangles to the plot to separate most correlated (red), middle (yellow) and least correlated (green) channels:
     #separate rage -1 to 1 into 6 equal parts:
-    ranges=np.linspace(-1, 1, 7)
-    x_most=[ranges[0], ranges[1]]
-    x_most2=[ranges[-1], ranges[-2]]
-    x_middle=[ranges[1], ranges[2]]
-    x_middle2=[ranges[-2], ranges[-3]]
-    x_least=[ranges[2], ranges[4]]
+    # ranges=np.linspace(-1, 1, 7)
+    # x_most=[ranges[0], ranges[1]]
+    # x_most2=[ranges[-1], ranges[-2]]
+    # x_middle=[ranges[1], ranges[2]]
+    # x_middle2=[ranges[-2], ranges[-3]]
+    # x_least=[ranges[2], ranges[4]]
 
-    fig.add_shape(type="rect", xref="x", yref="y", x0=x_most[0], y0=-0.1, x1=x_most[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
-    fig.add_shape(type="rect", xref="x", yref="y", x0=x_most2[0], y0=-0.1, x1=x_most2[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
-    fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle[0], y0=-0.1, x1=x_middle[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
-    fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle2[0], y0=-0.1, x1=x_middle2[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
-    fig.add_shape(type="rect", xref="x", yref="y", x0=x_least[0], y0=-0.1, x1=x_least[1], y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+    # fig.add_shape(type="rect", xref="x", yref="y", x0=x_most[0], y0=-0.1, x1=x_most[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+    # fig.add_shape(type="rect", xref="x", yref="y", x0=x_most2[0], y0=-0.1, x1=x_most2[1], y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+    # fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle[0], y0=-0.1, x1=x_middle[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    # fig.add_shape(type="rect", xref="x", yref="y", x0=x_middle2[0], y0=-0.1, x1=x_middle2[1], y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    # fig.add_shape(type="rect", xref="x", yref="y", x0=x_least[0], y0=-0.1, x1=x_least[1], y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+
+    fig.add_shape(type="rect", xref="x", yref="y", x0=0, y0=-0.1, x1=corr_val_of_last_least_correlated, y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_middle_correlated, y0=-0.1, x1=1, y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
 
     #set axis titles:
     fig.update_xaxes(title_text='Correlation coefficient')
@@ -1455,24 +1465,49 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     if verbose_plots is True:
         fig.show()
 
-    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Sign of a correlation value only indicates the position of a channel relative to the magnetic field. Therefore, the absolute value of the correlation coefficient should be considered. <br> Red area represents the 1/3 of channels with the highest correlation. Green area: 1/3 of channels with the lowest correlation.')]
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ECG; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ECG;</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ECG. </p>')]
 
     return corr_derivs
 
 
-def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots):
+def split_correlated_artifacts_into_3_groups(artif_per_ch):
+
+    """
+    Collect artif_per_ch into 3 lists - for plotting:
+    - a third of all channels that are the most correlated with mean_rwave
+    - a third of all channels that are the least correlated with mean_rwave
+    - a third of all channels that are in the middle of the correlation with mean_rwave
+
+    Parameters
+
+
+    """
 
     #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
     artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
 
-    #collect artif_per_ch into 3 lists:
-    # - a third of all channels that are the most correlated with mean_rwave
-    # - a third of all channels that are the least correlated with mean_rwave
-    # - a third of all channels that are in the middle of the correlation with mean_rwave
-
     most_correlated = artif_per_ch[:int(len(artif_per_ch)/3)]
     least_correlated = artif_per_ch[-int(len(artif_per_ch)/3):]
     middle_correlated = artif_per_ch[int(len(artif_per_ch)/3):-int(len(artif_per_ch)/3)]
+
+    #get correlation values of all most correlated channels:
+    all_most_correlated = [abs(ch.corr_coef) for ch in most_correlated]
+    all_middle_correlated = [abs(ch.corr_coef) for ch in middle_correlated]
+    all_least_correlated = [abs(ch.corr_coef) for ch in least_correlated]
+
+    #find the correlation value of the last channel in the list of the most correlated channels:
+    # this is needed for plotting correlation values, to know where to put separation rectangles.
+    corr_val_of_last_most_correlated = max(all_most_correlated)
+    corr_val_of_last_middle_correlated = max(all_middle_correlated)
+    corr_val_of_last_least_correlated = max(all_least_correlated)
+
+    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+
+
+
+def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots):
+
+    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
 
     #plot using plotly: 
     # artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
@@ -1937,7 +1972,7 @@ def check_mean_rwave(raw, use_method, ecg_data, ecg_or_eog, event_indexes, tmin,
     if len(event_indexes) <1:
         ecg_str_checked = 'Reconstructed ECG data can not be used for artifact detection: no R waves were found.'
         print('___MEG QC___: ', ecg_str_checked)
-        
+
         return False, ecg_str_checked, np.empty((0, 0)), []
 
     mean_rwave = find_mean_rwave(ecg_data, event_indexes, tmin, tmax, sfreq)  
