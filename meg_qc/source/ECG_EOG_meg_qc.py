@@ -1460,42 +1460,6 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     return corr_derivs
 
 
-def plot_mean_rwave(tmin, tmax, mean_rwave, ecg_or_eog, use_method, verbose_plots):
-
-    """
-    Plot mean Rwave
-
-    Parameters
-
-    
-    """
-
-    if use_method == 'correlation_reconstructed':
-        title = 'Mean RECONSTRUCTED '+ecg_or_eog+' epoch'
-    elif use_method == 'correlation':
-        title = 'Mean RECORDED '+ecg_or_eog+' epoch'
-
-    artif_time_vector = np.linspace(tmin, tmax, len(mean_rwave))
-
-    fig_mean_rwave = go.Figure()
-    fig_mean_rwave.add_trace(go.Scatter(x=artif_time_vector, y=mean_rwave, mode='lines', name=title))
-    fig_mean_rwave.update_layout(
-    title={
-        'text': title,
-        'y':0.85,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top'},
-        xaxis_title='Time (s)', 
-        yaxis_title='Amplitude (V)')
-    
-    fig_derivs = [QC_derivative(fig_mean_rwave, 'Mean_artifact'+ecg_or_eog, 'plotly')]
-
-    if verbose_plots is True:
-        fig_mean_rwave.show()
-
-    return fig_derivs
-
 def plot_artif_per_ch_correlated_lobes(artif_per_ch, tmin, tmax, m_or_g, ecg_or_eog, chs_by_lobe, flip_data, verbose_plots):
 
     #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
@@ -1921,11 +1885,12 @@ def choose_method_ECG(raw: mne.io.Raw, ecg_params: dict):
     return use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes
 
 
-def check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder):
+def check_mean_rwave(raw, use_method, ecg_data, ecg_or_eog, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, verbose_plots):
 
     """
     Calculate mean R wave based on either real ECG channel data or on reconstructed data (depends on the method used) 
     and check if it has an R wave shape.
+    Plot Rwave with peaks.
     
     Parameters
     ----------
@@ -1988,7 +1953,24 @@ def check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq
         ecg_str_checked = 'Mean Rwave is not good enough to use for artifact detection. Artifact detection was not performed.'
         print('___MEG QC___: ', ecg_str_checked)
 
-    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave
+
+    #Plot:
+    if mean_rwave.size > 0:
+        t = np.linspace(tmin, tmax, len(mean_rwave))
+        if use_method == 'correlation_reconstructed':
+            title = 'Mean data of the RECONSTRUCTED '
+        elif use_method == 'correlation':
+            title = 'Mean data of the RECORDED '
+
+        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, 'ECG', fig = None, plot_original = True, plot_smoothed = False)
+        if verbose_plots is True:
+                mean_rwave_fig.show()
+
+        fig_derivs = [QC_derivative(mean_rwave_fig, 'Mean_artifact'+ecg_or_eog, 'plotly', description_for_user = ecg_str_checked)]
+    else:
+        fig_derivs = []
+
+    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, fig_derivs
 
     
 
@@ -2054,15 +2036,9 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = choose_method_ECG(raw, ecg_params)
     ecg_derivs += noisy_ch_derivs
 
-    mean_good, ecg_str_checked, mean_rwave = check_mean_rwave(raw, use_method, ecg_data, event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder)
+    mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_rwave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder, verbose_plots)
     ecg_str += ecg_str_checked
     simple_metric_ECG = {'description': ecg_str}
-
-    if mean_rwave.size > 0:
-        rwave_derivs= plot_mean_rwave(tmin, tmax, mean_rwave, 'ECG', use_method, verbose_plots=verbose_plots)
-        ecg_derivs += rwave_derivs
-    else:
-        return ecg_derivs, simple_metric_ECG, ecg_str, []
 
     if mean_good is False:
         return ecg_derivs, simple_metric_ECG, ecg_str, []

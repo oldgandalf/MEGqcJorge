@@ -66,6 +66,9 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
             unit='Tesla/m'
         elif psd is True:
             unit='Tesla/m / Hz'
+    elif m_or_g == 'ECG':
+        m_or_g_tit = 'ECG channel'
+        unit = 'V'
     else:
         m_or_g_tit = '?'
         unit='?'
