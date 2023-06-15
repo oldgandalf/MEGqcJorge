@@ -401,7 +401,3 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
 
     return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
-
-
-
-

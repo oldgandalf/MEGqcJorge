@@ -148,7 +148,7 @@ def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list,
 
     return fig
 
-def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float):
+def detect_noisy_ecg_eog(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float):
     """
     Detects noisy ecg or eog channels.
 
@@ -197,10 +197,10 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
     bad_ecg_eog = {}
     noisy_ch_derivs=[]
     all_ch_data = []
-    Rpeaks = []
+    peaks = []
 
     if len(picked_channels_ecg_or_eog) == 0: 
-        return noisy_ch_derivs, bad_ecg_eog, ch_data, Rpeaks
+        return noisy_ch_derivs, bad_ecg_eog, ch_data, peaks
     else:
         all_ch_data.append(raw.get_data(picks=picked_channels_ecg_or_eog)[0]) #here ch_data will be the RAW DATA
         # get_data creates list inside of a list becausee expects to create a list for each channel. 
@@ -208,7 +208,7 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
 
         for ch_data, picked in zip(all_ch_data, picked_channels_ecg_or_eog):
 
-            ecg_eval, fig, Rpeaks = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
+            ecg_eval, fig, peaks = check_3_conditions(picked, ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
             print(f'___MEG QC___: {picked} satisfied conditions for a good channel: ', ecg_eval)
 
             if all(ecg_eval):
@@ -225,7 +225,7 @@ def detect_noisy_ecg(raw: mne.io.Raw, picked_channels_ecg_or_eog: list,  ecg_or_
     #In fact this fucntion is only used for ECG now, so it outpus all_ch_data[0] - the ECG data for 1 channel.
     #kept as a lopp still, in case we want to use it for EOG in the future.
 
-    return noisy_ch_derivs, bad_ecg_eog, all_ch_data[0], Rpeaks
+    return noisy_ch_derivs, bad_ecg_eog, all_ch_data[0], peaks
 
 
 def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
@@ -1322,7 +1322,7 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     if verbose_plots is True:
         fig.show()
 
-    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ECG; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ECG;</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ECG. </p>')]
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>')]
 
     return corr_derivs
 
@@ -1779,11 +1779,12 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
     """
 
     picks_ECG = mne.pick_types(raw.info, ecg=True)
+
     ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
 
-    if ecg_ch_name: #ecg channel present
+    if len(ecg_ch_name)>0: #ecg channel present
 
-        noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
+        noisy_ch_derivs, bad_ecg_eog, ecg_data, event_indexes = detect_noisy_ecg_eog(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
 
         ch=ecg_ch_name[0]
         if bad_ecg_eog[ch] == 'bad': #ecg channel present but noisy:
@@ -1791,10 +1792,15 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
             print('___MEG QC___: ', ecg_str)
             raw.drop_channels(ch)
             use_method = 'correlation_reconstructed'
+
         elif bad_ecg_eog[ch] == 'good': #ecg channel present and good - use it
-            ecg_str = ch+' is good and is used to identify hearbeats. '
+            ecg_str = ch + ' is good and is used to identify hearbeats. '
             use_method = 'correlation'
+
     else: #no ecg channel present
+
+        # print('GOT HERE 7')
+
         noisy_ch_derivs, ecg_data, event_indexes = [], [], []
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. '
         use_method = 'correlation_reconstructed'
@@ -1852,7 +1858,7 @@ def get_EOG_data(raw: mne.io.Raw):
     # Get the data of the EOG channel as an array. MNE only sees blinks, not saccades.
     eog_data = raw.get_data(picks=blinks_ch_name)[0]
 
-    eog_str = 'EOG channel '+blinks_ch_name+' is used to identify eye blinks. '
+    eog_str = blinks_ch_name+' is used to identify eye blinks. '
 
     height = np.mean(eog_data) + 1 * np.std(eog_data)
     fs=raw.info['sfreq']
@@ -2009,10 +2015,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     gaussian_sigma=ecg_params['gaussian_sigma']
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
 
-
     ecg_derivs = []
     use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     ecg_derivs += noisy_ch_derivs
+
 
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
     ecg_str += ecg_str_checked
@@ -2036,7 +2042,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         artif_per_ch = calculate_artifacts_on_channels(ecg_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=ecg_params_internal, gaussian_sigma=gaussian_sigma)
 
-        use_method = 'mean_threshold' #REMOVE THIS LINE WHEN IMPLEMENTING METHOD 2
+        #use_method = 'mean_threshold' 
 
         #2 options:
         #1. find channels with peaks above threshold defined by average over all channels+multiplier set by user
