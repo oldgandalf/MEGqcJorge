@@ -1745,7 +1745,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 
-def get_ECG_data_and_choose_method(raw: mne.io.Raw, ecg_params: dict):
+def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     """
     Choose the method of finding affected channels based on the presense and quality of ECG channel.
@@ -1861,7 +1861,7 @@ def get_EOG_data(raw: mne.io.Raw):
     return eog_str, eog_data, event_indexes, blinks_ch_name
 
 
-def check_mean_rwave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float, verbose_plots: bool):
+def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float, verbose_plots: bool):
 
     """
     Calculate mean R wave based on either real ECG channel data or on reconstructed data (depends on the method used) 
@@ -2011,10 +2011,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
     ecg_derivs = []
-    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_and_choose_method(raw, ecg_params)
+    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     ecg_derivs += noisy_ch_derivs
 
-    mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_rwave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
     ecg_str += ecg_str_checked
 
     ecg_derivs += rwave_derivs
@@ -2129,7 +2129,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     use_method = 'correlation' #'mean_threshold' 
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion (if channel present) or fail.
 
-    mean_good, eog_str_checked, mean_blink, blink_derivs = check_mean_rwave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, eog_str_checked, mean_blink, blink_derivs = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
     eog_str += eog_str_checked
 
     eog_derivs += blink_derivs
