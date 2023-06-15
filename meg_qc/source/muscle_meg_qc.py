@@ -359,7 +359,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
     #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
-    muscle_derivs, simple_metric, scores_muscle = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
+    muscle_derivs, simple_metric, scores_muscle = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
 
     return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
 
@@ -410,12 +410,16 @@ def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshol
     return muscle_derivs, simple_metric, scores_muscle
 
 
-def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+
+    """
+    annotate_muscle_zscore() requires threshold_muscle so define a minimal one here: 5 z-score.
+    
+    """
+
 
     muscle_derivs=[]
 
-    threshold_muscle = 5 # z-score
-    #annotate_muscle_zscore requires threshold_muscle so define a minimal one here.
 
     for m_or_g in m_or_g_decided: #generally no need for loop, we will use just 1 type here. Left in case we change the principle.
 
