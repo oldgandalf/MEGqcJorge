@@ -345,7 +345,8 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
 
     raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
 
-    attach_sec = 5
+    attach_sec = 3 # seconds
+
     if attach_dummy is True:
         print(raw, attach_sec)
         raw = attach_dummy_data(raw, attach_sec) #attach dummy data to avoid filtering artifacts at the beginning and end of the recording.  
@@ -357,6 +358,17 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
+    #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
+    muscle_derivs, simple_metric, scores_muscle = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
+
+    return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
+
+
+
+def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+
+    muscle_derivs=[]
+
     for m_or_g in m_or_g_decided: #generally no need for loop, we will use just 1 type here. Left in case we change the principle.
 
         z_scores_dict={}
@@ -374,12 +386,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
                 # annot_muscle['onset'] = annot_muscle['onset']-attach_sec
                 # annot_muscle['duration'] = annot_muscle['duration']-attach_sec
                 scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
-                print('Raw times before', raw.times)
-                print('Raw dur before', raw.n_times / raw.info['sfreq'])
-
                 raw = raw.crop(tmin=attach_sec, tmax=raw.times[int(-attach_sec*raw.info['sfreq'])])
-                print('Raw times after', raw.times)
-                print('Raw dur after', raw.n_times / raw.info['sfreq'])
 
 
 
@@ -400,4 +407,50 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
             
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
 
-    return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
+    return muscle_derivs, simple_metric, scores_muscle
+
+
+def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+
+    muscle_derivs=[]
+
+    threshold_muscle = 5 # z-score
+    #annotate_muscle_zscore requires threshold_muscle so define a minimal one here.
+
+    for m_or_g in m_or_g_decided: #generally no need for loop, we will use just 1 type here. Left in case we change the principle.
+
+        z_scores_dict={}
+
+        z_score_details={}
+
+        annot_muscle, scores_muscle = annotate_muscle_zscore(
+        raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
+        filter_freq=muscle_freqs)
+
+        #cut attached beginning and end from annot_muscle, scores_muscle:
+        if cut_dummy is True:
+            # annot_muscle = annot_muscle[annot_muscle['onset']>attach_sec]
+            # annot_muscle['onset'] = annot_muscle['onset']-attach_sec
+            # annot_muscle['duration'] = annot_muscle['duration']-attach_sec
+            scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
+            raw = raw.crop(tmin=attach_sec, tmax=raw.times[int(-attach_sec*raw.info['sfreq'])])
+
+
+        # Plot muscle z-scores across recording
+        peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
+
+        muscle_times = raw.times[peak_locs_pos]
+        high_scores_muscle=scores_muscle[peak_locs_pos]
+
+        muscle_derivs += plot_muscle(m_or_g, raw, scores_muscle, None, muscle_times, high_scores_muscle, verbose_plots, interactive_matplot, annot_muscle)
+
+        # collect all details for simple metric:
+        z_score_details['muscle_event_times'] = muscle_times.tolist()
+        z_score_details['muscle_event_zscore'] = high_scores_muscle.tolist()
+        z_scores_dict = {
+            'number_muscle_events': len(muscle_times), 
+            'Details': z_score_details}
+            
+        simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
+
+    return muscle_derivs, simple_metric, scores_muscle
