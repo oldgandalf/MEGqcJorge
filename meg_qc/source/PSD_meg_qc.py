@@ -188,7 +188,7 @@ def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute
     relative_unknown=100-(sum(freq_amplitudes_relative))*100
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
-        all_bands_names.append('unknown')
+        all_bands_names.append('other frequencies')
         all_mean_abs_values.append(total_freq_ampl - sum(freq_amplitudes_absolute))
 
     labels=[None]*len(all_bands_names)
