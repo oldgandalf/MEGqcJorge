@@ -842,6 +842,7 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             ticktext = boxes_names,
             rangeslider=dict(visible=True)
         ),
+        xaxis_title='Experimental epochs',
         yaxis = dict(
             showexponent = 'all',
             exponentformat = 'e'),
@@ -897,25 +898,13 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
-        hover_tit='Amplitude'
+        hover_tit='PtP Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
         fig_name='PP_manual_epoch_per_channel_'+ch_tit
-
-        #Add the data about std of each epoch (as a list, 1 std for 1 epoch) into each channel object inside the chs_by_lobe dictionary:
-        for lobe in chs_by_lobe:
-            for ch in chs_by_lobe[lobe]:
-                ch.ptp_epoch = df_std_ptp.loc[ch.name].values
-
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_per_channel_'+ch_tit
-
-        #Add the data about std of each epoch (as a list, 1 std for 1 epoch) into each channel object inside the chs_by_lobe dictionary:
-        for lobe in chs_by_lobe:
-            for ch in chs_by_lobe[lobe]:
-                ch.std_epoch = df_std_ptp.loc[ch.name].values
-
     else:
         print('what_data should be either peaks or stds')
 
@@ -983,22 +972,69 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
 
     return fig_deriv
 
-
-def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
+def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
 
     """
-    Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
-    (box contains magnetometers or gradiomneters, not together): 
-    each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
+    Assign std or ptp va;ues of each epoch as list to each channel. 
+    This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
+    
+    Parameters
+    ----------
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
+    
+        
+    Returns
+    -------
+    chs_by_lobe : dict
+        updated dictionary with channel objects sorted by lobe - with info about std or ptp of epochs.
+    """
+
+    if what_data=='peaks':
+        #Add the data about std of each epoch (as a list, 1 std for 1 epoch) into each channel object inside the chs_by_lobe dictionary:
+        for lobe in chs_by_lobe:
+            for ch in chs_by_lobe[lobe]:
+                ch.ptp_epoch = df_std_ptp.loc[ch.name].values
+    elif what_data=='stds':
+        for lobe in chs_by_lobe:
+            for ch in chs_by_lobe[lobe]:
+                ch.std_epoch = df_std_ptp.loc[ch.name].values
+    else:
+        print('what_data should be either peaks or stds')
+
+    return chs_by_lobe
+
+
+def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+    Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
+    
+    Process: 
+    Each box need to be plotted as a separate trace first.
+    Each channels inside each box has to be plottted as separate trace to allow diffrenet color coding
+    
+    For each box_representing_epoch:
+        box trace
+        For each color coded lobe:
+            For each dot_representing_channel in lobe:
+                dot trace
+
+    Add all traces to plotly figure
+
 
     Parameters
     ----------
     chs_by_lobe : dict
         dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
     ch_type : str
         'mag' or 'grad'
-    channels : list
-        list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
     verbose_plots : bool
@@ -1011,74 +1047,81 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, ch_type: str, what_data: str
 
     """
 
+    epochs_names = df_std_ptp.columns.tolist()
+
     ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
-        hover_tit='PP_Amplitude'
+        hover_tit='PtP Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_all_data_'+ch_tit
+        fig_name='PP_manual_epoch_per_channel_2_'+ch_tit
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_all_data_'+ch_tit
+        fig_name='STD_epoch_per_channel_2_'+ch_tit
     else:
-        raise ValueError('what_data must be set to "stds" or "peaks"')
+        print('what_data should be either peaks or stds')
 
-    boxwidth=0.4 #the area around which the data dots are scattered depends on the width of the box.
+
+    boxwidth=0.5 #the area around which the data dots are scattered depends on the width of the box.
 
     # For this plot have to separately create a box (no data points plotted) as 1 trace
     # Then separately create for each cannel (dot) a separate trace. It s the only way to make them all different lobe colors.
-    # Additionally, the dots are scattered along the y axis, this is done for visualisation only, y position does not hold information.
+    # Additionally, the dots are scattered along the x axis inside each box, this is done for visualisation only, x position does not hold information.
     
     # Put all data dots in a list of traces groupped by lobe:
-    values_all=[]
-    traces = []
-
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch in ch_list:
-            if what_data == 'stds':
-                data = ch.std_overall
-            elif what_data == 'peaks':
-                data = ch.ptp_overall
-            values_all += [data]
-
-            y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
-            #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
-            
-            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
-
-
-    # create box plot trace
-    box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)
     
-    #Colllect all traces and add them to the figure:
-    all_traces = [box_trace]+traces
-    fig = go.Figure(data=all_traces)
+    dot_traces = []
+    box_traces = []
 
-    #Add hover text to the dots, remove too many digits after coma.
-    fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
+    for ep_number, ep_name in enumerate(epochs_names):
+        dots_in_1_box=[]
+        for lobe,  ch_list in chs_by_lobe.items():
+            for ch in ch_list:
+                if what_data == 'stds':
+                    data = ch.std_epoch[ep_number]
+                elif what_data == 'peaks':
+                    data = ch.ptp_epoch[ep_number]
+                dots_in_1_box += [data]
+
+                x = ep_number + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
+                #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+                
+                dot_traces += [go.Scatter(x=[x], y=[data], mode='markers', marker=dict(size=4, color=ch.lobe_color), opacity=0.8, name=ch.name, text=str(ep_name), legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()), hovertemplate='Epoch: '+str(ep_name)+'<br>'+hover_tit+': %{y: .2e}')]
+
+        # create box plot trace
+        box_traces += [go.Box(x0=ep_number, y=dots_in_1_box, orientation='v', name=ep_name, line_width=1.8, opacity=0.8, boxpoints=False, width=boxwidth, showlegend=False)]
+    
+    #Collect all traces and add them to the figure:
+
+    all_traces = box_traces+dot_traces
+    fig = go.Figure(data=all_traces)
         
     #more settings:
     fig.update_layout(
-        yaxis_range=[-0.5,0.5],
-        yaxis={'visible': False, 'showticklabels': False},
         xaxis = dict(
-        showexponent = 'all',
-        exponentformat = 'e'),
-        xaxis_title=y_ax_and_fig_title+" in "+unit,
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(epochs_names))],
+            ticktext = epochs_names,
+            rangeslider=dict(visible=True)
+        ),
+        xaxis_title='Experimental epochs',
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
         title={
-        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
-        'y':0.85,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top'},
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
     
     if verbose_plots is True:
         fig.show()
 
-    description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 

@@ -5,9 +5,9 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epoched_xaxis_channels
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
-from meg_qc.source.STD_meg_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
+from meg_qc.source.STD_meg_qc import make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 from IPython.display import display
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
@@ -307,8 +307,11 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
         for m_or_g in m_or_g_chosen:
             df_ptp=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
             
+            chs_by_lobe_copy[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='peaks', chs_by_lobe=chs_by_lobe_copy[m_or_g], df_std_ptp=df_ptp) #for easier plotting
+
             fig_ptp_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
+            fig_ptp_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
             #fig_ptp_epoch1 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
             fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 

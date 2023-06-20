@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from IPython.display import display
 
@@ -547,8 +547,11 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
 
+            chs_by_lobe_copy[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_copy[m_or_g], df_std_ptp=df_std) #for easier plotting
+
             fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
+            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
             #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
             fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
