@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epochs_lobes
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epoched_xaxis_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.STD_meg_qc import get_big_small_std_ptp_epochs, make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 from IPython.display import display
@@ -307,16 +307,7 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
         for m_or_g in m_or_g_chosen:
             df_ptp=get_ptp_epochs(channels[m_or_g], dict_epochs_mg[m_or_g], sfreq, ptp_manual_params['ptp_thresh_lvl'], ptp_manual_params['max_pair_dist_sec'])
             
-            #display (df_ptp)
-
-            #Add std epoch data into channel object inside the chs_by_lobe dictionary:
-            for lobe in chs_by_lobe_copy[m_or_g]:
-                for ch in chs_by_lobe_copy[m_or_g][lobe]:
-                    ch.ptp_epoch = df_ptp.loc[ch.name].values
-                    #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
-
-            epochs_names = df_ptp.columns.tolist()
-            fig_ptp_epoch0 += [boxplot_epochs_lobes(chs_by_lobe_copy[m_or_g], epochs_names, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
+            fig_ptp_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
             #fig_ptp_epoch1 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
             fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
