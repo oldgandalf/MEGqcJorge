@@ -91,14 +91,22 @@ def get_all_config_params(config_file_name: str):
         all_qc_params['default'] = default_params
 
         filtering_section = config['Filtering']
-        if filtering_section.getboolean('apply_filtering') is True:
-            filtering_params = dict({
-                'l_freq': filtering_section.getfloat('l_freq'),
-                'h_freq': filtering_section.getfloat('h_freq'),
-                'method': filtering_section['method']})
-            all_qc_params['Filtering'] = filtering_params
-        else: 
-            all_qc_params['Filtering'] = False
+        try:
+            lfreq = filtering_section.getfloat('l_freq')
+        except:
+            lfreq = None
+
+        try:
+            hfreq = filtering_section.getfloat('h_freq')
+        except:
+            hfreq = None
+        
+        all_qc_params['Filtering'] = dict({
+            'apply_filtering': filtering_section.getboolean('apply_filtering'),
+            'l_freq': lfreq,
+            'h_freq': hfreq,
+            'method': filtering_section['method'],
+            'downsample_to_hz': filtering_section.getint('downsample_to_hz')})
 
 
         epoching_section = config['Epoching']
@@ -611,7 +619,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Data filtering:
     raw_cropped_filtered = raw_cropped.copy()
-    if filtering_settings is not False:
+    if filtering_settings['apply_filtering'] is True:
         raw_cropped.load_data() #Data has to be loaded into mememory before filetering:
         raw_cropped_filtered = raw_cropped.copy()
 
@@ -622,17 +630,38 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         raw_cropped_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
         print('___MEG QC___: ', 'Data filtered from', filtering_settings['l_freq'], 'to', filtering_settings['h_freq'], 'Hz.')
         
-        #And downsample:
-        raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
-        #frequency to resample is 5 times higher than the maximum chosen frequency of the function
-        print('___MEG QC___: ', 'Data resampled to', filtering_settings['h_freq']*5, 'Hz.')
-    else:
-        raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
-        #OR maybe we dont need these 2 copies of data at all? Think how to get rid of them, 
-        # because they are used later. Referencing might mess up things, check that.
-        print('___MEG QC___: ', 'Data not filtered.')
-    
+        if filtering_settings['downsample_to_hz'] is False:
+            raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
+            resample_str = 'Data not resampled. '
+            print('___MEG QC___: ', resample_str)
+        elif filtering_settings['downsample_to_hz'] >= filtering_settings['h_freq']*5:
+            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
+            resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
+            print('___MEG QC___: ', resample_str)
+        else:
+            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
+            #frequency to resample is 5 times higher than the maximum chosen frequency of the function
+            resample_str = 'Chosen "downsample_to_hz" value set was too low, it must be at least 5 time higher than the highest filer frequency. Data resampled to ' + str(filtering_settings['h_freq']*5) + ' Hz. '
+            print('___MEG QC___: ', resample_str)
 
+            
+    else:
+        print('___MEG QC___: ', 'Data not filtered.')
+        #And downsample:
+        if filtering_settings['downsample_to_hz'] is not False:
+            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
+            if filtering_settings['downsample_to_hz'] < 500:
+                resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. Keep in mind: resampling to less than 500Hz is not recommended, since it might result in high frequency data loss (for example of the CHPI coils signal. '
+                print('___MEG QC___: ', resample_str)
+            else:
+                resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
+                print('___MEG QC___: ', resample_str)
+        else:
+            raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
+            resample_str = 'Data not resampled. '
+            print('___MEG QC___: ', resample_str)
+
+        
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
@@ -680,5 +709,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     
     clicking_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
 
+    resample_str = '<p>' + resample_str + '</p>'
 
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, verbose_plots
+
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots

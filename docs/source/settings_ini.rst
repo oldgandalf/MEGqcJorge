@@ -41,6 +41,7 @@ Default settings [DEFAULT]
 Filtering [Filtering]
 ---------------------
 - **apply_filtering** (bool): if True, the data will be filtered. Default: *True*
+- **downsample_to_hz** (int or float) - frequency to downsample to. Must be: 1. at least 5 times higher than h_freq to avoid misrepresentation. 2. Low value may lead to misrepresentation of chpi coils signal. They send signals in frequencies in higher than 100 hz. When downsampled this information may disappear. Recommended optimal value: 1000. Recommended minimum value: 500 Unit: Hz. Can be also set to False to avoid downsampling.
 - **l_freq** (int or float) : lower frequency for bandpass filter. Unit: Hz. Default: *0*
 - **h_freq** (int or float) : higher frequency for bandpass filter. Unit: Hz. Default: *140*. Reason: output of PSD can be used for filtering the data before muscle artifact detection. Musce artifacts are usually around 110-140 Hz, so this setting allows to see if there are extra frequencies which would need to be filtered out
 - **method** (str) : method of filtering. Default: *iir*. Or turn off filtering completely by setting apply_filtering = False. Parameters in this case dont matter.
