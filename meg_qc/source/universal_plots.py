@@ -553,6 +553,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
             'xanchor': 'center',
             'yanchor': 'top'},
             hoverlabel=dict(font=dict(size=10)))
+        
 
         mag_fig = switch_names_on_off(mag_fig)
 
@@ -678,7 +679,7 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
     mode='markers',
     marker=dict(
         color=color,
-        size=5,
+        size=8,
         symbol=symbol,
     ),
     text=names,
@@ -749,6 +750,14 @@ def plot_sensors_3d(chs_by_lobe: dict):
         'x':0.5,
         'xanchor': 'center',
         'yanchor': 'top'})
+    
+    fig.update_layout(
+        scene = dict(
+        xaxis = dict(visible=False),
+        yaxis = dict(visible=False),
+        zaxis =dict(visible=False)
+        )
+    )
 
     #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
 
