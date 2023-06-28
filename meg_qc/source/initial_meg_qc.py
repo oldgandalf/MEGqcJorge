@@ -181,7 +181,8 @@ def get_all_config_params(config_file_name: str):
         'allowed_range_of_peaks_stds': ecg_section.getfloat('allowed_range_of_peaks_stds'),
         'norm_lvl': ecg_section.getfloat('norm_lvl'),
         'gaussian_sigma': ecg_section.getint('gaussian_sigma'),
-        'thresh_lvl_peakfinder': ecg_section.getfloat('thresh_lvl_peakfinder'),})
+        'thresh_lvl_peakfinder': ecg_section.getfloat('thresh_lvl_peakfinder'),
+        'height_multiplier': ecg_section.getfloat('height_multiplier')})
 
         eog_section = config['EOG']
         all_qc_params['EOG'] = dict({

@@ -12,7 +12,7 @@ from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_
 from IPython.display import display
 
 
-def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float):
+def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
 
     """
     Check if the ECG/EOG channel is not corrupted using 3 conditions:
@@ -32,6 +32,8 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
         Number of breaks allowed per 10 minutes of recording, by default 3. Can also set to 0, but then it can falsely detect a break/burst if the peak detection was not perfect.
     allowed_range_of_peaks_stds : float, optional
         Allowed range of standard deviations of peak amplitudes, by default 0.05. Works for ECG channel, but not good for EOG channel.
+    height_multiplier: float
+        Will define how high the peaks on the ECG channel should be to be counted as peaks. Higher value - higher the peak need to be, hense less peaks will be found.
     
     Returns
     -------
@@ -48,7 +50,7 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
 
     # 1. Check if R peaks (or EOG peaks)  have similar amplitude. If not - data is too noisy:
     # Find R peaks (or peaks of EOG wave) using find_peaks
-    height = np.mean(ch_data) + 1 * np.std(ch_data)
+    height = np.mean(ch_data) + height_multiplier * np.std(ch_data)
     peaks, _ = find_peaks(ch_data, height=height, distance=round(0.5 * fs)) #assume there are no peaks within 0.5 seconds from each other.
 
 
@@ -147,7 +149,7 @@ def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list,
 
     return fig
 
-def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float):
+def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
     
     """
     Detects noisy ecg or eog channels.
@@ -167,16 +169,19 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
         ECG channel names to be checked.
     ecg_or_eog : str
         'ECG' or 'EOG'
-    n_breaks_bursts_allowed_per_10min : int, optional
+    n_breaks_bursts_allowed_per_10min : int
         Number of breaks allowed per 10 minutes of recording. The default is 3.
-    allowed_range_of_peaks_stds : float, optional
+    allowed_range_of_peaks_stds : float
         Allowed range of peaks standard deviations. The default is 0.05.
 
         - The channel data will be scaled from 0 to 1, so the setting is universal for all data sets.
         - The peaks will be detected on the scaled data
         - The average std of all peaks has to be within this allowed range, If it is higher - the channel has too high deviation in peaks height and is counted as noisy
+    
+    height_multiplier: float
+        Defines how high the peaks on the ECG channel should be to be counted as peaks. Higher value - higher the peak need to be, hense less peaks will be found.
 
-
+        
     Returns
     -------
     bad_ecg_eog : dict
@@ -199,7 +204,7 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     # get_data creates list inside of a list becausee expects to create a list for each channel. 
     # but iteration takes 1 ch at a time. this is why [0]
 
-    ecg_eval, peaks = check_3_conditions(ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds)
+    ecg_eval, peaks = check_3_conditions(ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds, height_multiplier)
     print(f'___MEG QC___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
 
     if all(ecg_eval):
@@ -977,12 +982,13 @@ def estimate_t0(artif_per_ch_nonflipped: list, t: np.ndarray, params_internal: d
     
     """ 
     Estimate t0 for the artifact. MNE has it s own estimation of t0, but it is often not accurate.
+    t0 will be the point of the maximal amplitude of the artifact.
     Steps:
 
     1. find maxima on all channels (absolute values) in time frame around -0.02<t[peak_loc]<0.012 
         (here R wave is typically detected by mne - for ecg, for eog it is -0.1<t[peak_loc]<0.2)
     2. take 5 channels with most prominent peak 
-    3. find estimated average t0 for all 5 channels, because t0 of event which mne estimated is often not accurate.
+    3. find estimated average t0 for all 5 channels, set it as new t0.
     
 
     Parameters
@@ -1031,7 +1037,7 @@ def estimate_t0(artif_per_ch_nonflipped: list, t: np.ndarray, params_internal: d
     # find the index of max value for each of these 5 channels:
     max_values_ind_in_avg_ecg_epoch_data_nonflipped=np.argmax(np.abs(avg_ecg_epoch_data_nonflipped_limited_to_event[max_values_ind]), axis=1)
     
-    #find average index of max value for these 5 channels th then derive t0_estimated:
+    #find average index of max value for these 5 channels, then derive t0_estimated:
     t0_estimated_average=int(np.round(np.mean(max_values_ind_in_avg_ecg_epoch_data_nonflipped)))
     #limited to event means that the index is limited to the time interval where R wave is expected to be.
     #Now need to get back to actual time interval of the whole epoch:
@@ -1203,6 +1209,43 @@ def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
 
     return artif_per_ch
 
+def align_artif_data(ch_wave, mean_rwave):
+
+    # Find peaks in mean_rwave
+    peaks1, _ = find_peaks(mean_rwave)
+
+    # Initialize variables for best alignment
+    best_time_shift = 0
+    best_correlation = -np.inf
+    best_aligned_ch_wave = None
+
+    # Try aligning ch_wave in both orientations
+    for flip in [False, True]:
+        # Flip ch_wave if needed
+        #aligned_ch_wave = np.flip(ch_wave) if flip else ch_wave
+        aligned_ch_wave = -ch_wave if flip else ch_wave
+
+        # Find peaks in aligned_ch_wave
+        peaks2, _ = find_peaks(aligned_ch_wave)
+
+        # Calculate the time shift based on the peak positions
+        time_shift = peaks1[0] - peaks2[0]
+
+        # Shift aligned_ch_wave to align with mean_rwave
+        aligned_ch_wave = np.roll(aligned_ch_wave, time_shift)
+
+        # Calculate the correlation between mean_rwave and aligned_ch_wave
+        correlation = np.corrcoef(mean_rwave, aligned_ch_wave)[0, 1]
+
+        # Update the best alignment if the correlation is higher
+        if correlation > best_correlation:
+            best_correlation = correlation
+            best_time_shift = time_shift
+            best_aligned_ch_wave = aligned_ch_wave
+        
+    return best_aligned_ch_wave, best_time_shift, best_correlation
+
+
 
 def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
@@ -1235,7 +1278,7 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
     for ch in artif_per_ch:
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
-
+    
     return artif_per_ch
 
 
@@ -1775,7 +1818,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
 
         ecg_ch = ecg_ch[0]
 
-        bad_ecg_eog, ecg_data, event_indexes, ecg_eval = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'])
+        bad_ecg_eog, ecg_data, event_indexes, ecg_eval = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
 
         fig = plot_ECG_EOG_channel(ecg_data, event_indexes, ch_name = ecg_ch, fs = raw.info['sfreq'], verbose_plots = verbose_plots)
         noisy_ch_derivs = [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
@@ -1955,7 +1998,176 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, fig_derivs
 
+
+# NEW APPROACH - shift:
+
+def find_t0_mean(ch_data):
     
+    prominence=(max(ch_data) - min(ch_data)) / 8
+    #run peak detection:
+    peaks_pos_loc, _ = find_peaks(ch_data, prominence=prominence)
+    peaks_neg_loc, _ = find_peaks(-ch_data, prominence=prominence)
+    
+    #put all these together and sort by which comes first:
+    if len(peaks_pos_loc) == 0:
+        peaks_pos_loc = [None]
+    if len(peaks_neg_loc) == 0:
+        peaks_neg_loc = [None]
+
+    potential_t0 = list(peaks_pos_loc) + list(peaks_neg_loc)
+    potential_t0 = [item for item in potential_t0 if item is not None]
+    potential_t0 = sorted(potential_t0)
+
+    if len(potential_t0) == 0: #if no peaks were found - just take the max of ch_data:
+        potential_t0 = [np.argmax(ch_data)]
+
+    return potential_t0
+
+def find_t0_highest(ch_data):
+    
+    prominence=(max(ch_data) - min(ch_data)) / 8
+    #run peak detection:
+    peaks_pos_loc, _ = find_peaks(ch_data, prominence=prominence)
+    if len(peaks_pos_loc) == 0:
+        peaks_pos_loc = None
+    else:
+        peaks_pos_magn = ch_data[peaks_pos_loc]
+        # find peak with highest magnitude:
+        max_peak_pos_loc = peaks_pos_loc[np.argmax(peaks_pos_magn)]
+
+
+    peaks_neg_loc, _ = find_peaks(-ch_data, prominence=prominence)
+    if len(peaks_neg_loc) == 0:
+        peaks_neg_loc = None
+    else:
+        peaks_neg_magn = ch_data[peaks_neg_loc]
+        min_peak_neg_loc = peaks_neg_loc[np.argmin(peaks_neg_magn)]
+
+    if peaks_pos_loc is None and peaks_neg_loc is None:
+        t0 = None
+    elif peaks_pos_loc is None:
+        t0 = min_peak_neg_loc
+    elif peaks_neg_loc is None:
+        t0 = max_peak_pos_loc
+    else:
+        #choose the one with highest absolute magnitude:
+        if abs(ch_data[max_peak_pos_loc]) > abs(ch_data[min_peak_neg_loc]):
+            t0 = max_peak_pos_loc
+        else:
+            t0 = min_peak_neg_loc
+
+    return t0
+
+def find_t0_channels(artif_per_ch, tmin, tmax):
+
+    #run peak detection on all channels and find the 5 channels with the highest peaks:
+    
+    chosen_t0 = []
+    chosen_t0_magnitudes = []
+
+    for ch in artif_per_ch:
+        data = ch.artif_data_smoothed
+        
+        #potential_t0 = find_t0_1ch(data)
+        ch_t0 = find_t0_highest(data)
+        
+        if ch_t0 is not None:
+            chosen_t0.append(ch_t0)
+            chosen_t0_magnitudes.append(abs(data[ch_t0]))
+            #take absolute value of magnitudes because we don't care if it's positive or negative
+
+    #CHECK IF ABS IS ACTUALLY BETTER THAN NOT ABS
+
+    #find the 10 channels with the highest magnitudes:
+    chosen_t0_magnitudes = np.array(chosen_t0_magnitudes)
+    chosen_t0 = np.array(chosen_t0)
+    chosen_t0_sorted = chosen_t0[np.argsort(chosen_t0_magnitudes)]
+    chosen_t0_sorted = chosen_t0_sorted[-10:]
+
+
+    #find the distance between 10 chosen peaks:
+    t = np.linspace(tmin, tmax, len(artif_per_ch[0].artif_data_smoothed))
+    time_max = t[np.max(chosen_t0_sorted)]
+    time_min = t[np.min(chosen_t0_sorted)]
+
+    #if the values of 10 highest peaks are close together, take the mean of them:
+    if abs(time_max - time_min) < 0.01:
+        #find the average location of the highest peak over the 10 channels:
+        t0_channels = int(np.mean(chosen_t0_sorted))
+    else: 
+        #if not close - this is the rare case when half of channels have first of phase of r wave stronger 
+        #and second half has second part of r wave stronger. And these 2 are almost the same amplitude.
+        #so if we would take mean - they will cancel out and we will get the middle lowest point of rwave instead of a peak.
+        # so we take the highest peak instead:
+        t0_channels = int(np.max(chosen_t0_sorted))
+
+    return t0_channels
+
+
+def shift_mean_wave(mean_rwave, t0_channels, t0_mean):
+    t0_shift = t0_channels - t0_mean
+    mean_rwave_shifted = np.roll(mean_rwave, t0_shift)
+    return mean_rwave_shifted
+
+
+def plot_mean_rwave_shifted(mean_rwave_shifted, mean_rwave, ecg_or_eog, tmin, tmax, verbose_plots):
+    ##Now plot the mean_rwave_shifted and the mean_rwave on the same plot 
+
+    t = np.linspace(tmin, tmax, len(mean_rwave_shifted))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+
+    if verbose_plots is True:
+        fig.show()
+
+    fig_derivs = [QC_derivative(fig, 'Mean_artifact_'+ecg_or_eog+'_shifted', 'plotly')]
+
+    return fig_derivs
+
+def plot_channels(artif_per_ch):
+    
+    fig = go.Figure()
+    for ch in artif_per_ch:
+        fig.add_trace(go.Scatter(x=np.arange(len(ch.artif_data)), y=ch.artif_data, mode='lines', name='artif_per_ch.artif_data'))
+    fig.show()
+
+    return fig
+
+def align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax):
+
+    #Get 5 highest channels.
+    #get highest positive peak and highest negative peak
+    # put them in list sorted by which peak comes first
+
+    #calculate average location of the 1st peak over 5 channels and set it as t0
+
+    #do the same for the mean wave. set it s first peak as t0
+
+    #calculate time shift between the two t0s
+
+    #shift the mean wave by the time shift
+
+    t0_channels = find_t0_channels(artif_per_ch, tmin, tmax)
+
+    t = np.linspace(tmin, tmax, len(mean_rwave))
+    t0_time_channels = t[t0_channels]
+    
+    t0_mean = find_t0_mean(mean_rwave)
+    t0_time_mean = t[t0_mean]
+
+    print('t0_time_channels: ', t0_time_channels)
+    print('t0_time_mean: ', t0_time_mean)
+
+    mean_rwave_shifted_variations = []
+    for t0_m in t0_mean:
+        mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))
+    
+    return mean_rwave_shifted_variations
+
+    #Think of: when no second peak. when shift is wrong - do another shift and calculate correlation again. if correlation is higher, keep it. if not, keep the first shift.
+
+
 
 #%%
 def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: list, chs_by_lobe_orig: dict, m_or_g_chosen: list, verbose_plots: bool):
@@ -2027,6 +2239,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     
     affected_channels={}
+    best_affected_channels={}
     bad_avg_str = {}
     avg_objects_ecg =[]
 
@@ -2051,7 +2264,25 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
 
-            affected_channels[m_or_g] = find_affected_by_correlation(mean_rwave, artif_per_ch)
+            mean_rwave_shifted_variations = align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax)
+            
+            best_mean_corr = 0
+            for mean_shifted in mean_rwave_shifted_variations:
+                affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
+                #collect all correlation values for all channels:
+                all_corr_values = [ch.corr_coef for ch in affected_channels[m_or_g]]
+                #get 10 highest correlations:
+                all_corr_values.sort(reverse=True)
+                print('all_corr_values', all_corr_values)
+                all_corr_values = all_corr_values[:10]
+                mean_corr = np.mean(all_corr_values)
+                #if mean corr is better than the previous one - save it
+                if mean_corr > best_mean_corr:
+                    best_mean_corr = mean_corr
+                    best_mean_shifted = mean_shifted
+                    best_affected_channels[m_or_g] = affected_channels[m_or_g]
+
+            shifted_derivs = plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax, verbose_plots)
             affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation(affected_channels[m_or_g], 'ECG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
@@ -2061,7 +2292,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
-        ecg_derivs += affected_derivs+correlation_derivs
+        ecg_derivs += shifted_derivs+affected_derivs+correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
