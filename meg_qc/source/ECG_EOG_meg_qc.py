@@ -1999,9 +1999,25 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, fig_derivs
 
 
-# NEW APPROACH - shift:
+# Functions for alignment of ECG with meg channels:
 
-def find_t0_mean(ch_data):
+def find_t0_mean(ch_data: np.ndarray or list):
+
+    """
+    Find all t0 options for the mean ECG wave.
+
+    Parameters
+    ----------
+    ch_data : np.ndarray or list
+        averaged ECG channel data.
+    
+    Returns
+    -------
+    potential_t0: list
+        List with all potential t0 options for the mean ECG wave.
+        Will be used to get all possible option for shifting the ECG wave to align it with the MEG channels.
+    """
+
     
     prominence=(max(ch_data) - min(ch_data)) / 8
     #run peak detection:
@@ -2023,7 +2039,22 @@ def find_t0_mean(ch_data):
 
     return potential_t0
 
-def find_t0_highest(ch_data):
+def find_t0_highest(ch_data: np.ndarray):
+
+    """
+    Find the t0 as the largest in absolute amplitude peak of the ECG artifact on ONE channel.
+    This function is looped over all channels to find the t0 for all channels.
+
+    Parameters
+    ----------
+    ch_data : np.ndarray or list
+        the data for average ECG artifact on meg channel.
+
+    Returns
+    -------
+    t0: int
+        t0 for the channel (index, not the seconds!).
+    """
     
     prominence=(max(ch_data) - min(ch_data)) / 8
     #run peak detection:
@@ -2058,9 +2089,31 @@ def find_t0_highest(ch_data):
 
     return t0
 
-def find_t0_channels(artif_per_ch, tmin, tmax):
+def find_t0_channels(artif_per_ch: list, tmin: float, tmax: float):
 
-    #run peak detection on all channels and find the 5 channels with the highest peaks:
+    """ 
+    Run peak detection on all channels and find the 10 channels with the highest peaks.
+    Then find the t0 for each of these channels and take the mean of these t0s as the final t0.
+    It is also possible that t0 of these 10 channels dont concentrate around the same point, but around 1 points.
+    For this reason theer is a check on how far the time points are from each other. If over 0.01, then they probabably 
+    concentrate around 2 points and then just the 1 highes magnitude (not the mean) as taken as the final t0.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of Avg_artif objects, one for each channel.
+    tmin : float
+        Start time of epoch.
+    tmax : float
+        End time of epoch.  
+
+    Returns
+    -------
+    t0_channels : int
+        The final t0 (index, not the seconds!) that will be used for all channels as a refernce point. 
+        To this point the Average ECG will be aligned.
+
+    """
     
     chosen_t0 = []
     chosen_t0_magnitudes = []
@@ -2104,14 +2157,67 @@ def find_t0_channels(artif_per_ch, tmin, tmax):
     return t0_channels
 
 
-def shift_mean_wave(mean_rwave, t0_channels, t0_mean):
+def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
+
+    """
+    Shifts the mean ECG wave to align with the ECG artifacts found on meg channels.
+    np.roll is used to shift. meaning: foer example wjen shifte to the right: 
+    the end of array will be attached in the beginning to the leaft.
+    Usually ok, but it may cause issues if the array was originally very short or very strongly shifted, 
+    then it may split the wave shape in half and the shifted wave will look completely unusable.
+    Therefore, dont limit tmin and tmax too tight in config file (default is good). 
+    Or come up with other way insted of np.roll.
+
+    Parameters
+    ----------
+    mean_rwave : np.ndarray
+        The mean ECG wave, not shifted yet.
+    t0_channels : int
+        The location of the peak of ECG artifact on the MEG channels. (This is not seconds! This is index).
+    t0_mean : int
+        The location of the peak of the mean ECG wave on the ECG channel. (This is not seconds! This is index).
+    
+    Returns
+    -------
+    mean_rwave_shifted : np.ndarray
+        The mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    
+    """
+
     t0_shift = t0_channels - t0_mean
     mean_rwave_shifted = np.roll(mean_rwave, t0_shift)
+
     return mean_rwave_shifted
 
 
-def plot_mean_rwave_shifted(mean_rwave_shifted, mean_rwave, ecg_or_eog, tmin, tmax, verbose_plots):
-    ##Now plot the mean_rwave_shifted and the mean_rwave on the same plot 
+def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarray, ecg_or_eog: str, tmin: float, tmax: float, verbose_plots: bool):
+    
+    """
+    Plots the mean ECG wave and the mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    Probabb;y will not be included into the report. Just for algorythm demosntration.
+    The already shifted mean ECG wave is plotted in the report.
+
+    Parameters
+    ----------
+    mean_rwave_shifted : np.ndarray
+        The mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    mean_rwave : np.ndarray
+        The mean ECG wave, not shifted, original.
+    ecg_or_eog : str
+        'ECG' or 'EOG'
+    tmin : float
+        The start time of the epoch.
+    tmax : float
+        The end time of the epoch.
+    verbose_plots : bool
+        If True, the plot will be shown in the notebook.
+
+    Returns
+    -------
+    fig_derivs : list
+        list with one QC_derivative object, which contains the plot. (in case want to input intot he report)
+    
+    """
 
     t = np.linspace(tmin, tmax, len(mean_rwave_shifted))
     fig = go.Figure()
@@ -2125,28 +2231,36 @@ def plot_mean_rwave_shifted(mean_rwave_shifted, mean_rwave, ecg_or_eog, tmin, tm
 
     return fig_derivs
 
-def plot_channels(artif_per_ch):
+
+def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tmax: float):
+
+    """ Aligns the mean ECG wave with the ECG artifacts found on meg channels.
+    1) The average highest point of 10 most prominent meg channels is used as refernce.
+    The ECG artifact is shifted multiple times, 
+    2) each time the correlation of ECG channel with
+    meg channel artofacts is calculated, then the aligment versiob which shows highes correlation 
+    is chosen as final.
+    Part 1) is done inside this function, part 2) is done inside the main ECG_meg_qc function, 
+    but they are both the part of one algorithm.
+
+    Parameters
+    ----------
+    mean_rwave : np.array
+        The mean ECG wave (resulting from recorded or recosntructed ECG signal).
+    artif_per_ch : list
+        List of Avg_artif objects, each of which contains the ECG artifact from one MEG channel.
+    tmin : float
+        The start time of the ECG artifact, set in config
+    tmax : float
+        The end time of the ECG artifact, set in config
     
-    fig = go.Figure()
-    for ch in artif_per_ch:
-        fig.add_trace(go.Scatter(x=np.arange(len(ch.artif_data)), y=ch.artif_data, mode='lines', name='artif_per_ch.artif_data'))
-    fig.show()
-
-    return fig
-
-def align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax):
-
-    #Get 5 highest channels.
-    #get highest positive peak and highest negative peak
-    # put them in list sorted by which peak comes first
-
-    #calculate average location of the 1st peak over 5 channels and set it as t0
-
-    #do the same for the mean wave. set it s first peak as t0
-
-    #calculate time shift between the two t0s
-
-    #shift the mean wave by the time shift
+    Returns
+    -------
+    mean_rwave_shifted_variations : list
+        List of arrays. Every array is a variation of he mean ECG wave shifted 
+        to align with the ECG artifacts found on meg channels.
+    
+    """
 
     t0_channels = find_t0_channels(artif_per_ch, tmin, tmax)
 
@@ -2164,9 +2278,6 @@ def align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax):
         mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))
     
     return mean_rwave_shifted_variations
-
-    #Think of: when no second peak. when shift is wrong - do another shift and calculate correlation again. if correlation is higher, keep it. if not, keep the first shift.
-
 
 
 #%%
@@ -2216,7 +2327,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     tmin=ecg_params_internal['ecg_epoch_tmin']
     tmax=ecg_params_internal['ecg_epoch_tmax']
 
-    #WROTE THIS BEFORE, BUT ACTUALLY NEED TO CHECK IF IT S STILL TRUE OR THE PROBLEM WAS SOLVED FRO THRESHOLD METHOD:
+    #WROTE THIS BEFORE, BUT ACTUALLY NEED TO CHECK IF IT S STILL TRUE OR THE PROBLEM WAS SOLVED FOR THRESHOLD METHOD:
     #tmin, tmax can be anything from -0.1/0.1 to -0.04/0.04. for CORRELATION method. But if we do mean and threshold - time best has to be -0.04/0.04. 
     # For this method number of peaks in particular time frame is calculated and based on that good/bad rwave is decided.
     norm_lvl=ecg_params['norm_lvl']
@@ -2270,7 +2381,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
                 #collect all correlation values for all channels:
-                all_corr_values = [ch.corr_coef for ch in affected_channels[m_or_g]]
+                all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
                 #get 10 highest correlations:
                 all_corr_values.sort(reverse=True)
                 print('all_corr_values', all_corr_values)
