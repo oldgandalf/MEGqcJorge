@@ -67,10 +67,6 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
     
     """
 
-    print('HERE')
-    print(channels)
-
-    
     data_channels=data.get_data(picks = channels)
 
     #std_channels = RMSE(data_channels)
@@ -400,10 +396,10 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     for ep in epochs:
         epochs_details += [{'epoch': ep, 'number_of_noisy_ch': int(noisy_epochs_df.iloc[-3,ep]), 'perc_of_noisy_ch': float(noisy_epochs_df.iloc[-2,ep]), 'epoch_too_noisy': noisy_epochs_df.iloc[-1,ep], 'number_of_flat_ch': int(flat_epochs_df.iloc[-3,ep]), 'perc_of_flat_ch': float(flat_epochs_df.iloc[-2,ep]), 'epoch_too_flat': flat_epochs_df.iloc[-1,ep]}]
 
-    total_num_noisy_ep=sum([ep for ep in epochs_details if ep['epoch_too_noisy'] is True])
+    total_num_noisy_ep=len([ep for ep in epochs_details if ep['epoch_too_noisy'] is True])
     total_perc_noisy_ep=round(total_num_noisy_ep/len(epochs)*100)
 
-    total_num_flat_ep=sum([ep for ep in epochs_details if ep['epoch_too_flat'] is True])
+    total_num_flat_ep=len([ep for ep in epochs_details if ep['epoch_too_flat'] is True])
     total_perc_flat_ep=round(total_num_flat_ep/len(epochs)*100)
 
     metric_local_content={

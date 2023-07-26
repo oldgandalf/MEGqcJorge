@@ -1088,7 +1088,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     - PSD for each channel
     - amplitudes (area under the curve) of functionally distinct frequency bands, such as 
         delta (0.5-4 Hz), theta (4-8 Hz), alpha (8-12 Hz), beta (12-30 Hz), and gamma (30-100 Hz) for each channel 
-        and average amplitudeof band over all channels
+        and average amplitude of band over all channels
     - average psd over all channels
     - noise frequencies for average psd + creates a band around them
     - noise frequencies for each channel + creates a band around them
