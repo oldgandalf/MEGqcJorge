@@ -548,8 +548,10 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
             fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
             fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+            #older versions, no color coding:
             #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
-            fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+            #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
 
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_std, m_or_g, 'std', std_params['noisy_channel_multiplier'], std_params['flat_multiplier'], std_params['allow_percent_noisy_flat_epochs'])

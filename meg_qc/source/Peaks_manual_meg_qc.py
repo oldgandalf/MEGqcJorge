@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 import mne
+from scipy.signal import find_peaks
 from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.STD_meg_qc import make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
@@ -114,8 +115,20 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
         thresh=(max(one_ch_data) - min(one_ch_data)) / ptp_thresh_lvl 
         #can also change the whole thresh to a single number setting
 
-        pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
-        neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+        #pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
+        #neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+        #Found error in mne.preprocessing.peak_finder()! It gives error if there are no peaks detected. So changed to scipy.signal.find_peaks() for now
+
+        pos_peak_locs, _ = find_peaks(one_ch_data, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
+        pos_peak_magnitudes = one_ch_data[pos_peak_locs]
+
+        neg_peak_locs, _ = find_peaks(-one_ch_data, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
+        neg_peak_magnitudes = one_ch_data[neg_peak_locs]
+
+        # print('POS mne', pos_peak_locs, pos_peak_magnitudes)
+        # print('POS scipy', pos_peak_locs2, pos_peak_magnitudes2)
+        # print('NEG mne ', neg_peak_locs, neg_peak_magnitudes)
+        # print('NEG scipy ', neg_peak_locs2, neg_peak_magnitudes2)
 
         pp_ampl, _ = neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         peak_ampl_channels.append(pp_ampl)
@@ -312,8 +325,10 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
             fig_ptp_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
             fig_ptp_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
+            
+            #older versions, no color coding:
             #fig_ptp_epoch1 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
-            fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+            #fig_ptp_epoch2 += [boxplot_epochs(df_mg=df_ptp, ch_type=m_or_g, what_data='peaks', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
 
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_ptp, m_or_g, 'ptp', ptp_manual_params['noisy_channel_multiplier'], ptp_manual_params['flat_multiplier'], ptp_manual_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
