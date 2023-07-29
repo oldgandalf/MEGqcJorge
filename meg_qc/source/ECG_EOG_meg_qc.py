@@ -1958,7 +1958,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     #Calculate average over the whole reconstrcted channels and check if it has an R wave shape:
 
     if len(event_indexes) <1:
-        ecg_str_checked = 'Reconstructed ECG data can not be used for artifact detection: no expected wave shape was detected.'
+        ecg_str_checked = 'No expected wave shape was detected in the averaged event of '+ecg_or_eog+' channel.'
         print('___MEG QC___: ', ecg_str_checked)
 
         return False, ecg_str_checked, np.empty((0, 0)), []
@@ -1971,10 +1971,10 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     mean_rwave_obj.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
 
     if mean_rwave_obj.wave_shape is True:
-        ecg_str_checked = 'Mean wave is good enough to use for artifact detection'
+        ecg_str_checked = 'Mean event of '+ecg_or_eog+' channel has expected shape.'
         print('___MEG QC___: ', ecg_str_checked)
     else:
-        ecg_str_checked = 'Mean wave is not good enough to use for artifact detection. Artifact detection was not performed.'
+        ecg_str_checked = 'Mean events of '+ecg_or_eog+' channel does not have expected shape. Artifact detection was not performed.'
         print('___MEG QC___: ', ecg_str_checked)
 
 
@@ -2388,10 +2388,13 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                 all_corr_values = all_corr_values[:10]
                 mean_corr = np.mean(all_corr_values)
                 #if mean corr is better than the previous one - save it
+
+                best_mean_shifted = mean_shifted #preassign
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
                     best_mean_shifted = mean_shifted
                     best_affected_channels[m_or_g] = affected_channels[m_or_g]
+
 
             shifted_derivs = plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax, verbose_plots)
             affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
