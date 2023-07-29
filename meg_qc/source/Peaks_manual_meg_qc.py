@@ -180,8 +180,16 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
             thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
             #can also change the whole thresh to a single number setting
 
-            pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
-            neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+            #pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
+            #neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=-1, thresh=thresh, verbose=False) #negative peaks
+            #Found error in mne.preprocessing.peak_finder()! It gives error if there are no peaks detected. So changed to scipy.signal.find_peaks() for now
+
+            pos_peak_locs, _ = find_peaks(data_ch_epoch, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
+            pos_peak_magnitudes = data_ch_epoch[pos_peak_locs]
+
+            neg_peak_locs, _ = find_peaks(-data_ch_epoch, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
+            neg_peak_magnitudes = data_ch_epoch[neg_peak_locs]
+            
             pp_ampl,_=neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
             peak_ampl_epoch.append(pp_ampl)
 
