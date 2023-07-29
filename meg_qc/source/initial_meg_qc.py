@@ -298,7 +298,12 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
 
-    events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
+    try:
+        events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
+    except:
+        print('___MEG QC___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
+        events = mne.find_events(data, stim_channel=None, min_duration=event_dur)
+        #here for info pn how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
     n_events=len(events)
 
     if n_events == 0:
