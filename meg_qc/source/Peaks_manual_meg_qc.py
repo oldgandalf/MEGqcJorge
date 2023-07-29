@@ -44,6 +44,9 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
 
     """
 
+    if len(pos_peak_locs)<1 or len(neg_peak_locs)<1:
+        return 0, None
+    
     pair_dist=max_pair_dist_sec*sfreq
     pairs_magnitudes=[]
     pairs_locs=[]
@@ -52,6 +55,9 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
     for posit_peak_ind, posit_peak_loc in enumerate(pos_peak_locs):
         
         # Finding the value in neg_peak_locs which is closest to posit_peak_loc
+        print('HERE')
+        print(neg_peak_locs)
+        print(posit_peak_loc)
         closest_negative_peak_index = np.abs(neg_peak_locs - posit_peak_loc).argmin()
 
         # Check if the closest negative peak is within the given distance

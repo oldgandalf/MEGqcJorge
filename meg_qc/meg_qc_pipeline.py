@@ -120,7 +120,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         print('___MEG QC___: ', 'TOTAL subs', len(list_of_subs))
         print('___MEG QC___: ', 'EMPTY room?', sorted(list_of_subs)[0], sorted(list_of_subs)[-1])
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
-        for sid in list_of_subs[0:20]: 
+        for sid in list_of_subs[0:3]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -132,16 +132,27 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            for fif_ind, data_file in enumerate(list_of_fifs[1:2]): 
+            for fif_ind, data_file in enumerate(list_of_fifs[0:3]): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
+
+                if 'acq-crosstalk' in data_file:
+                    print('___MEG QC___: ', 'Skipping crosstalk file ', data_file)
+                    #read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
+                    continue
 
                 # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
                 shielding_str, m_or_g_skipped_str, epoching_str, ecg_str, eog_str, head_str, muscle_str, pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', '', '', '', '', '', '', '', ''
     
                 print('___MEG QC___: ', 'Starting initial processing...')
                 start_time = time.time()
-                dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
-                    
+
+                try:
+                    dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
+                except:
+                    print('___MEG QC___: ', 'Could not process file ', data_file, '. Skipping it.')
+                    #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
+                    return
+                
                 print('___MEG QC___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 # QC measurements:
