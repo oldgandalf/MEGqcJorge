@@ -120,7 +120,7 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
     return simple_metric
 
 
-def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool = False):
+def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
 
     """ 
     Plot positions and rotations of the head.
@@ -163,7 +163,8 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: boo
     # The green horizontal lines represent the original head position, whereas the
     # Red lines are the new head position averaged over all the time points.
 
-    head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+    head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average_mne', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
 
     #plot head_pos using PLOTLY:
@@ -370,7 +371,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
 
     # Visual part:
     if plot_with_lines is True:
-        head_pos_derivs, head_pos_baselined = make_head_pos_plot(raw, head_pos)
+        head_pos_derivs, head_pos_baselined = make_head_pos_plot(raw, head_pos, verbose_plots=verbose_plots)
     else:
         head_pos_derivs = []
 
