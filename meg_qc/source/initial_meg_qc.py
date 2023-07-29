@@ -115,12 +115,14 @@ def get_all_config_params(config_file_name: str):
         stim_channel = stim_channel.split(",")
         if stim_channel==['']:
             stim_channel=None
+        
 
         epoching_params = dict({
         'event_dur': epoching_section.getfloat('event_dur'),
         'epoch_tmin': epoching_section.getfloat('epoch_tmin'),
         'epoch_tmax': epoching_section.getfloat('epoch_tmax'),
-        'stim_channel': stim_channel})
+        'stim_channel': stim_channel,
+        'event_repeated': epoching_section['event_repeated']})
         all_qc_params['Epoching'] = epoching_params
 
         std_section = config['STD']
@@ -303,8 +305,8 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
         print('___MEG QC___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         epochs_grad, epochs_mag = None, None
     else:
-        epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
-        epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None)
+        epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
+        epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
 
     dict_epochs_mg = {
     'mag': epochs_mag,

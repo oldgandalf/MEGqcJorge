@@ -53,6 +53,7 @@ Epoching [Epoching]
 - **epoch_tmin** (float) : time in seconds before the event. Unit: sec. Default: *-0.2*
 - **epoch_tmax** (float) : time in seconds after the event. Unit: sec. Default: 1
 - **stim_channel** (str) : leave blank if want it to be detected automatically or write explicitely like *STI101*. Default:  * blank *. 
+- **event_repeated** (str) : how to handle duplicates in events[:, 0]. Can be 'error' to raise an error, ‘drop’ to only retain the row occurring first in the events, or 'merge' to combine the coinciding events (=duplicates) into a new event (see Notes for details). Default: *merge*
 
 Standard deviation [STD]
 ------------------------
