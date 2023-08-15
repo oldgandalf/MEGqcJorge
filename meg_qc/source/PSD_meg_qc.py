@@ -661,7 +661,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
 def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_half_length: float, verbose_plots: bool):
     
     """
-    Detect the frequency band around the noise peaks.
+    Form a frequency band around the noise peaks.
     Simple approach: used by default.
 
     1. Create frequency band around central noise frequency just by adding -x...+x Hz around.
@@ -806,6 +806,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     if simple_or_complex == 'simple':
         noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_simple(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos, band_half_length=1, verbose_plots=verbose_plots)
+        # band_half_length is set to 1. Means we go 1Hz left and 1 Hz right from the central freq to create a band.
     elif simple_or_complex == 'complex':
         noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos, verbose_plots=verbose_plots)
     else:

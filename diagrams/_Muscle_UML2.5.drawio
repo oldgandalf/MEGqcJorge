@@ -1,11 +1,11 @@
-<mxfile host="Electron" modified="2023-05-04T18:56:57.119Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.2.1 Chrome/112.0.5615.87 Electron/24.1.2 Safari/537.36" etag="CQxWBYIaXXPsLeOa0w31" version="21.2.1" type="device">
+<mxfile host="Electron" modified="2023-08-14T21:10:16.678Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="qSFlSSzBQjjtF_-iwf9s" version="21.6.8" type="device">
   <diagram name="Page-1" id="dtkTwhtDY3SrjnRo8XkO">
-    <mxGraphModel dx="1505" dy="1997" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1590" dy="1923" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="lJstjDnfzTnsdC9-dKv9-14" value="&lt;font style=&quot;&quot;&gt;Muscle_meq_qc&lt;br&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Detect high frequency (110-140Hz) artifacts correlated with (but not limited to) muscle activity&lt;/font&gt;&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;" parent="1" vertex="1">
-          <mxGeometry x="290" y="-550" width="600" height="60" as="geometry" />
+        <mxCell id="lJstjDnfzTnsdC9-dKv9-14" value="&lt;font style=&quot;&quot;&gt;Muscle_meq_qc()&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;" parent="1" vertex="1">
+          <mxGeometry x="505" y="-540" width="170" height="40" as="geometry" />
         </mxCell>
         <mxCell id="VmBpd-jAXGRa_ZSsbWtE-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" parent="1" source="yhwz2y4raJEEbXIZIOFM-8" target="VmBpd-jAXGRa_ZSsbWtE-28" edge="1">
           <mxGeometry relative="1" as="geometry" />
