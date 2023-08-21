@@ -1344,7 +1344,7 @@ def plot_correlation(artif_per_ch, ecg_or_eog, m_or_g, verbose_plots=False):
     fig.update_yaxes(title_text='P-value')
 
     #set title:
-    fig.update_layout(title_text=tit+': Pearson correlation between average '+ecg_or_eog+' recorded and average artifact for each channel')
+    fig.update_layout(title_text=tit+': Pearson correlation between reference '+ecg_or_eog+' epoch and '+ecg_or_eog+' epoch in each channel')
 
     if verbose_plots is True:
         fig.show()
