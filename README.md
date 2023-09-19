@@ -4,19 +4,14 @@ Magnetoencephalography (MEG) data are susceptible to noise and artifacts, which 
 
 MEGqc is designed to detect specific noise patterns in the data and visualize them in easily interpretable human-readable reports. Additionally, the calculated metrics are provided in machine-readable JSON files, which allow for better machine interoperability or integration into workflows. Among other measures we calculate the relative power of noise frequencies in the Power Spectral Density (PSD), several metrics to describe the ‘noisiness’ of channels and/or epochs, e.g. STD or peak-to-peak amplitudes, and quantification of EOG and ECG related noise averaged over all channels and on a per-channel basis (see the architecture UML for a list of all computed metrics). The software strives to help researchers to standardize and speed up their quality control workflow. This being said, usability is a central aspect of MEGqc. It requires only minimal user input to work: a path to the dataset and the tuning of a handful of parameters through a human and machine-readable configuration file, but can also be adapted to the specific needs of more experienced users by overriding the default values of respective parameters in the configuration file. However, this simple user interface, e.g. only one path to the dataset is required and the software will locate and load the files needed for the workflow, only works if the structural organization of the dataset is internally known to the software. 
 
-Since neuroimaging data can be very diverse with respect to their structural organization the software is tailored to the BIDS standard (Gorgolewski et al., 2016; Niso et al., 2018). Thus MEGqc requires the data to be organized according to BIDS. 
+Since neuroimaging data can be very diverse concerning their structural organization the software is tailored to the BIDS standard (Gorgolewski et al., 2016; Niso et al., 2018). Thus MEGqc requires the data to be organized according to BIDS. 
 
 MEGqc strongly relies on the MNE-python software package (Gramfort et al., 2013).
 
 Documentation: https://meg-qc.readthedocs.io/
 
-As the result of analysis will be produced (for each data file (.fif)):
+The following derivatives are produced as the result of the analysis for each data file (.fif):
 
-- html report for all metrics 
-- csv file with the results of the analysis for some of metrics
-- machine readable json file with the results of the analysis for all metrics
-
-In the html report:
-
-- all the plots produced by MEQ-QC are interactive, they can be scrolled through and enlarged. 
-- a few plots from MNE (in ECG and EOG sections) are not interactive.
+- HTML report for all metrics presented as interactive figures, that can be scrolled through and enlarged;
+- TSV file with the results of the analysis for some of the metrics;
+- machine-readable JSON file with the results of the analysis for all metrics.
