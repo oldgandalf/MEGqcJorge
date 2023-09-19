@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2023-05-04T18:53:39.486Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.2.1 Chrome/112.0.5615.87 Electron/24.1.2 Safari/537.36" etag="Q4QdLYNqvQ04P9g6PHYJ" version="21.2.1" type="device">
+<mxfile host="Electron" modified="2023-08-14T21:11:16.241Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="3ytDqhOEXVjAPj_LR4RS" version="21.6.8" type="device">
   <diagram name="Page-1" id="PUbhOBLwAxsONIC4mjg5">
-    <mxGraphModel dx="3505" dy="1597" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2954" dy="1074" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -120,12 +120,10 @@
         <mxCell id="z92k_c89T4PLz4YoD9Kb-43" value="passing parameters &lt;br&gt;for each of QC metrics" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="-1580" y="505" width="130" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="z92k_c89T4PLz4YoD9Kb-44" value="" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#ff0000;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="-1191" y="860" width="30" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="z92k_c89T4PLz4YoD9Kb-45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="z92k_c89T4PLz4YoD9Kb-29" target="z92k_c89T4PLz4YoD9Kb-44" edge="1">
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="z92k_c89T4PLz4YoD9Kb-29" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="-1176" y="819.0000000000002" as="sourcePoint" />
+            <mxPoint x="-1176" y="860" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="z92k_c89T4PLz4YoD9Kb-46" value="Derivatives: &lt;br&gt;html report, csv files" style="html=1;fontSize=11;" parent="1" vertex="1">
@@ -137,8 +135,11 @@
         <mxCell id="z92k_c89T4PLz4YoD9Kb-48" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Main MEG QC pipeline&amp;nbsp;&lt;br&gt;&lt;b&gt;&lt;i&gt;make_derivative_meg_qc()&amp;nbsp;&lt;/i&gt;&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="-1302" y="-100" width="260" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="LrJdc65StuMU2UIHShSl-1" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;Each metrict can be included/excluded &lt;br&gt;from the analysis by the user in config file&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+        <mxCell id="LrJdc65StuMU2UIHShSl-1" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;Each metrict can be included/excluded &lt;br&gt;from the analysis by the user in config file&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
           <mxGeometry x="-1630" y="560" width="230" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="gJO7JIBL_jriJ2bUjoK9-1" value="" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1">
+          <mxGeometry x="-1191" y="860" width="30" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

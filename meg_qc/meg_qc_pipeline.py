@@ -307,8 +307,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         meg_artifact.extension = '.html'
 
                         if deriv.content_type == 'df':
-                            meg_artifact.extension = '.csv'
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path)
+                            meg_artifact.extension = '.tsv'
+                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path, sep='\t')
 
                         elif deriv.content_type == 'report mne':
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
