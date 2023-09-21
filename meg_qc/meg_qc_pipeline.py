@@ -122,7 +122,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
-        for sid in list_of_subs[0:4]: 
+        for sid in list_of_subs: #[0:4]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -134,7 +134,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            for fif_ind, data_file in enumerate(list_of_fifs[0:10]): 
+            for fif_ind, data_file in enumerate(list_of_fifs): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
 
                 if 'acq-crosstalk' in data_file:
@@ -263,25 +263,22 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 #         print(f"Set type of data found in key '{key}'")
                 
 
-                #Make report and add to QC_derivs:
+                #Make report and add to QC_derivs (old report version):
                 # report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_str)
                 # QC_derivs['Report']= [QC_derivative(report_html_string, 'Report', 'report')]
 
                 report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
-                QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORTmne', 'report mne')]
+                QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
 
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
                 QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
 
-
-                # d=0
 
                 #if there are any derivs calculated in this section:
                 for section in (section for section in QC_derivs.values() if section):
                     # loop over section where deriv.content_type is not 'matplotlib' or 'plotly' or 'report'
                     for deriv in (deriv for deriv in section if deriv.content_type != 'matplotlib' and deriv.content_type != 'plotly' and deriv.content_type != 'report'):
                         
-                        # d=d+1
                         # print('___MEG QC___: ', 'writing deriv: ', d)
                         # print('___MEG QC___: ', deriv)
 
@@ -335,8 +332,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         if raw is None:
             print('___MEG QC___: ', 'No data files could be processed.')
-            return [None]*14
+            #return [None]*14
+            return
 
     #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
-    return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
-
+    # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
+    
+    return

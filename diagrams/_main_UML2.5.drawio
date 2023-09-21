@@ -1,4 +1,4 @@
-<mxfile host="Electron" modified="2023-08-14T21:11:16.241Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="3ytDqhOEXVjAPj_LR4RS" version="21.6.8" type="device">
+<mxfile host="Electron" modified="2023-09-12T18:11:51.390Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="sd4QA3jHpDDNyPAz5HMW" version="21.6.8" type="device">
   <diagram name="Page-1" id="PUbhOBLwAxsONIC4mjg5">
     <mxGraphModel dx="2954" dy="1074" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -126,7 +126,7 @@
             <mxPoint x="-1176" y="860" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="z92k_c89T4PLz4YoD9Kb-46" value="Derivatives: &lt;br&gt;html report, csv files" style="html=1;fontSize=11;" parent="1" vertex="1">
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-46" value="Derivatives: &lt;br&gt;HTML report, &lt;br&gt;JSON, TSV files&amp;nbsp;" style="html=1;fontSize=11;" parent="1" vertex="1">
           <mxGeometry x="-978" y="744" width="110" height="50" as="geometry" />
         </mxCell>
         <mxCell id="z92k_c89T4PLz4YoD9Kb-47" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" parent="1" source="z92k_c89T4PLz4YoD9Kb-31" target="z92k_c89T4PLz4YoD9Kb-46" edge="1">
@@ -138,7 +138,7 @@
         <mxCell id="LrJdc65StuMU2UIHShSl-1" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;Each metrict can be included/excluded &lt;br&gt;from the analysis by the user in config file&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
           <mxGeometry x="-1630" y="560" width="230" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="gJO7JIBL_jriJ2bUjoK9-1" value="" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" vertex="1" parent="1">
+        <mxCell id="gJO7JIBL_jriJ2bUjoK9-1" value="" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" parent="1" vertex="1">
           <mxGeometry x="-1191" y="860" width="30" height="30" as="geometry" />
         </mxCell>
       </root>

@@ -2227,7 +2227,10 @@ def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarr
     if verbose_plots is True:
         fig.show()
 
-    fig_derivs = [QC_derivative(fig, 'Mean_artifact_'+ecg_or_eog+'_shifted', 'plotly')]
+    #fig_derivs = [QC_derivative(fig, 'Mean_artifact_'+ecg_or_eog+'_shifted', 'plotly')] 
+    # #activate is you want to output the shift demonstration to the report, normally dont'
+    
+    fig_derivs = []
 
     return fig_derivs
 
