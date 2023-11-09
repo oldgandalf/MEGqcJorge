@@ -536,7 +536,7 @@ def assign_channels_properties(raw: mne.io.Raw):
                         ch.lobe = lobe
                         ch.lobe_color = lobe_colors[lobe]
     else:
-        lobes_color_coding_str='For MEG system other than Treux color coding by lobe is not applied.'
+        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
         print('___MEG QC___: ' + lobes_color_coding_str)
 
         for key, value in channels_objs.items():
