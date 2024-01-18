@@ -231,7 +231,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
 def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
 
     """
-    Attach a dummy start and end to the data to avoid filtering artifacts at the beginning of the recording.
+    Attach a dummy start and end to the data to avoid filtering artifacts at the beginning/end of the recording.
     
     Parameters
     ----------

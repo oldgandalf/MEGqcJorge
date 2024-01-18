@@ -143,7 +143,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
     """ 
     Calculate std for multiple epochs for a list of channels.
-    Used as internal function in std_meg_epoch
+    Used as internal function in std_meg_epoch()
 
     Parameters
     ----------
