@@ -28,7 +28,7 @@ from meg_qc.source.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.source.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
 from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
-from meg_qc.source.universal_plots import QC_derivative
+from meg_qc.source.universal_plots import QC_derivative, estimate_figure_size
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
@@ -133,6 +133,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             print('___MEG QC___: ', 'TOTAL fifs: ', len(list_of_fifs))
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+
+            list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
 
             for fif_ind, data_file in enumerate(list_of_fifs): 
                 print('___MEG QC___: ', 'Take fif: ', data_file)
@@ -245,6 +247,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': eog_derivs,
                 'Head movement artifacts': head_derivs,
                 'High frequency (Muscle) artifacts': muscle_derivs}
+
+                figure_sizes = estimate_figure_size(QC_derivs)
 
                 QC_simple={
                 'STD': simple_metrics_std, 

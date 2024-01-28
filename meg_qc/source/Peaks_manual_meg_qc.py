@@ -333,7 +333,7 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
             
             chs_by_lobe_copy[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='peaks', chs_by_lobe=chs_by_lobe_copy[m_or_g], df_std_ptp=df_ptp) #for easier plotting
 
-            fig_ptp_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
+            # fig_ptp_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
 
             fig_ptp_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_ptp, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)]
             

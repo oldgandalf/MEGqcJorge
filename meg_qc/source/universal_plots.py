@@ -321,8 +321,29 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
+
+
+    downsampling_factor = 5  # replace with your desired downsampling factor
+    # Create a new list for the downsampled traces
+    traces_downsampled = []
+
+    # Go through each trace
+    for trace in traces:
+        # Downsample the x and y values of the trace
+        x_downsampled = trace['x'][::downsampling_factor]
+        y_downsampled = trace['y'][::downsampling_factor]
+
+        # Create a new trace with the downsampled values
+        trace_downsampled = go.Scatter(x=x_downsampled, y=y_downsampled, line=trace['line'], name=trace['name'], legendgroup=trace['legendgroup'], legendgrouptitle=trace['legendgrouptitle'])
+
+        # Add the downsampled trace to the list
+        traces_downsampled.append(trace_downsampled)
+
+
+
+
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
-    fig = go.Figure(data=traces)
+    fig = go.Figure(data=traces_downsampled)
 
     fig.update_layout(legend_traceorder='grouped', legend_tracegroupgap=12, legend_groupclick='toggleitem')
     #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
@@ -1391,6 +1412,47 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
 
     return qc_derivative
+
+
+def estimate_figure_size(QC_derivs):
+        
+    import json
+    from plotly.utils import PlotlyJSONEncoder
+    import plotly.graph_objects as go
+
+    fig_sizes = {}
+    
+    for key in QC_derivs:
+
+        fig_sizes[key] = []
+
+        fig_n = 1
+        for deriv in QC_derivs[key]:
+
+            print(type(deriv.content))
+
+            if isinstance(deriv.content, go.Figure):
+
+                # Convert the figure to JSON
+                fig_json = json.dumps(deriv.content, cls=PlotlyJSONEncoder)
+
+                # Calculate the size of the figure in bytes
+                fig_size = len(fig_json.encode('utf-8'))
+
+                # Convert the size to megabytes
+                fig_size_kb = fig_size / 1e+3
+
+                print(f'The size of the figure' + key + str(fig_n) + 'is approximately {fig_size_mb} KB.')
+
+                fig_n += 1
+
+                fig_sizes[key].append(fig_size_kb)
+
+    print('___MEGqc___: Figure sizes in bytes:')
+    print(fig_sizes)
+
+    return fig_sizes
+
 
 
 

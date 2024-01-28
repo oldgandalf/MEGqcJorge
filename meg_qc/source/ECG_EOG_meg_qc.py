@@ -2339,7 +2339,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     ecg_derivs = []
     use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params, verbose_plots)
-    ecg_derivs += noisy_ch_derivs
+    
+    #ecg_derivs += noisy_ch_derivs
 
 
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
@@ -2361,7 +2362,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
-        ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
+        # ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
         artif_per_ch = calculate_artifacts_on_channels(ecg_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=ecg_params_internal, gaussian_sigma=gaussian_sigma)
 
@@ -2477,9 +2478,11 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         return eog_derivs, simple_metric_EOG, eog_str, []
     
         
-    for data, name in zip(eog_data, eog_ch_name):
-        fig = plot_ECG_EOG_channel(data, [], name, fs= raw.info['sfreq'], verbose_plots = verbose_plots)
-        eog_derivs += [QC_derivative(fig, name+' data', 'plotly')]
+    # for data, name in zip(eog_data, eog_ch_name):
+
+    #     fig = plot_ECG_EOG_channel(data, [], name, fs= raw.info['sfreq'], verbose_plots = verbose_plots)
+
+    #     eog_derivs += [QC_derivative(fig, name+' data', 'plotly')]
 
     # Now choose the channel with blinks only (if there are several):
     #(NEED TO FIGURE OUT HOW)
@@ -2510,7 +2513,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
 
         eog_epochs = mne.preprocessing.create_eog_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
-        eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
+        # eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
         artif_per_ch = calculate_artifacts_on_channels(eog_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=eog_params_internal, gaussian_sigma=gaussian_sigma)
 
