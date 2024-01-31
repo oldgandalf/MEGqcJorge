@@ -323,7 +323,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 
 
 
-    downsampling_factor = 5  # replace with your desired downsampling factor
+    downsampling_factor = 1  # replace with your desired downsampling factor
     # Create a new list for the downsampled traces
     traces_downsampled = []
 
