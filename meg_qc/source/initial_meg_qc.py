@@ -446,7 +446,7 @@ class MEG_channels:
         return json.dumps(self.__dict__)
     
     def to_df(self):
-        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.ptp_overall]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'PtP all'])
+        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.ptp_overall, self.std_epoch, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'PtP all', 'STD epoch', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
 
 def assign_channels_properties(raw: mne.io.Raw):
 
