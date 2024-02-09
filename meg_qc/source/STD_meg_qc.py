@@ -3,6 +3,7 @@ import pandas as pd
 import mne
 from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
+from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 from IPython.display import display
 
 # In[2]:
@@ -572,6 +573,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     #first everything about mags, then everything about grads. - in this ordr they ll be added to repot. 
     #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
-    for_report_std = {'chs_by_lobe_std': chs_by_lobe_std}
+    #Extract chs_by_lobe into a data frame
+    chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
 
-    return derivs_std, simple_metric_std, std_str, for_report_std
+    return derivs_std, simple_metric_std, std_str
