@@ -6,9 +6,91 @@ import numpy as np
 import pandas as pd
 import mne
 import warnings
-from IPython.display import display
 import random
 import copy
+#from meg_qc.source.initial_meg_qc import MEG_channels
+
+class MEG_channels:
+
+    """ 
+    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
+
+    """
+
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
+
+        """
+        Constructor method
+        
+        Parameters
+        ----------
+        name : str
+            The name of the channel.
+        type : str
+            The type of the channel: 'mag', 'grad'
+        lobe : str
+            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
+        lobe_color : str
+            The color code for plotting with plotly according to the lobe area of the channel.
+        loc : list
+            The location of the channel on the helmet.
+        time_series : array
+            The time series of the channel.
+        std_overall : float
+            The standard deviation of the channel time series.
+        std_epoch : array
+            The standard deviation of the channel time series per epochs.
+        ptp_overall : float
+            The peak-to-peak amplitude of the channel time series.
+        ptp_epoch : array
+            The peak-to-peak amplitude of the channel time series per epochs.
+        psd : array
+            The power spectral density of the channel.
+        mean_ecg : float
+            The mean ECG artifact of the channel.
+        mean_eog : float
+            The mean EOG artifact of the channel.
+
+        """
+
+        self.name = name
+        self.type = type
+        self.lobe = lobe
+        self.lobe_color = lobe_color
+        self.loc = loc
+        self.time_series = time_series
+        self.std_overall = std_overall
+        self.std_epoch = std_epoch
+        self.ptp_overall = ptp_overall
+        self.ptp_epoch = ptp_epoch
+        self.psd = psd
+        self.mean_ecg = mean_ecg
+        self.mean_eog = mean_eog
+
+
+    def __repr__(self):
+
+        """
+        Returns the string representation of the object.
+        
+        """
+
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
+        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
+
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
+
+
+    def to_json(self):
+        return json.dumps(self.__dict__)
+    
+    def to_df(self):
+        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.ptp_overall, self.std_epoch, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
+
+
+
+
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 
@@ -1156,6 +1238,128 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
     return qc_derivative
 
 
+def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+
+    TODO!!
+
+    Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
+    
+    Process: 
+    Each box need to be plotted as a separate trace first.
+    Each channels inside each box has to be plottted as separate trace to allow diffrenet color coding
+    
+    For each box_representing_epoch:
+        box trace
+        For each color coded lobe:
+            For each dot_representing_channel in lobe:
+                dot trace
+
+    Add all traces to plotly figure
+
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
+    ch_type : str
+        'mag' or 'grad'
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+
+    # First, get the epochs from csv and convert back into object.
+
+
+    epochs_names = df_std_ptp.columns.tolist()
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='PtP Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_2_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_2_'+ch_tit
+    else:
+        print('what_data should be either peaks or stds')
+
+
+    boxwidth=0.5 #the area around which the data dots are scattered depends on the width of the box.
+
+    # For this plot have to separately create a box (no data points plotted) as 1 trace
+    # Then separately create for each cannel (dot) a separate trace. It s the only way to make them all different lobe colors.
+    # Additionally, the dots are scattered along the x axis inside each box, this is done for visualisation only, x position does not hold information.
+    
+    # Put all data dots in a list of traces groupped by lobe:
+    
+    dot_traces = []
+    box_traces = []
+
+    for ep_number, ep_name in enumerate(epochs_names):
+        dots_in_1_box=[]
+        for lobe,  ch_list in chs_by_lobe.items():
+            for ch in ch_list:
+                if what_data == 'stds':
+                    data = ch.std_epoch[ep_number]
+                elif what_data == 'peaks':
+                    data = ch.ptp_epoch[ep_number]
+                dots_in_1_box += [data]
+
+                x = ep_number + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
+                #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+                
+                dot_traces += [go.Scatter(x=[x], y=[data], mode='markers', marker=dict(size=4, color=ch.lobe_color), opacity=0.8, name=ch.name, text=str(ep_name), legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()), hovertemplate='Epoch: '+str(ep_name)+'<br>'+hover_tit+': %{y: .2e}')]
+
+        # create box plot trace
+        box_traces += [go.Box(x0=ep_number, y=dots_in_1_box, orientation='v', name=ep_name, line_width=1.8, opacity=0.8, boxpoints=False, width=boxwidth, showlegend=False)]
+    
+    #Collect all traces and add them to the figure:
+
+    all_traces = box_traces+dot_traces
+    fig = go.Figure(data=all_traces)
+        
+    #more settings:
+    fig.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(epochs_names))],
+            ticktext = epochs_names,
+            rangeslider=dict(visible=True)
+        ),
+        xaxis_title='Experimental epochs',
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
+    
+    if verbose_plots is True:
+        fig.show()
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
 
 def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool) -> QC_derivative:
 
@@ -1413,8 +1617,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
 
     return qc_derivative
 
-
-def boxplot_all_time_csv(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_all_time_csv(std_csv_path, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
@@ -1441,6 +1644,10 @@ def boxplot_all_time_csv(chs_by_lobe: dict, ch_type: str, what_data: str, verbos
 
     """
 
+    #First, convert scv back into dict with MEG_channels objects:
+
+    df = pd.read_csv(std_csv_path)  
+
     ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
@@ -1464,18 +1671,34 @@ def boxplot_all_time_csv(chs_by_lobe: dict, ch_type: str, what_data: str, verbos
     values_all=[]
     traces = []
 
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch in ch_list:
+    # for lobe,  ch_list in chs_by_lobe.items():
+    #     for ch in ch_list:
+    #         if what_data == 'stds':
+    #             data = ch.std_overall
+    #         elif what_data == 'peaks':
+    #             data = ch.ptp_overall
+    #         values_all += [data]
+
+    #         y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
+    #         #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+            
+    #         traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+
+    for index, row in df.iterrows():
+        
+        if row['Type'] == ch_type: #plot only mag/grad
+
             if what_data == 'stds':
-                data = ch.std_overall
+                data = row['STD all']
             elif what_data == 'peaks':
-                data = ch.ptp_overall
+                data = row['PtP all']
+
             values_all += [data]
 
             y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
             #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
             
-            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe'], legendgrouptitle=dict(text=row['Lobe'].upper()))]
 
 
     # create box plot trace

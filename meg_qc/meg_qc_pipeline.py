@@ -172,7 +172,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_STD'] is True:
                     print('___MEG QC___: ', 'Starting STD...')
                     start_time = time.time()
-                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
+                    std_derivs, simple_metrics_std, std_str, f_path_std = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
     
                 if all_qc_params['default']['run_PSD'] is True:
@@ -249,6 +249,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'High frequency (Muscle) artifacts': muscle_derivs}
 
                 figure_sizes = estimate_figure_size(QC_derivs)
+                #TODO: delete this and the original func
 
                 QC_simple={
                 'STD': simple_metrics_std, 
@@ -259,6 +260,16 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': simple_metrics_eog,
                 'HEAD': simple_metrics_head,
                 'MUSCLE': simple_metrics_muscle}  
+
+                Plotting_paths={
+                'STD': f_path_std, 
+                'PSD': f_path_std,
+                'PTP_MANUAL': simple_metrics_pp_manual, 
+                'PTP_AUTO': simple_metrics_pp_auto,
+                'ECG': simple_metrics_ecg, 
+                'EOG': simple_metrics_eog,
+                'HEAD': simple_metrics_head,
+                'MUSCLE': simple_metrics_muscle} 
 
 
                 # Testing errors:
@@ -348,4 +359,4 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     with open('for_report.json', 'w') as file_wrapper:
         json.dump(for_report, file_wrapper, indent=4)
 
-    return for_report
+    return for_report, Plotting_paths

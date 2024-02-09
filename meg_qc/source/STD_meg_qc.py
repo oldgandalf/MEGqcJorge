@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_all_time_csv, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 from IPython.display import display
@@ -536,7 +536,9 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
                 ch.std_overall = std_all_data[m_or_g][ch.name]
                 #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
-        derivs_std += [boxplot_all_time(chs_by_lobe_std[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+        #derivs_std += [boxplot_all_time_csv(chs_by_lobe_std[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+        derivs_std += [boxplot_all_time_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
@@ -574,6 +576,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
     #Extract chs_by_lobe into a data frame
-    chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
+    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
 
-    return derivs_std, simple_metric_std, std_str
+    return derivs_std, simple_metric_std, std_str, f_path
