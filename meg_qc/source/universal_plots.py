@@ -1238,7 +1238,7 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
     return qc_derivative
 
 
-def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
 
@@ -1261,10 +1261,8 @@ def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame
 
     Parameters
     ----------
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
+    std_csv_path: str
+
     ch_type : str
         'mag' or 'grad'
     what_data : str
@@ -1281,8 +1279,7 @@ def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame
 
     # First, get the epochs from csv and convert back into object.
 
-
-    epochs_names = df_std_ptp.columns.tolist()
+    df = pd.read_csv(std_csv_path)  
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -1290,10 +1287,12 @@ def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame
         hover_tit='PtP Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
         fig_name='PP_manual_epoch_per_channel_2_'+ch_tit
+        epochs_names = [i for i in range(len(df['PtP epoch'].iloc[0]))]
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_per_channel_2_'+ch_tit
+        epochs_names = [i for i in range(len(df['STD epoch'].iloc[0]))]
     else:
         print('what_data should be either peaks or stds')
 
@@ -1307,25 +1306,27 @@ def boxplot_epoched_xaxis_epochs_csv(chs_by_lobe: dict, df_std_ptp: pd.DataFrame
     # Put all data dots in a list of traces groupped by lobe:
     
     dot_traces = []
-    box_traces = []
+    box_traces = []    
 
-    for ep_number, ep_name in enumerate(epochs_names):
+    for ep in epochs_names:
         dots_in_1_box=[]
-        for lobe,  ch_list in chs_by_lobe.items():
-            for ch in ch_list:
+        for index, row in df.iterrows():
+
+            if row['Type'] == ch_type: #plot only mag/grad
+
                 if what_data == 'stds':
-                    data = ch.std_epoch[ep_number]
+                    data = row['STD epoch'] [ep]
                 elif what_data == 'peaks':
-                    data = ch.ptp_epoch[ep_number]
+                    data = row['PtP epoch'][ep]
                 dots_in_1_box += [data]
 
-                x = ep_number + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
+                x = ep + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
                 #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
                 
-                dot_traces += [go.Scatter(x=[x], y=[data], mode='markers', marker=dict(size=4, color=ch.lobe_color), opacity=0.8, name=ch.name, text=str(ep_name), legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()), hovertemplate='Epoch: '+str(ep_name)+'<br>'+hover_tit+': %{y: .2e}')]
+                dot_traces += [go.Scatter(x=[x], y=[data], mode='markers', marker=dict(size=4, color=row['Lobe Color']), opacity=0.8, name=row['Name'], text=str(ep), legendgroup=row['Lobe'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Epoch: '+str(ep)+'<br>'+hover_tit+': %{y: .2e}')]
 
         # create box plot trace
-        box_traces += [go.Box(x0=ep_number, y=dots_in_1_box, orientation='v', name=ep_name, line_width=1.8, opacity=0.8, boxpoints=False, width=boxwidth, showlegend=False)]
+        box_traces += [go.Box(x0=ep, y=dots_in_1_box, orientation='v', name=ep, line_width=1.8, opacity=0.8, boxpoints=False, width=boxwidth, showlegend=False)]
     
     #Collect all traces and add them to the figure:
 
@@ -1617,7 +1618,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
 
     return qc_derivative
 
-def boxplot_all_time_csv(std_csv_path, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
