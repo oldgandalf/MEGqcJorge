@@ -28,7 +28,7 @@ from meg_qc.source.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.source.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
 from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
-from meg_qc.source.universal_plots import QC_derivative, estimate_figure_size
+from meg_qc.source.universal_plots import QC_derivative
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
@@ -248,8 +248,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'Head movement artifacts': head_derivs,
                 'High frequency (Muscle) artifacts': muscle_derivs}
 
-                figure_sizes = estimate_figure_size(QC_derivs)
-                #TODO: delete this and the original func
 
                 QC_simple={
                 'STD': simple_metrics_std, 

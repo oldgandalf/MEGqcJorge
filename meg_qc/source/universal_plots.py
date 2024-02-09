@@ -1671,21 +1671,8 @@ def boxplot_all_time_csv(std_csv_path, ch_type: str, what_data: str, verbose_plo
     values_all=[]
     traces = []
 
-    # for lobe,  ch_list in chs_by_lobe.items():
-    #     for ch in ch_list:
-    #         if what_data == 'stds':
-    #             data = ch.std_overall
-    #         elif what_data == 'peaks':
-    #             data = ch.ptp_overall
-    #         values_all += [data]
-
-    #         y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
-    #         #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
-            
-    #         traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
-
     for index, row in df.iterrows():
-        
+
         if row['Type'] == ch_type: #plot only mag/grad
 
             if what_data == 'stds':
@@ -1735,45 +1722,6 @@ def boxplot_all_time_csv(std_csv_path, ch_type: str, what_data: str, verbose_plo
 
     return qc_derivative
 
-
-def estimate_figure_size(QC_derivs):
-        
-    import json
-    from plotly.utils import PlotlyJSONEncoder
-    import plotly.graph_objects as go
-
-    fig_sizes = {}
-    
-    for key in QC_derivs:
-
-        fig_sizes[key] = []
-
-        fig_n = 1
-        for deriv in QC_derivs[key]:
-
-            print(type(deriv.content))
-
-            if isinstance(deriv.content, go.Figure):
-
-                # Convert the figure to JSON
-                fig_json = json.dumps(deriv.content, cls=PlotlyJSONEncoder)
-
-                # Calculate the size of the figure in bytes
-                fig_size = len(fig_json.encode('utf-8'))
-
-                # Convert the size to megabytes
-                fig_size_kb = fig_size / 1e+3
-
-                print(f'The size of the figure' + key + str(fig_n) + 'is approximately {fig_size_mb} KB.')
-
-                fig_n += 1
-
-                fig_sizes[key].append(fig_size_kb)
-
-    print('___MEGqc___: Figure sizes in bytes:')
-    print(fig_sizes)
-
-    return fig_sizes
 
 
 
