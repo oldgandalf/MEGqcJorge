@@ -5,6 +5,33 @@ import json
 
 import sys
 
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs
+
+# open for_report.json and load it into a dictionary:
+with open('for_report.json', 'r') as file:
+    data = file.read()
+    for_report = json.loads(data)
+
+#get 'ch_chosen' from for_report:
+m_or_g_chosen = for_report['ch_chosen']
+
+# Figure derivs for STD:
+
+
+# Here we get dfs from STD data and plot all figures:
+
+derivs_std = []
+verbose_plots = False
+
+for m_or_g in m_or_g_chosen:
+
+    derivs_std += [boxplot_all_time(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+    fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+    fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_std[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
 sys.path.append('./meg_qc/source/')
@@ -342,10 +369,4 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
     # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
     
-
-    for_report = {'ch_chosen': m_or_g_chosen}
-    # save as json:
-    with open('for_report.json', 'w') as file_wrapper:
-        json.dump(for_report, file_wrapper, indent=4)
-
-    return for_report
+    return

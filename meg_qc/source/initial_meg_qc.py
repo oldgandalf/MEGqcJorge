@@ -2,6 +2,9 @@ import mne
 import configparser
 import numpy as np
 import random
+import json
+import pandas as pd
+from IPython.display import display
 
 from IPython.display import display
 from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
@@ -439,6 +442,12 @@ class MEG_channels:
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
 
 
+    def to_json(self):
+        return json.dumps(self.__dict__)
+    
+    def to_df(self):
+        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.ptp_overall]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'PtP all'])
+
 def assign_channels_properties(raw: mne.io.Raw):
 
     """
@@ -740,5 +749,17 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     resample_str = '<p>' + resample_str + '</p>'
 
+
+    #Extract chs)by_lobe into a dta frame
+    chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
+
+    its = []
+    for ch_type, content in chs_by_lobe_df.items():
+        for lobe, items in content.items():
+            its.append(items)
+
+    its_fin = pd.concat(its)
+
+    its_fin.to_csv('/Volumes/M2_DATA/Channels_by_lobe.csv', index=False)  
 
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots

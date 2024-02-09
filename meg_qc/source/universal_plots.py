@@ -1005,7 +1005,7 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
 def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
 
     """
-    Assign std or ptp va;ues of each epoch as list to each channel. 
+    Assign std or ptp values of each epoch as list to each channel. 
     This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
     
     Parameters
@@ -1316,6 +1316,105 @@ def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, wha
 
 
 def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+    Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
+    (box contains magnetometers or gradiomneters, not together): 
+    each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
+    ch_type : str
+        'mag' or 'grad'
+    channels : list
+        list of channel names
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        hover_tit='PP_Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_all_data_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_all_data_'+ch_tit
+    else:
+        raise ValueError('what_data must be set to "stds" or "peaks"')
+
+    boxwidth=0.4 #the area around which the data dots are scattered depends on the width of the box.
+
+    # For this plot have to separately create a box (no data points plotted) as 1 trace
+    # Then separately create for each cannel (dot) a separate trace. It s the only way to make them all different lobe colors.
+    # Additionally, the dots are scattered along the y axis, this is done for visualisation only, y position does not hold information.
+    
+    # Put all data dots in a list of traces groupped by lobe:
+    values_all=[]
+    traces = []
+
+    for lobe,  ch_list in chs_by_lobe.items():
+        for ch in ch_list:
+            if what_data == 'stds':
+                data = ch.std_overall
+            elif what_data == 'peaks':
+                data = ch.ptp_overall
+            values_all += [data]
+
+            y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
+            #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
+            
+            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
+
+
+    # create box plot trace
+    box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)
+    
+    #Colllect all traces and add them to the figure:
+    all_traces = [box_trace]+traces
+    fig = go.Figure(data=all_traces)
+
+    #Add hover text to the dots, remove too many digits after coma.
+    fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
+        
+    #more settings:
+    fig.update_layout(
+        yaxis_range=[-0.5,0.5],
+        yaxis={'visible': False, 'showticklabels': False},
+        xaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+        xaxis_title=y_ax_and_fig_title+" in "+unit,
+        title={
+        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'},
+        legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
+    
+    if verbose_plots is True:
+        fig.show()
+
+    description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
+
+    return qc_derivative
+
+
+def boxplot_all_time_csv(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
     Create representation of calculated std data as a boxplot over the whoe time series, not epoched.

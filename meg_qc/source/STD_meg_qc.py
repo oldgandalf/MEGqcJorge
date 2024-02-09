@@ -520,7 +520,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     derivs_list = []
     noisy_flat_epochs_derivs={}
 
-    chs_by_lobe_copy=chs_by_lobe.copy()
+    chs_by_lobe_std=chs_by_lobe.copy()
     # copy here, because want to keep original dict unchanged. 
     # In principal it s good to collect all data about channel metrics there BUT if the metrics are run in parallel this might produce conflicts 
     # (without copying  dict can be chanaged both inside+outside this function even when it is not returned.)
@@ -530,12 +530,12 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         std_all_data[m_or_g] = get_std_all_data(data, channels[m_or_g])
 
         #Add std data into channel object inside the chs_by_lobe dictionary:
-        for lobe in chs_by_lobe_copy[m_or_g]:
-            for ch in chs_by_lobe_copy[m_or_g][lobe]:
+        for lobe in chs_by_lobe_std[m_or_g]:
+            for ch in chs_by_lobe_std[m_or_g][lobe]:
                 ch.std_overall = std_all_data[m_or_g][ch.name]
                 #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
-        derivs_std += [boxplot_all_time(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+        derivs_std += [boxplot_all_time(chs_by_lobe_std[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
@@ -543,11 +543,11 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         for m_or_g in m_or_g_chosen:
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
 
-            chs_by_lobe_copy[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_copy[m_or_g], df_std_ptp=df_std) #for easier plotting
+            chs_by_lobe_std[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_std[m_or_g], df_std_ptp=df_std) #for easier plotting
 
             # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
-            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_std[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
             #older versions, no color coding:
             #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
@@ -572,4 +572,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     #first everything about mags, then everything about grads. - in this ordr they ll be added to repot. 
     #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
-    return derivs_std, simple_metric_std, std_str
+    for_report_std = {'chs_by_lobe_std': chs_by_lobe_std}
+
+    return derivs_std, simple_metric_std, std_str, for_report_std
