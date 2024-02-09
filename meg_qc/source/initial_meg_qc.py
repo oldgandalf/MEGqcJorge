@@ -750,7 +750,13 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     resample_str = '<p>' + resample_str + '</p>'
 
 
-    #Extract chs)by_lobe into a dta frame
+    #Extract chs_by_lobe into a data frame
+    chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Chs')
+
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
+
+def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
+    #Extract chs_by_lobe into a data frame
     chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
 
     its = []
@@ -760,6 +766,4 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     its_fin = pd.concat(its)
 
-    its_fin.to_csv('/Volumes/M2_DATA/Channels_by_lobe.csv', index=False)  
-
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
+    its_fin.to_csv('/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv', index=False)  
