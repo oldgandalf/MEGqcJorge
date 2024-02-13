@@ -8,6 +8,9 @@ import mne
 import warnings
 import random
 import copy
+import json
+import ast
+
 #from meg_qc.source.initial_meg_qc import MEG_channels
 
 class MEG_channels:
@@ -1242,8 +1245,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     """
 
-    TODO!!
-
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
     
     Process: 
@@ -1281,6 +1282,30 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     df = pd.read_csv(std_csv_path)  
 
+    # Convert the string back to a list of floats for all columns except the first 4
+    # Convert the string back to a list of floats or a float for all columns except the first 4
+
+    # Create an empty DataFrame to store the new data
+    df_new = pd.DataFrame()
+
+    for col in df.columns[6:7]:
+        for r_index, row in df.iterrows():
+            d = df.loc[r_index, col]
+            lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] if pd.notna(x) else x
+            d = lambda_func(d)
+            
+            # Create a temporary DataFrame for the current row
+            df_temp = pd.DataFrame(d, columns=[col])
+            
+            # Add the other columns from the original DataFrame
+            for c in df.columns[:6]:
+                df_temp[c] = row[c]
+            
+            # Append the temporary DataFrame to the new DataFrame
+            df_new = df_new.append(df_temp, ignore_index=True)
+
+    print (df_new)
+
     ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
@@ -1316,6 +1341,10 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
                 if what_data == 'stds':
                     data = row['STD epoch'] [ep]
+
+                    # print('_______row[STD epoch]_______', row['STD epoch'])
+                    # print(type(row['STD epoch']))
+                    
                 elif what_data == 'peaks':
                     data = row['PtP epoch'][ep]
                 dots_in_1_box += [data]

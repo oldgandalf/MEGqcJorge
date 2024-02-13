@@ -440,14 +440,9 @@ class MEG_channels:
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
-
-
-    def to_json(self):
-        return json.dumps(self.__dict__)
     
     def to_df(self):
         return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.std_epoch, self.ptp_overall,  self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
-
 
 
 def assign_channels_properties(raw: mne.io.Raw):
@@ -769,6 +764,10 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     its_fin = pd.concat(its)
 
     f_path = '/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv'
+
+    # Convert the list of floats to a string for all columns except the first 4
+    for col in its_fin.columns[4:]:
+        its_fin[col] = its_fin[col].apply(str)
 
     its_fin.to_csv(f_path, index=False)  
 
