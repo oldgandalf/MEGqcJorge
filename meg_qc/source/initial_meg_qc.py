@@ -441,9 +441,21 @@ class MEG_channels:
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
     
-    def to_df(self):
-        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.std_epoch, self.ptp_overall,  self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
+    # def to_df(self):
+    #     return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.std_epoch, self.ptp_overall,  self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
 
+    def to_df(self):
+        data_dict = {}
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG']):
+            value = getattr(self, attr)
+            if isinstance(value, (list, np.ndarray)):
+                for i, v in enumerate(value):
+                    data_dict[f'{column_name}_{i}'] = [v]
+            else:
+                data_dict[column_name] = [value]
+        return pd.DataFrame(data_dict)
+    
 
 def assign_channels_properties(raw: mne.io.Raw):
 
@@ -753,6 +765,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
+
     #Extract chs_by_lobe into a data frame
     chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
 

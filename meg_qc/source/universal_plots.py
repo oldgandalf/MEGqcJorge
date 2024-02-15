@@ -1302,7 +1302,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
                 df_temp[c] = row[c]
             
             # Append the temporary DataFrame to the new DataFrame
-            df_new = df_new.append(df_temp, ignore_index=True)
+            df_new = pd.concat([df_new, df_temp], axis=0)
 
     print (df_new)
 
