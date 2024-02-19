@@ -1318,7 +1318,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_per_channel_2_'+ch_tit
-        print('___err here')
 
         # Create a list of columns that start with 'STD epoch_'
         epoch_columns = [col for col in df.columns if col.startswith('STD epoch_')]

@@ -764,6 +764,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
 
+
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
 
     #Extract chs_by_lobe into a data frame
@@ -778,10 +779,18 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
 
     f_path = '/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv'
 
-    # Convert the list of floats to a string for all columns except the first 4
-    for col in its_fin.columns[4:]:
-        its_fin[col] = its_fin[col].apply(str)
+    
+    # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
+    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in its_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        its_fin = its_fin.drop(columns='STD epoch')
+    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in its_fin.columns):
+        # If there are, drop the 'PtP epoch' column
+        its_fin = its_fin.drop(columns='PtP epoch')
 
     its_fin.to_csv(f_path, index=False)  
+
+    # if chs_by_lobe already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
+    # Check if there are columns that start with 'STD epoch_'
 
     return f_path
