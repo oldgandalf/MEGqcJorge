@@ -1245,6 +1245,8 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     """
 
+    TODO: adjust doctrings!
+
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
     
     Process: 
@@ -1282,8 +1284,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     df = pd.read_csv(std_csv_path)  
 
-    print('!!!!!', std_csv_path)
-
     # Convert the string back to a list of floats for all columns except the first 4
     # Convert the string back to a list of floats or a float for all columns except the first 4
 
@@ -1307,9 +1307,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             # Append the temporary DataFrame to the new DataFrame
             df_new = pd.concat([df_new, df_temp], axis=0)
 
-
-    print (df_new)
-
     ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
@@ -1323,19 +1320,14 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         fig_name='STD_epoch_per_channel_2_'+ch_tit
         print('___err here')
 
-        # Get the first column that starts with 'STD epoch'
-        epoch_column = next(col for col in df.columns if col.startswith('STD epoch'))
+        # Create a list of columns that start with 'STD epoch_'
+        epoch_columns = [col for col in df.columns if col.startswith('STD epoch_')]
 
-        # Get the length of the first element in that column
-        length = len(df[epoch_column].iloc[0])
+        # Get the number of these columns
+        num_epoch_columns = len(epoch_columns)
 
         # Create a list of numbers from 0 to that length
-        epochs_names = [i for i in range(length)]
-
-        print('epoch names', epochs_names)
-
-
-        #epochs_names = [i for i in range(len(df['STD epoch'].iloc[0]))]
+        epochs_names = [i for i in range(num_epoch_columns)]
 
     else:
         print('what_data should be either peaks or stds')
@@ -1359,13 +1351,12 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             if row['Type'] == ch_type: #plot only mag/grad
 
                 if what_data == 'stds':
-                    data = row['STD epoch'] [ep]
-
-                    # print('_______row[STD epoch]_______', row['STD epoch'])
-                    # print(type(row['STD epoch']))
-                    
+                    data = row['STD epoch_' + str(ep)]
                 elif what_data == 'peaks':
-                    data = row['PtP epoch'][ep]
+                    data = row['PtP epoch_'+ str(ep)]
+                else:
+                    raise ValueError('what_data should be either peaks or stds')    
+
                 dots_in_1_box += [data]
 
                 x = ep + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
