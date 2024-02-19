@@ -1291,10 +1291,18 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     for col in df.columns[6:7]:
         for r_index, row in df.iterrows():
             d = df.loc[r_index, col]
-            lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] if pd.notna(x) else x
+            #lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] if pd.notna(x) else x
+            lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] 
             d = lambda_func(d)
             
             # Create a temporary DataFrame for the current row
+            print('ERROR HERE')
+            print(type(d))
+            print(d)
+            print(col)
+            print('___')
+
+            #df_temp = pd.DataFrame(d, columns=[col])
             df_temp = pd.DataFrame(d, columns=[col])
             
             # Add the other columns from the original DataFrame
