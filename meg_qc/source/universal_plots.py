@@ -1282,6 +1282,8 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     df = pd.read_csv(std_csv_path)  
 
+    print('!!!!!', std_csv_path)
+
     # Convert the string back to a list of floats for all columns except the first 4
     # Convert the string back to a list of floats or a float for all columns except the first 4
 
@@ -1296,13 +1298,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             d = lambda_func(d)
             
             # Create a temporary DataFrame for the current row
-            print('ERROR HERE')
-            print(type(d))
-            print(d)
-            print(col)
-            print('___')
-
-            #df_temp = pd.DataFrame(d, columns=[col])
             df_temp = pd.DataFrame(d, columns=[col])
             
             # Add the other columns from the original DataFrame
@@ -1311,6 +1306,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             
             # Append the temporary DataFrame to the new DataFrame
             df_new = pd.concat([df_new, df_temp], axis=0)
+
 
     print (df_new)
 
@@ -1325,7 +1321,22 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_per_channel_2_'+ch_tit
-        epochs_names = [i for i in range(len(df['STD epoch'].iloc[0]))]
+        print('___err here')
+
+        # Get the first column that starts with 'STD epoch'
+        epoch_column = next(col for col in df.columns if col.startswith('STD epoch'))
+
+        # Get the length of the first element in that column
+        length = len(df[epoch_column].iloc[0])
+
+        # Create a list of numbers from 0 to that length
+        epochs_names = [i for i in range(length)]
+
+        print('epoch names', epochs_names)
+
+
+        #epochs_names = [i for i in range(len(df['STD epoch'].iloc[0]))]
+
     else:
         print('what_data should be either peaks or stds')
 
