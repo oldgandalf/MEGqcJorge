@@ -779,7 +779,6 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
 
     f_path = '/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv'
 
-    
     # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
     if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in its_fin.columns):
         # If there are, drop the 'STD epoch' column
