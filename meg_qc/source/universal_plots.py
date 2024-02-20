@@ -1087,6 +1087,132 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
 
     return fig_deriv
 
+
+def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
+
+    """
+    TODO: adjust doctrings!
+
+
+
+    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
+    Color tagged channels by lobes. 
+    One box is one channel, boxes are on x axis. Epoch are inside as dots. Y axis shows the STD/PtP value.
+    
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
+    ch_type : str
+        Type of the channel: 'mag', 'grad'
+    what_data : str
+        Type of the data: 'peaks' or 'stds'
+    x_axis_boxes : str
+        What to plot as boxplot on x axis: 'channels' or 'epochs'
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    fig_deriv : QC_derivative 
+        derivative containing plotly figure
+    
+    """
+    df = pd.read_csv(std_csv_path)
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    # Figure column names:
+    # Create a list of columns that start with 'STD epoch_'
+    epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
+
+    # Get the number of these columns
+    num_epoch_columns = len(epoch_columns)
+
+    # Create a list of numbers from 0 to that length
+    epochs_names = [i for i in range(num_epoch_columns)]
+
+
+    if what_data=='peaks':
+        hover_tit='PtP Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+    else:
+        print('what_data should be either peaks or stds')
+
+    x_axis_boxes = 'channels'
+    if x_axis_boxes=='channels':
+        hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
+    elif x_axis_boxes=='epochs':
+        #legend_title = 'Epochs'
+        hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
+    else:
+        print('x_axis_boxes should be either channels or epochs')
+
+
+    fig = go.Figure()
+
+    #Here each trace is 1 box representing 1 channel. Epochs inside the box are automatically plotted given argument boxpoints="all":
+    #Boxes are groupped by lobe. So first each channel fo lobe 1 is plotted, then each of lobe 2, etc..
+    boxes_names = []
+
+    for index, row in df.iterrows():
+        if row['Type'] == ch_type: #plot only mag/grad
+            if what_data == 'stds':
+                data = [row['STD epoch_'+str(n)] for n in epochs_names]
+
+            elif what_data == 'peaks':
+                data = [row['PtP epoch_'+str(n)] for n in epochs_names]
+            
+            boxes_names += row['Name']
+
+            fig.add_trace(go.Box(y=data, 
+            name=row['Name'], 
+            opacity=0.7, 
+            boxpoints="all", 
+            pointpos=0,
+            marker_color=row['Lobe Color'],
+            marker_size=3,
+            legendgroup=row['Lobe'], 
+            legendgrouptitle=dict(text=row['Lobe'].upper()),
+            line_width=0.8,
+            line_color=row['Lobe Color'],
+            text=epochs_names))
+
+    fig.update_traces(hovertemplate=hovertemplate)
+
+    fig.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = [v for v in range(0, len(boxes_names))],
+            ticktext = boxes_names,
+            rangeslider=dict(visible=True)),
+        yaxis = dict(
+            showexponent = 'all',
+            exponentformat = 'e'),
+        yaxis_title=y_ax_and_fig_title+' in '+unit,
+        title={
+            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},)
+        #legend_title=legend_title)
+        
+    if verbose_plots is True:
+        fig.show()
+
+    fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return fig_deriv
+
+
 def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
 
     """
@@ -1318,25 +1444,25 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
+    # Figure column names:
+    # Create a list of columns that start with 'STD epoch_'
+    epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
+
+    # Get the number of these columns
+    num_epoch_columns = len(epoch_columns)
+
+    # Create a list of numbers from 0 to that length
+    epochs_names = [i for i in range(num_epoch_columns)]
+
+
     if what_data=='peaks':
         hover_tit='PtP Amplitude'
         y_ax_and_fig_title='Peak-to-peak amplitude'
         fig_name='PP_manual_epoch_per_channel_2_'+ch_tit
-        epochs_names = [i for i in range(len(df['PtP epoch'].iloc[0]))]
     elif what_data=='stds':
         hover_tit='STD'
         y_ax_and_fig_title='Standard deviation'
         fig_name='STD_epoch_per_channel_2_'+ch_tit
-
-        # Create a list of columns that start with 'STD epoch_'
-        epoch_columns = [col for col in df.columns if col.startswith('STD epoch_')]
-
-        # Get the number of these columns
-        num_epoch_columns = len(epoch_columns)
-
-        # Create a list of numbers from 0 to that length
-        epochs_names = [i for i in range(num_epoch_columns)]
-
     else:
         print('what_data should be either peaks or stds')
 

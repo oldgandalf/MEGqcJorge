@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_all_time_csv, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, boxplot_epoched_xaxis_epochs_csv, assign_epoched_std_ptp_to_channels
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_all_time_csv, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, boxplot_epoched_xaxis_epochs_csv, boxplot_epoched_xaxis_channels_csv, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 from IPython.display import display
@@ -550,6 +550,8 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
             chs_by_lobe_std[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_std[m_or_g], df_std_ptp=df_std) #for easier plotting
 
             # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
 
             #TODO: make flexible file name
             fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
