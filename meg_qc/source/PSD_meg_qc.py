@@ -13,7 +13,7 @@ from IPython.display import display
 from typing import List
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, Plot_psd_csv
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 
@@ -150,6 +150,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
+
 
 
 def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):

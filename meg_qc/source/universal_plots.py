@@ -441,6 +441,90 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     
 
     return fig
+
+
+def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, df_data: pd.DataFrame, x_values):
+
+    """
+    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with lobes as keys and lists of channels as values.
+    df_data : pd.DataFrame
+        Data frame with data to plot.
+    x_values : list
+        List of x values for the plot.
+    
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure.
+
+    """
+
+    df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+
+    fig = go.Figure()
+    traces_lobes=[]
+    traces_chs=[]
+
+    if metric.lower() == 'psd':
+        col_prefix = 'PSD_Hz_'
+
+   
+    for index, row in df.iterrows():
+        for cell in row:
+        #if col_prefix in row: #TODO: how to specify colomns here?
+            ch_data=cell
+            color = row['Lobe Color'] 
+            # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
+            # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
+
+            traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
+            #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
+
+    # sort traces in random order:
+    # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
+    # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
+    traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
+
+
+
+    downsampling_factor = 1  # replace with your desired downsampling factor
+    # Create a new list for the downsampled traces
+    traces_downsampled = []
+
+    # Go through each trace
+    for trace in traces:
+        # Downsample the x and y values of the trace
+        x_downsampled = trace['x'][::downsampling_factor]
+        y_downsampled = trace['y'][::downsampling_factor]
+
+        # Create a new trace with the downsampled values
+        trace_downsampled = go.Scatter(x=x_downsampled, y=y_downsampled, line=trace['line'], name=trace['name'], legendgroup=trace['legendgroup'], legendgrouptitle=trace['legendgrouptitle'])
+
+        # Add the downsampled trace to the list
+        traces_downsampled.append(trace_downsampled)
+
+
+
+
+    # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
+    fig = go.Figure(data=traces_downsampled)
+
+    fig.update_layout(legend_traceorder='grouped', legend_tracegroupgap=12, legend_groupclick='toggleitem')
+    #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
+    #But then you cant see individual channels, it turn on/off the whole group. There is no option to tun group off by clicking on group title. Grup title and group items behave the same.
+
+    #to see the legend: there is really nothing to sort here. The legend is sorted by default by the order of the traces in the figure. The onl way is to group the traces by lobe.
+    #print(fig['layout'])
+
+    #https://plotly.com/python/reference/?_ga=2.140286640.2070772584.1683497503-1784993506.1683497503#layout-legend-traceorder
+    
+
+    return fig
         
 
 def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
@@ -1213,6 +1297,95 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     return fig_deriv
 
 
+def Plot_psd_csv(m_or_g:str, std_csv_path: str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs_by_lobe: dict, method: str, verbose_plots: bool):
+
+    """
+    Plotting Power Spectral Density for all channels.
+
+    Parameters
+    ----------
+    m_or_g : str
+        'mag' or 'grad'
+    freqs : np.ndarray
+        frequencies
+    psds : np.ndarray
+        power spectral density for each channel
+    channels : list
+        list of channel names
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
+    method : str
+        'welch' or 'multitaper' or other method
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+        
+    """
+
+    # First, get the epochs from csv and convert back into object.
+    df = pd.read_csv(std_csv_path) 
+
+    # Figure out frequencies:
+    freq_cols = [col for col in df.columns if col.startswith('PSD__Hz_')]
+    freqs = np.array([float(x.replace('PSD__Hz_', '')) for x in freq_cols])
+    #TODO: here remove 'PSD__Hz_' part and convert remains to a float
+
+    channels = []
+    for index, row in df.iterrows():
+        channels.append(row['Name'])
+
+    #psds = 
+
+
+
+
+
+    #if row['Type'] == ch_type: #plot only mag/grad
+
+    df_psds=pd.DataFrame(psds.T, columns=channels)
+
+    # Assuming df_psds is a DataFrame with a DateTimeIndex
+    downsampling_factor = 1  # replace with your desired downsampling factor
+    df_psds_downsampled = df_psds[::downsampling_factor]
+    
+    #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds_downsampled, freqs)
+
+    fig = plot_df_of_channels_data_as_lines_by_lobe_csv(chs_by_lobe, df_psds_downsampled, freqs)
+
+    tit, unit = get_tit_and_unit(m_or_g)
+    fig.update_layout(
+    title={
+    'text': method[0].upper()+method[1:]+" periodogram for all "+tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'},
+    yaxis_title="Amplitude, "+unit,
+    yaxis = dict(
+        showexponent = 'all',
+        exponentformat = 'e'),
+    xaxis_title="Frequency (Hz)")
+
+    fig.update_traces(hovertemplate='Frequency: %{x} Hz<br>Amplitude: %{y: .2e} T/Hz')
+
+    #Add buttons to switch scale between log and linear:
+    fig = add_log_buttons(fig)
+
+    if verbose_plots is True:
+        fig.show()
+    
+    fig_name='PSD_all_data_'+tit
+
+    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
+
 def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
 
     """
@@ -1436,13 +1609,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     """
 
     # First, get the epochs from csv and convert back into object.
-
     df = pd.read_csv(std_csv_path)  
-
-    # Convert the string back to a list of floats for all columns except the first 4
-    # Convert the string back to a list of floats or a float for all columns except the first 4
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
 
     # Figure column names:
     # Create a list of columns that start with 'STD epoch_'
@@ -1454,6 +1621,9 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     # Create a list of numbers from 0 to that length
     epochs_names = [i for i in range(num_epoch_columns)]
 
+    #TODO: here better use the actual epoch names, not recreate their numeration
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
 
     if what_data=='peaks':
         hover_tit='PtP Amplitude'
