@@ -1206,7 +1206,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         # Add psds and freqs into chs_by_lobe dict:
         chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe[m_or_g], freqs[m_or_g], psds[m_or_g])
 
-        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
+        #psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
@@ -1216,7 +1216,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
         noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', verbose_plots=verbose_plots)
         
-        derivs_psd += [psd_plot_derivative] + [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
+        derivs_psd += [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
 
 
     # Make a simple metric for PSD:
@@ -1226,5 +1226,11 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
 
     #Extract chs_by_lobe into a data frame
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
+
+    for m_or_g in m_or_g_chosen:
+
+        psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
+
+        derivs_psd += [psd_plot_derivative]
 
     return derivs_psd, simple_metric, psd_str, noisy_freqs_global, f_path

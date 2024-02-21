@@ -443,7 +443,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, df_data: pd.DataFrame, x_values):
+def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
@@ -475,13 +475,19 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, df_d
 
    
     for index, row in df.iterrows():
-        for cell in row:
-        #if col_prefix in row: #TODO: how to specify colomns here?
-            ch_data=cell
-            color = row['Lobe Color'] 
-            # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
-            # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
 
+        if row['Type'] == m_or_g: #plot only mag/grad
+            ch_data = []
+            for col in df.columns:
+                if col_prefix in col:
+
+                    #ch_data = row[col] #or maybe 
+                    ch_data.append(row[col])
+
+                    # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
+                    # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
+            
+            color = row['Lobe Color']
             traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
             #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
 
@@ -1297,7 +1303,68 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     return fig_deriv
 
 
-def Plot_psd_csv(m_or_g:str, std_csv_path: str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs_by_lobe: dict, method: str, verbose_plots: bool):
+def add_log_buttons(fig: go.Figure):
+
+    """
+    Add buttons to switch scale between log and linear. For some reason only swithcing the Y scale works so far.
+
+    Parameters
+    ----------
+    fig : go.Figure
+        The figure to be modified withot buttons
+        
+    Returns
+    -------
+    fig : go.Figure
+        The modified figure with the buttons
+        
+    """
+
+    updatemenus = [
+    {
+        "buttons": [
+            {
+                "args": [{"xaxis.type": "linear"}],
+                "label": "X linear",
+                "method": "relayout"
+            },
+            {
+                "args": [{"xaxis.type": "log"}],
+                "label": "X log",
+                "method": "relayout"
+            }
+        ],
+        "direction": "right",
+        "showactive": True,
+        "type": "buttons",
+        "x": 0.15,
+        "y": -0.1
+    },
+    {
+        "buttons": [
+            {
+                "args": [{"yaxis.type": "linear"}],
+                "label": "Y linear",
+                "method": "relayout"
+            },
+            {
+                "args": [{"yaxis.type": "log"}],
+                "label": "Y log",
+                "method": "relayout"
+            }
+        ],
+        "direction": "right",
+        "showactive": True,
+        "type": "buttons",
+        "x": 1,
+        "y": -0.1
+    }]
+
+    fig.update_layout(updatemenus=updatemenus)
+
+    return fig
+
+def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
     """
     Plotting Power Spectral Density for all channels.
@@ -1328,7 +1395,7 @@ def Plot_psd_csv(m_or_g:str, std_csv_path: str, freqs: np.ndarray, psds:np.ndarr
     """
 
     # First, get the epochs from csv and convert back into object.
-    df = pd.read_csv(std_csv_path) 
+    df = pd.read_csv(f_path) 
 
     # Figure out frequencies:
     freq_cols = [col for col in df.columns if col.startswith('PSD__Hz_')]
@@ -1345,17 +1412,15 @@ def Plot_psd_csv(m_or_g:str, std_csv_path: str, freqs: np.ndarray, psds:np.ndarr
 
 
 
-    #if row['Type'] == ch_type: #plot only mag/grad
+    # df_psds=pd.DataFrame(psds.T, columns=channels)
 
-    df_psds=pd.DataFrame(psds.T, columns=channels)
-
-    # Assuming df_psds is a DataFrame with a DateTimeIndex
-    downsampling_factor = 1  # replace with your desired downsampling factor
-    df_psds_downsampled = df_psds[::downsampling_factor]
+    # # Assuming df_psds is a DataFrame with a DateTimeIndex
+    # downsampling_factor = 1  # replace with your desired downsampling factor
+    # df_psds_downsampled = df_psds[::downsampling_factor]
     
     #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds_downsampled, freqs)
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe_csv(chs_by_lobe, df_psds_downsampled, freqs)
+    fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
 
     tit, unit = get_tit_and_unit(m_or_g)
     fig.update_layout(
