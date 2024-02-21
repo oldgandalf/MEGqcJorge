@@ -377,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
 
         """
         Constructor method
@@ -406,6 +406,8 @@ class MEG_channels:
             The peak-to-peak amplitude of the channel time series per epochs.
         psd : array
             The power spectral density of the channel.
+        freq: array
+            Frequencies for psd.
         mean_ecg : float
             The mean ECG artifact of the channel.
         mean_eog : float
@@ -424,6 +426,7 @@ class MEG_channels:
         self.ptp_overall = ptp_overall
         self.ptp_epoch = ptp_epoch
         self.psd = psd
+        self.freq = freq
         self.mean_ecg = mean_ecg
         self.mean_eog = mean_eog
 
@@ -441,21 +444,30 @@ class MEG_channels:
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
     
-    # def to_df(self):
-    #     return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.std_epoch, self.ptp_overall,  self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
-
     def to_df(self):
         data_dict = {}
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG']):
+        freqs = self.freq
+        print('____freqs_____', freqs)
+
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_eog'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'mean EOG']):
             value = getattr(self, attr)
             if isinstance(value, (list, np.ndarray)):
-                for i, v in enumerate(value):
-                    data_dict[f'{column_name}_{i}'] = [v]
+
+                #adding option for psd:
+                if 'psd' in attr:
+                    freqs = getattr(self, 'freq') #??? right
+                    for i, v in enumerate(value):
+                        fr = freqs[i]
+                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
+
+                else: #TODO: here maybe change to elif std/ptp?
+                    for i, v in enumerate(value):
+                        data_dict[f'{column_name}_{i}'] = [v]
             else:
                 data_dict[column_name] = [value]
+
         return pd.DataFrame(data_dict)
-    
 
 def assign_channels_properties(raw: mne.io.Raw):
 
@@ -769,6 +781,16 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
 
     #Extract chs_by_lobe into a data frame
     chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
+    # channel.to_df() converts chs_by_lobe dict to df!
+
+    # print("______chs_by_lobe['mag']['Left Frontal'][0].psd")
+    # print(chs_by_lobe['mag']['Left Frontal'][0].psd)
+
+    # if chs_by_lobe['mag']['Left Frontal'][0].psd is not None:
+    #     print('____df____')
+    #     print(chs_by_lobe_df)
+
+
 
     its = []
     for ch_type, content in chs_by_lobe_df.items():
@@ -778,6 +800,7 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     its_fin = pd.concat(its)
 
     f_path = '/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv'
+    #TODO: make flexible file path
 
     # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
     if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in its_fin.columns):
@@ -786,6 +809,9 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in its_fin.columns):
         # If there are, drop the 'PtP epoch' column
         its_fin = its_fin.drop(columns='PtP epoch')
+    if any(col.startswith('PSD_') and col[4:].isdigit() for col in its_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        its_fin = its_fin.drop(columns='PSD')
 
     its_fin.to_csv(f_path, index=False)  
 

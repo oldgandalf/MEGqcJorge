@@ -15,6 +15,7 @@ from typing import List
 
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
 from meg_qc.source.universal_html_report import simple_metric_basic
+from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version
@@ -1085,6 +1086,39 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     nperseg=int(sfreq/psd_step_size)
     return nfft, nperseg
 
+
+def assign_psds_to_channels(chs_by_lobe, freqs, psds):
+
+    """
+
+    TODO: fix docstrings 
+
+
+    Assign std or ptp values of each epoch as list to each channel. 
+    This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
+    
+    Parameters
+    ----------
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
+    
+        
+    Returns
+    -------
+    chs_by_lobe : dict
+        updated dictionary with channel objects sorted by lobe - with info about std or ptp of epochs.
+    """
+    for lobe in chs_by_lobe:
+        for ch_n, ch in enumerate(chs_by_lobe[lobe]):
+            ch.psd = psds[ch_n]
+            ch.freq = freqs
+
+    return chs_by_lobe
+
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool, helperplots: bool):
     
@@ -1161,10 +1195,15 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     method = 'welch'
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
+    chs_by_lobe_psd=chs_by_lobe.copy()
+
     for m_or_g in m_or_g_chosen:
 
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
+
+        # Add psds and freqs into chs_by_lobe dict:
+        chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe[m_or_g], freqs[m_or_g], psds[m_or_g])
 
         psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
 
@@ -1184,4 +1223,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
 
     psd_str = '' #blank for now. maybe wil need to add notes later.
 
-    return derivs_psd, simple_metric, psd_str, noisy_freqs_global
+    #Extract chs_by_lobe into a data frame
+    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
+
+    return derivs_psd, simple_metric, psd_str, noisy_freqs_global, f_path

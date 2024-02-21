@@ -178,7 +178,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_PSD'] is True:
                     print('___MEG QC___: ', 'Starting PSD...')
                     start_time = time.time()
-                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, verbose_plots, helperplots=False)
+                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global, f_path_psd = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, verbose_plots, helperplots=False)
                     print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_PTP_manual'] is True:
@@ -259,15 +259,17 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'HEAD': simple_metrics_head,
                 'MUSCLE': simple_metrics_muscle}  
 
-                Plotting_paths={
-                'STD': f_path_std, 
-                'PSD': f_path_std,
-                'PTP_MANUAL': simple_metrics_pp_manual, 
-                'PTP_AUTO': simple_metrics_pp_auto,
-                'ECG': simple_metrics_ecg, 
-                'EOG': simple_metrics_eog,
-                'HEAD': simple_metrics_head,
-                'MUSCLE': simple_metrics_muscle} 
+                # Plotting_paths={
+                # 'STD': f_path_std, 
+                # 'PSD': f_path_psd,
+                # 'PTP_MANUAL': simple_metrics_pp_manual, 
+                # 'PTP_AUTO': simple_metrics_pp_auto,
+                # 'ECG': simple_metrics_ecg, 
+                # 'EOG': simple_metrics_eog,
+                # 'HEAD': simple_metrics_head,
+                # 'MUSCLE': simple_metrics_muscle} 
+
+                Plotting_paths = {}
 
 
                 # Testing errors:
