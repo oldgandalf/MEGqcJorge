@@ -549,13 +549,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
 
             chs_by_lobe_std[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_std[m_or_g], df_std_ptp=df_std) #for easier plotting
 
-            # # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-            # fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
-
-            # #TODO: make flexible file name
-            # fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
             #older versions, no color coding:
             #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
             #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
@@ -591,5 +584,5 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
             fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
     derivs_std += fig_std_epoch0+fig_std_epoch1 + fig_std_epoch2 + derivs_list 
-    
+
     return derivs_std, simple_metric_std, std_str, f_path
