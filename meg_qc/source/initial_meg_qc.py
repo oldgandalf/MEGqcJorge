@@ -447,7 +447,6 @@ class MEG_channels:
     def to_df(self):
         data_dict = {}
         freqs = self.freq
-        print('____freqs_____', freqs)
 
         for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_eog'], 
                                     ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'mean EOG']):
