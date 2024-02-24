@@ -488,6 +488,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
                     # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
             
             color = row['Lobe Color']
+
+            print('ch_data HERE: ', row['Name'], ch_data)
+
             traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
             #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
 
@@ -1398,27 +1401,15 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     df = pd.read_csv(f_path) 
 
     # Figure out frequencies:
-    freq_cols = [col for col in df.columns if col.startswith('PSD__Hz_')]
-    freqs = np.array([float(x.replace('PSD__Hz_', '')) for x in freq_cols])
-    #TODO: here remove 'PSD__Hz_' part and convert remains to a float
+    freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
+    freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
+    
+    #TODO: DF with freqs still has redundand columns with names of frequencies like column.startswith('Freq_')
+    # Remove them!
 
     channels = []
     for index, row in df.iterrows():
         channels.append(row['Name'])
-
-    #psds = 
-
-
-
-
-
-    # df_psds=pd.DataFrame(psds.T, columns=channels)
-
-    # # Assuming df_psds is a DataFrame with a DateTimeIndex
-    # downsampling_factor = 1  # replace with your desired downsampling factor
-    # df_psds_downsampled = df_psds[::downsampling_factor]
-    
-    #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds_downsampled, freqs)
 
     fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
 

@@ -13,7 +13,7 @@ from IPython.display import display
 from typing import List
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, Plot_psd_csv
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 
@@ -119,9 +119,8 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
     # Assuming df_psds is a DataFrame with a DateTimeIndex
     downsampling_factor = 1  # replace with your desired downsampling factor
     df_psds_downsampled = df_psds[::downsampling_factor]
-    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds_downsampled, freqs)
 
-    #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds, freqs)
+    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds, freqs)
 
     tit, unit = get_tit_and_unit(m_or_g)
     fig.update_layout(
