@@ -377,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None):
 
         """
         Constructor method
@@ -428,7 +428,9 @@ class MEG_channels:
         self.psd = psd
         self.freq = freq
         self.mean_ecg = mean_ecg
+        self.mean_ecg_smooth = mean_ecg_smooth
         self.mean_eog = mean_eog
+        self.mean_eog_smooth = mean_eog_smooth
 
 
     def __repr__(self):
@@ -467,6 +469,14 @@ class MEG_channels:
                 data_dict[column_name] = [value]
 
         return pd.DataFrame(data_dict)
+    
+    def add_ecg_eog_info(self, Avg_artif):
+
+        for artif_ch in Avg_artif:
+            if artif_ch.name == self.name:
+                self.mean_ecg = Avg_artif.artif_data
+                self.mean_ecg_smooth = Avg_artif.artif_data_smoothed
+
 
 def assign_channels_properties(raw: mne.io.Raw):
 

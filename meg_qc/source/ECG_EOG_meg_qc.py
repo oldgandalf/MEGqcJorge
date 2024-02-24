@@ -8,7 +8,7 @@ from copy import deepcopy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
 from meg_qc.source.universal_html_report import simple_metric_basic
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
 from IPython.display import display
 
 
@@ -907,6 +907,101 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
 
     return fig
 
+
+def plot_affected_channels_csv(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, chs_by_lobe: dict, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
+
+    """
+    Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+    
+    Parameters
+    ----------
+    artif_affected_channels : list
+        List of ECG/EOG artifact affected channels.
+    artifact_lvl : float
+        The threshold for the artifact amplitude: average over all channels*norm_lvl.
+    t : np.ndarray
+        Time vector.
+    ch_type : str
+        Either 'mag' or 'grad'.
+    fig_tit: str
+        The title of the figure.
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
+    flip_data : bool
+        If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
+        'flip' means that the data will be flipped if the peak of the artifact is negative. 
+        This is donr to get the same sign of the artifact for all channels, then to get the mean artifact amplitude over all channels and the threshold for the artifact amplitude onbase of this mean
+        And also for the reasons of visualization: the artifact amplitude is always positive.
+    smoothed: bool
+        Plot smoothed data (true) or nonrmal (false)
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        The plotly figure with the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+
+        
+    """
+
+    if artif_affected_channels: #if affected channels present:
+
+        #plot channels separated by lobes:
+        affected_names_list = []
+        affected_data_list = []
+        for ch in artif_affected_channels:
+            affected_names_list.append(ch.name)
+            if smoothed is True:
+                affected_data_list.append(ch.artif_data_smoothed)
+            else:
+                affected_data_list.append(ch.artif_data)
+
+        affected_data_arr = np.array(affected_data_list)
+
+        df_affected=pd.DataFrame(affected_data_arr.T, columns=affected_names_list)
+
+        #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_affected, t)
+        fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'ecg', t, m_or_g)
+
+        #decorate the plot:
+        ch_type_tit, unit = get_tit_and_unit(ch_type)
+        fig.update_layout(
+            xaxis_title='Time in seconds',
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title='Mean artifact magnitude in '+unit,
+            title={
+                'text': fig_tit+str(len(artif_affected_channels))+' '+ch_type_tit,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+
+
+    else:
+        fig=go.Figure()
+        ch_type_tit, _ = get_tit_and_unit(ch_type)
+        title=fig_tit+'0 ' +ch_type_tit
+        fig.update_layout(
+            title={
+            'text': title,
+            'x': 0.5,
+            'y': 0.9,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+        
+    #in any case - add the threshold on the plot
+    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
+
+    if flip_data is False and artifact_lvl is not None: 
+        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), line=dict(color='black'), name='-Thres=mean_peak/norm_lvl'))
+
+    if verbose_plots is True:
+        fig.show()
+
+    return fig
 
 
 
@@ -2388,7 +2483,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                 all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
                 #get 10 highest correlations:
                 all_corr_values.sort(reverse=True)
-                print('all_corr_values', all_corr_values)
                 all_corr_values = all_corr_values[:10]
                 mean_corr = np.mean(all_corr_values)
                 #if mean corr is better than the previous one - save it

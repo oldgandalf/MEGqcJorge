@@ -472,6 +472,12 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
 
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
+    elif metric.lower() == 'ecg':
+        col_prefix = 'ECG_sec_'
+    elif metric.lower() == 'eog':
+        col_prefix = 'EOG_sec_'
+    else:
+        print('No proper column in df! Check the metric!')
 
    
     for index, row in df.iterrows():
@@ -488,8 +494,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
                     # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
             
             color = row['Lobe Color']
-
-            print('ch_data HERE: ', row['Name'], ch_data)
 
             traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
             #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
