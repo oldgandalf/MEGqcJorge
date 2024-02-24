@@ -470,12 +470,12 @@ class MEG_channels:
 
         return pd.DataFrame(data_dict)
     
-    def add_ecg_eog_info(self, Avg_artif):
+    def add_ecg_eog_info(self, Avg_artif_list):
 
-        for artif_ch in Avg_artif:
+        for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
-                self.mean_ecg = Avg_artif.artif_data
-                self.mean_ecg_smooth = Avg_artif.artif_data_smoothed
+                self.mean_ecg = artif_ch.artif_data
+                self.mean_ecg_smooth = artif_ch.artif_data_smoothed
 
 
 def assign_channels_properties(raw: mne.io.Raw):
@@ -821,6 +821,13 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     if any(col.startswith('PSD_') and col[4:].isdigit() for col in its_fin.columns):
         # If there are, drop the 'STD epoch' column
         its_fin = its_fin.drop(columns='PSD')
+    if any(col.startswith('ECG_') and col[4:].isdigit() for col in its_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        its_fin = its_fin.drop(columns='ECG')
+    if any(col.startswith('EOG_') and col[4:].isdigit() for col in its_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        its_fin = its_fin.drop(columns='EOG')
+
 
     its_fin.to_csv(f_path, index=False)  
 

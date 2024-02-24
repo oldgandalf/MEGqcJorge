@@ -9,7 +9,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
-from IPython.display import display
+from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 
 
 def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
@@ -2511,7 +2511,15 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', bad_avg_str, use_method)
 
-    return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
+    #Extract chs_by_lobe into a data frame
+    for m_or_g  in m_or_g_chosen:
+        for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
+            for lobe_ch in lobe_channels:
+                lobe_ch.add_ecg_eog_info(affected_channels[m_or_g])
+
+    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
+
+    return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg, f_path
 
 
 #%%
