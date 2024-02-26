@@ -377,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None, ecg_time = None, eog_time = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -431,6 +431,10 @@ class MEG_channels:
         self.mean_ecg_smooth = mean_ecg_smooth
         self.mean_eog = mean_eog
         self.mean_eog_smooth = mean_eog_smooth
+        self.ecg_time = ecg_time
+        self.eog_time = eog_time
+        self.muscle_time = muscle_time
+        self.head_time = head_time
 
 
     def __repr__(self):
@@ -461,6 +465,11 @@ class MEG_channels:
                     for i, v in enumerate(value):
                         fr = freqs[i]
                         data_dict[f'{column_name}_Hz_{fr}'] = [v]
+                elif 'ecg' in attr or 'eog' in attr or 'muscle' in attr or 'head' in attr:
+                    times = getattr(self, 'ecg_time') #TODO: add here all other option besides ecg
+                    for i, v in enumerate(value):
+                        t = times[i]
+                        data_dict[f'{column_name}_sec_{t}'] = [v]
 
                 else: #TODO: here maybe change to elif std/ptp?
                     for i, v in enumerate(value):
@@ -469,13 +478,22 @@ class MEG_channels:
                 data_dict[column_name] = [value]
 
         return pd.DataFrame(data_dict)
-    
-    def add_ecg_eog_info(self, Avg_artif_list):
+
+    def add_ecg_info(self, Avg_artif_list, artif_time_vector):
 
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
                 self.mean_ecg = artif_ch.artif_data
                 self.mean_ecg_smooth = artif_ch.artif_data_smoothed
+                self.ecg_time = artif_time_vector
+                
+    def add_eog_info(self, Avg_artif_list, artif_time_vector):
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_eog = artif_ch.artif_data
+                self.mean_eog_smooth = artif_ch.artif_data_smoothed
+                self.eog_time = artif_time_vector
 
 
 def assign_channels_properties(raw: mne.io.Raw):

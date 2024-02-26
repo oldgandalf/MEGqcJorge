@@ -473,9 +473,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
     elif metric.lower() == 'ecg':
-        col_prefix = 'ECG_sec_'
+        col_prefix = 'mean_ECG_sec_'
     elif metric.lower() == 'eog':
-        col_prefix = 'EOG_sec_'
+        col_prefix = 'mean_EOG_sec_'
     else:
         print('No proper column in df! Check the metric!')
 

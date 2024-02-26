@@ -2512,10 +2512,13 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', bad_avg_str, use_method)
 
     #Extract chs_by_lobe into a data frame
+    artif_time_vector = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
+    #TODO: above we always use tmin, tmax, sfreq to create time vctor in every fuction. here it s done again, maybe change above?
+    
     for m_or_g  in m_or_g_chosen:
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
             for lobe_ch in lobe_channels:
-                lobe_ch.add_ecg_eog_info(affected_channels[m_or_g])
+                lobe_ch.add_ecg_info(affected_channels[m_or_g], artif_time_vector)
 
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
