@@ -377,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None, ecg_time = None, eog_time = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -431,6 +431,10 @@ class MEG_channels:
         self.mean_ecg_smooth = mean_ecg_smooth
         self.mean_eog = mean_eog
         self.mean_eog_smooth = mean_eog_smooth
+        self.ecg_corr_coeff = ecg_corr_coeff
+        self.ecg_pval = ecg_pval
+        self.eog_corr_coeff = eog_corr_coeff
+        self.eog_pval = eog_pval
         self.ecg_time = ecg_time
         self.eog_time = eog_time
         self.muscle = muscle
@@ -456,12 +460,15 @@ class MEG_channels:
         data_dict = {}
         freqs = self.freq
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_eog', 'muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'mean EOG', 'Muscle', 'Head']):
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'mean EOG', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
+            
+            
+            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
             value = getattr(self, attr)
             if isinstance(value, (list, np.ndarray)):
 
-                #adding option for psd:
+                
                 if 'psd' == attr:
                     freqs = getattr(self, 'freq') #??? right
                     for i, v in enumerate(value):

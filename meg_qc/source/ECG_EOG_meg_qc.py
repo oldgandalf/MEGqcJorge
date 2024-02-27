@@ -2598,8 +2598,9 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
-    for m_or_g in m_or_g_chosen:
-        affected_derivs = plot_artif_per_ch_correlated_lobes_csv(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
+    # for m_or_g in m_or_g_chosen:
+    #     affected_derivs = plot_artif_per_ch_correlated_lobes_csv(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
+
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg, f_path
 
