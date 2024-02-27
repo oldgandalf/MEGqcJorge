@@ -1371,6 +1371,35 @@ def add_log_buttons(fig: go.Figure):
 
     return fig
 
+
+def figure_x_axis(df, metric):
+     
+    if metric.lower() == 'psd':
+        # Figure out frequencies:
+        freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
+        freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
+        return freqs
+    
+    elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
+        if metric.lower() == 'ecg':
+            prefix = 'mean ECG_sec_'
+        elif metric.lower() == 'eog': 
+            prefix = 'mean EOG_sec_'
+        elif metric.lower() == 'muscle':
+            prefix = 'Muscle_sec_'
+        elif metric.lower() == 'head':
+            prefix = 'Head_sec_'
+        
+        time_cols = [column for column in df if column.startswith(prefix)]
+        time_vec = np.array([float(x.replace(prefix, '')) for x in time_cols])
+
+        return time_vec
+    
+    else:
+        print('Wrong metric! Cant figure out xaxis for plotting.')
+        return None
+
+
 def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
     """
@@ -1405,9 +1434,8 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     df = pd.read_csv(f_path) 
 
     # Figure out frequencies:
-    freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
-    freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
-    
+    freqs = figure_x_axis(df, metric='psd')
+
     #TODO: DF with freqs still has redundand columns with names of frequencies like column.startswith('Freq_')
     # Remove them!
 
