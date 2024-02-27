@@ -504,6 +504,8 @@ class MEG_channels:
                 self.mean_ecg = artif_ch.artif_data
                 self.mean_ecg_smooth = artif_ch.artif_data_smoothed
                 self.ecg_time = artif_time_vector
+                self.ecg_corr_coeff = artif_ch.corr_coef
+                self.ecg_pval = artif_ch.p_value
                 
     def add_eog_info(self, Avg_artif_list, artif_time_vector):
 
@@ -512,6 +514,12 @@ class MEG_channels:
                 self.mean_eog = artif_ch.artif_data
                 self.mean_eog_smooth = artif_ch.artif_data_smoothed
                 self.eog_time = artif_time_vector
+                self.eog_corr_coeff = artif_ch.corr_coef
+                self.eog_pval = artif_ch.p_value
+
+                #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
+                # but artif_ch doesnt have this separation to ecg/eog. 
+                # Need to just make sure that the function is called in the right place.
 
 
 def assign_channels_properties(raw: mne.io.Raw):
