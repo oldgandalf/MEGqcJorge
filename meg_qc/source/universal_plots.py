@@ -443,7 +443,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g):
+def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
@@ -463,8 +463,11 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
         Plotly figure.
 
     """
+    if f_path is not None:
+        df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
 
-    df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+    print('___Most affected_')
+    print(df)
 
     fig = go.Figure()
     traces_lobes=[]
@@ -473,9 +476,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
     elif metric.lower() == 'ecg':
-        col_prefix = 'mean_ECG_sec_'
+        col_prefix = 'mean ECG_sec_'
     elif metric.lower() == 'eog':
-        col_prefix = 'mean_EOG_sec_'
+        col_prefix = 'mean EOG_sec_'
     else:
         print('No proper column in df! Check the metric!')
 
