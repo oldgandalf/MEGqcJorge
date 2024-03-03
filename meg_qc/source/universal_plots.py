@@ -381,9 +381,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     if f_path is not None:
         df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
 
-    print('___Most affected_')
-    print(df)
-
     fig = go.Figure()
     traces_lobes=[]
     traces_chs=[]
@@ -391,9 +388,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
     elif metric.lower() == 'ecg':
-        col_prefix = 'mean ECG_sec_'
+        col_prefix = 'mean_ecg_sec_'
     elif metric.lower() == 'eog':
-        col_prefix = 'mean EOG_sec_'
+        col_prefix = 'mean_eog_sec_'
     elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
         col_prefix = 'smoothed_mean_ecg_sec_'
     elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
@@ -1304,13 +1301,13 @@ def figure_x_axis(df, metric):
     
     elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
         if metric.lower() == 'ecg':
-            prefix = 'mean ECG_sec_'
+            prefix = 'mean_ecg_sec_'
         elif metric.lower() == 'smoothed_ecg':
             prefix = 'smoothed_mean_ecg_sec_'
         elif metric.lower() == 'smoothed_eog':
             prefix = 'smoothed_mean_eog_sec_'
         elif metric.lower() == 'eog': 
-            prefix = 'mean EOG_sec_'
+            prefix = 'mean_eog_sec_'
         elif metric.lower() == 'muscle':
             prefix = 'Muscle_sec_'
         elif metric.lower() == 'head':
