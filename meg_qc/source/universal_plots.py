@@ -8,91 +8,6 @@ import mne
 import warnings
 import random
 import copy
-import json
-import ast
-
-#from meg_qc.source.initial_meg_qc import MEG_channels
-
-class MEG_channels:
-
-    """ 
-    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
-
-    """
-
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
-
-        """
-        Constructor method
-        
-        Parameters
-        ----------
-        name : str
-            The name of the channel.
-        type : str
-            The type of the channel: 'mag', 'grad'
-        lobe : str
-            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
-        lobe_color : str
-            The color code for plotting with plotly according to the lobe area of the channel.
-        loc : list
-            The location of the channel on the helmet.
-        time_series : array
-            The time series of the channel.
-        std_overall : float
-            The standard deviation of the channel time series.
-        std_epoch : array
-            The standard deviation of the channel time series per epochs.
-        ptp_overall : float
-            The peak-to-peak amplitude of the channel time series.
-        ptp_epoch : array
-            The peak-to-peak amplitude of the channel time series per epochs.
-        psd : array
-            The power spectral density of the channel.
-        mean_ecg : float
-            The mean ECG artifact of the channel.
-        mean_eog : float
-            The mean EOG artifact of the channel.
-
-        """
-
-        self.name = name
-        self.type = type
-        self.lobe = lobe
-        self.lobe_color = lobe_color
-        self.loc = loc
-        self.time_series = time_series
-        self.std_overall = std_overall
-        self.std_epoch = std_epoch
-        self.ptp_overall = ptp_overall
-        self.ptp_epoch = ptp_epoch
-        self.psd = psd
-        self.mean_ecg = mean_ecg
-        self.mean_eog = mean_eog
-
-
-    def __repr__(self):
-
-        """
-        Returns the string representation of the object.
-        
-        """
-
-        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
-        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
-        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
-
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
-
-
-    def to_json(self):
-        return json.dumps(self.__dict__)
-    
-    def to_df(self):
-        return pd.DataFrame(data=[[self.name, self.type, self.lobe, self.lobe_color, self.time_series, self.std_overall, self.ptp_overall, self.std_epoch, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]], columns=['Name','Type','Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'mean ECG', 'mean EOG'])
-
-
-
 
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
@@ -479,6 +394,10 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
         col_prefix = 'mean ECG_sec_'
     elif metric.lower() == 'eog':
         col_prefix = 'mean EOG_sec_'
+    elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
+        col_prefix = 'smoothed_mean_ecg_sec_'
+    elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
+        col_prefix = 'smoothed_mean_eog_sec_'
     else:
         print('No proper column in df! Check the metric!')
 
@@ -1386,6 +1305,10 @@ def figure_x_axis(df, metric):
     elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
         if metric.lower() == 'ecg':
             prefix = 'mean ECG_sec_'
+        elif metric.lower() == 'smoothed_ecg':
+            prefix = 'smoothed_mean_ecg_sec_'
+        elif metric.lower() == 'smoothed_eog':
+            prefix = 'smoothed_mean_eog_sec_'
         elif metric.lower() == 'eog': 
             prefix = 'mean EOG_sec_'
         elif metric.lower() == 'muscle':

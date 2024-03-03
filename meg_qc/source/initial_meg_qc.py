@@ -377,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smooth: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smooth: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -428,9 +428,9 @@ class MEG_channels:
         self.psd = psd
         self.freq = freq
         self.mean_ecg = mean_ecg
-        self.mean_ecg_smooth = mean_ecg_smooth
+        self.mean_ecg_smoothed = mean_ecg_smoothed
         self.mean_eog = mean_eog
-        self.mean_eog_smooth = mean_eog_smooth
+        self.mean_eog_smoothed = mean_eog_smoothed
         self.ecg_corr_coeff = ecg_corr_coeff
         self.ecg_pval = ecg_pval
         self.eog_corr_coeff = eog_corr_coeff
@@ -445,9 +445,13 @@ class MEG_channels:
 
     def __repr__(self):
 
+
+
         """
         Returns the string representation of the object.
         
+        TODO: add remaining metrics here
+
         """
 
         all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
@@ -460,8 +464,8 @@ class MEG_channels:
         data_dict = {}
         freqs = self.freq
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'mean EOG', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean ECG', 'smoothed_mean_ecg', 'mean EOG', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
             
             
             #adding psds/ecg/eog/etc over time or over freqs for plotting later:
@@ -475,7 +479,7 @@ class MEG_channels:
                         fr = freqs[i]
                         data_dict[f'{column_name}_Hz_{fr}'] = [v]
 
-                elif 'mean_ecg' == attr or 'mean_eog' == attr or 'muscle' == attr or 'head' == attr:
+                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
                     if attr == 'mean_ecg':
                         times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
                     elif attr == 'mean_eog':
@@ -502,7 +506,7 @@ class MEG_channels:
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
                 self.mean_ecg = artif_ch.artif_data
-                self.mean_ecg_smooth = artif_ch.artif_data_smoothed
+                self.mean_ecg_smoothed = artif_ch.artif_data_smoothed
                 self.ecg_time = artif_time_vector
                 self.ecg_corr_coeff = artif_ch.corr_coef
                 self.ecg_pval = artif_ch.p_value
@@ -512,7 +516,7 @@ class MEG_channels:
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
                 self.mean_eog = artif_ch.artif_data
-                self.mean_eog_smooth = artif_ch.artif_data_smoothed
+                self.mean_eog_smoothed = artif_ch.artif_data_smoothed
                 self.eog_time = artif_time_vector
                 self.eog_corr_coeff = artif_ch.corr_coef
                 self.eog_pval = artif_ch.p_value
