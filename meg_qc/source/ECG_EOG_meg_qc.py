@@ -10,7 +10,7 @@ from scipy.stats import pearsonr
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
-from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv
+from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv
 
 
 def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
@@ -2288,8 +2288,10 @@ def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
 def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarray, ecg_or_eog: str, tmin: float, tmax: float, verbose_plots: bool):
     
     """
+    Only for demonstartion while running the pipeline. Dpesnt go into final report.
+
     Plots the mean ECG wave and the mean ECG wave shifted to align with the ECG artifacts found on meg channels.
-    Probabb;y will not be included into the report. Just for algorythm demosntration.
+    Probably will not be included into the report. Just for algorythm demosntration.
     The already shifted mean ECG wave is plotted in the report.
 
     Parameters
@@ -2493,9 +2495,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                     best_mean_shifted = mean_shifted
                     best_affected_channels[m_or_g] = affected_channels[m_or_g]
 
+            if verbose_plots is True:
+                plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax, verbose_plots)
+            
 
-            shifted_derivs = plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax, verbose_plots)
-            correlation_derivs = plot_correlation(affected_channels[m_or_g], 'ECG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2503,7 +2506,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
-        ecg_derivs += shifted_derivs+correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
@@ -2523,8 +2525,9 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     for m_or_g in m_or_g_chosen:
         affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+        correlation_derivs = plot_correlation_csv(f_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
 
-    ecg_derivs += affected_derivs
+    ecg_derivs += affected_derivs + correlation_derivs
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg, f_path
 
@@ -2638,15 +2641,12 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
             
             affected_channels[m_or_g] = find_affected_by_correlation(mean_blink, artif_per_ch)
-            correlation_derivs = plot_correlation(affected_channels[m_or_g], 'EOG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
         else:
             raise ValueError('use_method should be either mean_threshold or correlation')
         
-
-        eog_derivs += correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_eog.append(avg_overall_obj)
 
@@ -2666,7 +2666,8 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
 
     for m_or_g in m_or_g_chosen:
         affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+        correlation_derivs = plot_correlation_csv(f_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
-    eog_derivs += affected_derivs
+    eog_derivs += affected_derivs + correlation_derivs 
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog, f_path

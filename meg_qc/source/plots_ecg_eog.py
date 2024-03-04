@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-from meg_qc.source.universal_plots import plot_df_of_channels_data_as_lines_by_lobe_csv, get_tit_and_unit
-from meg_qc.source.universal_plots import QC_derivative
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe_csv
 
 def figure_x_axis(df, metric):
      
@@ -280,3 +279,61 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
    
     return affected_derivs
+
+
+def plot_correlation_csv(f_path, ecg_or_eog, m_or_g, verbose_plots=False):
+
+    """
+    Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of channels with Avg_artif objects.
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
+    m_or_g : str
+        Either 'mag' or 'grad'.
+    verbose_plots : bool
+        If True, plot will be displayed in a notebook.
+
+    Returns
+    -------
+    corr_derivs : list
+        List with 1 QC_derivative instance: Figure with correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    
+    """
+
+    ecg_or_eog = ecg_or_eog.lower()
+
+    df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+    df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
+
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+
+    traces = []
+
+    tit, _ = get_tit_and_unit(m_or_g)
+
+    for index, row in df.iterrows():
+        traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
+
+    fig = go.Figure(data=traces)
+
+    fig.add_shape(type="rect", xref="x", yref="y", x0=0, y0=-0.1, x1=corr_val_of_last_least_correlated, y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_middle_correlated, y0=-0.1, x1=1, y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+
+    #set axis titles:
+    fig.update_xaxes(title_text='Correlation coefficient')
+    fig.update_yaxes(title_text='P-value')
+
+    #set title:
+    fig.update_layout(title_text=tit+': Pearson correlation between reference '+ecg_or_eog+' epoch and '+ecg_or_eog+' epoch in each channel')
+
+    if verbose_plots is True:
+        fig.show()
+
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>')]
+
+    return corr_derivs
