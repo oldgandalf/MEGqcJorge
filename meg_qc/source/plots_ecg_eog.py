@@ -98,7 +98,7 @@ def split_correlated_artifacts_into_3_groups_csv(df, metric):
     return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
 
 
-def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, fig_tit: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
+def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
@@ -135,15 +135,15 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
         
     """
 
+    fig_tit=ecg_or_eog+title
+
     #if df and not df.empty: #if affected channels present:
     if df is not None:
         if smoothed is True:
-            metric = 'ecg_smoothed'
+            metric = ecg_or_eog+'_smoothed'
         elif smoothed is False:
-            metric = 'ecg'
+            metric = ecg_or_eog
         fig = plot_df_of_channels_data_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
-
-        #TODO: add smoothed version here!!
 
         #decorate the plot:
         ch_type_tit, unit = get_tit_and_unit(m_or_g)
@@ -232,16 +232,15 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
-
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
 
     most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
 
-
     smoothed = True
-    fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, fig_tit=ecg_or_eog+' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, fig_tit=ecg_or_eog+' middle affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, fig_tit=ecg_or_eog+' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' middle affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+
 
     #set the same Y axis limits for all 3 figures for clear comparison:
 

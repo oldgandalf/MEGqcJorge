@@ -2638,7 +2638,6 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
             
             affected_channels[m_or_g] = find_affected_by_correlation(mean_blink, artif_per_ch)
-            affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'EOG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation(affected_channels[m_or_g], 'EOG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
@@ -2647,11 +2646,27 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
-        eog_derivs += affected_derivs+correlation_derivs
+        eog_derivs += correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_eog.append(avg_overall_obj)
 
 
     simple_metric_EOG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'EOG', bad_avg_str, use_method)
 
-    return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog
+    #Extract chs_by_lobe into a data frame
+    artif_time_vector = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
+    #TODO: above we always use tmin, tmax, sfreq to create time vector in every fuction. here it s done again, maybe change above?
+
+    for m_or_g  in m_or_g_chosen:
+        for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
+            for lobe_ch in lobe_channels:
+                lobe_ch.add_eog_info(affected_channels[m_or_g], artif_time_vector)
+
+    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
+
+    for m_or_g in m_or_g_chosen:
+        affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+
+    eog_derivs += affected_derivs
+
+    return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog, f_path
