@@ -10,6 +10,7 @@ from scipy.stats import pearsonr
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
+from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv
 
 
 def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
@@ -1581,83 +1582,6 @@ def plot_artif_per_ch_correlated_lobes(artif_per_ch: list, tmin: float, tmax: fl
         
     return affected_derivs
 
-def plot_artif_per_ch_correlated_lobes_csv(artif_per_ch: list, tmin: float, tmax: float, m_or_g: str, ecg_or_eog: str, chs_by_lobe: dict, flip_data: bool, verbose_plots: bool):
-
-    """
-    Plot average artifact for each channel, colored by lobe, 
-    channels are split into 3 separate plots, based on their correlation with mean_rwave: equal number of channels in each group.
-
-    Parameters
-    ----------
-    artif_per_ch : list
-        List of objects of class Avg_artif
-    tmin : float
-        Start time of the epoch (negative value)
-    tmax : float
-        End time of the epoch
-    m_or_g : str
-        Type of the channel: mag or grad
-    ecg_or_eog : str
-        Type of the artifact: ECG or EOG
-    chs_by_lobe : dict
-        Dictionary with channels split by lobe
-    flip_data : bool
-        Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
-    verbose_plots : bool
-        If True, plots are shown in the notebook.
-
-    Returns
-    -------
-    artif_per_ch : list
-        List of objects of class Avg_artif
-    affected_derivs : list
-        List of objects of class QC_derivative (plots)
-    
-
-    """
-
-
-    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups(artif_per_ch)
-
-    #plot using plotly: 
-    # artif_per_ch.artif_data - a third of all channels that are the most correlated with mean_rwave, 
-    # artif_per_ch.artif_data - a third of all channels that are the less with mean_rwave, 
-    # artif_per_ch.artif_data - a third of all channels that are the least correlated with mean_rwave
-
-    artif_time_vector = np.linspace(tmin, tmax, len(artif_per_ch[0].artif_data))
-
-    fig_most_affected = plot_affected_channels(most_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' most affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels(middle_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' middle affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=False)
-    fig_least_affected = plot_affected_channels(least_correlated, None, artif_time_vector, ch_type=m_or_g, fig_tit=ecg_or_eog+' least affected channels (smoothed): ', chs_by_lobe=chs_by_lobe, flip_data=flip_data, smoothed = True, verbose_plots=False)
-
-    #set the same Y axis limits for all 3 figures for clear comparison:
-    
-    # combine the data lists into one numpy array
-    arr = np.array([ch.artif_data for ch in artif_per_ch])
-
-    # #find the highest and lowest value in artif_per_ch.artif_data:
-    ymin = np.min(arr)
-    ymax = np.max(arr)
-
-    ylim = [ymin*.95, ymax*1.05]
-
-    # update the layout of all three figures with the same y-axis limits
-    fig_most_affected.update_layout(yaxis_range=ylim)
-    fig_middle_affected.update_layout(yaxis_range=ylim)
-    fig_least_affected.update_layout(yaxis_range=ylim)
-
-    if verbose_plots is True:
-        fig_most_affected.show()
-        fig_middle_affected.show()
-        fig_least_affected.show()
-    
-    affected_derivs = []
-    affected_derivs += [QC_derivative(fig_most_affected, ecg_or_eog+'most_affected_channels_'+m_or_g, 'plotly')]
-    affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
-    affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
-        
-    return affected_derivs
-
 
 def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal: dict, thresh_lvl_peakfinder: float, plotflag: bool, verbose_plots: bool, m_or_g: str, chs_by_lobe: dict, norm_lvl: float, flip_data: bool, gaussian_sigma: float, artif_time_vector: np.ndarray):
     
@@ -2571,7 +2495,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
             shifted_derivs = plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax, verbose_plots)
-            affected_derivs = plot_artif_per_ch_correlated_lobes(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation(affected_channels[m_or_g], 'ECG', m_or_g, verbose_plots=verbose_plots)
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
@@ -2580,7 +2503,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
-        ecg_derivs += shifted_derivs+affected_derivs+correlation_derivs
+        ecg_derivs += shifted_derivs+correlation_derivs
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
 
@@ -2589,7 +2512,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     #Extract chs_by_lobe into a data frame
     artif_time_vector = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
-    #TODO: above we always use tmin, tmax, sfreq to create time vctor in every fuction. here it s done again, maybe change above?
+    #TODO: above we always use tmin, tmax, sfreq to create time vector in every fuction. here it s done again, maybe change above?
 
     for m_or_g  in m_or_g_chosen:
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
@@ -2598,9 +2521,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
-    # for m_or_g in m_or_g_chosen:
-    #     affected_derivs = plot_artif_per_ch_correlated_lobes_csv(affected_channels[m_or_g], tmin, tmax, m_or_g, 'ECG', chs_by_lobe[m_or_g], flip_data=False, verbose_plots=verbose_plots)
+    for m_or_g in m_or_g_chosen:
+        affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
 
+    ecg_derivs += affected_derivs
 
     return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg, f_path
 
