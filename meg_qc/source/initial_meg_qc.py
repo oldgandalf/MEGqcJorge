@@ -838,16 +838,6 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
 
     #Extract chs_by_lobe into a data frame
     chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
-    # channel.to_df() converts chs_by_lobe dict to df!
-
-    # print("______chs_by_lobe['mag']['Left Frontal'][0].psd")
-    # print(chs_by_lobe['mag']['Left Frontal'][0].psd)
-
-    # if chs_by_lobe['mag']['Left Frontal'][0].psd is not None:
-    #     print('____df____')
-    #     print(chs_by_lobe_df)
-
-
 
     its = []
     for ch_type, content in chs_by_lobe_df.items():
@@ -876,10 +866,6 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
         # If there are, drop the 'STD epoch' column
         its_fin = its_fin.drop(columns='EOG')
 
-
     its_fin.to_csv(f_path, index=False)  
-
-    # if chs_by_lobe already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
-    # Check if there are columns that start with 'STD epoch_'
 
     return f_path

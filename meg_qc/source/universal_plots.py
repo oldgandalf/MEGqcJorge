@@ -2080,4 +2080,98 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
 
 
 
+def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
+
+    """
+    Plot the muscle events with the z-scores and the threshold.
+    
+    Parameters
+    ----------
+    m_or_g : str
+        The channel type used for muscle detection: 'mag' or 'grad'.
+    raw : mne.io.Raw
+        The raw data.
+    scores_muscle : np.ndarray
+        The z-scores of the muscle events.
+    threshold_muscle : float
+        The z-score threshold used for muscle detection.
+    muscle_times : np.ndarray
+        The times of the muscle events.
+    high_scores_muscle : np.ndarray
+        The z-scores of the muscle events over the threshold.
+    verbose_plots : bool
+        True for showing plot in notebook.
+    annot_muscle : mne.Annotations
+        The annotations of the muscle events. Used only for interactive_matplot.
+    interactive_matplot : bool
+        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report.
+
+    Returns
+    -------
+    fig_derivs : list
+        A list of QC_derivative objects with plotly figures for muscle events.
+
+    """
+
+    df = pd.read_csv(f_path)  
+
+    print(df)
+
+    fig_derivs = []
+
+    fig=go.Figure()
+    tit, _ = get_tit_and_unit(m_or_g)
+    # fig.add_trace(go.Scatter(x=raw.times, y=scores_muscle, mode='lines', name='high freq (muscle scores)'))
+    # fig.add_trace(go.Scatter(x=muscle_times, y=high_scores_muscle, mode='markers', name='high freq (muscle) events'))
+    
+    fig.add_trace(go.Scatter(x=df['data_times'], y=df['scores_muscle'], mode='lines', name='high freq (muscle scores)'))
+    fig.add_trace(go.Scatter(x=df['high_scores_muscle_times'], y=df['high_scores_muscle'], mode='markers', name='high freq (muscle) events'))
+    
+    
+    # #removed threshold, so this one is not plotted now:
+    #fig.add_trace(go.Scatter(x=raw.times, y=[threshold_muscle]*len(raw.times), mode='lines', name='z score threshold: '+str(threshold_muscle)))
+    fig.update_layout(xaxis_title='time, (s)', yaxis_title='zscore', title={
+    'text': "Muscle z scores (high fequency artifacts) over time based on "+tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+
+    if verbose_plots is True:
+        fig.show()
+
+    fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit, 'plotly')]
+    
+    return fig_derivs
+
+
+
+def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
+
+    '''
+    Currently not used since cant be added into HTML report
+
+    '''
+    # ## View the annotations (interactive_matplot)
+
+    tit, _ = get_tit_and_unit(m_or_g)
+    fig_derivs = []
+    if interactive_matplot is True:
+        order = np.arange(144, 164)
+        raw.set_annotations(annot_muscle)
+        fig2=raw.plot(start=5, duration=20, order=order)
+        #Change settings to show all channels!
+
+        # No suppressing of plots should be done here. This one is matplotlib interactive plot, so it ll only work with %matplotlib qt.
+        # Makes no sense to suppress it. Also, adding to QC_derivative is just formal, cos whe extracting to html it s not interactive any more. 
+        # Should not be added to report. Kept here in case mne will allow to extract interactive later.
+
+        fig_derivs += [QC_derivative(fig2, 'muscle_annotations_'+tit, 'matplotlib')]
+    
+    return fig_derivs
+
+    
+
+
+
 
