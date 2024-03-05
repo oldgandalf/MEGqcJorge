@@ -119,6 +119,22 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
     
     return simple_metric
 
+def head_pos_to_csv(file_name_prefix, head_pos):
+
+    #names=['x', 'y', 'z', 'q1', 'q2', 'q3']
+    names = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']
+
+    # df = pd.DataFrame(data=head_pos, index=names, columns=[c for c in range(len(head_pos))])
+    # df=df.transpose()
+
+    df = pd.DataFrame(data=head_pos, columns=names)
+    
+    f_path = '/Volumes/M2_DATA/'+file_name_prefix+'.csv'
+    df.to_csv(f_path) 
+
+    return f_path
+
+
 
 def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
 
@@ -368,6 +384,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
 
+    f_path = head_pos_to_csv('Head', head_pos)
 
     # Visual part:
     if plot_with_lines is True:
