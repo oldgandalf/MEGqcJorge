@@ -1,5 +1,6 @@
 import plotly
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import base64
 from io import BytesIO
 import numpy as np
@@ -9,6 +10,8 @@ import warnings
 import random
 import copy
 
+from mne.preprocessing import compute_average_dev_head_t
+import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 
@@ -2171,7 +2174,105 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     return fig_derivs
 
     
+def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
+
+    """ 
+    Plot positions and rotations of the head.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    head_pos : np.ndarray
+        Head positions and rotations.
+    verbose_plots : bool
+        True for showing plot in notebook.
+        
+    Returns
+    -------
+    head_derivs : list 
+        List of QC_derivative objects containing figures with head positions and rotations.
+    head_pos_baselined : np.ndarray
+        Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
+    """
+
+    head_pos = pd.read_csv(f_path) 
+
+    #drop first column. cos index is being created as an extra column when transforming from csv back to df:
+    head_pos.drop(columns=head_pos.columns[0], axis=1, inplace=True)
+
+    #plot head_pos using PLOTLY:
+
+    # First, for each head position subtract the first point from all the other points to make it always deviate from 0:
+    head_pos_baselined=head_pos.copy()
+    #head_pos_baselined=head_pos_degrees.copy()
+    for column in ['x', 'y', 'z', 'q1', 'q2', 'q3']:
+        head_pos_baselined[column] -= head_pos_baselined[column][0]
+
+    t = head_pos['t']
+
+    fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quat)"))
+
+    names_pos=['x', 'y', 'z']
+    names_rot=['q1', 'q2', 'q3']
+    for counter in [0, 1, 2]:
+        position=1000*-head_pos[names_pos[counter]]
+        #position=1000*-head_pos_baselined[names_pos[counter]]
+        fig1p.add_trace(go.Scatter(x=t, y=position, mode='lines', name=names_pos[counter]), row=counter+1, col=1)
+        fig1p.update_yaxes(title_text=names_pos[counter], row=counter+1, col=1)
+        rotation=head_pos[names_rot[counter]]
+        #rotation=head_pos_baselined[names_rot[counter]]
+        fig1p.add_trace(go.Scatter(x=t, y=rotation, mode='lines', name=names_rot[counter]), row=counter+1, col=2)
+        fig1p.update_yaxes(title_text=names_rot[counter], row=counter+1, col=2)
+
+    fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
+    fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
+
+    if verbose_plots is True:
+        fig1p.show()
+
+    head_derivs = [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+    return head_derivs, head_pos_baselined
 
 
 
+def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
 
+    """
+
+    Currently not used if we wanna plot solely from csv. 
+    This function requires also raw as input and cant be only from csv.
+
+    TODO: but we can calculate these inputs earlier and add them to csv as well.
+
+    """
+
+    original_head_dev_t = mne.transforms.invert_transform(
+        raw.info['dev_head_t'])
+    average_head_dev_t = mne.transforms.invert_transform(
+        compute_average_dev_head_t(raw, head_pos))
+    
+    print('________')
+    print(original_head_dev_t)
+    print(average_head_dev_t)
+    print(len(original_head_dev_t), len(average_head_dev_t ))
+
+    if verbose_plots is False:
+        matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+
+    #plot using MNE:
+    fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
+    #fig1 = mne.viz.plot_head_positions(head_pos_degrees)
+    for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
+                        original_head_dev_t['trans'][:3, 3]):
+        ax.axhline(1000*val, color='r')
+        ax.axhline(1000*val_ori, color='g')
+        #print('___MEG QC___: ', 'val', val, 'val_ori', val_ori)
+    # The green horizontal lines represent the original head position, whereas the
+    # Red lines are the new head position averaged over all the time points.
+
+
+    head_derivs = [QC_derivative(fig1, 'Head_position_rotation_average_mne', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+    return head_derivs

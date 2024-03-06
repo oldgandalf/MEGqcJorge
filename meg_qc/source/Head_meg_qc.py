@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
-from meg_qc.source.universal_plots import QC_derivative
+from meg_qc.source.universal_plots import QC_derivative, make_head_pos_plot_csv, make_head_pos_plot_mne
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
 mne.viz.set_browser_backend('matplotlib')
@@ -121,11 +121,7 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
 
 def head_pos_to_csv(file_name_prefix, head_pos):
 
-    #names=['x', 'y', 'z', 'q1', 'q2', 'q3']
     names = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']
-
-    # df = pd.DataFrame(data=head_pos, index=names, columns=[c for c in range(len(head_pos))])
-    # df=df.transpose()
 
     df = pd.DataFrame(data=head_pos, columns=names)
     
@@ -133,7 +129,6 @@ def head_pos_to_csv(file_name_prefix, head_pos):
     df.to_csv(f_path) 
 
     return f_path
-
 
 
 def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
@@ -374,6 +369,8 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
         print('___MEG QC___: ', head_str)
         simple_metric_head = {'description': 'Head positions could not be computed.'}
         return [], simple_metric_head, head_str, None, None
+    
+    f_path = head_pos_to_csv('Head', head_pos)
 
     # Optional! translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
     # (we assume they are in radients. But in the plot it says they are in quat! 
@@ -384,11 +381,12 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
 
-    f_path = head_pos_to_csv('Head', head_pos)
-
     # Visual part:
     if plot_with_lines is True:
         head_pos_derivs, head_pos_baselined = make_head_pos_plot(raw, head_pos, verbose_plots=verbose_plots)
+        head_pos_derivs, head_pos_baselined = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
+        head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
+        head_pos_derivs += head_pos_derivs2
     else:
         head_pos_derivs = []
 
