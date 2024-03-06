@@ -2664,10 +2664,6 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
 
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
 
-    for m_or_g in m_or_g_chosen:
-        affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-        correlation_derivs = plot_correlation_csv(f_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
-
-    eog_derivs += affected_derivs + correlation_derivs 
+    eog_derivs += affected_derivs
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog, f_path

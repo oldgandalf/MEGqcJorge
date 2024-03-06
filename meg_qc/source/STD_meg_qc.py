@@ -515,9 +515,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     small_std_with_value_all_data = {}
     std_all_data = {}
     derivs_std = []
-    fig_std_epoch0 = []
-    fig_std_epoch1 = []
-    fig_std_epoch2 = []
     derivs_list = []
     noisy_flat_epochs_derivs={}
 
@@ -537,9 +534,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
                 #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
         #derivs_std += [boxplot_all_time_csv(chs_by_lobe_std[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
-        #TODO: make flexible file name
-        derivs_std += [boxplot_all_time_csv('/Volumes/M2_DATA/STDs_by_lobe.csv', ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
@@ -574,15 +568,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     #Extract chs_by_lobe into a data frame
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
 
-    #TODO: This part will go into separate plotting
-    if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None: #If epochs are present
-        for m_or_g in m_or_g_chosen:
-
-            # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
-            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
-    derivs_std += fig_std_epoch0+fig_std_epoch1 + fig_std_epoch2 + derivs_list 
+    derivs_std += derivs_list 
 
     return derivs_std, simple_metric_std, std_str, f_path

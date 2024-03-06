@@ -1227,10 +1227,4 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     #Extract chs_by_lobe into a data frame
     f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
 
-    for m_or_g in m_or_g_chosen:
-
-        psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
-
-        derivs_psd += [psd_plot_derivative]
-
     return derivs_psd, simple_metric, psd_str, noisy_freqs_global, f_path

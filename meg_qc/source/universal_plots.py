@@ -2118,8 +2118,6 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
 
     df = pd.read_csv(f_path)  
 
-    print(df)
-
     fig_derivs = []
 
     fig=go.Figure()
@@ -2253,10 +2251,6 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
     average_head_dev_t = mne.transforms.invert_transform(
         compute_average_dev_head_t(raw, head_pos))
     
-    print('________')
-    print(original_head_dev_t)
-    print(average_head_dev_t)
-    print(len(original_head_dev_t), len(average_head_dev_t ))
 
     if verbose_plots is False:
         matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline

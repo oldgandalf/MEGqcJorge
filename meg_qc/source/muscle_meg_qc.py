@@ -29,7 +29,7 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_muscle_csv
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
 
 def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
 
@@ -451,8 +451,6 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     muscle_note = "This metric shows high frequency artifacts in range between 110-140 Hz. High power in this frequency band compared to the rest of the signal is strongly correlated with muscles artifacts, as suggested by MNE. However, high frequency oscillations may also occure in this range for reasons other than muscle activity (for example, in an empty room recording). "
     muscle_str_joined=muscle_note+"<p>"+muscle_str+"</p>"
 
-    muscle_derivs=[]
-
     raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
 
     attach_sec = 3 # seconds
@@ -470,6 +468,6 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
     simple_metric, scores_muscle, f_path = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
     
-    muscle_derivs +=  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = True)
+    muscle_derivs =  []
 
     return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw

@@ -328,7 +328,7 @@ def get_head_positions(raw: mne.io.Raw):
 
 
 
-def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: bool =True, plot_annotations: bool =False):
+def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations: bool =False):
 
     """
     Main function for head movement. Calculates:
@@ -381,21 +381,10 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
 
-    # Visual part:
-    if plot_with_lines is True:
-        head_pos_derivs, head_pos_baselined = make_head_pos_plot(raw, head_pos, verbose_plots=verbose_plots)
-        head_pos_derivs, head_pos_baselined = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
-        head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
-        head_pos_derivs += head_pos_derivs2
-    else:
-        head_pos_derivs = []
-
     if plot_annotations is True:
         plot_annot_derivs = make_head_annots_plot(raw, head_pos, verbose_plots=verbose_plots)
     else:
         plot_annot_derivs = []
-
-    head_derivs = head_pos_derivs + plot_annot_derivs
 
     # Calculate the standard deviation of the movement of the head over time:
     std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
@@ -409,6 +398,6 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_with_lines: 
     # Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos
+    return plot_annot_derivs, simple_metrics_head, head_str, df_head_pos, head_pos, f_path
 
 
