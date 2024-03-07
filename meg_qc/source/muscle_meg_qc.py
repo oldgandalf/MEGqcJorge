@@ -349,7 +349,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
         muscle_times = raw.times[peak_locs_pos]
         high_scores_muscle=scores_muscle[peak_locs_pos]
 
-        f_path = save_muscle_to_csv('Muscle', raw, scores_muscle, muscle_times, high_scores_muscle)
+        df_deriv = save_muscle_to_csv('Muscle', raw, scores_muscle, muscle_times, high_scores_muscle)
 
         # collect all details for simple metric:
         z_score_details['muscle_event_times'] = muscle_times.tolist()
@@ -360,7 +360,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
             
         simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
 
-    return simple_metric, scores_muscle, f_path
+    return simple_metric, scores_muscle, df_deriv
 
 
 def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np.ndarray, high_scores_muscle_times: np.ndarray, high_scores_muscle: np.ndarray, threshold_muscle: float = None):
@@ -372,11 +372,10 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
 
     df = pd.DataFrame(data=data, index=ind, columns=[c for c in range(len(data_times))])
     df=df.transpose()
-    
-    f_path = '/Volumes/M2_DATA/'+file_name_prefix+'.csv'
-    df.to_csv(f_path) 
 
-    return f_path
+    df_deriv = [QC_derivative(content = df, name = file_name_prefix, content_type = 'df')]
+
+    return df_deriv
 
 
 def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, verbose_plots: bool, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
@@ -466,8 +465,6 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
     #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
-    simple_metric, scores_muscle, f_path = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
-    
-    muscle_derivs =  []
+    simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
 
-    return muscle_derivs, simple_metric, muscle_str_joined, scores_muscle, raw
+    return df_deriv, simple_metric, muscle_str_joined, scores_muscle, raw

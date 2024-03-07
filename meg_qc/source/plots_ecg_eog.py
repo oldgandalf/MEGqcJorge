@@ -228,7 +228,7 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     ecg_or_eog = ecg_or_eog.lower()
 
-    df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+    df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
@@ -306,7 +306,7 @@ def plot_correlation_csv(f_path, ecg_or_eog, m_or_g, verbose_plots=False):
 
     ecg_or_eog = ecg_or_eog.lower()
 
-    df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+    df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
     _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)

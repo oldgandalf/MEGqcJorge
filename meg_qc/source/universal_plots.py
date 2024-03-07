@@ -143,7 +143,7 @@ class QC_derivative:
         name : str
             The name of the derivative (used to save in to file system)
         content_type : str
-            The type of the content: 'plotly', 'matplotlib', 'csv', 'report' or 'mne_report'.
+            The type of the content: 'plotly', 'matplotlib', 'df', 'report' or 'mne_report'.
             Used to choose the right way to save the derivative in main function.
         description_for_user : str, optional
             The description of the derivative, by default 'Add measurement description for a user...'
@@ -382,7 +382,7 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
 
     """
     if f_path is not None:
-        df = pd.read_csv(f_path) #TODO: maybe remove reading csv and pass directly the df here?
+        df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
 
     fig = go.Figure()
     traces_lobes=[]
@@ -1139,7 +1139,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
         derivative containing plotly figure
     
     """
-    df = pd.read_csv(std_csv_path)
+    df = pd.read_csv(std_csv_path, sep='\t')
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -1357,7 +1357,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     """
 
     # First, get the epochs from csv and convert back into object.
-    df = pd.read_csv(f_path) 
+    df = pd.read_csv(f_path, sep='\t') 
 
     # Figure out frequencies:
     freqs = figure_x_axis(df, metric='psd')
@@ -1558,7 +1558,7 @@ def csv_to_df_back(std_csv_path):
 
     #TODO: why do I create it? dont even need cos we got df = pd.read_csv(std_csv_path) in the next func
 
-    df = pd.read_csv(std_csv_path)  
+    df = pd.read_csv(std_csv_path, sep='\t')  
 
     # Create an empty DataFrame to store the new data
     df_new = pd.DataFrame()
@@ -1623,7 +1623,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     """
 
     # First, get the epochs from csv and convert back into object.
-    df = pd.read_csv(std_csv_path)  
+    df = pd.read_csv(std_csv_path, sep='\t')  
 
     # Figure column names:
     # Create a list of columns that start with 'STD epoch_'
@@ -2004,7 +2004,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
 
     #First, convert scv back into dict with MEG_channels objects:
 
-    df = pd.read_csv(std_csv_path)  
+    df = pd.read_csv(std_csv_path, sep='\t')  
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -2116,7 +2116,7 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
 
     """
 
-    df = pd.read_csv(f_path)  
+    df = pd.read_csv(f_path, sep='\t')  
 
     fig_derivs = []
 
@@ -2194,7 +2194,7 @@ def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
         Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
     """
 
-    head_pos = pd.read_csv(f_path) 
+    head_pos = pd.read_csv(f_path, sep='\t') 
 
     #drop first column. cos index is being created as an extra column when transforming from csv back to df:
     head_pos.drop(columns=head_pos.columns[0], axis=1, inplace=True)

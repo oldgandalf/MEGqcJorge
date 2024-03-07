@@ -131,7 +131,7 @@ def make_plots_meg_qc(config_plot_file_path):
 
     if plot_params['default']['plot_STD'] is True:
 
-        f_path = derivs_path+'STDs_by_lobe.csv'
+        f_path = derivs_path+'STDs_by_lobe.tsv'
         fig_std_epoch0 = []
         fig_std_epoch1 = []
     
@@ -150,7 +150,7 @@ def make_plots_meg_qc(config_plot_file_path):
     # PtP
         
     if plot_params['default']['plot_PTP_manual'] is True:
-        f_path = derivs_path+'PtPs_by_lobe.csv'
+        f_path = derivs_path+'PtPs_by_lobe.tsv'
 
 
 
@@ -162,7 +162,7 @@ def make_plots_meg_qc(config_plot_file_path):
         for m_or_g in m_or_g_chosen:
 
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
-            f_path = derivs_path+'PSDs_by_lobe.csv'
+            f_path = derivs_path+'PSDs_by_lobe.tsv'
 
             psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
 
@@ -173,7 +173,7 @@ def make_plots_meg_qc(config_plot_file_path):
     
     if plot_params['default']['plot_ECG'] is True:
             
-        f_path = derivs_path+'ECGs_by_lobe.csv'
+        f_path = derivs_path+'ECGs_by_lobe.tsv'
             
         for m_or_g in m_or_g_chosen:
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
@@ -185,7 +185,7 @@ def make_plots_meg_qc(config_plot_file_path):
 
     if plot_params['default']['plot_EOG'] is True:
          
-        f_path = derivs_path+'EOGs_by_lobe.csv'
+        f_path = derivs_path+'EOGs_by_lobe.tsv'
             
         for m_or_g in m_or_g_chosen:
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
@@ -197,7 +197,7 @@ def make_plots_meg_qc(config_plot_file_path):
         
     if plot_params['default']['plot_Muscle'] is True:
 
-        f_path = derivs_path+'muscle.csv'
+        f_path = derivs_path+'muscle.tsv'
 
         if 'mag' in m_or_g_chosen:
                 m_or_g_decided=['mag']
@@ -213,7 +213,7 @@ def make_plots_meg_qc(config_plot_file_path):
         
     if plot_params['default']['plot_Head'] is True:
 
-        f_path = derivs_path+'Head.csv'
+        f_path = derivs_path+'Head.tsv'
             
         head_pos_derivs, _ = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
         # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)

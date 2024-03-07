@@ -7,7 +7,7 @@ import pandas as pd
 from IPython.display import display
 
 from IPython.display import display
-from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
+from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg, QC_derivative
 
 
 def get_all_config_params(config_file_name: str):
@@ -844,28 +844,25 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
         for lobe, items in content.items():
             its.append(items)
 
-    its_fin = pd.concat(its)
-
-    f_path = '/Volumes/M2_DATA/'+file_name_prefix+'_by_lobe.csv'
-    #TODO: make flexible file path
+    df_fin = pd.concat(its)
 
     # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
-    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in its_fin.columns):
+    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
-        its_fin = its_fin.drop(columns='STD epoch')
-    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in its_fin.columns):
+        df_fin = df_fin.drop(columns='STD epoch')
+    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'PtP epoch' column
-        its_fin = its_fin.drop(columns='PtP epoch')
-    if any(col.startswith('PSD_') and col[4:].isdigit() for col in its_fin.columns):
+        df_fin = df_fin.drop(columns='PtP epoch')
+    if any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
-        its_fin = its_fin.drop(columns='PSD')
-    if any(col.startswith('ECG_') and col[4:].isdigit() for col in its_fin.columns):
+        df_fin = df_fin.drop(columns='PSD')
+    if any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
-        its_fin = its_fin.drop(columns='ECG')
-    if any(col.startswith('EOG_') and col[4:].isdigit() for col in its_fin.columns):
+        df_fin = df_fin.drop(columns='ECG')
+    if any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
-        its_fin = its_fin.drop(columns='EOG')
+        df_fin = df_fin.drop(columns='EOG')
 
-    its_fin.to_csv(f_path, index=False)  
+    df_deriv = [QC_derivative(content = df_fin, name = file_name_prefix, content_type = 'df')]
 
-    return f_path
+    return df_deriv

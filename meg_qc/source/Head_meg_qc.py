@@ -122,13 +122,11 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
 def head_pos_to_csv(file_name_prefix, head_pos):
 
     names = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']
-
     df = pd.DataFrame(data=head_pos, columns=names)
-    
-    f_path = '/Volumes/M2_DATA/'+file_name_prefix+'.csv'
-    df.to_csv(f_path) 
 
-    return f_path
+    df_deriv = [QC_derivative(content = df, name = file_name_prefix, content_type = 'df')]
+
+    return df_deriv
 
 
 def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
@@ -370,7 +368,6 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations:
         simple_metric_head = {'description': 'Head positions could not be computed.'}
         return [], simple_metric_head, head_str, None, None
     
-    f_path = head_pos_to_csv('Head', head_pos)
 
     # Optional! translate rotation columns [1:4] in head_pos.T into degrees: (360/2pi)*value: 
     # (we assume they are in radients. But in the plot it says they are in quat! 
@@ -381,6 +378,10 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations:
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
 
+    head_csv = head_pos_to_csv('Head', head_pos)
+    #f_path = head_pos_to_csv('Head', head_pos_degrees)
+
+    # MNE plot:
     if plot_annotations is True:
         plot_annot_derivs = make_head_annots_plot(raw, head_pos, verbose_plots=verbose_plots)
     else:
@@ -398,6 +399,8 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations:
     # Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)
     
-    return plot_annot_derivs, simple_metrics_head, head_str, df_head_pos, head_pos, f_path
+    head_derivs = plot_annot_derivs + head_csv
+
+    return head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos
 
 

@@ -2521,15 +2521,11 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(affected_channels[m_or_g], artif_time_vector)
 
-    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
+    ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
-    for m_or_g in m_or_g_chosen:
-        affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-        correlation_derivs = plot_correlation_csv(f_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+    ecg_derivs += ecg_csv_deriv
 
-    ecg_derivs += affected_derivs + correlation_derivs
-
-    return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg, f_path
+    return ecg_derivs, simple_metric_ECG, ecg_str, avg_objects_ecg
 
 
 #%%
@@ -2662,8 +2658,8 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
             for lobe_ch in lobe_channels:
                 lobe_ch.add_eog_info(affected_channels[m_or_g], artif_time_vector)
 
-    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
+    eog_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
 
-    eog_derivs += affected_derivs
+    eog_derivs += eog_csv_deriv
 
-    return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog, f_path
+    return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog

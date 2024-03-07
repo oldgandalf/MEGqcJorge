@@ -172,13 +172,13 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_STD'] is True:
                     print('___MEG QC___: ', 'Starting STD...')
                     start_time = time.time()
-                    std_derivs, simple_metrics_std, std_str, f_path_std = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
+                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
     
                 if all_qc_params['default']['run_PSD'] is True:
                     print('___MEG QC___: ', 'Starting PSD...')
                     start_time = time.time()
-                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global, f_path_psd = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, verbose_plots, helperplots=False)
+                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, verbose_plots, helperplots=False)
                     print('___MEG QC___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_PTP_manual'] is True:
@@ -196,7 +196,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_ECG'] is True:
                     print('___MEG QC___: ', 'Starting ECG...')
                     start_time = time.time()
-                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg, f_path_ecg = ECG_meg_qc(all_qc_params['ECG'], internal_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
+                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], internal_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                     avg_ecg += avg_objects_ecg
@@ -204,14 +204,14 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_EOG'] is True:
                     print('___MEG QC___: ', 'Starting EOG...')
                     start_time = time.time()
-                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog, f_path_eog = EOG_meg_qc(all_qc_params['EOG'], internal_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
+                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], internal_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen, verbose_plots)
                     print('___MEG QC___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
 
                     avg_eog += avg_objects_eog
 
                 if all_qc_params['default']['run_Head'] is True:
                     print('___MEG QC___: ', 'Starting Head movement calculation...')
-                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos, f_path = HEAD_movement_meg_qc(raw_cropped, verbose_plots, plot_annotations=False)
+                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, verbose_plots, plot_annotations=False)
                     print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_Muscle'] is True:
@@ -258,18 +258,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': simple_metrics_eog,
                 'HEAD': simple_metrics_head,
                 'MUSCLE': simple_metrics_muscle}  
-
-                # Plotting_paths={
-                # 'STD': f_path_std, 
-                # 'PSD': f_path_psd,
-                # 'PTP_MANUAL': simple_metrics_pp_manual, 
-                # 'PTP_AUTO': simple_metrics_pp_auto,
-                # 'ECG': simple_metrics_ecg, 
-                # 'EOG': simple_metrics_eog,
-                # 'HEAD': simple_metrics_head,
-                # 'MUSCLE': simple_metrics_muscle} 
-
-                Plotting_paths = {}
 
 
                 # Testing errors:
@@ -359,4 +347,4 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     with open('for_report.json', 'w') as file_wrapper:
         json.dump(for_report, file_wrapper, indent=4)
 
-    return for_report, Plotting_paths
+    return for_report

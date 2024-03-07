@@ -566,8 +566,8 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
     #Extract chs_by_lobe into a data frame
-    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
+    df_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
 
-    derivs_std += derivs_list 
+    derivs_std += derivs_list + df_deriv
 
-    return derivs_std, simple_metric_std, std_str, f_path
+    return derivs_std, simple_metric_std, std_str

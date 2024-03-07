@@ -1225,6 +1225,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     psd_str = '' #blank for now. maybe wil need to add notes later.
 
     #Extract chs_by_lobe into a data frame
-    f_path = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
+    df_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
 
-    return derivs_psd, simple_metric, psd_str, noisy_freqs_global, f_path
+    derivs_psd += df_deriv
+
+    return derivs_psd, simple_metric, psd_str, noisy_freqs_global
