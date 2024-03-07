@@ -1,5 +1,7 @@
 import configparser
 import sys
+import os
+import ancpbids
 
 from meg_qc.source.universal_plots import boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, make_head_pos_plot_csv, make_head_pos_plot_mne, plot_muscle_csv
 from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv
@@ -62,6 +64,7 @@ def get_plot_config_params(config_plot_file_name: str):
     subjects = default_section['subjects']
     subjects = [sub.strip() for sub in subjects.split(",")]
 
+    plot_sensors = default_section.getboolean('plot_sensors')
     plot_STD = default_section.getboolean('STD')
     plot_PSD = default_section.getboolean('PSD')
     plot_PTP_manual = default_section.getboolean('PTP_manual')
@@ -77,21 +80,12 @@ def get_plot_config_params(config_plot_file_name: str):
         print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
         return None
 
-    tmin = default_section['data_crop_tmin']
-    tmax = default_section['data_crop_tmax']
     try:
-        if not tmin: 
-            tmin = 0
-        else:
-            tmin=float(tmin)
-        if not tmax: 
-            tmax = None
-        else:
-            tmax=float(tmax)
 
         default_params = dict({
             'm_or_g_chosen': m_or_g_chosen, 
             'subjects': subjects,
+            'plot_sensors': plot_sensors,
             'plot_STD': plot_STD,
             'plot_PSD': plot_PSD,
             'plot_PTP_manual': plot_PTP_manual,
@@ -104,9 +98,7 @@ def get_plot_config_params(config_plot_file_name: str):
             'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
-            'verbose_plots': default_section.getboolean('verbose_plots'),
-            'crop_tmin': tmin,
-            'crop_tmax': tmax})
+            'verbose_plots': default_section.getboolean('verbose_plots')})
         plot_params['default'] = default_params
 
     except:
@@ -121,11 +113,63 @@ def make_plots_meg_qc(config_plot_file_path):
 
     plot_params = get_plot_config_params(config_plot_file_path)
 
-    derivs_path  = '/Volumes/M2_DATA/'
+    #derivs_path  = '/Volumes/M2_DATA/'
+
+    if plot_params is None:
+        return
+
     verbose_plots = plot_params['default']['verbose_plots']
     m_or_g_chosen = plot_params['default']['m_or_g_chosen']
 
+
+    ds_paths = plot_params['default']['dataset_path']
+    for dataset_path in ds_paths: #run over several data sets
+
+        try:
+            dataset = ancpbids.load_dataset(dataset_path)
+            schema = dataset.get_schema()
+        except:
+            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            return
+
+        #create derivatives folder first:
+        if os.path.isdir(dataset_path+'/derivatives')==False: 
+                os.mkdir(dataset_path+'/derivatives')
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+
+        schema = dataset.get_schema()
+
+        print('___MEG QC___: ', schema)
+        print('___MEG QC___: ', "\n")
+        print('___MEG QC___: ', schema.Artifact)
+
+        print('___MEG QC___: ', dataset.files)
+        print('___MEG QC___: ', dataset.folders)
+        print('___MEG QC___: ', dataset.derivatives)
+        print('___MEG QC___: ', dataset.items())
+        print('___MEG QC___: ', dataset.keys())
+        print('___MEG QC___: ', dataset.code)
+        print('___MEG QC___: ', dataset.name)
+
+        entities = dataset.query_entities()
+        print('___MEG QC___: ', 'entities', entities)
+
+        return
+
+        
+
+
+def herewego(plot_params):
+
     std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, sensors_derivs, time_series_derivs = [],[],[],[],[], [],  [], [], [], []
+
+    # sensors:
+
+    if plot_params['default']['plot_sensors'] is True:
+        sensors = []
 
     # STD
 
