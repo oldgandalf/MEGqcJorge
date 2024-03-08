@@ -829,7 +829,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
 
     #Extract chs_by_lobe into a data frame
-    chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Chs')
+    sensors_derivs += chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
 

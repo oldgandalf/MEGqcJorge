@@ -850,9 +850,96 @@ def plot_sensors_3d(chs_by_lobe: dict):
             else:
                 lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
 
+    print('_______')
+    print(lobes_dict)
+
     traces = []
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one clor pear each lobe
+        for lobe in lobes_dict:
+            ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
+            traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
+            #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
+            # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
+
+    else: #if there are no lobes - we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
+        ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
+        for i, _ in enumerate(ch_locs):
+            traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
+
+
+    fig = go.Figure(data=traces)
+
+    fig.update_layout(
+        width=900, height=900,
+        title={
+        'text': 'Sensors positions',
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+    
+    fig.update_layout(
+        scene = dict(
+        xaxis = dict(visible=False),
+        yaxis = dict(visible=False),
+        zaxis =dict(visible=False)
+        )
+    )
+
+    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
+
+
+    # Add the button to have names show up on hover or always:
+    fig = switch_names_on_off(fig)
+
+    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
+
+    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
+
+    return qc_derivative
+
+
+def plot_sensors_3d_csv(chs_by_lobe: dict):
+
+    """
+    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
+    Can turn mags/grads visialisation on and off.
+    Separete channels into brain areas by color coding.
+
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        A dictionary of channels by ch type and lobe.
+    
+    Returns
+    -------
+    qc_derivative : list
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+
+    chs_by_lobe_copy = copy.deepcopy(chs_by_lobe)
+    #otherwise we will change the original dict here and keep it messed up for the next function
+
+    qc_derivative = []
+
+    # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
+    lobes_dict = {}
+    for ch_type in chs_by_lobe_copy:
+        for lobe in chs_by_lobe_copy[ch_type]:
+            if lobe not in lobes_dict:
+                lobes_dict[lobe] = chs_by_lobe_copy[ch_type][lobe]
+            else:
+                lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
+
+    traces = []
+
+    print('_______')
+    print(lobes_dict)
+
+    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
         for lobe in lobes_dict:
             ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
             traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
