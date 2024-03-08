@@ -12,7 +12,7 @@ import copy
 
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
-#from meg_qc.source.initial_meg_qc import MEG_channels
+from meg_qc.source.initial_meg_qc import MEG_channels
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 

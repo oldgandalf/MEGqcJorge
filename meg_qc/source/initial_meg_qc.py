@@ -7,7 +7,7 @@ import pandas as pd
 from IPython.display import display
 
 from IPython.display import display
-from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg, QC_derivative
+from meg_qc.source.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative
 
 
 def get_all_config_params(config_file_name: str):
@@ -803,7 +803,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     #Plot sensors:
-    sensors_derivs = plot_sensors_3d(chs_by_lobe)
+    #sensors_derivs = plot_sensors_3d(chs_by_lobe)
 
 
     #Plot time series:
