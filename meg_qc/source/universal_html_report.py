@@ -42,16 +42,18 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
         text_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
     elif 'Muscle' in section_name:
         text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
-    elif 'Standard deviation' in section_name:
+    elif 'Standard deviation' in section_name or 'STD' in section_name:
         text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
-    elif 'Frequency' in section_name:
+    elif 'Frequency' in section_name or 'PSD' in section_name:
         text_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
-    elif 'Peak-to-Peak manual' in section_name:
+    elif 'Peak-to-Peak manual' in section_name or 'PtP_manual' in section_name :
         text_section_content="""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
-    elif 'Peak-to-Peak auto' in section_name:
+    elif 'Peak-to-Peak auto' in section_name or 'PtP_auto' in section_name:
         text_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
     elif derivs_section and not fig_derivs_section:
         text_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
+    elif 'Sensors' in section_name: #TODO: check if all works fine after this change
+        text_section_content="""<p>""""""</p>"""
     else:
         text_section_content="""<p>""""""</p>"""
 

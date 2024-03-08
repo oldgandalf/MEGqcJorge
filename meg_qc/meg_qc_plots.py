@@ -267,17 +267,16 @@ def herewego(plot_params):
         head_derivs += head_pos_derivs
 
     QC_derivs={
-        'MEG data quality analysis report': [],
-        'Interactive time series': time_series_derivs,
-        'Sensors locations': sensors_derivs,
-        'Standard deviation of the data': std_derivs, 
-        'Frequency spectrum': psd_derivs, 
-        'Peak-to-Peak manual': pp_manual_derivs, 
-        'Peak-to-Peak auto from MNE': pp_auto_derivs, 
+        'Time_series': time_series_derivs,
+        'Sensors': sensors_derivs,
+        'STD': std_derivs, 
+        'PSD': psd_derivs, 
+        'PtP_manual': pp_manual_derivs, 
+        'PtP_auto': pp_auto_derivs, 
         'ECG': ecg_derivs, 
         'EOG': eog_derivs,
-        'Head movement artifacts': head_derivs,
-        'High frequency (Muscle) artifacts': muscle_derivs}
+        'Head': head_derivs,
+        'Muscle': muscle_derivs}
     
 
     # TODO: if we make a report based on mne - we do need the raw data file.
@@ -286,6 +285,8 @@ def herewego(plot_params):
 
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings = [], default_setting = [])
 
-    QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
+    for metric, values in QC_derivs.items():
+        if values and metric != 'Sensors':
+            QC_derivs['Report_MNE'] += [QC_derivative(report_html_string, 'REPORT_'+metric, 'report mne')]
 
     return QC_derivs
