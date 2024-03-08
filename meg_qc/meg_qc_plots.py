@@ -169,7 +169,9 @@ def herewego(plot_params):
     # sensors:
 
     if plot_params['default']['plot_sensors'] is True:
-        sensors = []
+        sensors_csv_path = derivs_path+'Sensors.tsv'
+
+        sensor_derivs = plot_sensors_3d_csv(sensors_csv_path)
 
     # STD
 

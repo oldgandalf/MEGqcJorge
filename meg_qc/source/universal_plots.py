@@ -12,6 +12,7 @@ import copy
 
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
+#from meg_qc.source.initial_meg_qc import MEG_channels
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 
@@ -850,9 +851,6 @@ def plot_sensors_3d(chs_by_lobe: dict):
             else:
                 lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
 
-    print('_______')
-    print(lobes_dict)
-
     traces = []
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one clor pear each lobe
@@ -867,6 +865,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
         for i, _ in enumerate(ch_locs):
             traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
 
+    print(lobes_dict)
 
     fig = go.Figure(data=traces)
 
@@ -900,7 +899,7 @@ def plot_sensors_3d(chs_by_lobe: dict):
     return qc_derivative
 
 
-def plot_sensors_3d_csv(chs_by_lobe: dict):
+def plot_sensors_3d_csv(sensors_csv_path: str):
 
     """
     Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
@@ -920,24 +919,24 @@ def plot_sensors_3d_csv(chs_by_lobe: dict):
 
     """
 
-    chs_by_lobe_copy = copy.deepcopy(chs_by_lobe)
-    #otherwise we will change the original dict here and keep it messed up for the next function
+    df = pd.read_csv(sensors_csv_path, sep='\t')
 
-    qc_derivative = []
 
-    # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
-    lobes_dict = {}
-    for ch_type in chs_by_lobe_copy:
-        for lobe in chs_by_lobe_copy[ch_type]:
-            if lobe not in lobes_dict:
-                lobes_dict[lobe] = chs_by_lobe_copy[ch_type][lobe]
-            else:
-                lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
+    #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
+
+    unique_lobes = df['Lobe'].unique().tolist()
+
+    lobes_dict={}
+    for lobe in unique_lobes:
+        lobes_dict[lobe] = []
+        for index, row in df.iterrows():
+            if row['Lobe'] == lobe:
+                locs = [row[col] for col in df.columns if 'Sensor_location' in col]
+                lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], loc = locs))
+
+    print(lobes_dict)
 
     traces = []
-
-    print('_______')
-    print(lobes_dict)
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
         for lobe in lobes_dict:
@@ -979,9 +978,11 @@ def plot_sensors_3d_csv(chs_by_lobe: dict):
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
 
-    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
+    fig.show()
+    
+    qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
 
-    return qc_derivative
+    return qc_derivative 
 
 
 def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str, verbose_plots: bool):
