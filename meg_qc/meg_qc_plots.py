@@ -3,9 +3,9 @@ import sys
 import os
 import ancpbids
 
-from meg_qc.source.universal_plots import boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, make_head_pos_plot_csv, make_head_pos_plot_mne, plot_muscle_csv
+from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, make_head_pos_plot_csv, make_head_pos_plot_mne, plot_muscle_csv
 from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv
-
+from meg_qc.source.universal_html_report import make_joined_report_mne
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
@@ -118,9 +118,6 @@ def make_plots_meg_qc(config_plot_file_path):
     if plot_params is None:
         return
 
-    verbose_plots = plot_params['default']['verbose_plots']
-    m_or_g_chosen = plot_params['default']['m_or_g_chosen']
-
 
     ds_paths = plot_params['default']['dataset_path']
     for dataset_path in ds_paths: #run over several data sets
@@ -164,6 +161,9 @@ def make_plots_meg_qc(config_plot_file_path):
 
 def herewego(plot_params):
 
+    verbose_plots = plot_params['default']['verbose_plots']
+    m_or_g_chosen = plot_params['default']['m_or_g_chosen']
+
     std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, sensors_derivs, time_series_derivs = [],[],[],[],[], [],  [], [], [], []
 
     # sensors:
@@ -171,7 +171,7 @@ def herewego(plot_params):
     if plot_params['default']['plot_sensors'] is True:
         sensors_csv_path = derivs_path+'Sensors.tsv'
 
-        sensor_derivs = plot_sensors_3d_csv(sensors_csv_path)
+        sensors_derivs = plot_sensors_3d_csv(sensors_csv_path)
 
     # STD
 
@@ -253,7 +253,7 @@ def herewego(plot_params):
                 print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
-        muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = True)
+        muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
 
     # Head
         
@@ -279,4 +279,13 @@ def herewego(plot_params):
         'Head movement artifacts': head_derivs,
         'High frequency (Muscle) artifacts': muscle_derivs}
     
+
+    # TODO: if we make a report based on mne - we do need the raw data file.
+    # if we do just simple html, dont need raw, but then we dont have the fif file info
+    # What to do? Every time find a raw connected to the data? (open it from fif)
+
+    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings = [], default_setting = [])
+
+    QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
+
     return QC_derivs
