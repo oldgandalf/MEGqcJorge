@@ -137,22 +137,39 @@ def make_plots_meg_qc(config_plot_file_path):
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-        schema = dataset.get_schema()
-
-        print('___MEG QC___: ', schema)
-        print('___MEG QC___: ', "\n")
-        print('___MEG QC___: ', schema.Artifact)
-
-        print('___MEG QC___: ', dataset.files)
-        print('___MEG QC___: ', dataset.folders)
-        print('___MEG QC___: ', dataset.derivatives)
-        print('___MEG QC___: ', dataset.items())
-        print('___MEG QC___: ', dataset.keys())
-        print('___MEG QC___: ', dataset.code)
-        print('___MEG QC___: ', dataset.name)
-
         entities = dataset.query_entities()
         print('___MEG QC___: ', 'entities', entities)
+
+
+        # list_of_subs = list(entities["sub"])
+        if plot_params['default']['subjects'][0] != 'all':
+            list_of_subs = plot_params['default']['subjects']
+        elif plot_params['default']['subjects'][0] == 'all':
+            list_of_subs = sorted(list(dataset.query_entities()["sub"]))
+            print('___MEG QC___: ', 'list_of_subs', list_of_subs)
+            if not list_of_subs:
+                print('___MEG QC___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
+                return
+        else:
+            print('___MEG QC___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
+            return
+
+
+        for sid in list_of_subs[0:1]: #[0:4]: 
+            print('___MEG QC___: ', 'Dataset: ', dataset_path)
+            print('___MEG QC___: ', 'Take SID: ', sid)
+            
+            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+
+            # GET all derivs!
+            derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
+            print('___MEG QC___: ', 'derivs_list', derivs_list)
+
+            for fif_ind, data_file in enumerate(derivs_list): 
+                print('___MEG QC___: ', 'Take deriv: ', data_file)
+
+                #here goes the actual code for plotting
 
         return
 

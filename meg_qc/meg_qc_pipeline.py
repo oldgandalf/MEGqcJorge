@@ -81,6 +81,11 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
+        # print('_____derivs here___')
+        # print(type(dataset.derivatives))
+        # deriv = dataset.derivatives.folders['Meg_QC'].files
+        # print(deriv)
+
         # schema = dataset.get_schema()
         # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
@@ -131,6 +136,15 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             list_of_fifs = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
             print('___MEG QC___: ', 'list_of_fifs', list_of_fifs)
             print('___MEG QC___: ', 'TOTAL fifs: ', len(list_of_fifs))
+
+
+            # GET all derivs!
+            # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
+            # print('___MEG QC___: ', 'derivs_list', derivs_list)
+
+            # entities = dataset.query_entities()
+            # print('___MEG QC___: ', 'entities', entities)
+
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
