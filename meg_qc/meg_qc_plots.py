@@ -141,6 +141,11 @@ def make_plots_meg_qc(config_plot_file_path):
         print('___MEG QC___: ', 'entities', entities)
 
 
+        # SELECTOR:
+        # get all entities
+        # create selector for each subject, metric, run/task
+
+
         # list_of_subs = list(entities["sub"])
         if plot_params['default']['subjects'][0] != 'all':
             list_of_subs = plot_params['default']['subjects']
@@ -169,7 +174,10 @@ def make_plots_meg_qc(config_plot_file_path):
             for fif_ind, data_file in enumerate(derivs_list): 
                 print('___MEG QC___: ', 'Take deriv: ', data_file)
 
-                #here goes the actual code for plotting
+                #here goes the actual code for plotting:
+                
+
+
 
         return
 
