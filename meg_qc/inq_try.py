@@ -38,10 +38,23 @@
 
 import questionary
 
-# Define the options
-options = ['Option 1', 'Option 2', 'Option 3']
+# Define the categories and subcategories
+categories = {
+    'sub': {'029', '026', '025', '021', '016', '028', '022', '030', '018', '020', '009', '015', '013', '027', '014', '017', '012', '019', '023', '024', '031'},
+    'ses': {'1'},
+    'task': {'induction', 'deduction'},
+    'run': {1},
+    'desc': {'REPORT', 'ECGs', 'EOGs', 'Muscle', 'epochs', 'Sensors', 'PSDs', 'STDs', 'SimpleMetrics'}
+}
 
-# Ask the user to check some options
-checked_options = questionary.checkbox("Select options:", choices=options).ask()
+# Create a list of subcategories with category titles
+subcategories = []
+for category, items in categories.items():
+    subcategories.append(questionary.Separator(f'== {category} =='))
+    for item in items:
+        subcategories.append(str(item))
 
-print('You checked:', checked_options)
+# Ask the user to select a subcategory
+subcategory = questionary.select("Select a subcategory:", choices=subcategories).ask()
+
+print('You selected:', subcategory)
