@@ -3,6 +3,9 @@ import sys
 import os
 import ancpbids
 
+from prompt_toolkit.shortcuts import checkboxlist_dialog
+from prompt_toolkit.styles import Style
+
 from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, make_head_pos_plot_csv, make_head_pos_plot_mne, plot_muscle_csv
 from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv
 from meg_qc.source.universal_html_report import make_joined_report_mne
@@ -107,7 +110,57 @@ def get_plot_config_params(config_plot_file_name: str):
 
     return plot_params
 
+def modify_categories(categories):
 
+    old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+
+    categories_copy = categories.copy()
+    for category, subcategories in categories_copy.items():
+        # Convert the set of subcategories to a sorted list
+        sorted_subcategories = sorted(subcategories, key=str)
+        # If the category is in old_new_categories, replace it with the new category
+        if category in old_new_categories:
+            new_category = old_new_categories[category]
+            categories[new_category] = categories.pop(category)
+            # Replace the original set of subcategories with the modified list
+            sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
+            categories[new_category] = sorted_subcategories
+            
+    return categories
+
+def selector(entities):
+
+    # Define the categories and subcategories
+    categories = modify_categories(entities)
+
+    # Create a list of values with category titles
+    values = []
+    for category, items in categories.items():
+        values.append((f'== {category} ==', f'== {category} =='))
+        for item in items:
+            values.append((str(item), str(item)))
+
+    results = checkboxlist_dialog(
+        title="CheckboxList dialog",
+        text="Select subcategories:",
+        values=values,
+        style=Style.from_dict({
+            'dialog': 'bg:#cdbbb3',
+            'button': 'bg:#bf99a4',
+            'checkbox': '#e8612c',
+            'dialog.body': 'bg:#a9cfd0',
+            'dialog shadow': 'bg:#c98982',
+            'frame.label': '#fcaca3',
+            'dialog.body label': '#fd8bb6',
+        })
+    ).run()
+
+    # Ignore the category titles
+    selected_subcategories = [result for result in results if not result.startswith('== ')]
+
+    print('You selected:', selected_subcategories)
+
+    return selected_subcategories
 
 def make_plots_meg_qc(config_plot_file_path):
 
@@ -144,6 +197,8 @@ def make_plots_meg_qc(config_plot_file_path):
         # SELECTOR:
         # get all entities
         # create selector for each subject, metric, run/task
+
+        chosen_entities = selector(entities)
 
 
         # list_of_subs = list(entities["sub"])
