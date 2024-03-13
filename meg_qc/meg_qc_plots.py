@@ -6,9 +6,6 @@ import ancpbids
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 
-from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, make_head_pos_plot_csv, make_head_pos_plot_mne, plot_muscle_csv
-from meg_qc.source.plots_ecg_eog import plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv
-from meg_qc.source.universal_html_report import make_joined_report_mne
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
@@ -125,7 +122,12 @@ def modify_categories(categories):
             # Replace the original set of subcategories with the modified list
             sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
             categories[new_category] = sorted_subcategories
+
+    #Remove subcategories that are not QC metrics:
             
+    if 'METRIC' in categories:
+        categories['METRIC'] = [x for x in categories['METRIC'] if x in ['_ALL_METRICS_', 'STD', 'PSD', 'PtP_manual', 'PtP_auto', 'ECG', 'EOG', 'Head', 'Muscle']]
+
     return categories
 
 def selector(entities):
@@ -231,12 +233,68 @@ def make_plots_meg_qc(config_plot_file_path):
 
                 #here goes the actual code for plotting:
                 
+        return
+    
+
+def plot_metrics(chosen_entities):
+
+    for sid in list_of_subs[0:1]: #[0:4]: 
+        print('___MEG QC___: ', 'Dataset: ', dataset_path)
+        print('___MEG QC___: ', 'Take SID: ', sid)
+        
+        subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+        list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+
+        # GET all derivs!
+        derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
+        print('___MEG QC___: ', 'derivs_list', derivs_list)
+
+        for fif_ind, data_file in enumerate(derivs_list): 
+            print('___MEG QC___: ', 'Take deriv: ', data_file)
+
+            #here goes the actual code for plotting:
+                
+        return
+    
 
 
+def get_all_entities(config_plot_file_path):
 
+    plot_params = get_plot_config_params(config_plot_file_path)
+
+    #derivs_path  = '/Volumes/M2_DATA/'
+
+    if plot_params is None:
         return
 
-        
+
+    ds_paths = plot_params['default']['dataset_path']
+    for dataset_path in ds_paths: #run over several data sets
+
+        try:
+            dataset = ancpbids.load_dataset(dataset_path)
+            schema = dataset.get_schema()
+        except:
+            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            return
+
+        #create derivatives folder first:
+        if os.path.isdir(dataset_path+'/derivatives')==False: 
+                os.mkdir(dataset_path+'/derivatives')
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+
+        entities = dataset.query_entities()
+        print('___MEG QC___: ', 'entities', entities)
+    
+    return entities
+
+
+entities = get_all_entities('plot_settings.ini') #'meg_qc/plot_settings.ini'
+chosen_entities = selector(entities)
+print('Nexrt step: plot metrics for chosen entities:', chosen_entities)
 
 
 def herewego(plot_params):
