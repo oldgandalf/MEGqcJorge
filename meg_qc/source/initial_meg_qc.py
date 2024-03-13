@@ -1,13 +1,9 @@
 import mne
 import configparser
 import numpy as np
-import random
-import json
 import pandas as pd
 from IPython.display import display
-
-from IPython.display import display
-from meg_qc.source.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative
+from meg_qc.source.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative, assign_channels_properties, sort_channel_by_lobe
 
 
 def get_all_config_params(config_file_name: str):
@@ -298,8 +294,8 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
             stim_channel.append(data.info['chs'][ch]['ch_name'])
     print('___MEG QC___: ', 'Stimulus channels detected:', stim_channel)
 
-    picks_magn = data.copy().pick_types(meg='mag').ch_names if 'mag' in data else None
-    picks_grad = data.copy().pick_types(meg='grad').ch_names if 'grad' in data else None
+    picks_magn = data.copy().pick('mag').ch_names if 'mag' in data else None
+    picks_grad = data.copy().pick('grad').ch_names if 'grad' in data else None
 
     try:
         events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
@@ -369,306 +365,6 @@ def sanity_check(m_or_g_chosen, channels_objs):
         
     return m_or_g_chosen, m_or_g_skipped_str
 
-
-class MEG_channels:
-
-    """ 
-    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
-
-    """
-
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
-
-        """
-        Constructor method
-        
-        Parameters
-        ----------
-        name : str
-            The name of the channel.
-        type : str
-            The type of the channel: 'mag', 'grad'
-        lobe : str
-            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
-        lobe_color : str
-            The color code for plotting with plotly according to the lobe area of the channel.
-        loc : list
-            The location of the channel on the helmet.
-        time_series : array
-            The time series of the channel.
-        std_overall : float
-            The standard deviation of the channel time series.
-        std_epoch : array
-            The standard deviation of the channel time series per epochs.
-        ptp_overall : float
-            The peak-to-peak amplitude of the channel time series.
-        ptp_epoch : array
-            The peak-to-peak amplitude of the channel time series per epochs.
-        psd : array
-            The power spectral density of the channel.
-        freq: array
-            Frequencies for psd.
-        mean_ecg : float
-            The mean ECG artifact of the channel.
-        mean_eog : float
-            The mean EOG artifact of the channel.
-
-        """
-
-        self.name = name
-        self.type = type
-        self.lobe = lobe
-        self.lobe_color = lobe_color
-        self.loc = loc
-        self.time_series = time_series
-        self.std_overall = std_overall
-        self.std_epoch = std_epoch
-        self.ptp_overall = ptp_overall
-        self.ptp_epoch = ptp_epoch
-        self.psd = psd
-        self.freq = freq
-        self.mean_ecg = mean_ecg
-        self.mean_ecg_smoothed = mean_ecg_smoothed
-        self.mean_eog = mean_eog
-        self.mean_eog_smoothed = mean_eog_smoothed
-        self.ecg_corr_coeff = ecg_corr_coeff
-        self.ecg_pval = ecg_pval
-        self.eog_corr_coeff = eog_corr_coeff
-        self.eog_pval = eog_pval
-        self.ecg_time = ecg_time
-        self.eog_time = eog_time
-        self.muscle = muscle
-        self.head = head
-        self.muscle_time = muscle_time
-        self.head_time = head_time
-
-
-    def __repr__(self):
-
-
-
-        """
-        Returns the string representation of the object.
-        
-        TODO: add remaining metrics here
-
-        """
-
-        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
-        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
-        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
-
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
-    
-    def to_df(self):
-        data_dict = {}
-        freqs = self.freq
-
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
-            
-            
-            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
-            value = getattr(self, attr)
-            if isinstance(value, (list, np.ndarray)):
-
-                
-                if 'psd' == attr:
-                    freqs = getattr(self, 'freq') #??? right
-                    for i, v in enumerate(value):
-                        fr = freqs[i]
-                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
-
-                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
-                    if attr == 'mean_ecg':
-                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'mean_eog':
-                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'head':
-                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'muscle':
-                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
-                    
-                    for i, v in enumerate(value):
-                        t = times[i]
-                        data_dict[f'{column_name}_sec_{t}'] = [v]
-
-                else: #TODO: here maybe change to elif std/ptp?
-                    for i, v in enumerate(value):
-                        data_dict[f'{column_name}_{i}'] = [v]
-            else:
-                data_dict[column_name] = [value]
-
-        return pd.DataFrame(data_dict)
-
-    def add_ecg_info(self, Avg_artif_list, artif_time_vector):
-
-        for artif_ch in Avg_artif_list:
-            if artif_ch.name == self.name:
-                self.mean_ecg = artif_ch.artif_data
-                self.mean_ecg_smoothed = artif_ch.artif_data_smoothed
-                self.ecg_time = artif_time_vector
-                self.ecg_corr_coeff = artif_ch.corr_coef
-                self.ecg_pval = artif_ch.p_value
-                
-    def add_eog_info(self, Avg_artif_list, artif_time_vector):
-
-        for artif_ch in Avg_artif_list:
-            if artif_ch.name == self.name:
-                self.mean_eog = artif_ch.artif_data
-                self.mean_eog_smoothed = artif_ch.artif_data_smoothed
-                self.eog_time = artif_time_vector
-                self.eog_corr_coeff = artif_ch.corr_coef
-                self.eog_pval = artif_ch.p_value
-
-                #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
-                # but artif_ch doesnt have this separation to ecg/eog. 
-                # Need to just make sure that the function is called in the right place.
-
-
-def assign_channels_properties(raw: mne.io.Raw):
-
-    """
-    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
-
-    Can later try to make this function a method of the MEG_channels class. 
-    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
-
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        Raw data set.
-
-    Returns
-    -------
-    channels_objs : dict
-        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
-
-    """
-    channels_objs={'mag': [], 'grad': []}
-    if 'mag' in raw:
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
-        for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
-    else:
-        channels_objs['mag'] = []
-
-    if 'grad' in raw:
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
-        for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
-    else:
-        channels_objs['grad'] = []
-
-
-    # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
-    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
-    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
-
-    lobes_treux = {
-            'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
-            'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
-            'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
-            'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
-            'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
-            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
-            'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
-            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133']}
-
-    # These were just for Aarons presentation:
-    # lobes_treux = {
-    #         'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
-    #         'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
-    #         'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
-    #         'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
-    #         'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
-    #         'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
-    #         'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143', 'MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
-    #         'Right Occipital': ['MEG0611', 'MEG0612', 'MEG0613']}
-
-    # #Now add to lobes_treux also the name of each channel with space in the middle:
-    for lobe in lobes_treux.keys():
-        lobes_treux[lobe] += [channel[:-4]+' '+channel[-4:] for channel in lobes_treux[lobe]]
-
-    lobe_colors = {
-        'Left Frontal': '#1f77b4',
-        'Right Frontal': '#ff7f0e',
-        'Left Temporal': '#2ca02c',
-        'Right Temporal': '#9467bd',
-        'Left Parietal': '#e377c2',
-        'Right Parietal': '#d62728',
-        'Left Occipital': '#bcbd22',
-        'Right Occipital': '#17becf'}
-    
-    # These were just for Aarons presentation:
-    # lobe_colors = {
-    #     'Left Frontal': '#2ca02c',
-    #     'Right Frontal': '#2ca02c',
-    #     'Left Temporal': '#2ca02c',
-    #     'Right Temporal': '#2ca02c',
-    #     'Left Parietal': '#2ca02c',
-    #     'Right Parietal': '#2ca02c',
-    #     'Left Occipital': '#2ca02c',
-    #     'Right Occipital': '#d62728'}
-    
-    #assign treux labels to the channels:
-    if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
-        #loop over all values in the dictionary:
-        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
-        for key, value in channels_objs.items():
-            for ch in value:
-                for lobe in lobes_treux.keys():
-                    if ch.name in lobes_treux[lobe]:
-                        ch.lobe = lobe
-                        ch.lobe_color = lobe_colors[lobe]
-    else:
-        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
-        print('___MEG QC___: ' + lobes_color_coding_str)
-
-        for key, value in channels_objs.items():
-            for ch in value:
-                ch.lobe = 'All channels'
-                #take random color from lobe_colors:
-                ch.lobe_color = random.choice(list(lobe_colors.values()))
-
-    #sort channels by name:
-    for key, value in channels_objs.items():
-        channels_objs[key] = sorted(value, key=lambda x: x.name)
-
-    return channels_objs, lobes_color_coding_str
-
-def sort_channel_by_lobe(channels_objs: dict):
-
-    """ Sorts channels by lobes.
-
-    Parameters
-    ----------
-    channels_objs : dict
-        A dictionary of channel objects.
-    
-    Returns
-    -------
-    chs_by_lobe : dict
-        A dictionary of channels sorted by ch type and lobe.
-
-    """
-    chs_by_lobe = {}
-    for m_or_g in channels_objs:
-
-        #put all channels into separate lists based on their lobes:
-        lobes_names=list(set([ch.lobe for ch in channels_objs[m_or_g]]))
-        
-        lobes_dict = {key: [] for key in lobes_names}
-        #fill the dict with channels:
-        for ch in channels_objs[m_or_g]:
-            lobes_dict[ch.lobe].append(ch) 
-
-        #sort the dict by lobes names:
-        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
-
-    return chs_by_lobe
-    
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
 
@@ -785,25 +481,20 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     epoching_str = ''
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
-            
+
+
     #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
     #In this dict channels are separated by mag/grads. not by lobes.
     channels_objs, lobes_color_coding_str = assign_channels_properties(raw)
 
-
     #Check if there are channels to analyze according to info in config file:
     m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
-
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channel_by_lobe(channels_objs)
 
-
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
-
-    #Plot sensors:
-    #sensors_derivs = plot_sensors_3d(chs_by_lobe)
 
 
     #Plot time series:
@@ -827,9 +518,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     resample_str = '<p>' + resample_str + '</p>'
 
-
     #Extract chs_by_lobe into a data frame
-    sensors_derivs += chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
+    sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
 

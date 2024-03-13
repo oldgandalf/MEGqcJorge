@@ -12,7 +12,305 @@ import copy
 
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
-#from meg_qc.source.initial_meg_qc import MEG_channels
+
+class MEG_channels:
+
+    """ 
+    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
+
+    """
+
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
+
+        """
+        Constructor method
+        
+        Parameters
+        ----------
+        name : str
+            The name of the channel.
+        type : str
+            The type of the channel: 'mag', 'grad'
+        lobe : str
+            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
+        lobe_color : str
+            The color code for plotting with plotly according to the lobe area of the channel.
+        loc : list
+            The location of the channel on the helmet.
+        time_series : array
+            The time series of the channel.
+        std_overall : float
+            The standard deviation of the channel time series.
+        std_epoch : array
+            The standard deviation of the channel time series per epochs.
+        ptp_overall : float
+            The peak-to-peak amplitude of the channel time series.
+        ptp_epoch : array
+            The peak-to-peak amplitude of the channel time series per epochs.
+        psd : array
+            The power spectral density of the channel.
+        freq: array
+            Frequencies for psd.
+        mean_ecg : float
+            The mean ECG artifact of the channel.
+        mean_eog : float
+            The mean EOG artifact of the channel.
+
+        """
+
+        self.name = name
+        self.type = type
+        self.lobe = lobe
+        self.lobe_color = lobe_color
+        self.loc = loc
+        self.time_series = time_series
+        self.std_overall = std_overall
+        self.std_epoch = std_epoch
+        self.ptp_overall = ptp_overall
+        self.ptp_epoch = ptp_epoch
+        self.psd = psd
+        self.freq = freq
+        self.mean_ecg = mean_ecg
+        self.mean_ecg_smoothed = mean_ecg_smoothed
+        self.mean_eog = mean_eog
+        self.mean_eog_smoothed = mean_eog_smoothed
+        self.ecg_corr_coeff = ecg_corr_coeff
+        self.ecg_pval = ecg_pval
+        self.eog_corr_coeff = eog_corr_coeff
+        self.eog_pval = eog_pval
+        self.ecg_time = ecg_time
+        self.eog_time = eog_time
+        self.muscle = muscle
+        self.head = head
+        self.muscle_time = muscle_time
+        self.head_time = head_time
+
+
+    def __repr__(self):
+
+
+
+        """
+        Returns the string representation of the object.
+        
+        TODO: add remaining metrics here
+
+        """
+
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
+        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
+
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
+    
+    def to_df(self):
+        data_dict = {}
+        freqs = self.freq
+
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
+            
+            
+            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
+            value = getattr(self, attr)
+            if isinstance(value, (list, np.ndarray)):
+
+                
+                if 'psd' == attr:
+                    freqs = getattr(self, 'freq') #??? right
+                    for i, v in enumerate(value):
+                        fr = freqs[i]
+                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
+
+                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
+                    if attr == 'mean_ecg':
+                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'mean_eog':
+                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'head':
+                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'muscle':
+                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
+                    
+                    for i, v in enumerate(value):
+                        t = times[i]
+                        data_dict[f'{column_name}_sec_{t}'] = [v]
+
+                else: #TODO: here maybe change to elif std/ptp?
+                    for i, v in enumerate(value):
+                        data_dict[f'{column_name}_{i}'] = [v]
+            else:
+                data_dict[column_name] = [value]
+
+        return pd.DataFrame(data_dict)
+
+    def add_ecg_info(self, Avg_artif_list, artif_time_vector):
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_ecg = artif_ch.artif_data
+                self.mean_ecg_smoothed = artif_ch.artif_data_smoothed
+                self.ecg_time = artif_time_vector
+                self.ecg_corr_coeff = artif_ch.corr_coef
+                self.ecg_pval = artif_ch.p_value
+                
+    def add_eog_info(self, Avg_artif_list, artif_time_vector):
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_eog = artif_ch.artif_data
+                self.mean_eog_smoothed = artif_ch.artif_data_smoothed
+                self.eog_time = artif_time_vector
+                self.eog_corr_coeff = artif_ch.corr_coef
+                self.eog_pval = artif_ch.p_value
+
+                #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
+                # but artif_ch doesnt have this separation to ecg/eog. 
+                # Need to just make sure that the function is called in the right place.
+
+
+def assign_channels_properties(raw: mne.io.Raw):
+
+    """
+    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
+
+    Can later try to make this function a method of the MEG_channels class. 
+    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data set.
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+
+    """
+    channels_objs={'mag': [], 'grad': []}
+    if 'mag' in raw:
+        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        for ch in mag_locs:
+            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
+    else:
+        channels_objs['mag'] = []
+
+    if 'grad' in raw:
+        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        for ch in grad_locs:
+            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
+    else:
+        channels_objs['grad'] = []
+
+
+    # for understanding how the locations are obtained. They can be extracted as:
+    # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
+    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+
+    lobes_treux = {
+            'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+            'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+            'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+            'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+            'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
+            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
+            'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
+            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133']}
+
+    # These were just for Aarons presentation:
+    # lobes_treux = {
+    #         'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+    #         'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+    #         'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+    #         'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+    #         'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
+    #         'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
+    #         'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143', 'MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
+    #         'Right Occipital': ['MEG0611', 'MEG0612', 'MEG0613']}
+
+    # #Now add to lobes_treux also the name of each channel with space in the middle:
+    for lobe in lobes_treux.keys():
+        lobes_treux[lobe] += [channel[:-4]+' '+channel[-4:] for channel in lobes_treux[lobe]]
+
+    lobe_colors = {
+        'Left Frontal': '#1f77b4',
+        'Right Frontal': '#ff7f0e',
+        'Left Temporal': '#2ca02c',
+        'Right Temporal': '#9467bd',
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf'}
+    
+    # These were just for Aarons presentation:
+    # lobe_colors = {
+    #     'Left Frontal': '#2ca02c',
+    #     'Right Frontal': '#2ca02c',
+    #     'Left Temporal': '#2ca02c',
+    #     'Right Temporal': '#2ca02c',
+    #     'Left Parietal': '#2ca02c',
+    #     'Right Parietal': '#2ca02c',
+    #     'Left Occipital': '#2ca02c',
+    #     'Right Occipital': '#d62728'}
+    
+    #assign treux labels to the channels:
+    if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
+        #loop over all values in the dictionary:
+        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
+        for key, value in channels_objs.items():
+            for ch in value:
+                for lobe in lobes_treux.keys():
+                    if ch.name in lobes_treux[lobe]:
+                        ch.lobe = lobe
+                        ch.lobe_color = lobe_colors[lobe]
+    else:
+        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        print('___MEG QC___: ' + lobes_color_coding_str)
+
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.lobe = 'All channels'
+                #take random color from lobe_colors:
+                ch.lobe_color = random.choice(list(lobe_colors.values()))
+
+    #sort channels by name:
+    for key, value in channels_objs.items():
+        channels_objs[key] = sorted(value, key=lambda x: x.name)
+
+    return channels_objs, lobes_color_coding_str
+
+def sort_channel_by_lobe(channels_objs: dict):
+
+    """ Sorts channels by lobes.
+
+    Parameters
+    ----------
+    channels_objs : dict
+        A dictionary of channel objects.
+    
+    Returns
+    -------
+    chs_by_lobe : dict
+        A dictionary of channels sorted by ch type and lobe.
+
+    """
+    chs_by_lobe = {}
+    for m_or_g in channels_objs:
+
+        #put all channels into separate lists based on their lobes:
+        lobes_names=list(set([ch.lobe for ch in channels_objs[m_or_g]]))
+        
+        lobes_dict = {key: [] for key in lobes_names}
+        #fill the dict with channels:
+        for ch in channels_objs[m_or_g]:
+            lobes_dict[ch.lobe].append(ch) 
+
+        #sort the dict by lobes names:
+        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+
+    return chs_by_lobe
 
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 
@@ -2358,3 +2656,341 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
     head_derivs = [QC_derivative(fig1, 'Head_position_rotation_average_mne', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
     return head_derivs
+
+
+#__________ECG/EOG__________#
+
+
+def figure_x_axis(df, metric):
+     
+    if metric.lower() == 'psd':
+        # Figure out frequencies:
+        freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
+        freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
+        return freqs
+    
+    elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
+        if metric.lower() == 'ecg':
+            prefix = 'mean_ecg_sec_'
+        elif metric.lower() == 'eog': 
+            prefix = 'mean_eog_sec_'
+        elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
+            prefix = 'smoothed_mean_ecg_sec_'
+        elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
+            prefix = 'smoothed_mean_eog_sec_'
+        elif metric.lower() == 'muscle':
+            prefix = 'Muscle_sec_'
+        elif metric.lower() == 'head':
+            prefix = 'Head_sec_'
+        
+        time_cols = [column for column in df if column.startswith(prefix)]
+        time_vec = np.array([float(x.replace(prefix, '')) for x in time_cols])
+
+        return time_vec
+    
+    else:
+        print('Oh well IDK! figure_x_axis()')
+        return None
+    
+
+def split_correlated_artifacts_into_3_groups_csv(df, metric):
+
+    """
+    Collect artif_per_ch into 3 lists - for plotting:
+    - a third of all channels that are the most correlated with mean_rwave
+    - a third of all channels that are the least correlated with mean_rwave
+    - a third of all channels that are in the middle of the correlation with mean_rwave
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of objects of class Avg_artif
+
+    Returns
+    -------
+    artif_per_ch : list
+        List of objects of class Avg_artif, ranked by correlation coefficient
+    most_correlated : list
+        List of objects of class Avg_artif that are the most correlated with mean_rwave
+    least_correlated : list
+        List of objects of class Avg_artif that are the least correlated with mean_rwave
+    middle_correlated : list
+        List of objects of class Avg_artif that are in the middle of the correlation with mean_rwave
+    corr_val_of_last_least_correlated : float
+        Correlation value of the last channel in the list of the least correlated channels
+    corr_val_of_last_middle_correlated : float
+        Correlation value of the last channel in the list of the middle correlated channels
+    corr_val_of_last_most_correlated : float
+        Correlation value of the last channel in the list of the most correlated channels
+
+
+    """
+
+    #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
+    #artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
+
+    if metric.lower() != 'ecg' and metric.lower() != 'eog':
+        print('Wrong metric in split_correlated_artifacts_into_3_groups_csv()')
+
+
+    df_sorted = df.copy()    
+    df_sorted.sort_values(by = metric.lower()+'_corr_coeff') 
+
+    most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
+    least_correlated = df_sorted.copy()[-int(len(df_sorted)/3):]
+    middle_correlated = df_sorted.copy()[int(len(df_sorted)/3):-int(len(df_sorted)/3)]
+
+    #get correlation values of all most correlated channels:
+    all_most_correlated = most_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
+    all_middle_correlated = middle_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
+    all_least_correlated = least_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
+
+    #find the correlation value of the last channel in the list of the most correlated channels:
+    # this is needed for plotting correlation values, to know where to put separation rectangles.
+    corr_val_of_last_most_correlated = max(all_most_correlated)
+    corr_val_of_last_middle_correlated = max(all_middle_correlated)
+    corr_val_of_last_least_correlated = max(all_least_correlated)
+
+    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+
+
+def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
+
+    """
+    Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+    
+    Parameters
+    ----------
+    artif_affected_channels : list
+        List of ECG/EOG artifact affected channels.
+    artifact_lvl : float
+        The threshold for the artifact amplitude: average over all channels*norm_lvl.
+    t : np.ndarray
+        Time vector.
+    m_or_g : str
+        Either 'mag' or 'grad'.
+    fig_tit: str
+        The title of the figure.
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe
+    flip_data : bool
+        If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
+        'flip' means that the data will be flipped if the peak of the artifact is negative. 
+        This is donr to get the same sign of the artifact for all channels, then to get the mean artifact amplitude over all channels and the threshold for the artifact amplitude onbase of this mean
+        And also for the reasons of visualization: the artifact amplitude is always positive.
+    smoothed: bool
+        Plot smoothed data (true) or nonrmal (false)
+    verbose_plots : bool
+        True for showing plot in notebook.
+
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        The plotly figure with the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+
+        
+    """
+
+    fig_tit=ecg_or_eog+title
+
+    #if df and not df.empty: #if affected channels present:
+    if df is not None:
+        if smoothed is True:
+            metric = ecg_or_eog+'_smoothed'
+        elif smoothed is False:
+            metric = ecg_or_eog
+        fig = plot_df_of_channels_data_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
+
+        #decorate the plot:
+        ch_type_tit, unit = get_tit_and_unit(m_or_g)
+        fig.update_layout(
+            xaxis_title='Time in seconds',
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title='Mean artifact magnitude in '+unit,
+            title={
+                'text': fig_tit+str(len(df))+' '+ch_type_tit,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+
+
+    else:
+        fig=go.Figure()
+        ch_type_tit, _ = get_tit_and_unit(m_or_g)
+        title=fig_tit+'0 ' +ch_type_tit
+        fig.update_layout(
+            title={
+            'text': title,
+            'x': 0.5,
+            'y': 0.9,
+            'xanchor': 'center',
+            'yanchor': 'top'})
+        
+    #in any case - add the threshold on the plot
+    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
+
+    if flip_data is False and artifact_lvl is not None: 
+        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), line=dict(color='black'), name='-Thres=mean_peak/norm_lvl'))
+
+    if verbose_plots is True:
+        fig.show()
+
+    return fig
+
+def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
+
+    """
+    THE FINAL func
+
+    TODO:
+    maybe remove reading csv and pass directly the df here?
+    adjust docstrings
+
+
+    Plot average artifact for each channel, colored by lobe, 
+    channels are split into 3 separate plots, based on their correlation with mean_rwave: equal number of channels in each group.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of objects of class Avg_artif
+    tmin : float
+        Start time of the epoch (negative value)
+    tmax : float
+        End time of the epoch
+    m_or_g : str
+        Type of the channel: mag or grad
+    ecg_or_eog : str
+        Type of the artifact: ECG or EOG
+    chs_by_lobe : dict
+        Dictionary with channels split by lobe
+    flip_data : bool
+        Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
+    verbose_plots : bool
+        If True, plots are shown in the notebook.
+
+    Returns
+    -------
+    artif_per_ch : list
+        List of objects of class Avg_artif
+    affected_derivs : list
+        List of objects of class QC_derivative (plots)
+    
+
+    """
+
+
+    ecg_or_eog = ecg_or_eog.lower()
+
+    df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
+
+    artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
+
+    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+
+    smoothed = True
+    fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' middle affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+
+
+    #set the same Y axis limits for all 3 figures for clear comparison:
+
+    if ecg_or_eog.lower() == 'ecg' and smoothed is False:
+        prefix = 'mean_ecg_sec_'
+    elif ecg_or_eog.lower() == 'ecg' and smoothed is True:
+        prefix = 'smoothed_mean_ecg_sec_'
+    elif ecg_or_eog.lower() == 'eog' and smoothed is False:
+        prefix = 'mean_eog_sec_'
+    elif ecg_or_eog.lower() == 'eog' and smoothed is True:
+        prefix = 'smoothed_mean_eog_sec_'
+
+    cols = [column for column in df if column.startswith(prefix)]
+    cols = ['Name']+cols
+
+    limits_df = df[cols]
+
+    ymax = limits_df.loc[:, limits_df.columns != 'Name'].max().max()
+    ymin = limits_df.loc[:, limits_df.columns != 'Name'].min().min()
+
+    ylim = [ymin*.95, ymax*1.05]
+
+    # update the layout of all three figures with the same y-axis limits
+    fig_most_affected.update_layout(yaxis_range=ylim)
+    fig_middle_affected.update_layout(yaxis_range=ylim)
+    fig_least_affected.update_layout(yaxis_range=ylim)
+
+    if verbose_plots is True:
+        fig_most_affected.show()
+        fig_middle_affected.show()
+        fig_least_affected.show()
+    
+    affected_derivs = []
+    affected_derivs += [QC_derivative(fig_most_affected, ecg_or_eog+'most_affected_channels_'+m_or_g, 'plotly')]
+    affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
+    affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
+
+   
+    return affected_derivs
+
+
+def plot_correlation_csv(f_path, ecg_or_eog, m_or_g, verbose_plots=False):
+
+    """
+    Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+
+    Parameters
+    ----------
+    artif_per_ch : list
+        List of channels with Avg_artif objects.
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
+    m_or_g : str
+        Either 'mag' or 'grad'.
+    verbose_plots : bool
+        If True, plot will be displayed in a notebook.
+
+    Returns
+    -------
+    corr_derivs : list
+        List with 1 QC_derivative instance: Figure with correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    
+    """
+
+    ecg_or_eog = ecg_or_eog.lower()
+
+    df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
+
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+
+    traces = []
+
+    tit, _ = get_tit_and_unit(m_or_g)
+
+    for index, row in df.iterrows():
+        traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
+
+    fig = go.Figure(data=traces)
+
+    fig.add_shape(type="rect", xref="x", yref="y", x0=0, y0=-0.1, x1=corr_val_of_last_least_correlated, y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
+    fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_middle_correlated, y0=-0.1, x1=1, y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
+
+    #set axis titles:
+    fig.update_xaxes(title_text='Correlation coefficient')
+    fig.update_yaxes(title_text='P-value')
+
+    #set title:
+    fig.update_layout(title_text=tit+': Pearson correlation between reference '+ecg_or_eog+' epoch and '+ecg_or_eog+' epoch in each channel')
+
+    if verbose_plots is True:
+        fig.show()
+
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>')]
+
+    return corr_derivs

@@ -1092,7 +1092,7 @@ def assign_psds_to_channels(chs_by_lobe, freqs, psds):
     """
 
     TODO: fix docstrings 
-    TODO: move as a part of MEG_channels in innitial
+    TODO: move as a part of MEG_channels in plots
 
 
     Assign std or ptp values of each epoch as list to each channel. 

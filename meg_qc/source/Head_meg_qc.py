@@ -5,7 +5,7 @@ from plotly.subplots import make_subplots
 import mne
 from mne.preprocessing import annotate_movement, compute_average_dev_head_t
 import time
-from meg_qc.source.universal_plots import QC_derivative, make_head_pos_plot_csv, make_head_pos_plot_mne
+from meg_qc.source.universal_plots import QC_derivative
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
 mne.viz.set_browser_backend('matplotlib')
