@@ -143,7 +143,7 @@ def selector(entities):
             values.append((str(item), str(item)))
 
     results = checkboxlist_dialog(
-        title="CheckboxList dialog",
+        title="Select metrics to plot:",
         text="Select subcategories:",
         values=values,
         style=Style.from_dict({
