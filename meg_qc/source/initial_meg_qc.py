@@ -2,9 +2,12 @@ import mne
 import configparser
 import numpy as np
 import random
+import json
+import pandas as pd
+from IPython.display import display
 
 from IPython.display import display
-from meg_qc.source.universal_plots import plot_sensors_3d, plot_time_series, plot_time_series_avg
+from meg_qc.source.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative
 
 
 def get_all_config_params(config_file_name: str):
@@ -374,7 +377,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_eog: list or np.ndarray = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -403,6 +406,8 @@ class MEG_channels:
             The peak-to-peak amplitude of the channel time series per epochs.
         psd : array
             The power spectral density of the channel.
+        freq: array
+            Frequencies for psd.
         mean_ecg : float
             The mean ECG artifact of the channel.
         mean_eog : float
@@ -421,15 +426,32 @@ class MEG_channels:
         self.ptp_overall = ptp_overall
         self.ptp_epoch = ptp_epoch
         self.psd = psd
+        self.freq = freq
         self.mean_ecg = mean_ecg
+        self.mean_ecg_smoothed = mean_ecg_smoothed
         self.mean_eog = mean_eog
+        self.mean_eog_smoothed = mean_eog_smoothed
+        self.ecg_corr_coeff = ecg_corr_coeff
+        self.ecg_pval = ecg_pval
+        self.eog_corr_coeff = eog_corr_coeff
+        self.eog_pval = eog_pval
+        self.ecg_time = ecg_time
+        self.eog_time = eog_time
+        self.muscle = muscle
+        self.head = head
+        self.muscle_time = muscle_time
+        self.head_time = head_time
 
 
     def __repr__(self):
 
+
+
         """
         Returns the string representation of the object.
         
+        TODO: add remaining metrics here
+
         """
 
         all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
@@ -437,6 +459,71 @@ class MEG_channels:
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
+    
+    def to_df(self):
+        data_dict = {}
+        freqs = self.freq
+
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
+            
+            
+            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
+            value = getattr(self, attr)
+            if isinstance(value, (list, np.ndarray)):
+
+                
+                if 'psd' == attr:
+                    freqs = getattr(self, 'freq') #??? right
+                    for i, v in enumerate(value):
+                        fr = freqs[i]
+                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
+
+                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
+                    if attr == 'mean_ecg':
+                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'mean_eog':
+                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'head':
+                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'muscle':
+                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
+                    
+                    for i, v in enumerate(value):
+                        t = times[i]
+                        data_dict[f'{column_name}_sec_{t}'] = [v]
+
+                else: #TODO: here maybe change to elif std/ptp?
+                    for i, v in enumerate(value):
+                        data_dict[f'{column_name}_{i}'] = [v]
+            else:
+                data_dict[column_name] = [value]
+
+        return pd.DataFrame(data_dict)
+
+    def add_ecg_info(self, Avg_artif_list, artif_time_vector):
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_ecg = artif_ch.artif_data
+                self.mean_ecg_smoothed = artif_ch.artif_data_smoothed
+                self.ecg_time = artif_time_vector
+                self.ecg_corr_coeff = artif_ch.corr_coef
+                self.ecg_pval = artif_ch.p_value
+                
+    def add_eog_info(self, Avg_artif_list, artif_time_vector):
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_eog = artif_ch.artif_data
+                self.mean_eog_smoothed = artif_ch.artif_data_smoothed
+                self.eog_time = artif_time_vector
+                self.eog_corr_coeff = artif_ch.corr_coef
+                self.eog_pval = artif_ch.p_value
+
+                #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
+                # but artif_ch doesnt have this separation to ecg/eog. 
+                # Need to just make sure that the function is called in the right place.
 
 
 def assign_channels_properties(raw: mne.io.Raw):
@@ -716,7 +803,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     #Plot sensors:
-    sensors_derivs = plot_sensors_3d(chs_by_lobe)
+    #sensors_derivs = plot_sensors_3d(chs_by_lobe)
 
 
     #Plot time series:
@@ -741,4 +828,41 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     resample_str = '<p>' + resample_str + '</p>'
 
 
+    #Extract chs_by_lobe into a data frame
+    sensors_derivs += chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
+
     return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
+
+
+def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
+
+    #Extract chs_by_lobe into a data frame
+    chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}
+
+    its = []
+    for ch_type, content in chs_by_lobe_df.items():
+        for lobe, items in content.items():
+            its.append(items)
+
+    df_fin = pd.concat(its)
+
+    # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
+    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        df_fin = df_fin.drop(columns='STD epoch')
+    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
+        # If there are, drop the 'PtP epoch' column
+        df_fin = df_fin.drop(columns='PtP epoch')
+    if any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        df_fin = df_fin.drop(columns='PSD')
+    if any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        df_fin = df_fin.drop(columns='ECG')
+    if any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
+        # If there are, drop the 'STD epoch' column
+        df_fin = df_fin.drop(columns='EOG')
+
+    df_deriv = [QC_derivative(content = df_fin, name = file_name_prefix, content_type = 'df')]
+
+    return df_deriv

@@ -5,6 +5,33 @@ import json
 
 import sys
 
+from meg_qc.source.universal_plots import boxplot_all_time, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs
+
+# open for_report.json and load it into a dictionary:
+with open('for_report.json', 'r') as file:
+    data = file.read()
+    for_report = json.loads(data)
+
+#get 'ch_chosen' from for_report:
+m_or_g_chosen = for_report['ch_chosen']
+
+# Figure derivs for STD:
+
+
+# Here we get dfs from STD data and plot all figures:
+
+derivs_std = []
+verbose_plots = False
+
+for m_or_g in m_or_g_chosen:
+
+    derivs_std += [boxplot_all_time(chs_by_lobe_copy[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+    fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+    fig_std_epoch1 += [boxplot_epoched_xaxis_epochs(chs_by_lobe_std[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
 sys.path.append('./meg_qc/source/')
@@ -28,7 +55,7 @@ from meg_qc.source.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.source.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.source.muscle_meg_qc import MUSCLE_meg_qc
 from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
-from meg_qc.source.universal_plots import QC_derivative
+from meg_qc.source.universal_plots import QC_derivative, estimate_figure_size
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
@@ -81,11 +108,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-        # print('_____derivs here___')
-        # print(type(dataset.derivatives))
-        # deriv = dataset.derivatives.folders['Meg_QC'].files
-        # print(deriv)
-
         # schema = dataset.get_schema()
         # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
@@ -127,7 +149,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
-        for sid in list_of_subs[0:1]: #[0:4]: 
+        for sid in list_of_subs: #[0:4]: 
             print('___MEG QC___: ', 'Dataset: ', dataset_path)
             print('___MEG QC___: ', 'Take SID: ', sid)
             
@@ -136,15 +158,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             list_of_fifs = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
             print('___MEG QC___: ', 'list_of_fifs', list_of_fifs)
             print('___MEG QC___: ', 'TOTAL fifs: ', len(list_of_fifs))
-
-
-            # GET all derivs!
-            # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
-            # print('___MEG QC___: ', 'derivs_list', derivs_list)
-
-            # entities = dataset.query_entities()
-            # print('___MEG QC___: ', 'entities', entities)
-
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
@@ -225,7 +238,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 if all_qc_params['default']['run_Head'] is True:
                     print('___MEG QC___: ', 'Starting Head movement calculation...')
-                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, verbose_plots, plot_annotations=False)
+                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, verbose_plots, plot_with_lines=True, plot_annotations=False)
                     print('___MEG QC___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_Muscle'] is True:
@@ -262,6 +275,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'Head movement artifacts': head_derivs,
                 'High frequency (Muscle) artifacts': muscle_derivs}
 
+                figure_sizes = estimate_figure_size(QC_derivs)
 
                 QC_simple={
                 'STD': simple_metrics_std, 
@@ -355,10 +369,4 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
     # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
     
-
-    for_report = {'ch_chosen': m_or_g_chosen}
-    # save as json:
-    with open('for_report.json', 'w') as file_wrapper:
-        json.dump(for_report, file_wrapper, indent=4)
-
-    return for_report
+    return

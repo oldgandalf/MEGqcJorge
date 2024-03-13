@@ -13,8 +13,9 @@ from IPython.display import display
 from typing import List
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
 from meg_qc.source.universal_html_report import simple_metric_basic
+from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version
@@ -116,11 +117,10 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
     df_psds=pd.DataFrame(psds.T, columns=channels)
 
     # Assuming df_psds is a DataFrame with a DateTimeIndex
-    downsampling_factor = 5  # replace with your desired downsampling factor
+    downsampling_factor = 1  # replace with your desired downsampling factor
     df_psds_downsampled = df_psds[::downsampling_factor]
-    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds_downsampled, freqs)
 
-    #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds, freqs)
+    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_psds, freqs)
 
     tit, unit = get_tit_and_unit(m_or_g)
     fig.update_layout(
@@ -149,6 +149,7 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
+
 
 
 def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
@@ -1085,6 +1086,40 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     nperseg=int(sfreq/psd_step_size)
     return nfft, nperseg
 
+
+def assign_psds_to_channels(chs_by_lobe, freqs, psds):
+
+    """
+
+    TODO: fix docstrings 
+    TODO: move as a part of MEG_channels in innitial
+
+
+    Assign std or ptp values of each epoch as list to each channel. 
+    This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
+    
+    Parameters
+    ----------
+    what_data : str
+        'peaks' for peak-to-peak amplitudes or 'stds'
+    chs_by_lobe : dict
+        dictionary with channel objects sorted by lobe.
+    df_std_ptp : pd.DataFrame
+        Data Frame containing std or ptp value for each chnnel and each epoch
+    
+        
+    Returns
+    -------
+    chs_by_lobe : dict
+        updated dictionary with channel objects sorted by lobe - with info about std or ptp of epochs.
+    """
+    for lobe in chs_by_lobe:
+        for ch_n, ch in enumerate(chs_by_lobe[lobe]):
+            ch.psd = psds[ch_n]
+            ch.freq = freqs
+
+    return chs_by_lobe
+
 #%%
 def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool, helperplots: bool):
     
@@ -1161,12 +1196,17 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     method = 'welch'
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
+    chs_by_lobe_psd=chs_by_lobe.copy()
+
     for m_or_g in m_or_g_chosen:
 
         psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
-        psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
+        # Add psds and freqs into chs_by_lobe dict:
+        chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe[m_or_g], freqs[m_or_g], psds[m_or_g])
+
+        #psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
 
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
@@ -1176,12 +1216,17 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
         noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', verbose_plots=verbose_plots)
         
-        derivs_psd += [psd_plot_derivative] + [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
+        derivs_psd += [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
 
 
     # Make a simple metric for PSD:
     simple_metric=make_simple_metric_psd(mean_brain_waves_dict, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local, noise_ampl_relative_to_all_signal_local, noisy_freqs_local, m_or_g_chosen, freqs, channels)
 
     psd_str = '' #blank for now. maybe wil need to add notes later.
+
+    #Extract chs_by_lobe into a data frame
+    df_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
+
+    derivs_psd += df_deriv
 
     return derivs_psd, simple_metric, psd_str, noisy_freqs_global
