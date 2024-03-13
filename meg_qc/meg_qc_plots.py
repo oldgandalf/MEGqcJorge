@@ -61,8 +61,8 @@ def get_plot_config_params(config_plot_file_name: str):
         print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
-    subjects = default_section['subjects']
-    subjects = [sub.strip() for sub in subjects.split(",")]
+    # subjects = default_section['subjects']
+    # subjects = [sub.strip() for sub in subjects.split(",")]
 
     plot_sensors = default_section.getboolean('plot_sensors')
     plot_STD = default_section.getboolean('STD')
@@ -84,7 +84,7 @@ def get_plot_config_params(config_plot_file_name: str):
 
         default_params = dict({
             'm_or_g_chosen': m_or_g_chosen, 
-            'subjects': subjects,
+            'subjects': [],
             'plot_sensors': plot_sensors,
             'plot_STD': plot_STD,
             'plot_PSD': plot_PSD,
@@ -126,7 +126,7 @@ def modify_categories(categories):
     #Remove subcategories that are not QC metrics:
             
     if 'METRIC' in categories:
-        categories['METRIC'] = [x for x in categories['METRIC'] if x in ['_ALL_METRICS_', 'STD', 'PSD', 'PtP_manual', 'PtP_auto', 'ECG', 'EOG', 'Head', 'Muscle']]
+        categories['METRIC'] = [x for x in categories['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
 
     return categories
 
@@ -161,6 +161,14 @@ def selector(entities):
     selected_subcategories = [result for result in results if not result.startswith('== ')]
 
     print('You selected:', selected_subcategories)
+
+    # check that every category has at least one subcategory selected. If not - give a message to user and ask to select again:
+
+    # for category in categories:
+    #     if category not in selected_subcategories:
+    #         print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
+    #         selector(entities)
+
 
     return selected_subcategories
 
@@ -236,7 +244,34 @@ def make_plots_meg_qc(config_plot_file_path):
         return
     
 
-def plot_metrics(chosen_entities):
+def plot_metrics(config_plot_file_name: str, chosen_entities):
+
+    plot_params = get_plot_config_params(config_plot_file_path)
+
+    #derivs_path  = '/Volumes/M2_DATA/'
+
+    if plot_params is None:
+        return
+
+
+    ds_paths = plot_params['default']['dataset_path']
+    for dataset_path in ds_paths: #run over several data sets
+
+        try:
+            dataset = ancpbids.load_dataset(dataset_path)
+        except:
+            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            return
+        
+    #create derivatives folder first:
+        if os.path.isdir(dataset_path+'/derivatives')==False: 
+                os.mkdir(dataset_path+'/derivatives')
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+    list_of_subs = ['009'] #TODO: get real list from chosen entities
+
 
     for sid in list_of_subs[0:1]: #[0:4]: 
         print('___MEG QC___: ', 'Dataset: ', dataset_path)
@@ -291,10 +326,11 @@ def get_all_entities(config_plot_file_path):
     
     return entities
 
+def stuff():
+    entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
+    chosen_entities = selector(entities)
 
-entities = get_all_entities('plot_settings.ini') #'meg_qc/plot_settings.ini'
-chosen_entities = selector(entities)
-print('Nexrt step: plot metrics for chosen entities:', chosen_entities)
+    print('Next step: plot metrics for chosen entities:', chosen_entities)
 
 
 def herewego(plot_params):
