@@ -172,6 +172,68 @@ def selector(entities):
 
     return selected_subcategories
 
+
+def selector_by_categories(entities):
+
+    '''
+    Loop over categories (keys)
+    for every key use a subfunction that will create a selector for the subcategories.
+    '''
+
+    # Define the categories and subcategories
+    categories = modify_categories(entities)
+
+
+    selected = {}
+    # Create a list of values with category titles
+    for key, items in categories.items():
+        subcategory = selector_subcategory(categories[key], key)
+        selected[key] = subcategory
+
+    return selected
+
+def selector_subcategory(subcategories, category_title):
+
+    print('___MEG QC___: ', 'Select subcategories for:', category_title)
+    print('___MEG QC___: ', 'Subcategories:', subcategories)
+
+    # Create a list of values with category titles
+    values = []
+    for items in subcategories:
+        values.append((str(items), str(items)))
+
+        # Each tuple represents a checkbox item and should contain two elements:
+        # A string that will be returned when the checkbox is selected.
+        # A string that will be displayed as the label of the checkbox.
+
+    results = checkboxlist_dialog(
+        title="Select metrics to plot:",
+        text=category_title,
+        values=values,
+        style=Style.from_dict({
+            'dialog': 'bg:#cdbbb3',
+            'button': 'bg:#bf99a4',
+            'checkbox': '#e8612c',
+            'dialog.body': 'bg:#a9cfd0',
+            'dialog shadow': 'bg:#c98982',
+            'frame.label': '#fcaca3',
+            'dialog.body label': '#fd8bb6',
+        })
+    ).run()
+
+    # check that there is at least one subcategory selected. 
+    # If not - give a message to user and ask to select again:
+
+    if not results:
+        print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
+        selector_subcategory(subcategories)
+
+    print('___MEG QC___: ', 'You selected:', results)
+
+    return results
+
+
+
 def make_plots_meg_qc(config_plot_file_path):
 
     plot_params = get_plot_config_params(config_plot_file_path)
@@ -328,7 +390,9 @@ def get_all_entities(config_plot_file_path):
 
 def stuff():
     entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
-    chosen_entities = selector(entities)
+    #chosen_entities = selector(entities)
+
+    chosen_entities = selector_by_categories(entities)
 
     print('Next step: plot metrics for chosen entities:', chosen_entities)
 
