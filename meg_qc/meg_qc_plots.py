@@ -130,7 +130,9 @@ def modify_categories(categories):
 
     return categories
 
-def selector(entities):
+def selector_old(entities):
+
+    ''' Old version where everything is done in 1 window'''
 
     # Define the categories and subcategories
     categories = modify_categories(entities)
@@ -162,18 +164,10 @@ def selector(entities):
 
     print('You selected:', selected_subcategories)
 
-    # check that every category has at least one subcategory selected. If not - give a message to user and ask to select again:
-
-    # for category in categories:
-    #     if category not in selected_subcategories:
-    #         print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
-    #         selector(entities)
-
-
     return selected_subcategories
 
 
-def selector_by_categories(entities):
+def selector(entities):
 
     '''
     Loop over categories (keys)
@@ -187,18 +181,22 @@ def selector_by_categories(entities):
     selected = {}
     # Create a list of values with category titles
     for key, items in categories.items():
-        subcategory = selector_subcategory(categories[key], key)
-        while not subcategory:
-            print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
-            subcategory = selector_subcategory(categories[key], key)
+        subcategory = select_subcategory(categories[key], key)
         selected[key] = subcategory
+
+    for key, items in selected.items():
+        if not selected[key]: # if nothing was chosen:
+            title = 'You did not choose the '+key+'. Please try again:'
+            subcategory = select_subcategory(categories[key], key, title)
+            if not subcategory: # if nothing was chosen again - stop:
+                print('You still  did not choose the '+key+'. Please start over.')
+                return None
+            
+            selected[key] = subcategory
 
     return selected
 
-def selector_subcategory(subcategories, category_title):
-
-    print('___MEG QC___: ', 'Select subcategories for:', category_title)
-    print('___MEG QC___: ', 'Subcategories:', subcategories)
+def select_subcategory(subcategories, category_title, title="What would you like to plot?"):
 
     # Create a list of values with category titles
     values = []
@@ -210,7 +208,7 @@ def selector_subcategory(subcategories, category_title):
         # A string that will be displayed as the label of the checkbox.
 
     results = checkboxlist_dialog(
-        title="What would you like to plot?",
+        title=title,
         text=category_title,
         values=values,
         style=Style.from_dict({
@@ -223,11 +221,6 @@ def selector_subcategory(subcategories, category_title):
             'dialog.body label': '#fd8bb6',
         })
     ).run()
-
-    # check that there is at least one subcategory selected. 
-    # If not - give a message to user and ask to select again:
-
-    print('___MEG QC___: ', 'You selected:', results)
 
     return results
 
@@ -391,7 +384,7 @@ def stuff():
     entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
     #chosen_entities = selector(entities)
 
-    chosen_entities = selector_by_categories(entities)
+    chosen_entities = selector(entities)
 
     print('Next step: plot metrics for chosen entities:', chosen_entities)
 
