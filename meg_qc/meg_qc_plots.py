@@ -188,6 +188,9 @@ def selector_by_categories(entities):
     # Create a list of values with category titles
     for key, items in categories.items():
         subcategory = selector_subcategory(categories[key], key)
+        while not subcategory:
+            print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
+            subcategory = selector_subcategory(categories[key], key)
         selected[key] = subcategory
 
     return selected
@@ -207,7 +210,7 @@ def selector_subcategory(subcategories, category_title):
         # A string that will be displayed as the label of the checkbox.
 
     results = checkboxlist_dialog(
-        title="Select metrics to plot:",
+        title="What would you like to plot?",
         text=category_title,
         values=values,
         style=Style.from_dict({
@@ -223,10 +226,6 @@ def selector_subcategory(subcategories, category_title):
 
     # check that there is at least one subcategory selected. 
     # If not - give a message to user and ask to select again:
-
-    if not results:
-        print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
-        selector_subcategory(subcategories)
 
     print('___MEG QC___: ', 'You selected:', results)
 
