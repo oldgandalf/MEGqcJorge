@@ -107,35 +107,45 @@ def get_plot_config_params(config_plot_file_name: str):
 
     return plot_params
 
-def modify_categories(categories):
+def modify_entity_name(entities):
 
-    old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+    #old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
 
-    categories_copy = categories.copy()
+    old_new_categories = {'desc': 'METRIC'}
+
+    categories_copy = entities.copy()
     for category, subcategories in categories_copy.items():
         # Convert the set of subcategories to a sorted list
         sorted_subcategories = sorted(subcategories, key=str)
         # If the category is in old_new_categories, replace it with the new category
-        if category in old_new_categories:
+        if category in old_new_categories: 
+            #This here is to replace the old names with new like desc -> METRIC
+            #Normally we d use it only for the METRIC, but left this way in case the principle will extend to other categories
+            #see old_new_categories above.
+
             new_category = old_new_categories[category]
-            categories[new_category] = categories.pop(category)
+            entities[new_category] = entities.pop(category)
             # Replace the original set of subcategories with the modified list
             sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
-            categories[new_category] = sorted_subcategories
+            entities[new_category] = sorted_subcategories
+        else: #if we dont want to rename categories
+            sorted_subcategories.insert(0, '_ALL_'+category+'s_')
+            entities[category] = sorted_subcategories
 
-    #Remove subcategories that are not QC metrics:
+    #From METRIC remove whatever is not metric. 
+    #Cos METRIC is originally a desc entity which can contain just anything:
             
-    if 'METRIC' in categories:
-        categories['METRIC'] = [x for x in categories['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
+    if 'METRIC' in entities:
+        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
 
-    return categories
+    return entities
 
 def selector_old(entities):
 
     ''' Old version where everything is done in 1 window'''
 
     # Define the categories and subcategories
-    categories = modify_categories(entities)
+    categories = modify_entity_name(entities)
 
     # Create a list of values with category titles
     values = []
@@ -175,7 +185,7 @@ def selector(entities):
     '''
 
     # Define the categories and subcategories
-    categories = modify_categories(entities)
+    categories = modify_entity_name(entities)
 
 
     selected = {}
