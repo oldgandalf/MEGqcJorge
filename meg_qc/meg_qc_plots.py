@@ -187,14 +187,17 @@ def selector(entities):
     # Define the categories and subcategories
     categories = modify_entity_name(entities)
 
-
     selected = {}
     # Create a list of values with category titles
     for key, items in categories.items():
         subcategory = select_subcategory(categories[key], key)
         selected[key] = subcategory
 
+    print('SELECTED', selected)
+
+    #Check 1) if nothing was chosen, 2) if ALL was chosen
     for key, items in selected.items():
+
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
             subcategory = select_subcategory(categories[key], key, title)
@@ -202,7 +205,11 @@ def selector(entities):
                 print('You still  did not choose the '+key+'. Please start over.')
                 return None
             
-            selected[key] = subcategory
+        else:
+            for item in items:
+                if 'ALL' in item.upper():
+                    all_selected = [category for category in categories[key] if 'ALL' not in category.upper()]
+                    selected[key] = all_selected #everything
 
     return selected
 
@@ -390,13 +397,29 @@ def get_all_entities(config_plot_file_path):
     
     return entities
 
-def stuff():
-    entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
-    #chosen_entities = selector(entities)
+def stuff(config_plot_file_path):
 
-    chosen_entities = selector(entities)
+    plot_params = get_plot_config_params(config_plot_file_path)
+    ds_paths = plot_params['default']['dataset_path']
+    for dataset_path in ds_paths[0:1]: #run over several data sets
+        dataset = ancpbids.load_dataset(dataset_path)
 
-    print('Next step: plot metrics for chosen entities:', chosen_entities)
+        entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
+        #chosen_entities = selector(entities)
+
+        chosen_entities = selector(entities)
+        print(chosen_entities)
+
+        #Next step: plot metrics for chosen entities
+
+        # loop over all chosen entities and one by one retrueve file paths:
+        files_to_plot = []
+
+        # for entity, ent_value in chosen_entities:
+        #     files_to_plot += dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')
+        # #derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
+        #print('___MEG QC___: ', 'derivs_list', derivs_list)
+
 
 
 def herewego(plot_params):
