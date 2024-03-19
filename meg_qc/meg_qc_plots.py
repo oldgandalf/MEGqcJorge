@@ -404,31 +404,26 @@ def stuff(config_plot_file_path):
     for dataset_path in ds_paths[0:1]: #run over several data sets
         dataset = ancpbids.load_dataset(dataset_path)
 
-        # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=['009', '012'], desc = ['ECGs', 'EOGs', 'Muscle', 'PSDs'], scope='derivatives')))
+        entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
+        #chosen_entities = selector(entities)
 
-        # for f in derivs_list:
-        #     print('file', f)
+        chosen_entities = selector(entities)
+        print('CHOSEN entities to plot: ', chosen_entities)
 
-        # entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
-        # #chosen_entities = selector(entities)
-
-        # chosen_entities = selector(entities)
-        # print('CHOSEN: ', chosen_entities)
-
-        chosen_entities = {
-        'sub': ['009', '012'],
-        'ses': ['1'],
-        'task': ['deduction'],
-        'run': ['1'],
-        'METRIC': ['Muscle', 'PSDs', 'STDs']
-        }
+        # chosen_entities = {
+        # 'sub': ['009', '012'],
+        # 'ses': ['1'],
+        # 'task': ['deduction'],
+        # 'run': ['1'],
+        # 'METRIC': ['Muscle', 'PSDs', 'STDs']
+        # }
 
         # Creating the full list of files for each combination
         files_to_plot = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=chosen_entities['sub'], ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = chosen_entities['METRIC'], scope='derivatives')))
 
 
         for f in files_to_plot:
-            print('to plot: ', f)
+            print('File to plot: ', f)
 
     return files_to_plot
 
