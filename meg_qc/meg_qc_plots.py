@@ -426,64 +426,9 @@ def stuff(config_plot_file_path):
         # Creating the full list of files for each combination
         files_to_plot = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=chosen_entities['sub'], ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = chosen_entities['METRIC'], scope='derivatives')))
 
-        #files_to_plot = get_all_files_to_plot(dataset, chosen_entities)
 
         for f in files_to_plot:
             print('to plot: ', f)
-
-        #Next step: plot metrics for chosen entities
-
-        # # loop over all chosen entities and one by one retrieve file paths:
-        # files_to_plot = []
-
-        # for entity, ent_value in chosen_entities:
-        #     files_to_plot += dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')
-        # #derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
-        # print('___MEG QC___: ', 'derivs_list', derivs_list)
-
-    return files_to_plot
-
-    
-def get_all_files_to_plot(dataset, chosen_entities):
-
-    # Preparing the entities in the required format
-    entities_values = [chosen_entities[key] for key in chosen_entities]
-    entity_keys = [key for key in chosen_entities]
-
-    # Generating all possible combinations of entities
-    all_combinations = list(itertools.product(*entities_values))
-
-    print('all combos: ', all_combinations)
-
-    # Creating the full list of files for each combination
-    files_to_plot = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=chosen_entities['sub'], ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = chosen_entities['METRIC'], scope='derivatives')))
-
-    return files_to_plot
-
-def get_all_files_to_plot_ai(dataset, chosen_entities):
-
-    # Preparing the entities in the required format
-    entities_values = [chosen_entities[key] for key in chosen_entities]
-    entity_keys = [key for key in chosen_entities]
-
-    # Generating all possible combinations of entities
-    all_combinations = list(itertools.product(*entities_values))
-
-    print('all combos: ', all_combinations)
-
-    # Creating the full list of files for each combination
-    files_to_plot = []
-    for combination in all_combinations:
-        entity_dict = dict(zip(entity_keys, combination))
-        sub = entity_dict['sub']
-        ses = entity_dict['ses']
-        task = entity_dict['task']
-        run = entity_dict['run']
-        metrics = entity_dict['METRIC']
-
-        for metric in metrics:
-            file_path = dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = ses, run=run, task=task, desc = metrics, scope='derivatives')
-            files_to_plot.append(file_path)
 
     return files_to_plot
 
