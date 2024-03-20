@@ -403,23 +403,49 @@ def stuff(config_plot_file_path):
     ds_paths = plot_params['default']['dataset_path']
     for dataset_path in ds_paths[0:1]: #run over several data sets
         dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
         entities = get_all_entities(config_plot_file_path) 
 
         chosen_entities = selector(entities)
         print('CHOSEN entities to plot: ', chosen_entities)
 
-        # Creating the full list of files for each combination
-        files_to_plot = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=chosen_entities['sub'], ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = chosen_entities['METRIC'], scope='derivatives')))
+        for sub in chosen_entities['sub']:
+
+            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
+            list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
+
+            files_to_plot = {}
+            for metric in chosen_entities['METRIC']:
+                # Creating the full list of files for each combination
+                f = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
+                files_to_plot[metric] = f
+
+            # for f in files_to_plot:
+            #     print('File to plot: ', f)
+            print('Files to plot: ', files_to_plot)
+
+            for metric, files in files_to_plot.items():
+                for n_f, f in enumerate(files):
+
+                    meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[n_f]) #shell. empty derivative
+                    meg_artifact.add_entity('desc', metric) #file name
+                    meg_artifact.suffix = 'meg'
+                    meg_artifact.extension = '.html'
+
+                    #meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
 
 
-        for f in files_to_plot:
-            print('File to plot: ', f)
+    #ancpbids.write_derivative(dataset, derivative) 
+
 
     return files_to_plot
 
 
-def herewego(plot_params):
+def csv_to_fig(plot_params):
 
     verbose_plots = plot_params['default']['verbose_plots']
     m_or_g_chosen = plot_params['default']['m_or_g_chosen']
