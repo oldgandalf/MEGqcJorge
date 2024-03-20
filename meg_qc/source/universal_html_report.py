@@ -1,6 +1,7 @@
 
 import mne
-from meg_qc.source.universal_plots import get_tit_and_unit
+# from meg_qc.source.universal_plots import get_tit_and_unit
+from source.universal_plots import get_tit_and_unit
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
 
@@ -185,11 +186,12 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    if default_settings['plot_mne_butterfly'] is True:
-        report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
-    else:
-        report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
-    # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
+    if raw is not None:
+        if default_settings['plot_mne_butterfly'] is True:
+            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
+        else:
+            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
+        # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
 
     for key in sections:
         if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':

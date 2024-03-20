@@ -7,6 +7,12 @@ import itertools
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 
+# from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
+# from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
+
+from source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
+from source.universal_html_report import make_joined_report, make_joined_report_mne
+
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
@@ -399,6 +405,8 @@ def get_all_entities(config_plot_file_path):
 
 def stuff(config_plot_file_path):
 
+    files_to_plot = []
+
     plot_params = get_plot_config_params(config_plot_file_path)
     ds_paths = plot_params['default']['dataset_path']
     for dataset_path in ds_paths[0:1]: #run over several data sets
@@ -436,16 +444,117 @@ def stuff(config_plot_file_path):
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-                    #meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
+                    # Here convert csv into figure and into html report:
+                    deriv = csv_to_fig(metric, f)
 
 
-    #ancpbids.write_derivative(dataset, derivative) 
+                    meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
 
+
+    ancpbids.write_derivative(dataset, derivative) 
 
     return files_to_plot
 
 
-def csv_to_fig(plot_params):
+def csv_to_fig(metric, f_path):
+
+    m_or_g_chosen = ['mag'] #REMOVE. Parse from somewhere?
+    verbose_plots = False
+    raw = None # if none - we cant print raw information. 
+    # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
+
+
+    time_series_derivs, sensors_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
+
+    if 'STD' in metric.upper():
+
+        fig_std_epoch0 = []
+        fig_std_epoch1 = []
+    
+        for m_or_g in m_or_g_chosen:
+
+            std_derivs += [boxplot_all_time_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+            # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+
+        std_derivs += fig_std_epoch0+fig_std_epoch1 
+
+    elif 'PSD' in metric.upper():
+
+        for m_or_g in m_or_g_chosen:
+
+            method = 'welch' #is also hard coded in PSD_meg_qc() for now
+
+            psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
+
+            psd_derivs += [psd_plot_derivative]
+
+    elif 'ECG' in metric.upper():
+        for m_or_g in m_or_g_chosen:
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(f_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+
+        ecg_derivs += affected_derivs + correlation_derivs
+
+    # EOG
+
+    elif 'EOG' in metric.upper():
+            
+        for m_or_g in m_or_g_chosen:
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(f_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
+
+        eog_derivs += affected_derivs + correlation_derivs 
+
+    # Muscle
+        
+    elif 'MUSCLE' in metric.upper():
+
+        if 'mag' in m_or_g_chosen:
+                m_or_g_decided=['mag']
+        elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
+                m_or_g_decided=['grad']
+        else:
+                print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
+
+
+        muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
+
+    # Head
+        
+    elif 'HEAD' in metric.upper():
+            
+        head_pos_derivs, _ = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
+        # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
+        # head_pos_derivs += head_pos_derivs2
+        head_derivs += head_pos_derivs
+
+    QC_derivs={
+    'Time_series': time_series_derivs,
+    'Sensors': sensors_derivs,
+    'STD': std_derivs, 
+    'PSD': psd_derivs, 
+    'PtP_manual': pp_manual_derivs, 
+    'PtP_auto': pp_auto_derivs, 
+    'ECG': ecg_derivs, 
+    'EOG': eog_derivs,
+    'Head': head_derivs,
+    'Muscle': muscle_derivs}
+
+
+    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings = [], default_setting = [])
+
+    for metric, values in QC_derivs.items():
+        if values and metric != 'Sensors':
+            QC_derivs['Report_MNE'] += [QC_derivative(report_html_string, 'REPORT_'+metric, 'report mne')]
+
+    return QC_derivs
+
+
+def csv_to_fig_old(plot_params):
 
     verbose_plots = plot_params['default']['verbose_plots']
     m_or_g_chosen = plot_params['default']['m_or_g_chosen']
