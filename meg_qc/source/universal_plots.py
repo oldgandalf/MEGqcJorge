@@ -1232,8 +1232,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
                 locs = [row[col] for col in df.columns if 'Sensor_location' in col]
                 lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], loc = locs))
 
-    print(lobes_dict)
-
     traces = []
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
@@ -1275,8 +1273,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     fig = switch_names_on_off(fig)
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
-
-    fig.show()
     
     qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
 

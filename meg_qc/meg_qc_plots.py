@@ -10,7 +10,7 @@ from prompt_toolkit.styles import Style
 # from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
 # from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 
-from source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
+from source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv
 from source.universal_html_report import make_joined_report, make_joined_report_mne
 
 
@@ -228,6 +228,8 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
 
         fig_std_epoch0 = []
         fig_std_epoch1 = []
+
+        std_derivs = plot_sensors_3d_csv(tsv_path)
     
         for m_or_g in m_or_g_chosen:
 
@@ -242,6 +244,8 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
 
     elif 'PSD' in metric.upper():
 
+        psd_derivs = plot_sensors_3d_csv(tsv_path)
+
         for m_or_g in m_or_g_chosen:
 
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
@@ -251,6 +255,9 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
             psd_derivs += [psd_plot_derivative]
 
     elif 'ECG' in metric.upper():
+
+        ecg_derivs = plot_sensors_3d_csv(tsv_path)
+
         for m_or_g in m_or_g_chosen:
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
@@ -260,6 +267,8 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
     # EOG
 
     elif 'EOG' in metric.upper():
+
+        eog_derivs = plot_sensors_3d_csv(tsv_path)
             
         for m_or_g in m_or_g_chosen:
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
