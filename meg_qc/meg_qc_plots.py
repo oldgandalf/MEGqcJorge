@@ -416,9 +416,12 @@ def stuff(config_plot_file_path):
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-        entities = get_all_entities(config_plot_file_path) 
+        # entities = get_all_entities(config_plot_file_path) 
 
-        chosen_entities = selector(entities)
+        # chosen_entities = selector(entities)
+
+        chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        
         print('CHOSEN entities to plot: ', chosen_entities)
 
         for sub in chosen_entities['sub']:
@@ -448,7 +451,7 @@ def stuff(config_plot_file_path):
                     deriv = csv_to_fig(metric, f)
 
 
-                    meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
+                    meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
 
 
     ancpbids.write_derivative(dataset, derivative) 
@@ -458,9 +461,12 @@ def stuff(config_plot_file_path):
 
 def csv_to_fig(metric, f_path):
 
+    print(metric)
+    print(metric.upper())
+
     m_or_g_chosen = ['mag'] #REMOVE. Parse from somewhere?
     verbose_plots = False
-    raw = None # if none - we cant print raw information. 
+    raw = [] # if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
 
@@ -513,15 +519,19 @@ def csv_to_fig(metric, f_path):
         
     elif 'MUSCLE' in metric.upper():
 
+        print('yes')
+
         if 'mag' in m_or_g_chosen:
-                m_or_g_decided=['mag']
+            m_or_g_decided=['mag']
+            print('MAG yes')
         elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
-                m_or_g_decided=['grad']
+            m_or_g_decided=['grad']
         else:
-                print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
+            print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
         muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
+        print(muscle_derivs)
 
     # Head
         
@@ -542,10 +552,38 @@ def csv_to_fig(metric, f_path):
     'ECG': ecg_derivs, 
     'EOG': eog_derivs,
     'Head': head_derivs,
-    'Muscle': muscle_derivs}
+    'Muscle': muscle_derivs,
+    'Report_MNE': []}
+
+    print('QC_derivs')
+    print(QC_derivs)
 
 
-    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings = [], default_setting = [])
+    # report_strings = {
+    #     'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
+    #     'TIME_SERIES': time_series_str,
+    #     'STD': std_str,
+    #     'PSD': psd_str,
+    #     'PTP_MANUAL': pp_manual_str,
+    #     'PTP_AUTO': pp_auto_str,
+    #     'ECG': ecg_str,
+    #     'EOG': eog_str,
+    #     'HEAD': head_str,
+    #     'MUSCLE': muscle_str}
+
+    report_strings = {
+        'INITIAL_INFO': '',
+        'TIME_SERIES': '',
+        'STD': '',
+        'PSD': '',
+        'PTP_MANUAL': '',
+        'PTP_AUTO': '',
+        'ECG': '',
+        'EOG': '',
+        'HEAD': '',
+        'MUSCLE': ''}
+
+    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
     for metric, values in QC_derivs.items():
         if values and metric != 'Sensors':

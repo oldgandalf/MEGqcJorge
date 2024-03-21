@@ -44,6 +44,8 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     elif 'Muscle' in section_name:
         text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
     elif 'Standard deviation' in section_name or 'STD' in section_name:
+        print('HERE', report_strings)
+
         text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
     elif 'Frequency' in section_name or 'PSD' in section_name:
         text_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
@@ -186,7 +188,7 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    if raw is not None:
+    if raw: #if raw s not empty
         if default_settings['plot_mne_butterfly'] is True:
             report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
         else:
