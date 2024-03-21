@@ -387,3 +387,8 @@ def make_plots_meg_qc(ds_paths):
     ancpbids.write_derivative(dataset, derivative) 
 
     return tsvs_to_plot
+
+
+# RUN IT:
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
+
