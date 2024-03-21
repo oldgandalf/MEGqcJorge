@@ -35,87 +35,6 @@ sys.path.append('../../../../meg_qc/source/')
 # do we save them as derivatives to write over abcp bids as report as before?
 
 
-def get_plot_config_params(config_plot_file_name: str):
-
-    """
-    NOT used now, soince we do selector instead of config
-
-    Parse all the parameters from config and put into a python dictionary 
-    divided by sections. Parsing approach can be changed here, which 
-    will not affect working of other fucntions.
-    
-
-    Parameters
-    ----------
-    config_file_name: str
-        The name of the config file.
-
-    Returns
-    -------
-    all_qc_params: dict
-        A dictionary with all the parameters from the config file.
-
-    """
-    
-    plot_params = {}
-
-    config = configparser.ConfigParser()
-    config.read(config_plot_file_name)
-
-    default_section = config['DEFAULT']
-
-    m_or_g_chosen = default_section['do_for'] 
-    m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
-        return None
-
-    # subjects = default_section['subjects']
-    # subjects = [sub.strip() for sub in subjects.split(",")]
-
-    plot_sensors = default_section.getboolean('plot_sensors')
-    plot_STD = default_section.getboolean('STD')
-    plot_PSD = default_section.getboolean('PSD')
-    plot_PTP_manual = default_section.getboolean('PTP_manual')
-    plot_PTP_auto_mne = default_section.getboolean('PTP_auto_mne')
-    plot_ECG = default_section.getboolean('ECG')
-    plot_EOG = default_section.getboolean('EOG')
-    plot_Head = default_section.getboolean('Head')
-    plot_Muscle = default_section.getboolean('Muscle')
-
-    ds_paths = default_section['data_directory']
-    ds_paths = [path.strip() for path in ds_paths.split(",")]
-    if len(ds_paths) < 1:
-        print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
-        return None
-
-    try:
-
-        default_params = dict({
-            'm_or_g_chosen': m_or_g_chosen, 
-            'subjects': [],
-            'plot_sensors': plot_sensors,
-            'plot_STD': plot_STD,
-            'plot_PSD': plot_PSD,
-            'plot_PTP_manual': plot_PTP_manual,
-            'plot_PTP_auto_mne': plot_PTP_auto_mne,
-            'plot_ECG': plot_ECG,
-            'plot_EOG': plot_EOG,
-            'plot_Head': plot_Head,
-            'plot_Muscle': plot_Muscle,
-            'dataset_path': ds_paths,
-            'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
-            'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
-            'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
-            'verbose_plots': default_section.getboolean('verbose_plots')})
-        plot_params['default'] = default_params
-
-    except:
-        print('___MEG QC___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
-        return None
-
-    return plot_params
-
 def modify_entity_name(entities):
 
     #old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
@@ -193,18 +112,21 @@ def selector(entities):
     for every key use a subfunction that will create a selector for the subcategories.
     '''
 
+    # SELECT ENTITIES and SETTINGS
     # Define the categories and subcategories
     categories = modify_entity_name(entities)
+    categories['m_or_g'] = ['_ALL_', 'mag', 'grad']
+    categories['verbose_plots'] = ['True', 'False']
 
     selected = {}
     # Create a list of values with category titles
-    for key, items in categories.items():
+    for key, values in categories.items():
         subcategory = select_subcategory(categories[key], key)
         selected[key] = subcategory
 
 
     #Check 1) if nothing was chosen, 2) if ALL was chosen
-    for key, items in selected.items():
+    for key, values in selected.items():
 
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
@@ -214,12 +136,23 @@ def selector(entities):
                 return None
             
         else:
-            for item in items:
+            for item in values:
                 if 'ALL' in item.upper():
                     all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
                     selected[key] = all_selected #everything
 
-    return selected
+    #Separate into selected_entities and plot_settings:
+        selected_entities, plot_settings = {}, {}
+        for key, values in selected.items():
+            if key != 'verbose_plots' and key != 'm_or_g':
+                selected_entities[key] = values
+            elif key == 'verbose_plots' or key == 'm_or_g':
+                plot_settings[key] = values
+            else:
+                print('___MEGqc__: wow, weird key in selector()! check it.')
+
+    return selected_entities, plot_settings
+
 
 def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
 
@@ -231,6 +164,9 @@ def select_subcategory(subcategories, category_title, title="What would you like
         # Each tuple represents a checkbox item and should contain two elements:
         # A string that will be returned when the checkbox is selected.
         # A string that will be displayed as the label of the checkbox.
+
+    if category_title =='verbose_plots':
+        title = 'Do you want to see plots while running the script? (True) Or only after inside the report? (False)'
 
     results = checkboxlist_dialog(
         title=title,
@@ -250,22 +186,15 @@ def select_subcategory(subcategories, category_title, title="What would you like
     return results
 
 
-def get_ds_entities(config_plot_file_path):
+def get_ds_entities(ds_paths):
 
-    plot_params = get_plot_config_params(config_plot_file_path)
-
-    #derivs_path  = '/Volumes/M2_DATA/'
-
-    if plot_params is None:
-        return
-
-
-    ds_paths = plot_params['default']['dataset_path']
     for dataset_path in ds_paths: #run over several data sets
 
         try:
             dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
+
+            #schema = dataset.get_schema() #Remove?
+
         except:
             print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
             return
@@ -284,11 +213,12 @@ def get_ds_entities(config_plot_file_path):
     return entities
 
 
-def csv_to_html_report(metric, f_path):
+def csv_to_html_report(metric, tsv_path, plot_settings):
 
-    m_or_g_chosen = ['mag'] #TODO: REMOVE. Parse from somewhere?
-    verbose_plots = False
-    raw = [] # if empty - we cant print raw information. 
+    m_or_g_chosen = plot_settings['m_or_g'] 
+    verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
+
+    raw = [] # TODO: if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
 
@@ -301,12 +231,12 @@ def csv_to_html_report(metric, f_path):
     
         for m_or_g in m_or_g_chosen:
 
-            std_derivs += [boxplot_all_time_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            std_derivs += [boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
             # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
-            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
 
         std_derivs += fig_std_epoch0+fig_std_epoch1 
 
@@ -316,14 +246,14 @@ def csv_to_html_report(metric, f_path):
 
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
 
-            psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
+            psd_plot_derivative=Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
 
             psd_derivs += [psd_plot_derivative]
 
     elif 'ECG' in metric.upper():
         for m_or_g in m_or_g_chosen:
-            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-            correlation_derivs = plot_correlation_csv(f_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
 
         ecg_derivs += affected_derivs + correlation_derivs
 
@@ -332,8 +262,8 @@ def csv_to_html_report(metric, f_path):
     elif 'EOG' in metric.upper():
             
         for m_or_g in m_or_g_chosen:
-            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-            correlation_derivs = plot_correlation_csv(f_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
         eog_derivs += affected_derivs + correlation_derivs 
 
@@ -349,13 +279,13 @@ def csv_to_html_report(metric, f_path):
             print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
-        muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
+        muscle_derivs =  plot_muscle_csv(tsv_path, m_or_g_decided[0], verbose_plots = verbose_plots)
 
     # Head
         
     elif 'HEAD' in metric.upper():
             
-        head_pos_derivs, _ = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
+        head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path, verbose_plots=verbose_plots)
         # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
         # head_pos_derivs += head_pos_derivs2
         head_derivs += head_pos_derivs
@@ -408,16 +338,8 @@ def csv_to_html_report(metric, f_path):
     return QC_derivs
 
 
-def make_plots_meg_qc(config_plot_file_path):
+def make_plots_meg_qc(ds_paths):
 
-    #TODO get rid of config_plot_file_path?
-    #we use it to get data set path, mag/grad and... smth else?
-    #Rest is done in selector
-
-    tsvs_to_plot = []
-
-    plot_params = get_plot_config_params(config_plot_file_path)
-    ds_paths = plot_params['default']['dataset_path']
     for dataset_path in ds_paths[0:1]: #run over several data sets
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
@@ -425,13 +347,14 @@ def make_plots_meg_qc(config_plot_file_path):
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-        entities = get_ds_entities(config_plot_file_path) 
+        entities = get_ds_entities(ds_paths) 
 
-        chosen_entities = selector(entities)
+        chosen_entities, plot_settings = selector(entities)
 
         #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
         print('___MEG QC___: CHOSEN entities to plot: ', chosen_entities)
+        print('___MEG QC___: CHOSEN settings: ', plot_settings)
 
         for sub in chosen_entities['sub']:
 
@@ -441,13 +364,13 @@ def make_plots_meg_qc(config_plot_file_path):
             tsvs_to_plot = {}
             for metric in chosen_entities['METRIC']:
                 # Creating the full list of files for each combination
-                tsv = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
-                tsvs_to_plot[metric] = tsv
+                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
+                tsvs_to_plot[metric] = tsv_path
 
             print('___MEG QC___: TSVs to plot: ', tsvs_to_plot)
 
             for metric, files in tsvs_to_plot.items():
-                for n_tsv, tsv in enumerate(files):
+                for n_tsv, tsv_path in enumerate(files):
 
                     meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[n_tsv]) #shell. empty derivative
                     meg_artifact.add_entity('desc', metric) #file name
@@ -455,7 +378,7 @@ def make_plots_meg_qc(config_plot_file_path):
                     meg_artifact.extension = '.html'
 
                     # Here convert csv into figure and into html report:
-                    deriv = csv_to_html_report(metric, tsv)
+                    deriv = csv_to_html_report(metric, tsv_path, plot_settings)
 
 
                     meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
