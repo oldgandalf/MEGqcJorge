@@ -44,8 +44,6 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     elif 'Muscle' in section_name:
         text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
     elif 'Standard deviation' in section_name or 'STD' in section_name:
-        print('HERE', report_strings)
-
         text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
     elif 'Frequency' in section_name or 'PSD' in section_name:
         text_section_content="""<p>"""+report_strings['PSD']+"""</p>"""

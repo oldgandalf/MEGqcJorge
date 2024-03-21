@@ -179,7 +179,7 @@ def selector_old(entities):
     # Ignore the category titles
     selected_subcategories = [result for result in results if not result.startswith('== ')]
 
-    print('You selected:', selected_subcategories)
+    print('___MEG QC___: You selected:', selected_subcategories)
 
     return selected_subcategories
 
@@ -208,7 +208,7 @@ def selector(entities):
             title = 'You did not choose the '+key+'. Please try again:'
             subcategory = select_subcategory(categories[key], key, title)
             if not subcategory: # if nothing was chosen again - stop:
-                print('You still  did not choose the '+key+'. Please start over.')
+                print('___MEG QC___: You still  did not choose the '+key+'. Please start over.')
                 return None
             
         else:
@@ -416,13 +416,13 @@ def stuff(config_plot_file_path):
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-        # entities = get_all_entities(config_plot_file_path) 
+        entities = get_all_entities(config_plot_file_path) 
 
-        # chosen_entities = selector(entities)
+        chosen_entities = selector(entities)
 
-        chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
-        print('CHOSEN entities to plot: ', chosen_entities)
+        print('___MEG QC___: CHOSEN entities to plot: ', chosen_entities)
 
         for sub in chosen_entities['sub']:
 
@@ -435,9 +435,7 @@ def stuff(config_plot_file_path):
                 f = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
                 files_to_plot[metric] = f
 
-            # for f in files_to_plot:
-            #     print('File to plot: ', f)
-            print('Files to plot: ', files_to_plot)
+            print('___MEG QC___: Files to plot: ', files_to_plot)
 
             for metric, files in files_to_plot.items():
                 for n_f, f in enumerate(files):
@@ -461,10 +459,7 @@ def stuff(config_plot_file_path):
 
 def csv_to_fig(metric, f_path):
 
-    print(metric)
-    print(metric.upper())
-
-    m_or_g_chosen = ['mag'] #REMOVE. Parse from somewhere?
+    m_or_g_chosen = ['mag'] #TODO: REMOVE. Parse from somewhere?
     verbose_plots = False
     raw = [] # if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
@@ -519,11 +514,8 @@ def csv_to_fig(metric, f_path):
         
     elif 'MUSCLE' in metric.upper():
 
-        print('yes')
-
         if 'mag' in m_or_g_chosen:
             m_or_g_decided=['mag']
-            print('MAG yes')
         elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
             m_or_g_decided=['grad']
         else:
@@ -531,7 +523,6 @@ def csv_to_fig(metric, f_path):
 
 
         muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
-        print(muscle_derivs)
 
     # Head
         
@@ -554,10 +545,6 @@ def csv_to_fig(metric, f_path):
     'Head': head_derivs,
     'Muscle': muscle_derivs,
     'Report_MNE': []}
-
-    print('QC_derivs')
-    print(QC_derivs)
-
 
     # report_strings = {
     #     'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
@@ -582,6 +569,8 @@ def csv_to_fig(metric, f_path):
         'EOG': '',
         'HEAD': '',
         'MUSCLE': ''}
+    
+    #TODO: get these report strings from pipeline, save them
 
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
