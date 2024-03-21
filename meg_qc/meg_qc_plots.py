@@ -1,8 +1,7 @@
-import configparser
 import sys
 import os
 import ancpbids
-import itertools
+import json
 
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
@@ -213,7 +212,7 @@ def get_ds_entities(ds_paths):
     return entities
 
 
-def csv_to_html_report(metric, tsv_path, plot_settings):
+def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
 
     m_or_g_chosen = plot_settings['m_or_g'] 
     verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
@@ -221,6 +220,8 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
     raw = [] # TODO: if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
+    with open(report_str_path) as json_file:
+        report_strings = json.load(json_file)
 
     time_series_derivs, sensors_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
@@ -312,32 +313,6 @@ def csv_to_html_report(metric, tsv_path, plot_settings):
     'Muscle': muscle_derivs,
     'Report_MNE': []}
 
-    # report_strings = {
-    #     'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
-    #     'TIME_SERIES': time_series_str,
-    #     'STD': std_str,
-    #     'PSD': psd_str,
-    #     'PTP_MANUAL': pp_manual_str,
-    #     'PTP_AUTO': pp_auto_str,
-    #     'ECG': ecg_str,
-    #     'EOG': eog_str,
-    #     'HEAD': head_str,
-    #     'MUSCLE': muscle_str}
-
-    report_strings = {
-        'INITIAL_INFO': '',
-        'TIME_SERIES': '',
-        'STD': '',
-        'PSD': '',
-        'PTP_MANUAL': '',
-        'PTP_AUTO': '',
-        'ECG': '',
-        'EOG': '',
-        'HEAD': '',
-        'MUSCLE': ''}
-    
-    #TODO: get these report strings from pipeline, save them as json, read back in here
-
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
     for metric, values in QC_derivs.items():
@@ -370,6 +345,8 @@ def make_plots_meg_qc(ds_paths):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
+            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+
             tsvs_to_plot = {}
             for metric in chosen_entities['METRIC']:
                 # Creating the full list of files for each combination
@@ -387,7 +364,7 @@ def make_plots_meg_qc(ds_paths):
                     meg_artifact.extension = '.html'
 
                     # Here convert csv into figure and into html report:
-                    deriv = csv_to_html_report(metric, tsv_path, plot_settings)
+                    deriv = csv_to_html_report(metric, tsv_path, report_str_path, plot_settings)
 
 
                     meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)

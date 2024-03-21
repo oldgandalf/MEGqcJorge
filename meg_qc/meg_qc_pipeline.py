@@ -252,8 +252,13 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'HEAD': head_str,
                 'MUSCLE': muscle_str}
 
+                # Save report strings as json to read it back in when plotting:
+                report_str_derivs=[QC_derivative(report_strings, 'ReportStrings', 'json')]
+                
+
                 QC_derivs={
                 'MEG data quality analysis report': [],
+                'Report_strings': report_str_derivs,
                 'Interactive time series': time_series_derivs,
                 'Sensors locations': sensors_derivs,
                 'Standard deviation of the data': std_derivs, 

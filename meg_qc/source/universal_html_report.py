@@ -1,7 +1,7 @@
 
 import mne
-# from meg_qc.source.universal_plots import get_tit_and_unit
 from source.universal_plots import get_tit_and_unit
+#from universal_plots import get_tit_and_unit
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
 
