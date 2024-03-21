@@ -193,8 +193,8 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
             report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
         # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
 
-    for key in sections:
-        if key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':
+    for key, values in sections.items():
+        if values and key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':
             html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
             report.add_html(html_section_str, title=key)
 
