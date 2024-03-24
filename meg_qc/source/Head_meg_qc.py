@@ -168,7 +168,7 @@ def make_head_pos_plot(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: boo
                         original_head_dev_t['trans'][:3, 3]):
         ax.axhline(1000*val, color='r')
         ax.axhline(1000*val_ori, color='g')
-        #print('___MEG QC___: ', 'val', val, 'val_ori', val_ori)
+        #print('___MEGqc___: ', 'val', val, 'val_ori', val_ori)
     # The green horizontal lines represent the original head position, whereas the
     # Red lines are the new head position averaged over all the time points.
 
@@ -289,38 +289,38 @@ def get_head_positions(raw: mne.io.Raw):
         # - The index of the STIM channel containing information about when which cHPI coils were switched on.
         # - The values coding for the “on” state of each individual cHPI coil.
 
-        print('___MEG QC___: ', f'cHPI coil frequencies extracted from raw: {chpi_freqs} Hz')
+        print('___MEGqc___: ', f'cHPI coil frequencies extracted from raw: {chpi_freqs} Hz')
 
 
         #Estimating continuous head position
-        print('___MEG QC___: ', 'Start Computing cHPI amplitudes and locations...')
+        print('___MEGqc___: ', 'Start Computing cHPI amplitudes and locations...')
         start_time = time.time()
         chpi_amplitudes = mne.chpi.compute_chpi_amplitudes(raw)
         chpi_locs = mne.chpi.compute_chpi_locs(raw.info, chpi_amplitudes)
-        print('___MEG QC___: ', "Finished. --- Execution %s seconds ---" % (time.time() - start_time))
-        #print('___MEG QC___: ', 'chpi_locs:', chpi_locs)
+        print('___MEGqc___: ', "Finished. --- Execution %s seconds ---" % (time.time() - start_time))
+        #print('___MEGqc___: ', 'chpi_locs:', chpi_locs)
 
     except:
-        print('___MEG QC___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
+        print('___MEGqc___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
         try:
             #for CTF use:
             chpi_locs = mne.chpi.extract_chpi_locs_ctf(raw)
         except:
-            print('___MEG QC___: ', 'Also CTF appriach to compute Head positions failed. Trying KIT approach...')
+            print('___MEGqc___: ', 'Also CTF appriach to compute Head positions failed. Trying KIT approach...')
             try:
                 #for KIT use:
                 chpi_locs = mne.chpi.extract_chpi_locs_kit(raw)
             except:
-                print('___MEG QC___: ', 'Also KIT appriach to compute Head positions failed. Head positions can not be computed')
+                print('___MEGqc___: ', 'Also KIT appriach to compute Head positions failed. Head positions can not be computed')
                 no_head_pos_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
                 return head_pos, no_head_pos_str
 
     # Next steps - for all systems:
-    print('___MEG QC___: ', 'Start computing head positions...')
+    print('___MEGqc___: ', 'Start computing head positions...')
     start_time = time.time()
     head_pos = mne.chpi.compute_head_pos(raw.info, chpi_locs)
-    print('___MEG QC___: ', "Finished computing head positions. --- Execution %s seconds ---" % (time.time() - start_time))
-    #print('___MEG QC___: ', 'Head positions:', head_pos)
+    print('___MEGqc___: ', "Finished computing head positions. --- Execution %s seconds ---" % (time.time() - start_time))
+    #print('___MEGqc___: ', 'Head positions:', head_pos)
 
     return head_pos, no_head_pos_str
 
@@ -364,7 +364,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations:
     head_pos, head_str = get_head_positions(raw)
     if head_pos.size == 0:
         head_str = 'Head positions can not be computed. They can only be calculated if they have been continuously recorded during the session.'
-        print('___MEG QC___: ', head_str)
+        print('___MEGqc___: ', head_str)
         simple_metric_head = {'description': 'Head positions could not be computed.'}
         return [], simple_metric_head, head_str, None, None
     
@@ -391,10 +391,10 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw, verbose_plots: bool, plot_annotations:
     std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q, df_head_pos = compute_head_pos_std_and_max_rotation_movement(head_pos)
 
 
-    print('___MEG QC___: ', 'Std of head positions in mm: ', std_head_pos*1000)
-    print('___MEG QC___: ', 'Std of head rotations in quat: ', std_head_rotations)
-    print('___MEG QC___: ', 'Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
-    print('___MEG QC___: ', 'Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
+    print('___MEGqc___: ', 'Std of head positions in mm: ', std_head_pos*1000)
+    print('___MEGqc___: ', 'Std of head rotations in quat: ', std_head_rotations)
+    print('___MEGqc___: ', 'Max movement (x, y, z) in mm: ', [m*1000 for m in max_movement_xyz])
+    print('___MEGqc___: ', 'Max rotation (q1, q2, q3) in quat: ', max_rotation_q)
 
     # Make a simple metric:
     simple_metrics_head = make_simple_metric_head(std_head_pos, std_head_rotations, max_movement_xyz, max_rotation_q)

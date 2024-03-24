@@ -99,7 +99,7 @@ def selector_one_window(entities):
     # Ignore the category titles
     selected_subcategories = [result for result in results if not result.startswith('== ')]
 
-    print('___MEG QC___: You selected:', selected_subcategories)
+    print('___MEGqc___: You selected:', selected_subcategories)
 
     return selected_subcategories
 
@@ -131,7 +131,7 @@ def selector(entities):
             title = 'You did not choose the '+key+'. Please try again:'
             subcategory = select_subcategory(categories[key], key, title)
             if not subcategory: # if nothing was chosen again - stop:
-                print('___MEG QC___: You still  did not choose the '+key+'. Please start over.')
+                print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
                 return None
             
         else:
@@ -195,7 +195,7 @@ def get_ds_entities(ds_paths):
             #schema = dataset.get_schema() #Remove?
 
         except:
-            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
             return
 
         #create derivatives folder first:
@@ -207,7 +207,7 @@ def get_ds_entities(ds_paths):
 
 
         entities = dataset.query_entities()
-        print('___MEG QC___: ', 'entities', entities)
+        print('___MEGqc___: ', 'entities', entities)
     
     return entities
 
@@ -231,14 +231,14 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
     
         for m_or_g in m_or_g_chosen:
 
-            std_derivs += [boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-            # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            # fig_std_epoch2 += boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
+            fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-        std_derivs += fig_std_epoch0+fig_std_epoch1 
+            std_derivs += [fig_all_time] + [fig_std_epoch0] + [fig_std_epoch1] 
 
     elif 'PSD' in metric.upper():
 
@@ -260,9 +260,8 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
 
-        ecg_derivs += affected_derivs + correlation_derivs
+            ecg_derivs += affected_derivs + correlation_derivs
 
-    # EOG
 
     elif 'EOG' in metric.upper():
 
@@ -272,9 +271,8 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
             affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
             correlation_derivs = plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
-        eog_derivs += affected_derivs + correlation_derivs 
+            eog_derivs += affected_derivs + correlation_derivs 
 
-    # Muscle
         
     elif 'MUSCLE' in metric.upper():
 
@@ -283,12 +281,11 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
         elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
             m_or_g_decided=['grad']
         else:
-            print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
+            print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
         muscle_derivs =  plot_muscle_csv(tsv_path, m_or_g_decided[0], verbose_plots = verbose_plots)
 
-    # Head
         
     elif 'HEAD' in metric.upper():
             
@@ -311,7 +308,7 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
     'Report_MNE': []}
 
 
-    if not report_str_path:
+    if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
         report_strings = {
         'INITIAL_INFO': '',
         'TIME_SERIES': '',
@@ -352,22 +349,19 @@ def make_plots_meg_qc(ds_paths):
 
         #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
-        print('___MEG QC___: CHOSEN entities to plot: ', chosen_entities)
-        print('___MEG QC___: CHOSEN settings: ', plot_settings)
+        print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
+        print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
         for sub in chosen_entities['sub']:
 
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
-            print('__SUB', sub)
-            print(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives'))
-
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
             except:
                 report_str_path = '' #in case none was created yet
-                print('___MEGqc: No report strings were created for sub ', sub)
+                print('___MEGqc___: No report strings were created for sub ', sub)
 
             tsvs_to_plot = {}
             for metric in chosen_entities['METRIC']:
@@ -375,7 +369,7 @@ def make_plots_meg_qc(ds_paths):
                 tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
                 tsvs_to_plot[metric] = tsv_path
 
-            print('___MEG QC___: TSVs to plot: ', tsvs_to_plot)
+            print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
 
             for metric, files in tsvs_to_plot.items():
                 for n_tsv, tsv_path in enumerate(files):

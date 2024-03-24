@@ -350,7 +350,7 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
     else:
         metric_local=False
         pp_manual_str = 'Peak-to-Peak amplitude per epoch can not be calculated because no events are present. Check stimulus channel.'
-        print('___MEG QC___: ', pp_manual_str)
+        print('___MEGqc___: ', pp_manual_str)
         
     derivs_ptp += fig_ptp_epoch0+fig_ptp_epoch1 + fig_ptp_epoch2 + derivs_list
     #each of them saved into a separate list and only at the end put together because this way they keep the right order: 

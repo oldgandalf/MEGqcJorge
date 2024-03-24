@@ -267,7 +267,7 @@ def assign_channels_properties(raw: mne.io.Raw):
                         ch.lobe_color = lobe_colors[lobe]
     else:
         lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
-        print('___MEG QC___: ' + lobes_color_coding_str)
+        print('___MEGqc___: ' + lobes_color_coding_str)
 
         for key, value in channels_objs.items():
             for ch in value:
@@ -2644,7 +2644,7 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
                         original_head_dev_t['trans'][:3, 3]):
         ax.axhline(1000*val, color='r')
         ax.axhline(1000*val_ori, color='g')
-        #print('___MEG QC___: ', 'val', val, 'val_ori', val_ori)
+        #print('___MEGqc___: ', 'val', val, 'val_ori', val_ori)
     # The green horizontal lines represent the original head position, whereas the
     # Red lines are the new head position averaged over all the time points.
 
