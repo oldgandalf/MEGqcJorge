@@ -537,19 +537,19 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     df_fin = pd.concat(its)
 
     # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
-    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
+    if 'STD epoch' in df_fin and any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='STD epoch')
-    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
+    if 'PtP epoch' in df_fin and any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'PtP epoch' column
         df_fin = df_fin.drop(columns='PtP epoch')
-    if any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'PSD' in df_fin and any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='PSD')
-    if any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'ECG' in df_fin and any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='ECG')
-    if any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'EOG' in df_fin and any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='EOG')
 

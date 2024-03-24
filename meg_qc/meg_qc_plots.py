@@ -220,9 +220,6 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
     raw = [] # TODO: if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
-    with open(report_str_path) as json_file:
-        report_strings = json.load(json_file)
-
     time_series_derivs, sensors_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
     if 'STD' in metric.upper():
@@ -313,6 +310,24 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
     'Muscle': muscle_derivs,
     'Report_MNE': []}
 
+
+    if not report_str_path:
+        report_strings = {
+        'INITIAL_INFO': '',
+        'TIME_SERIES': '',
+        'STD': '',
+        'PSD': '',
+        'PTP_MANUAL': '',
+        'PTP_AUTO': '',
+        'ECG': '',
+        'EOG': '',
+        'HEAD': '',
+        'MUSCLE': ''}
+    else:
+        with open(report_str_path) as json_file:
+            report_strings = json.load(json_file)
+
+
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
     for metric, values in QC_derivs.items():
@@ -345,7 +360,14 @@ def make_plots_meg_qc(ds_paths):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
-            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+            print('__SUB', sub)
+            print(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives'))
+
+            try:
+                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+            except:
+                report_str_path = '' #in case none was created yet
+                print('___MEGqc: No report strings were created for sub ', sub)
 
             tsvs_to_plot = {}
             for metric in chosen_entities['METRIC']:
