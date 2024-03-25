@@ -214,10 +214,6 @@ def get_ds_entities(ds_paths):
 
 def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
 
-    print("____all_stuff___")
-    print(metric)
-    print(tsv_path)
-
     m_or_g_chosen = plot_settings['m_or_g'] 
     verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
 
