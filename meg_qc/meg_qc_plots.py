@@ -63,7 +63,7 @@ def modify_entity_name(entities):
     #Cos METRIC is originally a desc entity which can contain just anything:
             
     if 'METRIC' in entities:
-        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
+        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
 
     return entities
 
@@ -214,13 +214,17 @@ def get_ds_entities(ds_paths):
 
 def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
 
+    print("____all_stuff___")
+    print(metric)
+    print(tsv_path)
+
     m_or_g_chosen = plot_settings['m_or_g'] 
     verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
 
     raw = [] # TODO: if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
-    time_series_derivs, sensors_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
+    time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
     if 'STD' in metric.upper():
 
@@ -232,13 +236,33 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
         for m_or_g in m_or_g_chosen:
 
             fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
-
-            # fig_std_epoch2 += boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
             fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
-
             fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
+            #older versions, no color coding:
+            #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
+            #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+
             std_derivs += [fig_all_time] + [fig_std_epoch0] + [fig_std_epoch1] 
+
+    if 'PTP' in metric.upper():
+
+        fig_ptp_epoch0 = []
+        fig_ptp_epoch1 = []
+
+        ptp_manual_derivs = plot_sensors_3d_csv(tsv_path)
+    
+        for m_or_g in m_or_g_chosen:
+
+            fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
+            fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
+            fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
+
+            #older versions, no color coding:
+            #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
+            #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+
+            ptp_manual_derivs += [fig_all_time] + [fig_ptp_epoch0] + [fig_ptp_epoch1] 
 
     elif 'PSD' in metric.upper():
 
@@ -299,7 +323,7 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
     'Sensors': sensors_derivs,
     'STD': std_derivs, 
     'PSD': psd_derivs, 
-    'PtP_manual': pp_manual_derivs, 
+    'PtP_manual': ptp_manual_derivs, 
     'PtP_auto': pp_auto_derivs, 
     'ECG': ecg_derivs, 
     'EOG': eog_derivs,
@@ -354,6 +378,8 @@ def make_plots_meg_qc(ds_paths):
 
         for sub in chosen_entities['sub']:
 
+            print('_____sub____', sub)
+
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
@@ -381,6 +407,9 @@ def make_plots_meg_qc(ds_paths):
 
                     # Here convert csv into figure and into html report:
                     deriv = csv_to_html_report(metric, tsv_path, report_str_path, plot_settings)
+
+                    print('____deriv____')
+                    print(deriv)
 
 
                     meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)

@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
-from copy import deepcopy
+import copy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
 from meg_qc.source.universal_html_report import simple_metric_basic
@@ -609,7 +609,7 @@ class Avg_artif:
         
         """
 
-        data_copy=deepcopy(self.artif_data)
+        data_copy=copy.deepcopy(self.artif_data)
         self.artif_data_smoothed = gaussian_filter(data_copy, gauss_sigma)
 
         return self
@@ -2414,7 +2414,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     """
 
-    chs_by_lobe = deepcopy(chs_by_lobe_orig) 
+    chs_by_lobe = copy.deepcopy(chs_by_lobe_orig) 
     #in case we will change this variable in any way. If not copied it might introduce errors in parallel processing. 
     # This variable is used in all modules
 
@@ -2561,7 +2561,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     
     """
 
-    chs_by_lobe = deepcopy(chs_by_lobe_orig) 
+    chs_by_lobe = copy.deepcopy(chs_by_lobe_orig) 
     #in case we will change this variable in any way. If not copied it might introduce errors in parallel processing. 
     # This variable is used in all modules
 

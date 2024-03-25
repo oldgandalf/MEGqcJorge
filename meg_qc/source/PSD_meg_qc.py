@@ -11,6 +11,7 @@ from scipy.integrate import simpson
 from scipy.signal import find_peaks, peak_widths
 from IPython.display import display
 from typing import List
+import copy
 
 
 from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
@@ -1196,7 +1197,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     method = 'welch'
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
-    chs_by_lobe_psd=chs_by_lobe.copy()
+    chs_by_lobe_psd=copy.deepcopy(chs_by_lobe)
 
     for m_or_g in m_or_g_chosen:
 
@@ -1204,7 +1205,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
         # Add psds and freqs into chs_by_lobe dict:
-        chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe[m_or_g], freqs[m_or_g], psds[m_or_g])
+        chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe_psd[m_or_g], freqs[m_or_g], psds[m_or_g])
 
         #psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
 
@@ -1225,7 +1226,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     psd_str = '' #blank for now. maybe wil need to add notes later.
 
     #Extract chs_by_lobe into a data frame
-    df_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'PSDs')
+    df_deriv = chs_dict_to_csv(chs_by_lobe_psd,  file_name_prefix = 'PSDs')
 
     derivs_psd += df_deriv
 

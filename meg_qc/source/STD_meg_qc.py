@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import boxplot_all_time, boxplot_all_time_csv, boxplot_epochs, QC_derivative, boxplot_epoched_xaxis_channels, boxplot_epoched_xaxis_epochs, boxplot_epoched_xaxis_epochs_csv, boxplot_epoched_xaxis_channels_csv, assign_epoched_std_ptp_to_channels
+import copy
+from meg_qc.source.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
 from meg_qc.source.universal_html_report import simple_metric_basic
 from meg_qc.source.initial_meg_qc import chs_dict_to_csv
 from IPython.display import display
@@ -518,7 +519,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     derivs_list = []
     noisy_flat_epochs_derivs={}
 
-    chs_by_lobe_std=chs_by_lobe.copy()
+    chs_by_lobe_std=copy.deepcopy(chs_by_lobe)
     # copy here, because want to keep original dict unchanged. 
     # In principal it s good to collect all data about channel metrics there BUT if the metrics are run in parallel this might produce conflicts 
     # (without copying  dict can be chanaged both inside+outside this function even when it is not returned.)
@@ -533,8 +534,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
                 ch.std_overall = std_all_data[m_or_g][ch.name]
                 #print(ch.__dict__) #will print all the info saved in the object, more than just simply printing the object
 
-        #derivs_std += [boxplot_all_time_csv(chs_by_lobe_std[m_or_g], ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-
         big_std_with_value_all_data[m_or_g], small_std_with_value_all_data[m_or_g] = get_big_small_std_ptp_all_data(std_all_data[m_or_g], channels[m_or_g], std_params['std_lvl'])
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None: #If epochs are present
@@ -542,11 +541,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
             df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
 
             chs_by_lobe_std[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_std[m_or_g], df_std_ptp=df_std) #for easier plotting
-
-            #older versions, no color coding:
-            #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
-            #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
-
 
             noisy_flat_epochs_derivs[m_or_g] = get_noisy_flat_std_ptp_epochs(df_std, m_or_g, 'std', std_params['noisy_channel_multiplier'], std_params['flat_multiplier'], std_params['allow_percent_noisy_flat_epochs'])
             derivs_list += noisy_flat_epochs_derivs[m_or_g]
@@ -561,13 +555,14 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
 
     simple_metric_std = make_simple_metric_std(std_params, big_std_with_value_all_data, small_std_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)
 
-    #each of them saved into a separate list and only at the end put together because this way they keep the right order: 
+    #Extract chs_by_lobe into a data frame
+    df_deriv = chs_dict_to_csv(chs_by_lobe_std,  file_name_prefix = 'STDs')
+
+    derivs_std += derivs_list + df_deriv
+
+    #each deriv saved into a separate list and only at the end put together because this way they keep the right order: 
     #first everything about mags, then everything about grads. - in this ordr they ll be added to repot. 
     #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
 
-    #Extract chs_by_lobe into a data frame
-    df_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'STDs')
-
-    derivs_std += derivs_list + df_deriv
 
     return derivs_std, simple_metric_std, std_str
