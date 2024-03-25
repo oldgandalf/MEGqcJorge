@@ -42,7 +42,7 @@ def RMSE(data_m_or_g: np.array or list):
         rmse_data=np.sqrt(((y_pred - y_actual) ** 2).mean())
         rmse_list.append(rmse_data)
     else:
-        print('___MEG QC___: ', 'Only 1 or 2 dimentional data is accepted, not more!')
+        print('___MEGqc___: ', 'Only 1 or 2 dimentional data is accepted, not more!')
         return
 
     rmse_np=np.array(rmse_list) #conver to numpy array
@@ -118,8 +118,8 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: li
     std_of_measure_channels=np.std(ptp_or_std_channels)
     mean_of_measure_channels=np.mean(ptp_or_std_channels)
 
-    print('___MEG QC___: ', mean_of_measure_channels + std_multiplier*std_of_measure_channels, ' threshold for NOISY. ')
-    print('___MEG QC___: ', mean_of_measure_channels - std_multiplier*std_of_measure_channels, ' threshold for FLAT. ')
+    print('___MEGqc___: ', mean_of_measure_channels + std_multiplier*std_of_measure_channels, ' threshold for NOISY. ')
+    print('___MEGqc___: ', mean_of_measure_channels - std_multiplier*std_of_measure_channels, ' threshold for FLAT. ')
 
     # Find the index of channels with biggest and smallest std:
     ch_ind_big_measure = [index for (index, item) in enumerate(ptp_or_std_channels) if item > mean_of_measure_channels + std_multiplier*std_of_measure_channels] #find index with bigst std
@@ -556,7 +556,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
     else:
         metric_local=False
         std_str = 'STD per epoch can not be calculated because no events are present. Check stimulus channel.'
-        print('___MEG QC___: ', std_str)
+        print('___MEGqc___: ', std_str)
 
 
     simple_metric_std = make_simple_metric_std(std_params, big_std_with_value_all_data, small_std_with_value_all_data, channels, noisy_flat_epochs_derivs, metric_local, m_or_g_chosen)

@@ -36,7 +36,7 @@ def get_all_config_params(config_file_name: str):
     m_or_g_chosen = default_section['do_for'] 
     m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
+        print('___MEGqc___: ', 'No channels to analyze. Check parameter do_for in config file.')
         return None
 
     subjects = default_section['subjects']
@@ -54,7 +54,7 @@ def get_all_config_params(config_file_name: str):
     ds_paths = default_section['data_directory']
     ds_paths = [path.strip() for path in ds_paths.split(",")]
     if len(ds_paths) < 1:
-        print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
+        print('___MEGqc___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
         return None
 
     tmin = default_section['data_crop_tmin']
@@ -209,7 +209,7 @@ def get_all_config_params(config_file_name: str):
         'min_length_good': muscle_section.getfloat('min_length_good')})
 
     except:
-        print('___MEG QC___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
+        print('___MEGqc___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
         return None
 
     return all_qc_params
@@ -292,7 +292,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
-    print('___MEG QC___: ', 'Stimulus channels detected:', stim_channel)
+    print('___MEGqc___: ', 'Stimulus channels detected:', stim_channel)
 
     picks_magn = data.copy().pick('mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick('grad').ch_names if 'grad' in data else None
@@ -300,13 +300,13 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     try:
         events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
     except:
-        print('___MEG QC___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
+        print('___MEGqc___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
         events = mne.find_events(data, stim_channel=None, min_duration=event_dur)
         #here for info pn how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
     n_events=len(events)
 
     if n_events == 0:
-        print('___MEG QC___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
+        print('___MEGqc___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         epochs_grad, epochs_mag = None, None
     else:
         epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
@@ -348,11 +348,11 @@ def sanity_check(m_or_g_chosen, channels_objs):
         raise ValueError(m_or_g_skipped_str)
     if len(channels_objs['mag']) == 0 and 'mag' in m_or_g_chosen:
         m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
-        print('___MEG QC___: ', m_or_g_skipped_str)
+        print('___MEGqc___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
     elif len(channels_objs['grad']) == 0 and 'grad' in m_or_g_chosen:
         m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
-        print('___MEG QC___: ', m_or_g_skipped_str)
+        print('___MEGqc___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
     elif len(channels_objs['mag']) == 0 and len(channels_objs['grad']) == 0:
         m_or_g_chosen = []
@@ -410,7 +410,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     
     """
 
-    print('___MEG QC___: ', 'Reading data from file:', data_file)
+    print('___MEGqc___: ', 'Reading data from file:', data_file)
 
     try:
         raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
@@ -438,40 +438,40 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         #if filtering_settings['h_freq'] is higher than the Nyquist frequency, set it to Nyquist frequency:
         if filtering_settings['h_freq'] > raw_cropped_filtered.info['sfreq']/2 - 1:
             filtering_settings['h_freq'] = raw_cropped_filtered.info['sfreq']/2 - 1
-            print('___MEG QC___: ', 'High frequency for filtering is higher than Nyquist frequency. High frequency was set to Nyquist frequency:', filtering_settings['h_freq'])
+            print('___MEGqc___: ', 'High frequency for filtering is higher than Nyquist frequency. High frequency was set to Nyquist frequency:', filtering_settings['h_freq'])
         raw_cropped_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
-        print('___MEG QC___: ', 'Data filtered from', filtering_settings['l_freq'], 'to', filtering_settings['h_freq'], 'Hz.')
+        print('___MEGqc___: ', 'Data filtered from', filtering_settings['l_freq'], 'to', filtering_settings['h_freq'], 'Hz.')
         
         if filtering_settings['downsample_to_hz'] is False:
             raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
             resample_str = 'Data not resampled. '
-            print('___MEG QC___: ', resample_str)
+            print('___MEGqc___: ', resample_str)
         elif filtering_settings['downsample_to_hz'] >= filtering_settings['h_freq']*5:
             raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
             resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
-            print('___MEG QC___: ', resample_str)
+            print('___MEGqc___: ', resample_str)
         else:
             raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
             #frequency to resample is 5 times higher than the maximum chosen frequency of the function
             resample_str = 'Chosen "downsample_to_hz" value set was too low, it must be at least 5 time higher than the highest filer frequency. Data resampled to ' + str(filtering_settings['h_freq']*5) + ' Hz. '
-            print('___MEG QC___: ', resample_str)
+            print('___MEGqc___: ', resample_str)
 
             
     else:
-        print('___MEG QC___: ', 'Data not filtered.')
+        print('___MEGqc___: ', 'Data not filtered.')
         #And downsample:
         if filtering_settings['downsample_to_hz'] is not False:
             raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
             if filtering_settings['downsample_to_hz'] < 500:
                 resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. Keep in mind: resampling to less than 500Hz is not recommended, since it might result in high frequency data loss (for example of the CHPI coils signal. '
-                print('___MEG QC___: ', resample_str)
+                print('___MEGqc___: ', resample_str)
             else:
                 resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
-                print('___MEG QC___: ', resample_str)
+                print('___MEGqc___: ', resample_str)
         else:
             raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
             resample_str = 'Data not resampled. '
-            print('___MEG QC___: ', resample_str)
+            print('___MEGqc___: ', resample_str)
 
         
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
@@ -537,19 +537,19 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
     df_fin = pd.concat(its)
 
     # if df already contains columns like 'STD epoch_' with numbers, 'STD epoch' needs to be removed from the data frame:
-    if any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
+    if 'STD epoch' in df_fin and any(col.startswith('STD epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='STD epoch')
-    if any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
+    if 'PtP epoch' in df_fin and any(col.startswith('PtP epoch_') and col[10:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'PtP epoch' column
         df_fin = df_fin.drop(columns='PtP epoch')
-    if any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'PSD' in df_fin and any(col.startswith('PSD_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='PSD')
-    if any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'ECG' in df_fin and any(col.startswith('ECG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='ECG')
-    if any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
+    if 'EOG' in df_fin and any(col.startswith('EOG_') and col[4:].isdigit() for col in df_fin.columns):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='EOG')
 

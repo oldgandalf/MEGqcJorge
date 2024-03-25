@@ -267,7 +267,7 @@ def assign_channels_properties(raw: mne.io.Raw):
                         ch.lobe_color = lobe_colors[lobe]
     else:
         lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
-        print('___MEG QC___: ' + lobes_color_coding_str)
+        print('___MEGqc___: ' + lobes_color_coding_str)
 
         for key, value in channels_objs.items():
             for ch in value:
@@ -1232,8 +1232,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
                 locs = [row[col] for col in df.columns if 'Sensor_location' in col]
                 lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], loc = locs))
 
-    print(lobes_dict)
-
     traces = []
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
@@ -1275,8 +1273,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     fig = switch_names_on_off(fig)
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
-
-    fig.show()
     
     qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
 
@@ -2648,7 +2644,7 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
                         original_head_dev_t['trans'][:3, 3]):
         ax.axhline(1000*val, color='r')
         ax.axhline(1000*val_ori, color='g')
-        #print('___MEG QC___: ', 'val', val, 'val_ori', val_ori)
+        #print('___MEGqc___: ', 'val', val, 'val_ori', val_ori)
     # The green horizontal lines represent the original head position, whereas the
     # Red lines are the new head position averaged over all the time points.
 

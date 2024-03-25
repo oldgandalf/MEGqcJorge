@@ -1,10 +1,16 @@
-import configparser
 import sys
 import os
 import ancpbids
+import json
 
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
+
+# from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
+# from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
+
+from source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv
+from source.universal_html_report import make_joined_report, make_joined_report_mne
 
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
@@ -28,112 +34,45 @@ sys.path.append('../../../../meg_qc/source/')
 # do we save them as derivatives to write over abcp bids as report as before?
 
 
-def get_plot_config_params(config_plot_file_name: str):
+def modify_entity_name(entities):
 
-    """
-    Parse all the parameters from config and put into a python dictionary 
-    divided by sections. Parsing approach can be changed here, which 
-    will not affect working of other fucntions.
-    
+    #old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
 
-    Parameters
-    ----------
-    config_file_name: str
-        The name of the config file.
+    old_new_categories = {'desc': 'METRIC'}
 
-    Returns
-    -------
-    all_qc_params: dict
-        A dictionary with all the parameters from the config file.
-
-    """
-    
-    plot_params = {}
-
-    config = configparser.ConfigParser()
-    config.read(config_plot_file_name)
-
-    default_section = config['DEFAULT']
-
-    m_or_g_chosen = default_section['do_for'] 
-    m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEG QC___: ', 'No channels to analyze. Check parameter do_for in config file.')
-        return None
-
-    # subjects = default_section['subjects']
-    # subjects = [sub.strip() for sub in subjects.split(",")]
-
-    plot_sensors = default_section.getboolean('plot_sensors')
-    plot_STD = default_section.getboolean('STD')
-    plot_PSD = default_section.getboolean('PSD')
-    plot_PTP_manual = default_section.getboolean('PTP_manual')
-    plot_PTP_auto_mne = default_section.getboolean('PTP_auto_mne')
-    plot_ECG = default_section.getboolean('ECG')
-    plot_EOG = default_section.getboolean('EOG')
-    plot_Head = default_section.getboolean('Head')
-    plot_Muscle = default_section.getboolean('Muscle')
-
-    ds_paths = default_section['data_directory']
-    ds_paths = [path.strip() for path in ds_paths.split(",")]
-    if len(ds_paths) < 1:
-        print('___MEG QC___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
-        return None
-
-    try:
-
-        default_params = dict({
-            'm_or_g_chosen': m_or_g_chosen, 
-            'subjects': [],
-            'plot_sensors': plot_sensors,
-            'plot_STD': plot_STD,
-            'plot_PSD': plot_PSD,
-            'plot_PTP_manual': plot_PTP_manual,
-            'plot_PTP_auto_mne': plot_PTP_auto_mne,
-            'plot_ECG': plot_ECG,
-            'plot_EOG': plot_EOG,
-            'plot_Head': plot_Head,
-            'plot_Muscle': plot_Muscle,
-            'dataset_path': ds_paths,
-            'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
-            'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
-            'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
-            'verbose_plots': default_section.getboolean('verbose_plots')})
-        plot_params['default'] = default_params
-
-    except:
-        print('___MEG QC___: ', 'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
-        return None
-
-    return plot_params
-
-def modify_categories(categories):
-
-    old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
-
-    categories_copy = categories.copy()
+    categories_copy = entities.copy()
     for category, subcategories in categories_copy.items():
         # Convert the set of subcategories to a sorted list
         sorted_subcategories = sorted(subcategories, key=str)
         # If the category is in old_new_categories, replace it with the new category
-        if category in old_new_categories:
+        if category in old_new_categories: 
+            #This here is to replace the old names with new like desc -> METRIC
+            #Normally we d use it only for the METRIC, but left this way in case the principle will extend to other categories
+            #see old_new_categories above.
+
             new_category = old_new_categories[category]
-            categories[new_category] = categories.pop(category)
+            entities[new_category] = entities.pop(category)
             # Replace the original set of subcategories with the modified list
             sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
-            categories[new_category] = sorted_subcategories
+            entities[new_category] = sorted_subcategories
+        else: #if we dont want to rename categories
+            sorted_subcategories.insert(0, '_ALL_'+category+'s_')
+            entities[category] = sorted_subcategories
 
-    #Remove subcategories that are not QC metrics:
+    #From METRIC remove whatever is not metric. 
+    #Cos METRIC is originally a desc entity which can contain just anything:
             
-    if 'METRIC' in categories:
-        categories['METRIC'] = [x for x in categories['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
+    if 'METRIC' in entities:
+        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPmanual', 'PtPauto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
 
-    return categories
+    return entities
 
-def selector(entities):
+def selector_one_window(entities):
+
+    ''' Old version where everything is done in 1 window'''
 
     # Define the categories and subcategories
-    categories = modify_categories(entities)
+    categories = modify_entity_name(entities)
 
     # Create a list of values with category titles
     values = []
@@ -160,157 +99,103 @@ def selector(entities):
     # Ignore the category titles
     selected_subcategories = [result for result in results if not result.startswith('== ')]
 
-    print('You selected:', selected_subcategories)
-
-    # check that every category has at least one subcategory selected. If not - give a message to user and ask to select again:
-
-    # for category in categories:
-    #     if category not in selected_subcategories:
-    #         print('___MEG QC___: ', 'You have to select at least one subcategory for each category. Please try again.')
-    #         selector(entities)
-
+    print('___MEGqc___: You selected:', selected_subcategories)
 
     return selected_subcategories
 
-def make_plots_meg_qc(config_plot_file_path):
 
-    plot_params = get_plot_config_params(config_plot_file_path)
+def selector(entities):
 
-    #derivs_path  = '/Volumes/M2_DATA/'
+    '''
+    Loop over categories (keys)
+    for every key use a subfunction that will create a selector for the subcategories.
+    '''
 
-    if plot_params is None:
-        return
+    # SELECT ENTITIES and SETTINGS
+    # Define the categories and subcategories
+    categories = modify_entity_name(entities)
+    categories['m_or_g'] = ['_ALL_', 'mag', 'grad']
+    categories['verbose_plots'] = ['True', 'False']
 
-
-    ds_paths = plot_params['default']['dataset_path']
-    for dataset_path in ds_paths: #run over several data sets
-
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
-        except:
-            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
-
-        #create derivatives folder first:
-        if os.path.isdir(dataset_path+'/derivatives')==False: 
-                os.mkdir(dataset_path+'/derivatives')
-
-        derivative = dataset.create_derivative(name="Meg_QC")
-        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+    selected = {}
+    # Create a list of values with category titles
+    for key, values in categories.items():
+        subcategory = select_subcategory(categories[key], key)
+        selected[key] = subcategory
 
 
-        entities = dataset.query_entities()
-        print('___MEG QC___: ', 'entities', entities)
+    #Check 1) if nothing was chosen, 2) if ALL was chosen
+    for key, values in selected.items():
 
-
-        # SELECTOR:
-        # get all entities
-        # create selector for each subject, metric, run/task
-
-        chosen_entities = selector(entities)
-
-
-        # list_of_subs = list(entities["sub"])
-        if plot_params['default']['subjects'][0] != 'all':
-            list_of_subs = plot_params['default']['subjects']
-        elif plot_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()["sub"]))
-            print('___MEG QC___: ', 'list_of_subs', list_of_subs)
-            if not list_of_subs:
-                print('___MEG QC___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
-                return
-        else:
-            print('___MEG QC___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
-            return
-
-
-        for sid in list_of_subs[0:1]: #[0:4]: 
-            print('___MEG QC___: ', 'Dataset: ', dataset_path)
-            print('___MEG QC___: ', 'Take SID: ', sid)
+        if not selected[key]: # if nothing was chosen:
+            title = 'You did not choose the '+key+'. Please try again:'
+            subcategory = select_subcategory(categories[key], key, title)
+            if not subcategory: # if nothing was chosen again - stop:
+                print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
+                return None
             
-            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
-            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+        else:
+            for item in values:
+                if 'ALL' in item.upper():
+                    all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
+                    selected[key] = all_selected #everything
 
-            # GET all derivs!
-            derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
-            print('___MEG QC___: ', 'derivs_list', derivs_list)
+    #Separate into selected_entities and plot_settings:
+        selected_entities, plot_settings = {}, {}
+        for key, values in selected.items():
+            if key != 'verbose_plots' and key != 'm_or_g':
+                selected_entities[key] = values
+            elif key == 'verbose_plots' or key == 'm_or_g':
+                plot_settings[key] = values
+            else:
+                print('___MEGqc__: wow, weird key in selector()! check it.')
 
-            for fif_ind, data_file in enumerate(derivs_list): 
-                print('___MEG QC___: ', 'Take deriv: ', data_file)
-
-                #here goes the actual code for plotting:
-                
-        return
-    
-
-def plot_metrics(config_plot_file_name: str, chosen_entities):
-
-    plot_params = get_plot_config_params(config_plot_file_path)
-
-    #derivs_path  = '/Volumes/M2_DATA/'
-
-    if plot_params is None:
-        return
+    return selected_entities, plot_settings
 
 
-    ds_paths = plot_params['default']['dataset_path']
+def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
+
+    # Create a list of values with category titles
+    values = []
+    for items in subcategories:
+        values.append((str(items), str(items)))
+
+        # Each tuple represents a checkbox item and should contain two elements:
+        # A string that will be returned when the checkbox is selected.
+        # A string that will be displayed as the label of the checkbox.
+
+    if category_title =='verbose_plots':
+        title = 'Do you want to see plots while running the script? (True) Or only after inside the report? (False)'
+
+    results = checkboxlist_dialog(
+        title=title,
+        text=category_title,
+        values=values,
+        style=Style.from_dict({
+            'dialog': 'bg:#cdbbb3',
+            'button': 'bg:#bf99a4',
+            'checkbox': '#e8612c',
+            'dialog.body': 'bg:#a9cfd0',
+            'dialog shadow': 'bg:#c98982',
+            'frame.label': '#fcaca3',
+            'dialog.body label': '#fd8bb6',
+        })
+    ).run()
+
+    return results
+
+
+def get_ds_entities(ds_paths):
+
     for dataset_path in ds_paths: #run over several data sets
 
         try:
             dataset = ancpbids.load_dataset(dataset_path)
+
+            #schema = dataset.get_schema() #Remove?
+
         except:
-            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
-        
-    #create derivatives folder first:
-        if os.path.isdir(dataset_path+'/derivatives')==False: 
-                os.mkdir(dataset_path+'/derivatives')
-
-        derivative = dataset.create_derivative(name="Meg_QC")
-        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
-    list_of_subs = ['009'] #TODO: get real list from chosen entities
-
-
-    for sid in list_of_subs[0:1]: #[0:4]: 
-        print('___MEG QC___: ', 'Dataset: ', dataset_path)
-        print('___MEG QC___: ', 'Take SID: ', sid)
-        
-        subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
-        list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
-
-        # GET all derivs!
-        derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
-        print('___MEG QC___: ', 'derivs_list', derivs_list)
-
-        for fif_ind, data_file in enumerate(derivs_list): 
-            print('___MEG QC___: ', 'Take deriv: ', data_file)
-
-            #here goes the actual code for plotting:
-                
-        return
-    
-
-
-def get_all_entities(config_plot_file_path):
-
-    plot_params = get_plot_config_params(config_plot_file_path)
-
-    #derivs_path  = '/Volumes/M2_DATA/'
-
-    if plot_params is None:
-        return
-
-
-    ds_paths = plot_params['default']['dataset_path']
-    for dataset_path in ds_paths: #run over several data sets
-
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
-        except:
-            print('___MEG QC___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
             return
 
         #create derivatives folder first:
@@ -322,145 +207,190 @@ def get_all_entities(config_plot_file_path):
 
 
         entities = dataset.query_entities()
-        print('___MEG QC___: ', 'entities', entities)
+        print('___MEGqc___: ', 'entities', entities)
     
     return entities
 
-def stuff():
-    entities = get_all_entities('plot_settings.ini') #'plot_settings.ini'
-    chosen_entities = selector(entities)
 
-    print('Next step: plot metrics for chosen entities:', chosen_entities)
+def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
 
+    m_or_g_chosen = plot_settings['m_or_g'] 
+    verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
 
-def herewego(plot_params):
+    raw = [] # TODO: if empty - we cant print raw information. 
+    # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
-    verbose_plots = plot_params['default']['verbose_plots']
-    m_or_g_chosen = plot_params['default']['m_or_g_chosen']
+    time_series_derivs, sensors_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
-    std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs, sensors_derivs, time_series_derivs = [],[],[],[],[], [],  [], [], [], []
+    if 'STD' in metric.upper():
 
-    # sensors:
-
-    if plot_params['default']['plot_sensors'] is True:
-        sensors_csv_path = derivs_path+'Sensors.tsv'
-
-        sensors_derivs = plot_sensors_3d_csv(sensors_csv_path)
-
-    # STD
-
-    if plot_params['default']['plot_STD'] is True:
-
-        f_path = derivs_path+'STDs_by_lobe.tsv'
         fig_std_epoch0 = []
         fig_std_epoch1 = []
+
+        std_derivs = plot_sensors_3d_csv(tsv_path)
     
         for m_or_g in m_or_g_chosen:
 
-            std_derivs += [boxplot_all_time_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-            # fig_std_epoch0 += [boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
-            fig_std_epoch0 += [boxplot_epoched_xaxis_channels_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            # fig_std_epoch2 += boxplot_epoched_xaxis_channels(chs_by_lobe_copy[m_or_g], df_std, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
+            fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-            fig_std_epoch1 += [boxplot_epoched_xaxis_epochs_csv(f_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)]
+            fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
 
-        std_derivs += fig_std_epoch0+fig_std_epoch1 
+            std_derivs += [fig_all_time] + [fig_std_epoch0] + [fig_std_epoch1] 
 
+    elif 'PSD' in metric.upper():
 
-    # PtP
-        
-    if plot_params['default']['plot_PTP_manual'] is True:
-        f_path = derivs_path+'PtPs_by_lobe.tsv'
-
-
-
-    # PSD
-    # TODO: also add pie psd plot
-        
-    if plot_params['default']['plot_PSD'] is True:
+        psd_derivs = plot_sensors_3d_csv(tsv_path)
 
         for m_or_g in m_or_g_chosen:
 
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
-            f_path = derivs_path+'PSDs_by_lobe.tsv'
 
-            psd_plot_derivative=Plot_psd_csv(m_or_g, f_path, method, verbose_plots)
+            psd_plot_derivative=Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
 
             psd_derivs += [psd_plot_derivative]
 
+    elif 'ECG' in metric.upper():
 
-    # ECG
-    
-    if plot_params['default']['plot_ECG'] is True:
-            
-        f_path = derivs_path+'ECGs_by_lobe.tsv'
+        ecg_derivs = plot_sensors_3d_csv(tsv_path)
+
+        for m_or_g in m_or_g_chosen:
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+
+            ecg_derivs += affected_derivs + correlation_derivs
+
+
+    elif 'EOG' in metric.upper():
+
+        eog_derivs = plot_sensors_3d_csv(tsv_path)
             
         for m_or_g in m_or_g_chosen:
-            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-            correlation_derivs = plot_correlation_csv(f_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+            correlation_derivs = plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
-        ecg_derivs += affected_derivs + correlation_derivs
+            eog_derivs += affected_derivs + correlation_derivs 
 
-    # EOG
-
-    if plot_params['default']['plot_EOG'] is True:
-         
-        f_path = derivs_path+'EOGs_by_lobe.tsv'
-            
-        for m_or_g in m_or_g_chosen:
-            affected_derivs = plot_artif_per_ch_correlated_lobes_csv(f_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-            correlation_derivs = plot_correlation_csv(f_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
-
-        eog_derivs += affected_derivs + correlation_derivs 
-
-    # Muscle
         
-    if plot_params['default']['plot_Muscle'] is True:
-
-        f_path = derivs_path+'muscle.tsv'
+    elif 'MUSCLE' in metric.upper():
 
         if 'mag' in m_or_g_chosen:
-                m_or_g_decided=['mag']
+            m_or_g_decided=['mag']
         elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
-                m_or_g_decided=['grad']
+            m_or_g_decided=['grad']
         else:
-                print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
+            print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
-        muscle_derivs =  plot_muscle_csv(f_path, m_or_g_decided[0], verbose_plots = verbose_plots)
+        muscle_derivs =  plot_muscle_csv(tsv_path, m_or_g_decided[0], verbose_plots = verbose_plots)
 
-    # Head
         
-    if plot_params['default']['plot_Head'] is True:
-
-        f_path = derivs_path+'Head.tsv'
+    elif 'HEAD' in metric.upper():
             
-        head_pos_derivs, _ = make_head_pos_plot_csv(f_path, verbose_plots=verbose_plots)
+        head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path, verbose_plots=verbose_plots)
         # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
         # head_pos_derivs += head_pos_derivs2
         head_derivs += head_pos_derivs
 
     QC_derivs={
-        'Time_series': time_series_derivs,
-        'Sensors': sensors_derivs,
-        'STD': std_derivs, 
-        'PSD': psd_derivs, 
-        'PtP_manual': pp_manual_derivs, 
-        'PtP_auto': pp_auto_derivs, 
-        'ECG': ecg_derivs, 
-        'EOG': eog_derivs,
-        'Head': head_derivs,
-        'Muscle': muscle_derivs}
-    
+    'Time_series': time_series_derivs,
+    'Sensors': sensors_derivs,
+    'STD': std_derivs, 
+    'PSD': psd_derivs, 
+    'PtP_manual': pp_manual_derivs, 
+    'PtP_auto': pp_auto_derivs, 
+    'ECG': ecg_derivs, 
+    'EOG': eog_derivs,
+    'Head': head_derivs,
+    'Muscle': muscle_derivs,
+    'Report_MNE': []}
 
-    # TODO: if we make a report based on mne - we do need the raw data file.
-    # if we do just simple html, dont need raw, but then we dont have the fif file info
-    # What to do? Every time find a raw connected to the data? (open it from fif)
 
-    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings = [], default_setting = [])
+    if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
+        report_strings = {
+        'INITIAL_INFO': '',
+        'TIME_SERIES': '',
+        'STD': '',
+        'PSD': '',
+        'PTP_MANUAL': '',
+        'PTP_AUTO': '',
+        'ECG': '',
+        'EOG': '',
+        'HEAD': '',
+        'MUSCLE': ''}
+    else:
+        with open(report_str_path) as json_file:
+            report_strings = json.load(json_file)
+
+
+    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
     for metric, values in QC_derivs.items():
         if values and metric != 'Sensors':
             QC_derivs['Report_MNE'] += [QC_derivative(report_html_string, 'REPORT_'+metric, 'report mne')]
 
     return QC_derivs
+
+
+def make_plots_meg_qc(ds_paths):
+
+    for dataset_path in ds_paths[0:1]: #run over several data sets
+        dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+        entities = get_ds_entities(ds_paths) 
+
+        chosen_entities, plot_settings = selector(entities)
+
+        #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        
+        print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
+        print('___MEGqc___: CHOSEN settings: ', plot_settings)
+
+        for sub in chosen_entities['sub']:
+
+            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
+            list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
+
+            try:
+                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+            except:
+                report_str_path = '' #in case none was created yet
+                print('___MEGqc___: No report strings were created for sub ', sub)
+
+            tsvs_to_plot = {}
+            for metric in chosen_entities['METRIC']:
+                # Creating the full list of files for each combination
+                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = metric, scope='derivatives')))
+                tsvs_to_plot[metric] = tsv_path
+
+            print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
+
+            for metric, files in tsvs_to_plot.items():
+                for n_tsv, tsv_path in enumerate(files):
+
+                    meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[n_tsv]) #shell. empty derivative
+                    meg_artifact.add_entity('desc', metric) #file name
+                    meg_artifact.suffix = 'meg'
+                    meg_artifact.extension = '.html'
+
+                    # Here convert csv into figure and into html report:
+                    deriv = csv_to_html_report(metric, tsv_path, report_str_path, plot_settings)
+
+
+                    meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
+
+
+    ancpbids.write_derivative(dataset, derivative) 
+
+    return tsvs_to_plot
+
+
+# RUN IT:
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
+

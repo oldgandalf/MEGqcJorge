@@ -219,9 +219,9 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
 
     # - notch filter the data (it has to be preloaded before. done in the parent function):
     if noisy_freqs_all==[]:
-        print('___MEG QC___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
+        print('___MEGqc___: ', 'No powerline noise found in data or PSD artifacts detection was not performed. Notch filtering skipped.')
     elif (len(noisy_freqs_all))>0:
-        print('___MEG QC___: ', 'Powerline noise was found in data. Notch filtering at: ', noisy_freqs_all, ' Hz')
+        print('___MEGqc___: ', 'Powerline noise was found in data. Notch filtering at: ', noisy_freqs_all, ' Hz')
         raw.notch_filter(noisy_freqs_all)
     else:
         print('Something went wrong with powerline frequencies. Notch filtering skipped. Check parameter noisy_freqs_all')
@@ -438,13 +438,13 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
         muscle_str = 'For this data file artifact detection was performed on magnetometers, they are more sensitive to muscle activity than gradiometers. '
-        print('___MEG QC___: ', muscle_str)
+        print('___MEGqc___: ', muscle_str)
     elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
         m_or_g_decided=['grad']
         muscle_str = 'For this data file artifact detection was performed on gradiometers, they are less sensitive to muscle activity than magnetometers. '
-        print('___MEG QC___: ', muscle_str)
+        print('___MEGqc___: ', muscle_str)
     else:
-        print('___MEG QC___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
+        print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
         return [], []
     
     muscle_note = "This metric shows high frequency artifacts in range between 110-140 Hz. High power in this frequency band compared to the rest of the signal is strongly correlated with muscles artifacts, as suggested by MNE. However, high frequency oscillations may also occure in this range for reasons other than muscle activity (for example, in an empty room recording). "

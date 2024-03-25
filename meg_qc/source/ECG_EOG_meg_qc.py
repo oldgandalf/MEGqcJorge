@@ -65,10 +65,10 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
 
     if amplitude_std <= allowed_range_of_peaks_stds: 
         similar_ampl = True
-        print("___MEG QC___: Peaks have similar amplitudes, amplitude std: ", amplitude_std)
+        print("___MEGqc___: Peaks have similar amplitudes, amplitude std: ", amplitude_std)
     else:
         similar_ampl = False
-        print("___MEG QC___: Peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
+        print("___MEGqc___: Peaks do not have similar amplitudes, amplitude std: ", amplitude_std)
 
 
     # 2. Calculate RR intervals (time differences between consecutive R peaks)
@@ -92,10 +92,10 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
     no_breaks, no_bursts = True, True
     #Check if there are too many breaks:
     if n_breaks > len(rr_intervals)/60*10/n_breaks_bursts_allowed_per_10min:
-        print("___MEG QC___: There are more than 2 breaks in the data, number: ", n_breaks)
+        print("___MEGqc___: There are more than 2 breaks in the data, number: ", n_breaks)
         no_breaks = False
     if n_bursts > len(rr_intervals)/60*10/n_breaks_bursts_allowed_per_10min:
-        print("___MEG QC___: There are more than 2 bursts in the data, number: ", n_bursts)
+        print("___MEGqc___: There are more than 2 bursts in the data, number: ", n_bursts)
         no_bursts = False
 
 
@@ -205,13 +205,13 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     # but iteration takes 1 ch at a time. this is why [0]
 
     ecg_eval, peaks = check_3_conditions(ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds, height_multiplier)
-    print(f'___MEG QC___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
+    print(f'___MEGqc___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
 
     if all(ecg_eval):
-        print(f'___MEG QC___: Overall good {ecg_or_eog} channel: {ecg_ch}')
+        print(f'___MEGqc___: Overall good {ecg_or_eog} channel: {ecg_ch}')
         bad_ecg_eog[ecg_ch] = 'good'
     else:
-        print(f'___MEG QC___: Overall bad {ecg_or_eog} channel: {ecg_ch}')
+        print(f'___MEGqc___: Overall bad {ecg_or_eog} channel: {ecg_ch}')
         bad_ecg_eog[ecg_ch] = 'bad'
 
     return bad_ecg_eog, ch_data, peaks, ecg_eval
@@ -789,7 +789,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
     artif_threshold_lvl=mean_magnitude_peak/norm_lvl #data over this level will be counted as artifact contaminated
 
     if mean_magnitude_peak_smoothed is None or t0_actual_smoothed is None:
-        print('___MEG QC___: ', 'mean_magnitude_peak_smoothed and t0_actual_smoothed should be provided')
+        print('___MEGqc___: ', 'mean_magnitude_peak_smoothed and t0_actual_smoothed should be provided')
     else:
         artifact_lvl_smoothed=mean_magnitude_peak_smoothed/norm_lvl  #SO WHEN USING SMOOTHED CHANNELS - USE SMOOTHED AVERAGE TOO!
         timelimit_min_smoothed=-window_size_for_mean_threshold_method+t0_actual_smoothed
@@ -1193,7 +1193,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     max_n_peaks_allowed_for_ch = params_internal['max_n_peaks_allowed_for_ch']
 
     max_n_peaks_allowed=round(((abs(tmin)+abs(tmax))/0.1)*max_n_peaks_allowed_for_ch)
-    print('___MEG QC___: ', 'max_n_peaks_allowed_for_ch: '+str(max_n_peaks_allowed))
+    print('___MEGqc___: ', 'max_n_peaks_allowed_for_ch: '+str(max_n_peaks_allowed))
 
     #1.:
     #averaging the ECG epochs together:
@@ -1300,7 +1300,7 @@ def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
     #Check that all channels have been assigned a lobe:
     for ch_artif in artif_per_ch:
         if ch_artif.lobe is None or ch_artif.color is None:
-            print('___MEG QC___: ', 'Channel ', ch_artif.name, ' has not been assigned a lobe or color for plotting. Check assign_lobe_to_artifacts().')
+            print('___MEGqc___: ', 'Channel ', ch_artif.name, ' has not been assigned a lobe or color for plotting. Check assign_lobe_to_artifacts().')
 
     return artif_per_ch
 
@@ -1367,7 +1367,7 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
     
     if len(mean_rwave) != len(artif_per_ch[0].artif_data):
-        print('___MEG QC___: ', 'mean_rwave and artif_per_ch.artif_data have different length! Both are defined by tmin and tmax in config.py and are use to cut the data. Keep in mind if changing anything with tmin and tmax')
+        print('___MEGqc___: ', 'mean_rwave and artif_per_ch.artif_data have different length! Both are defined by tmin and tmax in config.py and are use to cut the data. Keep in mind if changing anything with tmin and tmax')
         print('len(mean_rwave): ', len(mean_rwave), 'len(artif_per_ch[0].artif_data): ', len(artif_per_ch[0].artif_data))
         return
 
@@ -1692,8 +1692,8 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal
 
         avg_artif_description = avg_artif_description1 + "<p></p>" + avg_artif_description2
 
-        print('___MEG QC___: ', avg_artif_description1)
-        print('___MEG QC___: ', avg_artif_description2)
+        print('___MEGqc___: ', avg_artif_description1)
+        print('___MEGqc___: ', avg_artif_description2)
 
         bad_avg_str = ''
 
@@ -1715,7 +1715,7 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal
         tit, _ = get_tit_and_unit(m_or_g)
         avg_artif_description = tit+": BAD " +ecg_or_eog+ " average. Detected " + str(len(avg_overall_obj.peak_magnitude)) + " peak(s). Expected 1-" + str(max_n_peaks_allowed_for_avg) + " peaks (pos+neg). Affected channels can not be estimated."
         bad_avg_str = tit+": "+ ecg_or_eog+ " signal detection/reconstruction did not produce reliable results. Affected channels can not be estimated."
-        print('___MEG QC___: ', bad_avg_str)
+        print('___MEGqc___: ', bad_avg_str)
 
 
     if plotflag is True:
@@ -1919,7 +1919,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
 
         if bad_ecg_eog[ecg_ch] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. '
-            print('___MEG QC___: ', ecg_str)
+            print('___MEGqc___: ', ecg_str)
             raw.drop_channels(ecg_ch)
             use_method = 'correlation_reconstructed'
 
@@ -1932,7 +1932,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
         noisy_ch_derivs, ecg_data, event_indexes = [], [], []
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. '
         use_method = 'correlation_reconstructed'
-        print('___MEG QC___: ', ecg_str)
+        print('___MEGqc___: ', ecg_str)
 
     return use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes
 
@@ -1969,7 +1969,7 @@ def get_EOG_data(raw: mne.io.Raw):
     # Get the names of the EOG channels
     eog_channel_names = [raw.ch_names[ch] for ch in eog_channels]
 
-    print('___MEG QC___: EOG channel names:', eog_channel_names)
+    print('___MEGqc___: EOG channel names:', eog_channel_names)
 
 
     #WHY AM I DOING THIS CHECK??
@@ -1981,7 +1981,7 @@ def get_EOG_data(raw: mne.io.Raw):
     except:
         noisy_ch_derivs, eog_data, event_indexes = [], [], []
         eog_str = 'No EOG channels found is this data set - EOG artifacts can not be detected.'
-        print('___MEG QC___: ', eog_str)
+        print('___MEGqc___: ', eog_str)
         return eog_str, noisy_ch_derivs, eog_data, event_indexes
 
     # Get the data of the EOG channel as an array. MNE only sees blinks, not saccades.
@@ -2053,7 +2053,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     if len(event_indexes) <1:
         ecg_str_checked = 'No expected wave shape was detected in the averaged event of '+ecg_or_eog+' channel.'
-        print('___MEG QC___: ', ecg_str_checked)
+        print('___MEGqc___: ', ecg_str_checked)
 
         return False, ecg_str_checked, np.empty((0, 0)), []
 
@@ -2066,10 +2066,10 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     if mean_rwave_obj.wave_shape is True:
         ecg_str_checked = 'Mean event of '+ecg_or_eog+' channel has expected shape.'
-        print('___MEG QC___: ', ecg_str_checked)
+        print('___MEGqc___: ', ecg_str_checked)
     else:
         ecg_str_checked = 'Mean events of '+ecg_or_eog+' channel does not have expected shape. Artifact detection was not performed.'
-        print('___MEG QC___: ', ecg_str_checked)
+        print('___MEGqc___: ', ecg_str_checked)
 
 
     #Plot:
