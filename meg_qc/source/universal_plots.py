@@ -1571,7 +1571,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             elif what_data == 'peaks':
                 data = [row['PtP epoch_'+str(n)] for n in epochs_names]
             
-            boxes_names += row['Name']
+            boxes_names += [row['Name']]
 
             fig.add_trace(go.Box(y=data, 
             name=row['Name'], 
