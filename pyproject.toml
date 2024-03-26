@@ -1,3 +1,4 @@
 [build-system]
 requires = ["setuptools", "wheel==0.30.0"]
+[project]
 metadata-version = "2.1"
