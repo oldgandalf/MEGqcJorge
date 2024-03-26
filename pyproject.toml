@@ -3,3 +3,4 @@ requires = ["setuptools", "wheel==0.30.0", "versioneer"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "meg_qc"
+dynamic = ["version"]
