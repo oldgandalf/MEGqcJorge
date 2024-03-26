@@ -1,4 +1,4 @@
-Metadata-Version: 2.3
+Metadata-Version: 2.1
 Name: meg-qc
 Version: 0.0.2+9.gd34faae.dirty
 Summary: Tool for automated MEG data quality control
