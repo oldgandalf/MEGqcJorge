@@ -2084,7 +2084,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
         mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
         if verbose_plots is True:
-                mean_rwave_fig.show()
+            mean_rwave_fig.show()
 
         fig_derivs = [QC_derivative(mean_rwave_fig, 'Mean_artifact'+ecg_or_eog, 'plotly', description_for_user = ecg_str_checked)]
     else:
