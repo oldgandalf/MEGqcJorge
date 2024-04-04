@@ -29,7 +29,7 @@ import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
 
 def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
 

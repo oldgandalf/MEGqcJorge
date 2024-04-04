@@ -14,9 +14,9 @@ from typing import List
 import copy
 
 
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
-from meg_qc.source.universal_html_report import simple_metric_basic
-from meg_qc.source.initial_meg_qc import chs_dict_to_csv
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
+from meg_qc.plotting.universal_html_report import simple_metric_basic
+from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version

@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./')
-from meg_qc.meg_qc_pipeline import make_derivative_meg_qc
+from meg_qc.calculating.meg_qc_pipeline import make_derivative_meg_qc
 
 #Add initial setup here (offer to install dependencies, etc.)
 
