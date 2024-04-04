@@ -2,7 +2,6 @@ import os
 import ancpbids
 import time
 import json
-
 import sys
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
@@ -20,8 +19,8 @@ sys.path.append('../../../../meg_qc/calculating/')
 
 
 from meg_qc.calculating.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
-from meg_qc.calculating.universal_html_report import make_joined_report, make_joined_report_mne
-from meg_qc.calculating.universal_plots import QC_derivative
+from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
+from meg_qc.plotting.universal_plots import QC_derivative
 
 from meg_qc.calculating.metrics.STD_meg_qc import STD_meg_qc
 from meg_qc.calculating.metrics.PSD_meg_qc import PSD_meg_qc
@@ -366,9 +365,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
     
 
-    for_report = {'ch_chosen': m_or_g_chosen}
-    # save as json:
-    with open('for_report.json', 'w') as file_wrapper:
-        json.dump(for_report, file_wrapper, indent=4)
+    # for_report = {'ch_chosen': m_or_g_chosen}
+    # # save as json:
+    # with open('for_report.json', 'w') as file_wrapper:
+    #     json.dump(for_report, file_wrapper, indent=4)
 
-    return for_report
+    return 

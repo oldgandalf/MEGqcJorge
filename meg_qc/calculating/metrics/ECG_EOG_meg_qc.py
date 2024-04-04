@@ -7,9 +7,9 @@ import matplotlib #this is in case we will need to suppress mne matplotlib plots
 import copy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
-from meg_qc.source.universal_html_report import simple_metric_basic
-from meg_qc.source.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
-from meg_qc.source.initial_meg_qc import chs_dict_to_csv
+from meg_qc.plotting.universal_html_report import simple_metric_basic
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
+from meg_qc.calculating.initial_meg_qc import chs_dict_to_csv
 
 
 def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):

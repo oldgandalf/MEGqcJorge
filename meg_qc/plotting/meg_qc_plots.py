@@ -9,22 +9,22 @@ from prompt_toolkit.styles import Style
 # from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
 # from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 
-from source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv
-from source.universal_html_report import make_joined_report, make_joined_report_mne
+from meg_qc.plotting.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv
+from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 
 
-# Needed to import the modules without specifying the full path, for command line and jupyter notebook
-sys.path.append('./')
-sys.path.append('./meg_qc/source/')
+# # Needed to import the modules without specifying the full path, for command line and jupyter notebook
+# sys.path.append('./')
+# sys.path.append('./meg_qc/source/')
 
-# relative path for `make html` (docs)
-sys.path.append('../meg_qc/source/')
+# # relative path for `make html` (docs)
+# sys.path.append('../meg_qc/source/')
 
-# relative path for `make html` (docs) run from https://readthedocs.org/
-# every time rst file is nested insd of another, need to add one more path level here:
-sys.path.append('../../meg_qc/source/')
-sys.path.append('../../../meg_qc/source/')
-sys.path.append('../../../../meg_qc/source/')
+# # relative path for `make html` (docs) run from https://readthedocs.org/
+# # every time rst file is nested insd of another, need to add one more path level here:
+# sys.path.append('../../meg_qc/source/')
+# sys.path.append('../../../meg_qc/source/')
+# sys.path.append('../../../../meg_qc/source/')
 
 
 # What we want: 

@@ -3,7 +3,7 @@ import configparser
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from meg_qc.calculating.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative, assign_channels_properties, sort_channel_by_lobe
+from meg_qc.plotting.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative, assign_channels_properties, sort_channel_by_lobe
 
 
 def get_all_config_params(config_file_name: str):
