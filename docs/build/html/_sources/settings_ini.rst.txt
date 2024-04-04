@@ -41,6 +41,7 @@ Default settings [DEFAULT]
 Filtering [Filtering]
 ---------------------
 - **apply_filtering** (bool): if True, the data will be filtered. Default: *True*
+- **downsample_to_hz** (int or float) - frequency to downsample to. Must be: 1. at least 5 times higher than h_freq to avoid misrepresentation. 2. Low value may lead to misrepresentation of chpi coils signal. They send signals in frequencies in higher than 100 hz. When downsampled this information may disappear. Recommended optimal value: 1000. Recommended minimum value: 500 Unit: Hz. Can be also set to False to avoid downsampling.
 - **l_freq** (int or float) : lower frequency for bandpass filter. Unit: Hz. Default: *0*
 - **h_freq** (int or float) : higher frequency for bandpass filter. Unit: Hz. Default: *140*. Reason: output of PSD can be used for filtering the data before muscle artifact detection. Musce artifacts are usually around 110-140 Hz, so this setting allows to see if there are extra frequencies which would need to be filtered out
 - **method** (str) : method of filtering. Default: *iir*. Or turn off filtering completely by setting apply_filtering = False. Parameters in this case dont matter.
@@ -52,6 +53,7 @@ Epoching [Epoching]
 - **epoch_tmin** (float) : time in seconds before the event. Unit: sec. Default: *-0.2*
 - **epoch_tmax** (float) : time in seconds after the event. Unit: sec. Default: 1
 - **stim_channel** (str) : leave blank if want it to be detected automatically or write explicitely like *STI101*. Default:  * blank *. 
+- **event_repeated** (str) : how to handle duplicates in events[:, 0]. Can be 'error' to raise an error, ‘drop’ to only retain the row occurring first in the events, or 'merge' to combine the coinciding events (=duplicates) into a new event (see Notes for details). Default: *merge*
 
 Standard deviation [STD]
 ------------------------
@@ -103,7 +105,6 @@ Heart beat artifacts [ECG]
 - **ecg_epoch_tmin** (float) : time in seconds before the event. Unit: seconds. Dont set smaller than -0.03. Default: *-0.04*
 - **ecg_epoch_tmax** (float) : time in seconds after the event. Unit: seconds. Dont set smaller than 0.03. Default: *0.04*
 - **norm_lvl** (int) : The norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*
-- **flip_data** (bool) : if True, then the data will be flipped if some epochs are negative due to magnetic fields orintation. If False the data will not be flipped and results might be less accurate. Default: *True*
 - **gaussian_sigma** (int) - The sigma of the gaussian kernel used to smooth the data. The higher the sigma, the more smoothing. Typically ECG data is less noisy than EOG nd requires smaller sigma. Default: 4
 
 
@@ -121,7 +122,6 @@ Eye movement artifacts [EOG]
 - **eog_epoch_tmin** (float) : time in seconds before the event. Unit: seconds. Default: *-0.2*
 - **eog_epoch_tmax** (float) : time in seconds after the event. Unit: seconds. Default: *0.4*
 - **norm_lvl** (int) : the norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold. Default: *1*
-- **flip_data** (bool) : if True, then the data will be flipped if some epochs are negative due to magnetic fields orintation. If False the data will not be flipped and results might be less accurate. Default: *True*
 - **gaussian_sigma** (int) - The sigma of the gaussian kernel used to smooth the data. The higher the sigma, the more smoothing. Typically EOG data is more noisy than EG nd requires larger sigma. Default: 6
 
 Head_movement artifacts [Head_movement]
