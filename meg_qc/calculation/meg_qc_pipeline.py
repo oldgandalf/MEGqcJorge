@@ -6,29 +6,29 @@ import sys
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append('./')
-sys.path.append('./meg_qc/calculating/')
+sys.path.append('./meg_qc/calculation/')
 
 # relative path for `make html` (docs)
-sys.path.append('../meg_qc/calculating/')
+sys.path.append('../meg_qc/calculation/')
 
 # relative path for `make html` (docs) run from https://readthedocs.org/
 # every time rst file is nested insd of another, need to add one more path level here:
-sys.path.append('../../meg_qc/calculating/')
-sys.path.append('../../../meg_qc/calculating/')
-sys.path.append('../../../../meg_qc/calculating/')
+sys.path.append('../../meg_qc/calculation/')
+sys.path.append('../../../meg_qc/calculation/')
+sys.path.append('../../../../meg_qc/calculation/')
 
 
-from meg_qc.calculating.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
+from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
 from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
-from meg_qc.calculating.metrics.STD_meg_qc import STD_meg_qc
-from meg_qc.calculating.metrics.PSD_meg_qc import PSD_meg_qc
-from meg_qc.calculating.metrics.Peaks_manual_meg_qc import PP_manual_meg_qc
-from meg_qc.calculating.metrics.Peaks_auto_meg_qc import PP_auto_meg_qc
-from meg_qc.calculating.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
-from meg_qc.calculating.metrics.Head_meg_qc import HEAD_movement_meg_qc
-from meg_qc.calculating.metrics.muscle_meg_qc import MUSCLE_meg_qc
+from meg_qc.calculation.metrics.STD_meg_qc import STD_meg_qc
+from meg_qc.calculation.metrics.PSD_meg_qc import PSD_meg_qc
+from meg_qc.calculation.metrics.Peaks_manual_meg_qc import PP_manual_meg_qc
+from meg_qc.calculation.metrics.Peaks_auto_meg_qc import PP_auto_meg_qc
+from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
+from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
+from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
