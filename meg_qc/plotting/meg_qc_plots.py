@@ -270,7 +270,12 @@ def csv_to_html_report(metric, tsv_path, report_str_path, plot_settings):
 
             psd_plot_derivative=Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
 
-            psd_derivs += [psd_plot_derivative]
+            psd_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=mean_brain_waves_relative, freq_amplitudes_absolute = mean_brain_waves_abs, total_freq_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_', verbose_plots=verbose_plots)
+
+            noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+
+
+            psd_derivs += [psd_plot_derivative]+[psd_pie_derivative]+[noise_pie_derivative]
 
     elif 'ECG' in metric.upper():
 

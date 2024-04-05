@@ -13,9 +13,7 @@ from IPython.display import display
 from typing import List
 import copy
 
-
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv, Plot_psd_csv
-from meg_qc.plotting.universal_html_report import simple_metric_basic
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
@@ -85,10 +83,10 @@ def add_log_buttons(fig: go.Figure):
     return fig
 
 
-def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs_by_lobe: dict, method: str, verbose_plots: bool):
+def Plot_psd_old(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs_by_lobe: dict, method: str, verbose_plots: bool):
 
     """
-    Plotting Power Spectral Density for all channels.
+    Plotting Power Spectral Density for all channels. OLD version
 
     Parameters
     ----------
@@ -146,75 +144,6 @@ def Plot_psd(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list, chs
         fig.show()
     
     fig_name='PSD_all_data_'+tit
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
-
-    return qc_derivative
-
-
-
-def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
-    
-    """
-    Plot pie chart representation of relative amplitude of each frequency band over the entire 
-    times series of mags or grads, not separated by individual channels.
-
-    Parameters
-    ----------
-    freq_amplitudes_relative : list
-        list of relative amplitudes of each frequency band
-    freq_amplitudes_absolute : list
-        list of absolute amplitudes of each frequency band 
-    total_freq_ampl : float
-        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
-    m_or_g : str
-        'mag' or 'grad'
-    bands_names : list
-        list of names of frequency bands
-    fig_tit : str
-        extra title to be added to the plot
-    fig_name : str
-        name of the figure to be saved
-    verbose_plots : bool
-        True for showing plot in notebook.
-    
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-    all_bands_names=bands_names.copy() 
-    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
-    #To keep them in original state outside the function, they are copied here.
-    all_mean_abs_values=freq_amplitudes_absolute.copy()
-    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
-
-    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    all_mean_relative_values=[v * 100 for v in freq_amplitudes_relative]  #in percentage
-    relative_unknown=100-(sum(freq_amplitudes_relative))*100
-    if relative_unknown>0:
-        all_mean_relative_values.append(relative_unknown)
-        all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_freq_ampl - sum(freq_amplitudes_absolute))
-
-    labels=[None]*len(all_bands_names)
-    for n, name in enumerate(all_bands_names):
-        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
-
-    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
-    fig.update_layout(
-    title={
-    'text': fig_tit + ch_type_tit,
-    'y':0.85,
-    'x':0.5,
-    'xanchor': 'center',
-    'yanchor': 'top'})
-
-    if verbose_plots is True:
-        fig.show()
-
-    fig_name=fig_name+ch_type_tit
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
@@ -353,15 +282,9 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     mean_brain_waves_abs=band_ampl_df.iloc[0, :].values.tolist()
     mean_brain_waves_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
 
-    if plotflag is True: 
-        psd_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=mean_brain_waves_relative, freq_amplitudes_absolute = mean_brain_waves_abs, total_freq_ampl=total_ampl[0], m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_', verbose_plots=verbose_plots)
-    else:
-        psd_pie_derivative = []
-
-
     mean_brain_waves_dict= {bands_names[i]: {'mean_brain_waves_relative': np.round(mean_brain_waves_relative[i]*100, 2), 'mean_brain_waves_abs': mean_brain_waves_abs[i]} for i in range(len(bands_names))}
 
-    return psd_pie_derivative, dfs_with_name, mean_brain_waves_dict
+    return dfs_with_name, mean_brain_waves_dict
 
 
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
@@ -857,7 +780,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
         noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
 
-        noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+        #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
 
     else:
         noise_pie_derivative = []
@@ -1207,17 +1130,15 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         # Add psds and freqs into chs_by_lobe dict:
         chs_by_lobe_psd[m_or_g] = assign_psds_to_channels(chs_by_lobe_psd[m_or_g], freqs[m_or_g], psds[m_or_g])
 
-        #psd_plot_derivative=Plot_psd(m_or_g, freqs[m_or_g], psds[m_or_g], channels[m_or_g], chs_by_lobe[m_or_g], method, verbose_plots)
-
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
         #Calculate the amplitude of alpha, beta, etc bands for each channel + average over all channels:
-        pie_wave_bands_derivative, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True, verbose_plots=verbose_plots)
+        dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True, verbose_plots=verbose_plots)
 
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
         noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', verbose_plots=verbose_plots)
         
-        derivs_psd += [pie_wave_bands_derivative] + dfs_wave_bands_ampl +[noise_pie_derivative] 
+        derivs_psd += dfs_wave_bands_ampl +[noise_pie_derivative] 
 
 
     # Make a simple metric for PSD:
