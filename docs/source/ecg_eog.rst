@@ -6,5 +6,5 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
 
 
-.. automodule:: meg_qc.source.ECG_EOG_meg_qc
+.. automodule:: meg_qc.calculation.metrics.ECG_EOG_meg_qc
    :members:

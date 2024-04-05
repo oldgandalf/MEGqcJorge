@@ -6,5 +6,5 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
 
 
-.. automodule:: meg_qc.source.PSD_meg_qc
+.. automodule:: meg_qc.calculation.metrics.PSD_meg_qc
    :members:
