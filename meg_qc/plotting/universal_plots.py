@@ -2025,9 +2025,8 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     """
 
-    TODO: adjust doctrings!
-
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
+    On base of the data from tsv file
     
     Process: 
     Each box need to be plotted as a separate trace first.
@@ -2045,7 +2044,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     Parameters
     ----------
     std_csv_path: str
-
+        Path to the tsv file with std data
     ch_type : str
         'mag' or 'grad'
     what_data : str
@@ -2164,6 +2163,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbos
     each box represents 1 channel, each dot is std of 1 epoch in this channel
     Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
     The figure will be saved as an interactive html file.
+
+    Old version, not used.
 
     Parameters
     ----------
@@ -2322,6 +2323,8 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     (box contains magnetometers or gradiomneters, not together): 
     each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
 
+    Old version.
+
     Parameters
     ----------
     chs_by_lobe : dict
@@ -2420,10 +2423,12 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
     (box contains magnetometers or gradiomneters, not together): 
     each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
 
+    On base of the data from tsv file.
+
     Parameters
     ----------
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
+    std_csv_path: str
+        Path to the tsv file with std data.
     ch_type : str
         'mag' or 'grad'
     channels : list
@@ -2519,34 +2524,22 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
     return qc_derivative
 
 
-
-
 def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
 
     """
     Plot the muscle events with the z-scores and the threshold.
+    On base of the data from tsv file.
     
     Parameters
     ----------
+    f_path: str
+        Path to tsv file with data.
     m_or_g : str
         The channel type used for muscle detection: 'mag' or 'grad'.
-    raw : mne.io.Raw
-        The raw data.
-    scores_muscle : np.ndarray
-        The z-scores of the muscle events.
-    threshold_muscle : float
-        The z-score threshold used for muscle detection.
-    muscle_times : np.ndarray
-        The times of the muscle events.
-    high_scores_muscle : np.ndarray
-        The z-scores of the muscle events over the threshold.
     verbose_plots : bool
         True for showing plot in notebook.
-    annot_muscle : mne.Annotations
-        The annotations of the muscle events. Used only for interactive_matplot.
-    interactive_matplot : bool
-        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report.
-
+    
+        
     Returns
     -------
     fig_derivs : list
@@ -2565,7 +2558,6 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
     
     fig.add_trace(go.Scatter(x=df['data_times'], y=df['scores_muscle'], mode='lines', name='high freq (muscle scores)'))
     fig.add_trace(go.Scatter(x=df['high_scores_muscle_times'], y=df['high_scores_muscle'], mode='markers', name='high freq (muscle) events'))
-    
     
     # #removed threshold, so this one is not plotted now:
     #fig.add_trace(go.Scatter(x=raw.times, y=[threshold_muscle]*len(raw.times), mode='lines', name='z score threshold: '+str(threshold_muscle)))
@@ -2613,14 +2605,12 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
 def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
 
     """ 
-    Plot positions and rotations of the head.
+    Plot positions and rotations of the head. On base of data from tsv file.
     
     Parameters
     ----------
-    raw : mne.io.Raw
-        Raw data.
-    head_pos : np.ndarray
-        Head positions and rotations.
+    f_path: str
+        Path to a file with data.
     verbose_plots : bool
         True for showing plot in notebook.
         
@@ -2714,6 +2704,25 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
 
 
 def figure_x_axis(df, metric):
+
+    ''''
+    Get the x axis for the plot based on the metric.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data frame with the data.
+    metric : str
+        The metric for which the x axis is needed. Can be 'PSD', 'ECG', 'EOG', 'Muscle', 'Head'.
+
+    Returns
+    -------
+    freqs : np.ndarray
+        Frequencies for the PSD plot.
+    time_vec : np.ndarray
+        Time vector for the ECG, EOG, Muscle, Head plots.
+    
+    '''
      
     if metric.lower() == 'psd':
         # Figure out frequencies:
@@ -2745,7 +2754,7 @@ def figure_x_axis(df, metric):
         return None
     
 
-def split_correlated_artifacts_into_3_groups_csv(df, metric):
+def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
 
     """
     Collect artif_per_ch into 3 lists - for plotting:
@@ -2755,8 +2764,10 @@ def split_correlated_artifacts_into_3_groups_csv(df, metric):
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of objects of class Avg_artif
+    df: pd.DataFrame
+        Data frame with the data.
+    metric : str
+        The metric for which the x axis is needed. Can be 'ECG' or 'EOG'.
 
     Returns
     -------
@@ -2810,13 +2821,12 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+    Based on the data from tsv file.
     
     Parameters
     ----------
-    artif_affected_channels : list
-        List of ECG/EOG artifact affected channels.
-    artifact_lvl : float
-        The threshold for the artifact amplitude: average over all channels*norm_lvl.
+    df : pd.DataFrame
+        Data frame with the data.
     t : np.ndarray
         Time vector.
     m_or_g : str
@@ -2892,33 +2902,23 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
+
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
 
     """
-    THE FINAL func
-
-    TODO:
-    maybe remove reading csv and pass directly the df here?
-    adjust docstrings
-
-
+    This is the final function.
     Plot average artifact for each channel, colored by lobe, 
     channels are split into 3 separate plots, based on their correlation with mean_rwave: equal number of channels in each group.
+    Based on the data from tsv file.
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of objects of class Avg_artif
-    tmin : float
-        Start time of the epoch (negative value)
-    tmax : float
-        End time of the epoch
+    f_path : str
+        Path to the tsv file with data.
     m_or_g : str
         Type of the channel: mag or grad
     ecg_or_eog : str
         Type of the artifact: ECG or EOG
-    chs_by_lobe : dict
-        Dictionary with channels split by lobe
     flip_data : bool
         Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
     verbose_plots : bool
@@ -2990,15 +2990,16 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     return affected_derivs
 
 
-def plot_correlation_csv(f_path, ecg_or_eog, m_or_g, verbose_plots=False):
+def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plots=False):
 
     """
     Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    Based on the data from tsv file.
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of channels with Avg_artif objects.
+    f_path : str
+        Path to the tsv file with data.
     ecg_or_eog : str
         Either 'ECG' or 'EOG'.
     m_or_g : str
