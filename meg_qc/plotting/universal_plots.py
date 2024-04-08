@@ -16,7 +16,8 @@ import matplotlib #this is in case we will need to suppress mne matplotlib plots
 class MEG_channels:
 
     """ 
-    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
+    Channel with info for plotting: name, type, lobe area, color code, location, initial time series 
+    + other data calculated by QC metrics (assigned in each metric separately while plotting).
 
     """
 
@@ -55,6 +56,31 @@ class MEG_channels:
             The mean ECG artifact of the channel.
         mean_eog : float
             The mean EOG artifact of the channel.
+        mean_ecg_smoothed : float
+            The mean ECG artifact of the channel smoothed.
+        mean_eog_smoothed : float
+            The mean EOG artifact of the channel smoothed.
+        ecg_corr_coeff : float
+            The correlation coefficient of the channel with ECG.
+        ecg_pval : float
+            The p-value of the correlation coefficient of the channel with ECG.
+        eog_corr_coeff : float
+            The correlation coefficient of the channel with EOG.
+        eog_pval : float
+            The p-value of the correlation coefficient of the channel with EOG.
+        ecg_time : float
+            The time vector of the ECG artifact.
+        eog_time : float
+            The time vector of the EOG artifact.
+        muscle : float
+            The muscle artifact data of the channel.
+        head : float
+            The head movement artifact data of the channel.
+        muscle_time : float
+            The time vector of the muscle artifact.
+        head_time : float
+            The time vector of the head movement artifact.
+        
 
         """
 
@@ -88,22 +114,23 @@ class MEG_channels:
 
     def __repr__(self):
 
-
-
         """
         Returns the string representation of the object.
-        
-        TODO: add remaining metrics here
 
         """
 
-        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
-        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog, self.ecg_corr_coeff, self.ecg_pval, self.eog_corr_coeff, self.eog_pval, self.muscle, self.head]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head']
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
     
     def to_df(self):
+
+        '''
+        Returns the object as a pandas DataFrame. To be later exported into a tsv file.
+        '''
+
         data_dict = {}
         freqs = self.freq
 
@@ -146,6 +173,10 @@ class MEG_channels:
 
     def add_ecg_info(self, Avg_artif_list, artif_time_vector):
 
+        '''
+        Adds ECG artifact info to the channel object.
+        '''
+
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
                 self.mean_ecg = artif_ch.artif_data
@@ -155,6 +186,10 @@ class MEG_channels:
                 self.ecg_pval = artif_ch.p_value
                 
     def add_eog_info(self, Avg_artif_list, artif_time_vector):
+
+        '''
+        Adds EOG artifact info to the channel object.
+        '''
 
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
@@ -186,6 +221,8 @@ def assign_channels_properties(raw: mne.io.Raw):
     -------
     channels_objs : dict
         Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+    lobes_color_coding_str : str
+        A string with information about the color coding of the lobes.
 
     """
     channels_objs={'mag': [], 'grad': []}
@@ -459,7 +496,6 @@ class QC_derivative:
 
         """
         Returns the string representation of the object.
-        
         """
 
         return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
@@ -542,7 +578,8 @@ def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
-    Old version. Here we plot all channels of one lobe together, then all channels of next lobe - gives less visual separation of traces since they blend together.
+    Old version. 
+    Here we plot all channels of one lobe together, then all channels of next lobe - gives less visual separation of traces since they blend together.
 
     Parameters
     ----------
@@ -580,10 +617,12 @@ def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
+def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+
+    Currntly not used.
 
     Parameters
     ----------
@@ -623,8 +662,6 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-
-
     downsampling_factor = 1  # replace with your desired downsampling factor
     # Create a new list for the downsampled traces
     traces_downsampled = []
@@ -640,8 +677,6 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 
         # Add the downsampled trace to the list
         traces_downsampled.append(trace_downsampled)
-
-
 
 
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
@@ -663,16 +698,15 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
-    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+    Plots data from a data frame as lines, each lobe has own color.
+    Data is taken from previously saved tsv file.
 
     Parameters
     ----------
-    chs_by_lobe : dict
-        Dictionary with lobes as keys and lists of channels as values.
-    df_data : pd.DataFrame
-        Data frame with data to plot.
-    x_values : list
-        List of x values for the plot.
+    f_path : str
+        Path to the csv file with the data to plot.
+    metric : str
+        The metric of the data to plot: 'psd', 'ecg', 'eog', 'smoothed_ecg', 'smoothed_eog'.
     
     Returns
     -------
@@ -724,8 +758,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-
-
     downsampling_factor = 1  # replace with your desired downsampling factor
     # Create a new list for the downsampled traces
     traces_downsampled = []
@@ -741,8 +773,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
 
         # Add the downsampled trace to the list
         traces_downsampled.append(trace_downsampled)
-
-
 
 
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
@@ -1200,15 +1230,18 @@ def plot_sensors_3d(chs_by_lobe: dict):
 def plot_sensors_3d_csv(sensors_csv_path: str):
 
     """
-    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
+    Plots the 3D locations of the sensors in the raw file. 
+    Plot both mags and grads (if both present) in 1 figure. 
     Can turn mags/grads visialisation on and off.
     Separete channels into brain areas by color coding.
+
+    Plot is made on base of the tsv file with sensors locations.
 
 
     Parameters
     ----------
-    chs_by_lobe : dict
-        A dictionary of channels by ch type and lobe.
+    sensors_csv_path : str
+        Path to the tsv file with the sensors locations.
     
     Returns
     -------
@@ -1265,8 +1298,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         zaxis =dict(visible=False)
         )
     )
-
-    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
 
 
     # Add the button to have names show up on hover or always:
@@ -1492,26 +1523,20 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
 def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
-    TODO: adjust doctrings!
-
-
-
     Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
     Color tagged channels by lobes. 
     One box is one channel, boxes are on x axis. Epoch are inside as dots. Y axis shows the STD/PtP value.
+
+    On base of the data from tsv file.
     
     Parameters
     ----------
-    chs_by_lobe : dict
-        Dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
+    std_csv_path: str
+        Path to the tsv file with std data
     ch_type : str
         Type of the channel: 'mag', 'grad'
     what_data : str
         Type of the data: 'peaks' or 'stds'
-    x_axis_boxes : str
-        What to plot as boxplot on x axis: 'channels' or 'epochs'
     verbose_plots : bool
         True for showing plot in notebook.
 
@@ -1711,20 +1736,14 @@ def figure_x_axis(df, metric):
 def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
     """
-    Plotting Power Spectral Density for all channels.
+    Plotting Power Spectral Density for all channels based on dtaa from tsv file.
 
     Parameters
     ----------
     m_or_g : str
         'mag' or 'grad'
-    freqs : np.ndarray
-        frequencies
-    psds : np.ndarray
-        power spectral density for each channel
-    channels : list
-        list of channel names
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
+    f_path : str
+        Path to the tsv file with PSD data.
     method : str
         'welch' or 'multitaper' or other method
     verbose_plots : bool
@@ -1734,7 +1753,6 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     -------
     QC_derivative
         QC_derivative object with plotly figure as content
-
         
     """
 
