@@ -2021,35 +2021,6 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
     return qc_derivative
 
 
-def csv_to_df_back(std_csv_path):
-
-    #TODO: why do I create it? dont even need cos we got df = pd.read_csv(std_csv_path) in the next func
-
-    df = pd.read_csv(std_csv_path, sep='\t')  
-
-    # Create an empty DataFrame to store the new data
-    df_new = pd.DataFrame()
-
-    for col in df.columns[6:7]:
-        for r_index, row in df.iterrows():
-            d = df.loc[r_index, col]
-            #lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] if pd.notna(x) else x
-            lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] 
-            d = lambda_func(d)
-            
-            # Create a temporary DataFrame for the current row
-            df_temp = pd.DataFrame(d, columns=[col])
-            
-            # Add the other columns from the original DataFrame
-            for c in df.columns[:6]:
-                df_temp[c] = row[c]
-            
-            # Append the temporary DataFrame to the new DataFrame
-            df_new = pd.concat([df_new, df_temp], axis=0)
-
-    return df_new
-
-
 def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
