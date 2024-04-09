@@ -13,8 +13,9 @@ from IPython.display import display
 from typing import List
 import copy
 
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_pie_chart_freq
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
+from meg_qc.plotting.universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version
@@ -766,8 +767,45 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
         noise_ampl = []
         noise_ampl_relative_to_signal = []
 
+    if ch_name.lower() == 'average':
+        #need to save to tsv only if we are on the average psd curve, 
+        #dont need to save for ebvery channel.
+
+        print('__HERE__')
+        print('noisy_freqs', noisy_freqs) 
+        print('noise_ampl', noise_ampl)
+        print('noise_ampl_relative_to_signal', noise_ampl_relative_to_signal)
+        print('total_amplitude', total_amplitude)
+
+
+        # Create a DataFrame
+        df = pd.DataFrame({
+            'noisy_freqs': noisy_freqs,
+            'noise_ampl': noise_ampl,
+            'noise_ampl_relative_to_signal': noise_ampl_relative_to_signal,
+            'total_amplitude': [total_amplitude] + [np.nan] * (len(noisy_freqs) - 1)})  # Add total_amplitude only once
+        
+        display(df)
+
+        # Save the DataFrame to a TSV file
+        df.to_csv('output.tsv', sep='\t', index=False)
+
+        print('___And now we plot!___')
+        # Read the data from the TSV file into a DataFrame
+        df = pd.read_csv('output.tsv', sep='\t')
+
+        # Extract the data
+        noisy_freqs = df['noisy_freqs'].tolist()
+        noise_ampl = df['noise_ampl'].tolist()
+        #total_amplitude = df['total_amplitude'][0]  # Assuming total_amplitude is the same for all rows
+        total_amplitude = df['total_amplitude'].dropna().iloc[0]  # Get the first non-null value
+        noise_ampl_relative_to_signal = df['noise_ampl_relative_to_signal'].tolist()
+
 
     if pie_plotflag is True: # Plot pie chart of SNR:
+
+        print('__HERE we plot the pie chart__')
+
         #Legend for the pie chart:
         bands_names=[]
         for fr_n, fr in enumerate(noisy_freqs):
@@ -780,12 +818,14 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
         noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
 
-        #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+        noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
 
     else:
         noise_pie_derivative = []
 
     return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
+
+
 
 def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag=True, helperplots=True, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', verbose_plots: bool = True):
 
@@ -848,9 +888,10 @@ def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, pie_plotflag
     noise_ampl_relative_to_all_signal_local_all_ch={}
     noisy_freqs_local_all_ch={}
 
-    for ch_n, ch in enumerate(channels): #plot only for some channels
+    for ch_n, ch in enumerate(channels): 
 
-        if (ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92) and helperplots is True:
+        if (ch_n==1 or ch_n==35 or ch_n==70 or ch_n==92) and helperplots is True: 
+            #plot only for some channels. For test purposes only!
             helper_plotflag=True
         else:
             helper_plotflag=False
