@@ -285,10 +285,10 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
 
                 print('___HERE plot_pie_chart_freq_csv1')
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise', verbose_plots=verbose_plots)
 
                 print('___HERE plot_pie_chart_freq_csv2')
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, fig_tit = "Relative amplitude of each band: ", fig_name = 'PSD_Relative_band_amplitude_all_channels_', verbose_plots=verbose_plots)
+                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves', verbose_plots=verbose_plots)
 
         elif 'ECG' in metric.upper():
 

@@ -13,7 +13,7 @@ from IPython.display import display
 from typing import List
 import copy
 
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_pie_chart_freq
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 
@@ -151,11 +151,12 @@ def Plot_psd_old(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list,
     return qc_derivative
 
 
-def get_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list):
+def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list):
 
     """
-    Calculate the area under the curve of one chosen band (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
+    Calculate the area under the curve of frequency bands (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
     Adopted from: https://raphaelvallat.com/bandpower.html
+    Take mean over all channels (mags/grads).
 
     
     Parameters
@@ -263,29 +264,41 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
     bands_names = ["delta (0.5-4 Hz)", "theta (4-8 Hz)", "alpha (8-12 Hz)", "beta (12-30 Hz)", "gamma (30-100 Hz)"]
 
-    band_ampl_df, band_ampl_relative_to_signal_df, ampl_by_Nfreq_per_ch_list_df, _ = get_bands_amplitude(wave_bands, freqs, psds, channels)
+    abs_band_ampl_df, band_ampl_relative_to_signal_df, ampl_by_Nfreq_per_ch_list_df, _ = get_mean_bands_amplitude(wave_bands, freqs, psds, channels)
 
     # Rename columns and extract to csv:
-    band_ampl_df.columns = bands_names
+    abs_band_ampl_df.columns = bands_names
     ampl_by_Nfreq_per_ch_list_df.columns = bands_names
     band_ampl_relative_to_signal_df.columns = bands_names
 
 
     dfs_with_name = [
-        QC_derivative(band_ampl_df,'abs_ampl_'+m_or_g, 'df'),
+        QC_derivative(abs_band_ampl_df,'abs_ampl_'+m_or_g, 'df'),
         QC_derivative(band_ampl_relative_to_signal_df, 'relative_ampl_'+m_or_g, 'df'),
         QC_derivative(ampl_by_Nfreq_per_ch_list_df, 'ampl_by_Nfreq_'+m_or_g, 'df')]
 
     # Calculate the mean amplitude of each band over all channels:
-    band_ampl_df, noise_ampl_relative_to_signal_df, _, total_ampl = get_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
+    abs_band_ampl_df, relative_band_ampl_df, _, total_ampl = get_mean_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
+    
+    # Merge the dataframes and with 'absolute' and 'relative' raw names:
+    merged_df = pd.concat([abs_band_ampl_df, relative_band_ampl_df], axis=0)  
+    merged_df.index = ['Absolute', 'Relative']
+
+    #add total_ampl as a new column in 'Absolute' raw and None in 'Relative' raw:
+    merged_df['Total amplitude'] = None
+    merged_df['Total amplitude']['Absolute'] = total_ampl[0]
+    merged_df['Total amplitude']['Relative'] = 1
+
+    bands_pie_df_deriv = [QC_derivative(content=merged_df, name='PSDbands'+m_or_g.capitalize(), content_type = 'df')]
+    
     #convert results to a list:
 
-    mean_brain_waves_abs=band_ampl_df.iloc[0, :].values.tolist()
-    mean_brain_waves_relative=noise_ampl_relative_to_signal_df.iloc[0, :].values.tolist()
+    mean_brain_waves_abs=abs_band_ampl_df.iloc[0, :].values.tolist()
+    mean_brain_waves_relative=relative_band_ampl_df.iloc[0, :].values.tolist()
 
     mean_brain_waves_dict= {bands_names[i]: {'mean_brain_waves_relative': np.round(mean_brain_waves_relative[i]*100, 2), 'mean_brain_waves_abs': mean_brain_waves_abs[i]} for i in range(len(bands_names))}
 
-    return dfs_with_name, mean_brain_waves_dict
+    return bands_pie_df_deriv, dfs_with_name, mean_brain_waves_dict
 
 
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
@@ -758,7 +771,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     if noisy_bands_final: #if not empty
 
-        noise_ampl_df, noise_ampl_relative_to_signal_df, _, _ = get_bands_amplitude(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
+        noise_ampl_df, noise_ampl_relative_to_signal_df, _, _ = get_mean_bands_amplitude(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
         #convert results to a list:
 
         noise_ampl = noise_ampl_df.iloc[0, :].values.tolist() #take the first and only raw, because there is only one channel calculated by this fucntion
@@ -778,12 +791,12 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
             'noise_ampl_relative_to_signal_'+m_or_g: noise_ampl_relative_to_signal,
             'total_amplitude_'+m_or_g: [total_amplitude] + [np.nan] * (len(noisy_freqs) - 1)})  # Add total_amplitude only once
 
-        pie_df_deriv = QC_derivative(content=df, name='PSDnoise'+m_or_g.capitalize(), content_type = 'df')
+        noise_pie_df_deriv = QC_derivative(content=df, name='PSDnoise'+m_or_g.capitalize(), content_type = 'df')
 
     else:
-        pie_df_deriv = []
+        noise_pie_df_deriv = []
 
-    return pie_df_deriv, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
+    return noise_pie_df_deriv, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
 
 
@@ -1134,12 +1147,12 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         avg_psd=np.mean(psds[m_or_g],axis=0) # average psd over all channels
         
         #Calculate the amplitude of alpha, beta, etc bands for each channel + average over all channels:
-        dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True, verbose_plots=verbose_plots)
+        bands_pie_df_deriv, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd, plotflag = True, verbose_plots=verbose_plots)
 
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
         noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, pie_plotflag=True, helperplots=helperplots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple', verbose_plots=verbose_plots)
         
-        derivs_psd += dfs_wave_bands_ampl +[noise_pie_derivative] 
+        derivs_psd += dfs_wave_bands_ampl +[noise_pie_derivative] + bands_pie_df_deriv
 
 
     # Make a simple metric for PSD:

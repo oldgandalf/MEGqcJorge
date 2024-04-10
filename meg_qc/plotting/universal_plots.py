@@ -1807,7 +1807,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
 
 
-def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
+def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
     
     """
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
@@ -1841,16 +1841,16 @@ def plot_pie_chart_freq(freq_amplitudes_relative: list, freq_amplitudes_absolute
     all_bands_names=bands_names.copy() 
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
     #To keep them in original state outside the function, they are copied here.
-    all_mean_abs_values=freq_amplitudes_absolute.copy()
+    all_mean_abs_values=amplitudes_abs.copy()
     ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    all_mean_relative_values=[v * 100 for v in freq_amplitudes_relative]  #in percentage
-    relative_unknown=100-(sum(freq_amplitudes_relative))*100
+    all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
+    relative_unknown=100-(sum(amplitudes_relative))*100
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_freq_ampl - sum(freq_amplitudes_absolute))
+        all_mean_abs_values.append(total_amplitude - sum(amplitudes_abs))
 
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):
@@ -1894,7 +1894,7 @@ def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_rel
     return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
 
 
-def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, fig_tit: str = "Ratio of signal and noise in the data: ", fig_name: str = 'PSD_SNR_all_channels_', verbose_plots : bool = False):
+def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str, verbose_plots : bool = False):
     
     """
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
@@ -1931,31 +1931,40 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, fig_tit: str = "Rati
     if not any(df.columns.str.contains(m_or_g)): #if it s not the right ch kind
         return []
 
-    print('columns:', df.columns.tolist())
+    if noise_or_waves == 'noise':
 
-    # Extract the data
-    noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
-    noise_ampl = df['noise_ampl_'+m_or_g].tolist()
-    #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
-    total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
-    noise_ampl_relative_to_signal = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
-    
+        fig_tit = "Ratio of signal and noise in the data: " 
+        fig_name = 'PSD_SNR_all_channels_'
 
-    noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal)
+        # Extract the data
+        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
+        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
+        #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
+        total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
+        amplitudes_relative = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
+        
+        amplitudes_abs, amplitudes_relative, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, amplitudes_relative)
+
+    elif noise_or_waves == 'waves':
+        fig_tit = "Relative amplitude of each band: " 
+        fig_name = 'PSD_Relative_band_amplitude_all_channels_'
+
+    else:
+        raise ValueError('Must be noise or waves in plot_pie_chart_freq_csv()!')
 
     all_bands_names=bands_names.copy() 
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
     #To keep them in original state outside the function, they are copied here.
-    all_mean_abs_values=noise_and_signal_ampl.copy()
+    all_mean_abs_values=amplitudes_abs.copy()
     ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    all_mean_relative_values=[v * 100 for v in noise_ampl_relative_to_signal]  #in percentage
-    relative_unknown=100-(sum(noise_ampl_relative_to_signal))*100
+    all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
+    relative_unknown=100-(sum(amplitudes_relative))*100
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_amplitude - sum(noise_and_signal_ampl))
+        all_mean_abs_values.append(total_amplitude - sum(amplitudes_abs))
 
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):
