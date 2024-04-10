@@ -769,61 +769,21 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     if ch_name.lower() == 'average':
         #need to save to tsv only if we are on the average psd curve, 
-        #dont need to save for ebvery channel.
-
-        print('__HERE__')
-        print('noisy_freqs', noisy_freqs) 
-        print('noise_ampl', noise_ampl)
-        print('noise_ampl_relative_to_signal', noise_ampl_relative_to_signal)
-        print('total_amplitude', total_amplitude)
-
+        #dont need to save for every channel.
 
         # Create a DataFrame
         df = pd.DataFrame({
-            'noisy_freqs': noisy_freqs,
-            'noise_ampl': noise_ampl,
-            'noise_ampl_relative_to_signal': noise_ampl_relative_to_signal,
-            'total_amplitude': [total_amplitude] + [np.nan] * (len(noisy_freqs) - 1)})  # Add total_amplitude only once
-        
-        display(df)
+            'noisy_freqs_'+m_or_g: noisy_freqs,
+            'noise_ampl_'+m_or_g: noise_ampl,
+            'noise_ampl_relative_to_signal_'+m_or_g: noise_ampl_relative_to_signal,
+            'total_amplitude_'+m_or_g: [total_amplitude] + [np.nan] * (len(noisy_freqs) - 1)})  # Add total_amplitude only once
 
-        # Save the DataFrame to a TSV file
-        df.to_csv('output.tsv', sep='\t', index=False)
-
-        print('___And now we plot!___')
-        # Read the data from the TSV file into a DataFrame
-        df = pd.read_csv('output.tsv', sep='\t')
-
-        # Extract the data
-        noisy_freqs = df['noisy_freqs'].tolist()
-        noise_ampl = df['noise_ampl'].tolist()
-        #total_amplitude = df['total_amplitude'][0]  # Assuming total_amplitude is the same for all rows
-        total_amplitude = df['total_amplitude'].dropna().iloc[0]  # Get the first non-null value
-        noise_ampl_relative_to_signal = df['noise_ampl_relative_to_signal'].tolist()
-
-
-    if pie_plotflag is True: # Plot pie chart of SNR:
-
-        print('__HERE we plot the pie chart__')
-
-        #Legend for the pie chart:
-        bands_names=[]
-        for fr_n, fr in enumerate(noisy_freqs):
-            bands_names.append(str(round(fr,1))+' Hz noise')
-
-        bands_names.append('Main signal')
-        
-        noise_and_signal_ampl = noise_ampl.copy()
-        noise_and_signal_ampl.append(total_amplitude-sum(noise_ampl)) #adding main signal ampl in the list
-
-        noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
-
-        noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+        pie_df_deriv = QC_derivative(content=df, name='PSDnoise'+m_or_g.capitalize(), content_type = 'df')
 
     else:
-        noise_pie_derivative = []
+        pie_df_deriv = []
 
-    return noise_pie_derivative, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
+    return pie_df_deriv, noise_ampl, noise_ampl_relative_to_signal, noisy_freqs
 
 
 

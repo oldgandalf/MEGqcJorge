@@ -1252,9 +1252,12 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     df = pd.read_csv(sensors_csv_path, sep='\t')
 
-
     #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
 
+    #if there are no lobes in df - skip this plot:
+    if 'Lobe' not in df.columns:
+        return []
+    
     unique_lobes = df['Lobe'].unique().tolist()
 
     lobes_dict={}
@@ -1759,6 +1762,9 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     # First, get the epochs from csv and convert back into object.
     df = pd.read_csv(f_path, sep='\t') 
 
+    if 'Name' not in df.columns:
+        return []
+
     # Figure out frequencies:
     freqs = figure_x_axis(df, metric='psd')
 
@@ -1795,7 +1801,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     
     fig_name='PSD_all_data_'+tit
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return qc_derivative
 
@@ -1885,10 +1891,10 @@ def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_rel
 
     #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
 
-    return  noise_and_signal_ampl, noise_ampl_relative_to_signal
+    return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
 
 
-def plot_pie_chart_freq_csv(freq_amplitudes_relative: list, freq_amplitudes_absolute: list, total_freq_ampl: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
+def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, fig_tit: str = "Ratio of signal and noise in the data: ", fig_name: str = 'PSD_SNR_all_channels_', verbose_plots : bool = False):
     
     """
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
@@ -1896,12 +1902,8 @@ def plot_pie_chart_freq_csv(freq_amplitudes_relative: list, freq_amplitudes_abso
 
     Parameters
     ----------
-    freq_amplitudes_relative : list
-        list of relative amplitudes of each frequency band
-    freq_amplitudes_absolute : list
-        list of absolute amplitudes of each frequency band 
-    total_freq_ampl : float
-        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
+    tsv_pie_path: str
+        Path to the tsv file with pie chart data
     m_or_g : str
         'mag' or 'grad'
     bands_names : list
@@ -1919,19 +1921,41 @@ def plot_pie_chart_freq_csv(freq_amplitudes_relative: list, freq_amplitudes_abso
         QC_derivative object with plotly figure as content
 
     """
+
+    # Read the data from the TSV file into a DataFrame
+    df = pd.read_csv(tsv_pie_path, sep='\t')
+
+    if not any(df.columns.str.contains('noise')) and not any(df.columns.str.contains('relative')):
+        return []
+    
+    if not any(df.columns.str.contains(m_or_g)): #if it s not the right ch kind
+        return []
+
+    print('columns:', df.columns.tolist())
+
+    # Extract the data
+    noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
+    noise_ampl = df['noise_ampl_'+m_or_g].tolist()
+    #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
+    total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
+    noise_ampl_relative_to_signal = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
+    
+
+    noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal)
+
     all_bands_names=bands_names.copy() 
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
     #To keep them in original state outside the function, they are copied here.
-    all_mean_abs_values=freq_amplitudes_absolute.copy()
+    all_mean_abs_values=noise_and_signal_ampl.copy()
     ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    all_mean_relative_values=[v * 100 for v in freq_amplitudes_relative]  #in percentage
-    relative_unknown=100-(sum(freq_amplitudes_relative))*100
+    all_mean_relative_values=[v * 100 for v in noise_ampl_relative_to_signal]  #in percentage
+    relative_unknown=100-(sum(noise_ampl_relative_to_signal))*100
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_freq_ampl - sum(freq_amplitudes_absolute))
+        all_mean_abs_values.append(total_amplitude - sum(noise_and_signal_ampl))
 
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):
@@ -1951,7 +1975,7 @@ def plot_pie_chart_freq_csv(freq_amplitudes_relative: list, freq_amplitudes_abso
 
     fig_name=fig_name+ch_type_tit
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return qc_derivative
 
