@@ -1971,14 +1971,13 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
         # Extract rows into lists
         amplitudes_abs = df_no_total.loc['absolute_'+m_or_g].tolist()
-        amplitudes_relative = df_no_total.loc['absolute_'+m_or_g].tolist()
+        amplitudes_relative = df_no_total.loc['relative_'+m_or_g].tolist()
         #take all values except the total in a list
 
         # Extract column names into a separate list
         bands_names = df_no_total.columns.tolist()
 
     else:
-        print('___SKIP__', noise_or_waves, tsv_pie_path)
         return []
 
     all_bands_names=bands_names.copy() 
@@ -1998,6 +1997,10 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
+
+    print('___here issue___')
+    print(all_mean_relative_values)
+    print(labels)
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
