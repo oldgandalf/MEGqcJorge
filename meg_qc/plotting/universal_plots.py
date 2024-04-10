@@ -9,6 +9,7 @@ import mne
 import warnings
 import random
 import copy
+import os
 
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
@@ -1922,16 +1923,21 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
     """
 
+    print('___Plot this', tsv_pie_path)
+
+    # Get the base name
+    base_name = os.path.basename(tsv_pie_path) #name of the fimal file
+    
+    #if not any(df.columns.str.contains(m_or_g)) and not any(df.index.str.contains(m_or_g)): 
+    if m_or_g not in base_name.lower():
+    #if it s not the right ch kind in the file
+        return []
+    
     # Read the data from the TSV file into a DataFrame
     df = pd.read_csv(tsv_pie_path, sep='\t')
 
-    if not any(df.columns.str.contains('noise')) and not any(df.columns.str.contains('relative')):
-        return []
-    
-    if not any(df.columns.str.contains(m_or_g)): #if it s not the right ch kind
-        return []
-
-    if noise_or_waves == 'noise':
+    if noise_or_waves == 'noise' and 'PSDnoise' in base_name:
+        #check that we input tsv file with the right data
 
         fig_tit = "Ratio of signal and noise in the data: " 
         fig_name = 'PSD_SNR_all_channels_'
@@ -1945,12 +1951,35 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
         
         amplitudes_abs, amplitudes_relative, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, amplitudes_relative)
 
-    elif noise_or_waves == 'waves':
+    elif noise_or_waves == 'waves' and 'PSDwaves' in base_name:
+
         fig_tit = "Relative amplitude of each band: " 
         fig_name = 'PSD_Relative_band_amplitude_all_channels_'
 
+
+        # Set the first column as the index
+        df.set_index(df.columns[0], inplace=True)
+
+        print('__Check here__')
+        print(df)
+
+        # Extract total_amplitude into a separate variable
+        total_amplitude = df['total_amplitude'].loc['absolute_'+m_or_g]
+
+        #drop total ampl:
+        df_no_total = copy.deepcopy(df.drop('total_amplitude', axis=1))
+
+        # Extract rows into lists
+        amplitudes_abs = df_no_total.loc['absolute_'+m_or_g].tolist()
+        amplitudes_relative = df_no_total.loc['absolute_'+m_or_g].tolist()
+        #take all values except the total in a list
+
+        # Extract column names into a separate list
+        bands_names = df_no_total.columns.tolist()
+
     else:
-        raise ValueError('Must be noise or waves in plot_pie_chart_freq_csv()!')
+        print('___SKIP__', noise_or_waves, tsv_pie_path)
+        return []
 
     all_bands_names=bands_names.copy() 
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
@@ -1964,7 +1993,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_amplitude - sum(amplitudes_abs))
+        all_mean_abs_values.append(total_amplitude - sum(all_mean_abs_values))
 
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):

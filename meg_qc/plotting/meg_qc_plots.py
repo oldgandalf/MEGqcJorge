@@ -281,13 +281,10 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             for m_or_g in m_or_g_chosen:
 
-                print('___HERE Plot_psd_csv')
                 psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
 
-                print('___HERE plot_pie_chart_freq_csv1')
                 psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise', verbose_plots=verbose_plots)
 
-                print('___HERE plot_pie_chart_freq_csv2')
                 psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves', verbose_plots=verbose_plots)
 
         elif 'ECG' in metric.upper():
@@ -417,6 +414,8 @@ def make_plots_meg_qc(ds_paths):
                 if metric == 'PSDs':
                     tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseMag', scope='derivatives')))
                     tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseGrad', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
                 
                 tsvs_to_plot[metric] = tsv_path
 

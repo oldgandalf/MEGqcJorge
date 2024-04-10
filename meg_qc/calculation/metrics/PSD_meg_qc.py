@@ -281,15 +281,15 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     abs_band_ampl_df, relative_band_ampl_df, _, total_ampl = get_mean_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
     
     # Merge the dataframes and with 'absolute' and 'relative' raw names:
-    merged_df = pd.concat([abs_band_ampl_df, relative_band_ampl_df], axis=0)  
-    merged_df.index = ['Absolute', 'Relative']
+    brain_bands_df = pd.concat([abs_band_ampl_df, relative_band_ampl_df], axis=0)  
+    brain_bands_df.index = ['absolute_'+m_or_g, 'relative_'+m_or_g]
 
     #add total_ampl as a new column in 'Absolute' raw and None in 'Relative' raw:
-    merged_df['Total amplitude'] = None
-    merged_df['Total amplitude']['Absolute'] = total_ampl[0]
-    merged_df['Total amplitude']['Relative'] = 1
+    brain_bands_df['total_amplitude'] = None
+    brain_bands_df['total_amplitude']['absolute_'+m_or_g] = total_ampl[0]
+    brain_bands_df['total_amplitude']['relative_'+m_or_g] = 1
 
-    bands_pie_df_deriv = [QC_derivative(content=merged_df, name='PSDbands'+m_or_g.capitalize(), content_type = 'df')]
+    waves_pie_df_deriv = [QC_derivative(content=brain_bands_df, name='PSDwaves'+m_or_g.capitalize(), content_type = 'df')]
     
     #convert results to a list:
 
@@ -298,7 +298,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
 
     mean_brain_waves_dict= {bands_names[i]: {'mean_brain_waves_relative': np.round(mean_brain_waves_relative[i]*100, 2), 'mean_brain_waves_abs': mean_brain_waves_abs[i]} for i in range(len(bands_names))}
 
-    return bands_pie_df_deriv, dfs_with_name, mean_brain_waves_dict
+    return waves_pie_df_deriv, dfs_with_name, mean_brain_waves_dict
 
 
 def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
