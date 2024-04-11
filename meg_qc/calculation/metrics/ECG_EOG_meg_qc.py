@@ -1914,8 +1914,18 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
 
         bad_ecg_eog, ecg_data, event_indexes, ecg_eval = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
 
+        #Collect the data into 1 df for plotting later. ecg_ch as name of first column, ecg_data as data, event_indexes as indexes of the events:
+        event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
+        
+        ecg_df = pd.DataFrame({
+            ecg_ch: ecg_data,
+            'event_indexes': event_indexes_with_none})
+        
+        noisy_ch_derivs = [QC_derivative(content=ecg_df, name='ECGdata', content_type = 'df')]
+
+
         fig = plot_ECG_EOG_channel(ecg_data, event_indexes, ch_name = ecg_ch, fs = raw.info['sfreq'], verbose_plots = verbose_plots)
-        noisy_ch_derivs = [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+        noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
         if bad_ecg_eog[ecg_ch] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. '
