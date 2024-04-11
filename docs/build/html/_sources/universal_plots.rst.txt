@@ -8,5 +8,5 @@ In the html report:
 
 
 
-.. automodule:: meg_qc.source.universal_plots
+.. automodule:: meg_qc.plotting.universal_plots
     :members:
