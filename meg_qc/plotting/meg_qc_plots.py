@@ -272,9 +272,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
         elif 'PSD' in metric.upper():
 
-            print('___We plot PSDs!')
-            print(tsv_path)
-
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
 
             psd_derivs += plot_sensors_3d_csv(tsv_path)
@@ -425,8 +422,6 @@ def make_plots_meg_qc(ds_paths):
             for metric, tsv_paths in tsvs_to_plot.items():
                 #for n_tsv, tsv_path in enumerate(files):
 
-                print('__THIS TSVs: ', tsv_paths)
-
                 meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[counter]) #shell. empty derivative
                 meg_artifact.add_entity('desc', metric) #file name
                 meg_artifact.suffix = 'meg'
@@ -434,7 +429,6 @@ def make_plots_meg_qc(ds_paths):
 
                 # Here convert csv into figure and into html report:
                 deriv = csv_to_html_report(metric, tsv_paths, report_str_path, plot_settings)
-                print('___MEGqc___: ', '___HERE DERIV', deriv)
 
                 meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
                 counter += 1

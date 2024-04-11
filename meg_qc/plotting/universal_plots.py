@@ -1960,9 +1960,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
         # Set the first column as the index
         df.set_index(df.columns[0], inplace=True)
 
-        print('__Check here__')
-        print(df)
-
         # Extract total_amplitude into a separate variable
         total_amplitude = df['total_amplitude'].loc['absolute_'+m_or_g]
 
