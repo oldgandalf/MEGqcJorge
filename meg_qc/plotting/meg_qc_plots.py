@@ -290,24 +290,25 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
             ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots = verbose_plots)
+
+            print('____before IT____, ecg_derivs', ecg_derivs)
+
+            #TODO: add ch description like here? export it as separate report strings?
             #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
             for m_or_g in m_or_g_chosen:
-                affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-                correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
 
-                ecg_derivs += affected_derivs + correlation_derivs
-
+            print('____before____, ecg_derivs', ecg_derivs)
 
         elif 'EOG' in metric.upper():
 
             eog_derivs += plot_sensors_3d_csv(tsv_path)
                 
             for m_or_g in m_or_g_chosen:
-                affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-                correlation_derivs = plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
-
-                eog_derivs += affected_derivs + correlation_derivs 
+                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
             
         elif 'MUSCLE' in metric.upper():
