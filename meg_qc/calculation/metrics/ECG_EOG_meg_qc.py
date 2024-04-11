@@ -1921,7 +1921,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
             ecg_ch: ecg_data,
             'event_indexes': event_indexes_with_none})
         
-        noisy_ch_derivs = [QC_derivative(content=ecg_df, name='ECGdata', content_type = 'df')]
+        noisy_ch_derivs = [QC_derivative(content=ecg_df, name='ECGchannel', content_type = 'df')]
 
 
         fig = plot_ECG_EOG_channel(ecg_data, event_indexes, ch_name = ecg_ch, fs = raw.info['sfreq'], verbose_plots = verbose_plots)
@@ -2446,7 +2446,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     ecg_derivs = []
     use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params, verbose_plots)
     
-    #ecg_derivs += noisy_ch_derivs
+    ecg_derivs += noisy_ch_derivs
 
 
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
