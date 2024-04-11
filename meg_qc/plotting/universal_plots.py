@@ -1923,14 +1923,10 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
     """
 
-    print('___Plot this', tsv_pie_path)
-
-    # Get the base name
+    #if it s not the right ch kind in the file
     base_name = os.path.basename(tsv_pie_path) #name of the fimal file
     
-    #if not any(df.columns.str.contains(m_or_g)) and not any(df.index.str.contains(m_or_g)): 
     if m_or_g not in base_name.lower():
-    #if it s not the right ch kind in the file
         return []
     
     # Read the data from the TSV file into a DataFrame
@@ -2853,6 +2849,115 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
 
 #__________ECG/EOG__________#
 
+def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float, verbose_plots: bool):
+
+    """
+    Plot the ECG channel data and detected peaks
+    
+    Parameters
+    ----------
+    ch_data : list or np.ndarray
+        Data of the channel
+    peaks : list or np.ndarray
+        Indices of the peaks in the data
+    ch_name : str
+        Name of the channel
+    fs : int
+        Sampling frequency of the data
+    verbose_plots : bool
+        If True, show the figure in the notebook
+        
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plot of the channel data and detected peaks
+        
+    """
+
+    time = np.arange(len(ch_data))/fs
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.update_layout(xaxis_title='time, s', 
+                yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+                yaxis_title='Amplitude',
+                title={
+                'text': ch_name,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    if verbose_plots is True:
+        fig.show()
+
+    return fig
+
+
+def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
+
+    """
+    Plot the ECG channel data and detected peaks
+    
+    Parameters
+    ----------
+    ch_data : list or np.ndarray
+        Data of the channel
+    peaks : list or np.ndarray
+        Indices of the peaks in the data
+    ch_name : str
+        Name of the channel
+    fs : int
+        Sampling frequency of the data
+    verbose_plots : bool
+        If True, show the figure in the notebook
+        
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plot of the channel data and detected peaks
+        
+    """
+
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'ecgchannel' not in base_name.lower() and 'eogchannel' not in base_name.lower():
+        return []
+
+    df = pd.read_csv(f_path, sep='\t') 
+
+    #name of the first column if it starts with 'ECG' or 'EOG':
+    ch_name = df.columns[1]
+    ch_data = df[ch_name].values
+    peaks = df['event_indexes'].dropna()
+    peaks = [int(x) for x in peaks]
+    fs = int(df['fs'].dropna())
+
+    time = np.arange(len(ch_data))/fs
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.update_layout(xaxis_title='time, s', 
+                yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+                yaxis_title='Amplitude',
+                title={
+                'text': ch_name,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    ch_deriv = [QC_derivative(fig, ch_name, 'plotly')]
+
+    if verbose_plots is True:
+        fig.show()
+
+    return ch_deriv
 
 def figure_x_axis(df, metric):
 
@@ -3085,10 +3190,17 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     """
 
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'desc-ecgs' not in base_name.lower() and 'desc-eogs' not in base_name.lower():
+        return []
+
 
     ecg_or_eog = ecg_or_eog.lower()
 
     df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
@@ -3164,6 +3276,12 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
         List with 1 QC_derivative instance: Figure with correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
     
     """
+
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'desc-ecgs' not in base_name.lower() and 'desc-eogs' not in base_name.lower():
+        return []
 
     ecg_or_eog = ecg_or_eog.lower()
 
