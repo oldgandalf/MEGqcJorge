@@ -230,7 +230,8 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
-
+    #TODO: think about it! the order goes by tsv files so it s messed uo cos ecg channels comes seond!
+    
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
         if 'STD' in metric.upper():
@@ -290,6 +291,8 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
             ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots = verbose_plots)
+
+            ecg_derivs += mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
 
             print('____before IT____, ecg_derivs', ecg_derivs)
 

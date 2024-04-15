@@ -3111,7 +3111,6 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     fig_tit=ecg_or_eog+title
 
-    #if df and not df.empty: #if affected channels present:
     if df is not None:
         if smoothed is True:
             metric = ecg_or_eog+'_smoothed'
@@ -3126,7 +3125,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-            yaxis_title='Mean artifact magnitude in '+unit,
+            yaxis_title='Mean magnitude in '+unit,
             title={
                 'text': fig_tit+str(len(df))+' '+ch_type_tit,
                 'y':0.85,

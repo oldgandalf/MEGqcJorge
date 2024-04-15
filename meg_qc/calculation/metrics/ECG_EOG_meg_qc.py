@@ -1819,7 +1819,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 
-def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots: bool):
+def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     """
     Choose the method of finding affected channels based on the presense and quality of ECG channel.
@@ -1871,12 +1871,10 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
         event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
         fs_with_none = [raw.info['sfreq']] + [None] * (len(ecg_data) - 1)
 
-        ecg_df = pd.DataFrame({
+        ecg_ch_df = pd.DataFrame({
             ecg_ch: ecg_data,
             'event_indexes': event_indexes_with_none,
             'fs': fs_with_none})
-        
-        noisy_ch_derivs = [QC_derivative(content=ecg_df, name='ECGchannel', content_type = 'df')]
 
         if bad_ecg_eog[ecg_ch] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. '
@@ -1890,12 +1888,12 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
 
     else: #no ecg channel present
 
-        noisy_ch_derivs, ecg_data, event_indexes = [], [], []
+        ecg_ch_df, ecg_data, event_indexes = [], [], []
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. '
         use_method = 'correlation_reconstructed'
         print('___MEGqc___: ', ecg_str)
 
-    return use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes
+    return use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes
 
 def get_EOG_data(raw: mne.io.Raw):
 
@@ -2395,14 +2393,17 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
 
     ecg_derivs = []
-    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params, verbose_plots)
+    use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     
-    ecg_derivs += noisy_ch_derivs
-
 
     mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    
     ecg_str += ecg_str_checked
 
+    mean_rwave_with_none = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+    ecg_ch_df['mean_rwave'] = mean_rwave_with_none
+
+    ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
     ecg_derivs += rwave_derivs
 
     if mean_good is False:
@@ -2480,6 +2481,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(affected_channels[m_or_g], artif_time_vector)
+
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
