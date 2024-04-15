@@ -3083,14 +3083,16 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
     ----------
     df : pd.DataFrame
         Data frame with the data.
+    artifact_lvl : float
+        The threshold for the artifact amplitude.
     t : np.ndarray
         Time vector.
     m_or_g : str
         Either 'mag' or 'grad'.
-    fig_tit: str
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
+    title : str
         The title of the figure.
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
     flip_data : bool
         If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
         'flip' means that the data will be flipped if the peak of the artifact is negative. 
@@ -3156,6 +3158,38 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
         fig.show()
 
     return fig
+
+def plot_mean_ecg_ch_data(f_path: str, ecg_or_eog: str, verbose_plots: bool):
+
+    #if it s not the right ch kind in the file
+    base_name = os.path.basename(f_path) #name of the fimal file
+    if ecg_or_eog + 'channel' not in base_name.lower():
+        return []
+    
+    # Load the data from the .tsv file into a DataFrame
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Create a scatter plot
+    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines'))
+
+    # Set the plot's title and labels
+    if 'recorded' in df['recorded_or_reconstructed'][0]:
+        which = 'recorded'
+    elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
+        which = 'reconstructed'
+    else:
+        which = ''
+    
+    fig.update_layout(title='Mean data of the '+ which + ecg_or_eog.upper() + ' channel', xaxis_title='Time, s', yaxis_title='Signal amplitude, V')
+
+    # Show the plot
+    if verbose_plots is True:
+        fig.show()
+
+    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ecg_ch_data', 'plotly')]
+
+    return mean_ecg_ch_deriv
+
 
 
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):

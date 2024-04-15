@@ -2033,7 +2033,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     #Plot:
     if mean_rwave.size > 0:
-        t = np.linspace(tmin, tmax, len(mean_rwave))
+        mean_rwave_time = np.linspace(tmin, tmax, len(mean_rwave))
         if use_method == 'correlation_reconstructed':
             title = 'Mean data of the RECONSTRUCTED '
         elif use_method == 'correlation':
@@ -2041,7 +2041,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
         else:
             title = 'Mean data of '
 
-        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
+        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(mean_rwave_time, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
         if verbose_plots is True:
             mean_rwave_fig.show()
 
@@ -2049,7 +2049,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     else:
         fig_derivs = []
 
-    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, fig_derivs
+    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, mean_rwave_time, fig_derivs
 
 
 # Functions for alignment of ECG with meg channels:
@@ -2396,13 +2396,14 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     
 
-    mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
     
     ecg_str += ecg_str_checked
 
-    mean_rwave_with_none = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
-    ecg_ch_df['mean_rwave'] = mean_rwave_with_none
-
+    ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+    ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
+    print('___MEGqc___: mean_rwave_time:', ecg_ch_df['mean_rwave_time'])
+    ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
     ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
     ecg_derivs += rwave_derivs
 
@@ -2565,7 +2566,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     use_method = 'correlation' #'mean_threshold' 
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion (if channel present) or fail.
 
-    mean_good, eog_str_checked, mean_blink, blink_derivs = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, eog_str_checked, mean_blink, mean_rwave_time, blink_derivs = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
     eog_str += eog_str_checked
 
     eog_derivs += blink_derivs

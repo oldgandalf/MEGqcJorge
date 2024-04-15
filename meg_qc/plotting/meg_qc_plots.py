@@ -290,11 +290,9 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
-            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots = verbose_plots)
+            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots)
 
-            ecg_derivs += mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
-
-            print('____before IT____, ecg_derivs', ecg_derivs)
+            ecg_derivs += plot_mean_ecg_ch_data(tsv_path, 'ECG', verbose_plots)
 
             #TODO: add ch description like here? export it as separate report strings?
             #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
@@ -302,8 +300,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             for m_or_g in m_or_g_chosen:
                 ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
                 ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
-
-            print('____before____, ecg_derivs', ecg_derivs)
 
         elif 'EOG' in metric.upper():
 
