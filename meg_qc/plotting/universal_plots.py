@@ -468,7 +468,7 @@ class QC_derivative:
 
     """
 
-    def __init__(self, content, name, content_type, description_for_user = ''):
+    def __init__(self, content, name, content_type, description_for_user = '', fig_order = 0):
 
         """
         Constructor method
@@ -485,6 +485,9 @@ class QC_derivative:
         description_for_user : str, optional
             The description of the derivative, by default 'Add measurement description for a user...'
             Used in the report to describe the derivative.
+        fig_order : int, optional
+            The order of the figure in the report, by default 0. Used for sorting.
+        
 
         """
 
@@ -492,6 +495,7 @@ class QC_derivative:
         self.name = name
         self.content_type = content_type
         self.description_for_user = description_for_user
+        self.fig_order = fig_order
 
     def __repr__(self):
 
