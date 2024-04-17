@@ -343,6 +343,12 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     'Muscle': muscle_derivs,
     'Report_MNE': []}
 
+    #Sort all based on fig_order of QC_derivative:
+    #(To plot them in correct order in the report)
+    for metric, values in QC_derivs.items():
+        if values:
+            QC_derivs[metric] = sorted(values, key=lambda x: x.fig_order)
+
 
     if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
         report_strings = {
