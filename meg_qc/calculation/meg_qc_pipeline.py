@@ -271,6 +271,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'Head movement artifacts': head_derivs,
                 'High frequency (Muscle) artifacts': muscle_derivs}
 
+                print('___MEGqc___: ', 'QC_derivs', QC_derivs)  
+
 
                 QC_simple={
                 'STD': simple_metrics_std, 

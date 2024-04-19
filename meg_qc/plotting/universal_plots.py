@@ -468,7 +468,7 @@ class QC_derivative:
 
     """
 
-    def __init__(self, content, name, content_type, description_for_user = ''):
+    def __init__(self, content, name, content_type, description_for_user = '', fig_order = 0):
 
         """
         Constructor method
@@ -485,6 +485,9 @@ class QC_derivative:
         description_for_user : str, optional
             The description of the derivative, by default 'Add measurement description for a user...'
             Used in the report to describe the derivative.
+        fig_order : int, optional
+            The order of the figure in the report, by default 0. Used for sorting.
+        
 
         """
 
@@ -492,6 +495,7 @@ class QC_derivative:
         self.name = name
         self.content_type = content_type
         self.description_for_user = description_for_user
+        self.fig_order = fig_order
 
     def __repr__(self):
 
@@ -1309,7 +1313,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
     
-    qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
+    qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ", fig_order=-1)]
 
     return qc_derivative 
 
@@ -1923,14 +1927,10 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
     """
 
-    print('___Plot this', tsv_pie_path)
-
-    # Get the base name
+    #if it s not the right ch kind in the file
     base_name = os.path.basename(tsv_pie_path) #name of the fimal file
     
-    #if not any(df.columns.str.contains(m_or_g)) and not any(df.index.str.contains(m_or_g)): 
     if m_or_g not in base_name.lower():
-    #if it s not the right ch kind in the file
         return []
     
     # Read the data from the TSV file into a DataFrame
@@ -1959,9 +1959,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
         # Set the first column as the index
         df.set_index(df.columns[0], inplace=True)
-
-        print('__Check here__')
-        print(df)
 
         # Extract total_amplitude into a separate variable
         total_amplitude = df['total_amplitude'].loc['absolute_'+m_or_g]
@@ -2856,6 +2853,115 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
 
 #__________ECG/EOG__________#
 
+def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float, verbose_plots: bool):
+
+    """
+    Plot the ECG channel data and detected peaks
+    
+    Parameters
+    ----------
+    ch_data : list or np.ndarray
+        Data of the channel
+    peaks : list or np.ndarray
+        Indices of the peaks in the data
+    ch_name : str
+        Name of the channel
+    fs : int
+        Sampling frequency of the data
+    verbose_plots : bool
+        If True, show the figure in the notebook
+        
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plot of the channel data and detected peaks
+        
+    """
+
+    time = np.arange(len(ch_data))/fs
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.update_layout(xaxis_title='time, s', 
+                yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+                yaxis_title='Amplitude',
+                title={
+                'text': ch_name,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    if verbose_plots is True:
+        fig.show()
+
+    return fig
+
+
+def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
+
+    """
+    Plot the ECG channel data and detected peaks
+    
+    Parameters
+    ----------
+    ch_data : list or np.ndarray
+        Data of the channel
+    peaks : list or np.ndarray
+        Indices of the peaks in the data
+    ch_name : str
+        Name of the channel
+    fs : int
+        Sampling frequency of the data
+    verbose_plots : bool
+        If True, show the figure in the notebook
+        
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plot of the channel data and detected peaks
+        
+    """
+
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'ecgchannel' not in base_name.lower() and 'eogchannel' not in base_name.lower():
+        return []
+
+    df = pd.read_csv(f_path, sep='\t') 
+
+    #name of the first column if it starts with 'ECG' or 'EOG':
+    ch_name = df.columns[1]
+    ch_data = df[ch_name].values
+    peaks = df['event_indexes'].dropna()
+    peaks = [int(x) for x in peaks]
+    fs = int(df['fs'].dropna())
+
+    time = np.arange(len(ch_data))/fs
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.update_layout(xaxis_title='time, s', 
+                yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+                yaxis_title='Amplitude',
+                title={
+                'text': ch_name,
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    ch_deriv = [QC_derivative(fig, ch_name, 'plotly', fig_order = 1)]
+
+    if verbose_plots is True:
+        fig.show()
+
+    return ch_deriv
 
 def figure_x_axis(df, metric):
 
@@ -2981,14 +3087,16 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
     ----------
     df : pd.DataFrame
         Data frame with the data.
+    artifact_lvl : float
+        The threshold for the artifact amplitude.
     t : np.ndarray
         Time vector.
     m_or_g : str
         Either 'mag' or 'grad'.
-    fig_tit: str
+    ecg_or_eog : str
+        Either 'ECG' or 'EOG'.
+    title : str
         The title of the figure.
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
     flip_data : bool
         If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
         'flip' means that the data will be flipped if the peak of the artifact is negative. 
@@ -3007,9 +3115,8 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
         
     """
 
-    fig_tit=ecg_or_eog+title
+    fig_tit=ecg_or_eog.upper()+title
 
-    #if df and not df.empty: #if affected channels present:
     if df is not None:
         if smoothed is True:
             metric = ecg_or_eog+'_smoothed'
@@ -3024,7 +3131,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-            yaxis_title='Mean artifact magnitude in '+unit,
+            yaxis_title='Mean magnitude in '+unit,
             title={
                 'text': fig_tit+str(len(df))+' '+ch_type_tit,
                 'y':0.85,
@@ -3055,6 +3162,48 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
         fig.show()
 
     return fig
+
+def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
+
+    #if it s not the right ch kind in the file
+    base_name = os.path.basename(f_path) #name of the final file
+    if ecg_or_eog.lower() + 'channel' not in base_name.lower():
+        return []
+
+    # Load the data from the .tsv file into a DataFrame
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Create a scatter plot
+    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines'))
+
+    # Set the plot's title and labels
+    if 'recorded' in df['recorded_or_reconstructed'][0]:
+        which = 'recorded'
+    elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
+        which = 'reconstructed'
+    else:
+        which = ''
+    
+    fig.update_layout(
+            xaxis_title='Time, s',
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title='Signal amplitude, V',
+            title={
+                'text': 'Mean data of the '+ which +' ' + ecg_or_eog.upper() + ' channel',
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    # Show the plot
+    if verbose_plots is True:
+        fig.show()
+
+    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ecg_ch_data', 'plotly', fig_order = 2)]
+
+    return mean_ecg_ch_deriv
 
 
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
@@ -3088,10 +3237,17 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     """
 
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'desc-ecgs' not in base_name.lower() and 'desc-eogs' not in base_name.lower():
+        return []
+
 
     ecg_or_eog = ecg_or_eog.lower()
 
     df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
@@ -3100,7 +3256,7 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     smoothed = True
     fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' middle affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
     fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
 
 
@@ -3135,10 +3291,11 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
         fig_middle_affected.show()
         fig_least_affected.show()
     
+    m_or_g_order = 0.1 if m_or_g == 'mag' else 0.2
     affected_derivs = []
-    affected_derivs += [QC_derivative(fig_most_affected, ecg_or_eog+'most_affected_channels_'+m_or_g, 'plotly')]
-    affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly')]
-    affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly')]
+    affected_derivs += [QC_derivative(fig_most_affected, ecg_or_eog+'most_affected_channels_'+m_or_g, 'plotly', fig_order = 3.01+m_or_g_order)] #for exaple for mage we get: 3.11
+    affected_derivs += [QC_derivative(fig_middle_affected, ecg_or_eog+'middle_affected_channels_'+m_or_g, 'plotly', fig_order = 3.02+m_or_g_order)]
+    affected_derivs += [QC_derivative(fig_least_affected, ecg_or_eog+'least_affected_channels_'+m_or_g, 'plotly', fig_order = 3.03+m_or_g_order)]
 
    
     return affected_derivs
@@ -3168,6 +3325,12 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     
     """
 
+    #if its not the right file, skip:
+    base_name = os.path.basename(f_path) #name of the fimal file
+    
+    if 'desc-ecgs' not in base_name.lower() and 'desc-eogs' not in base_name.lower():
+        return []
+
     ecg_or_eog = ecg_or_eog.lower()
 
     df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
@@ -3188,16 +3351,20 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
     fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_middle_correlated, y0=-0.1, x1=1, y1=1.1, line=dict(color="Red", width=2), fillcolor="Red", opacity=0.1)
 
-    #set axis titles:
-    fig.update_xaxes(title_text='Correlation coefficient')
-    fig.update_yaxes(title_text='P-value')
-
-    #set title:
-    fig.update_layout(title_text=tit+': Pearson correlation between reference '+ecg_or_eog+' epoch and '+ecg_or_eog+' epoch in each channel')
-
+    fig.update_layout(
+        title={
+            'text': tit+': Pearson correlation between reference '+ecg_or_eog.upper()+' epoch and '+ecg_or_eog.upper()+' epoch in each channel',
+            'y':0.85,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+        xaxis_title='Correlation coefficient',
+        yaxis_title = 'P-value') 
+    
     if verbose_plots is True:
         fig.show()
 
-    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>')]
+    m_or_g_order = 0.1 if m_or_g == 'mag' else 0.2
+    corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>', fig_order = 4+m_or_g_order)]
 
     return corr_derivs

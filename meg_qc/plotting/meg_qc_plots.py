@@ -17,7 +17,8 @@ sys.path.append(gradparent_dir)
 # from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
 # from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 
-from meg_qc.plotting.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv, plot_pie_chart_freq_csv
+# from meg_qc.plotting.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv, plot_pie_chart_freq_csv, plot_ECG_EOG_channel
+from meg_qc.plotting.universal_plots import *
 from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 
 
@@ -229,7 +230,8 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
-
+    #TODO: think about it! the order goes by tsv files so it s messed uo cos ecg channels comes seond!
+    
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
         if 'STD' in metric.upper():
@@ -272,9 +274,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
         elif 'PSD' in metric.upper():
 
-            print('___We plot PSDs!')
-            print(tsv_path)
-
             method = 'welch' #is also hard coded in PSD_meg_qc() for now
 
             psd_derivs += plot_sensors_3d_csv(tsv_path)
@@ -291,22 +290,24 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
+            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots)
+
+            ecg_derivs += plot_mean_ecg_ch_data_csv(tsv_path, 'ECG', verbose_plots)
+
+            #TODO: add ch description like here? export it as separate report strings?
+            #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+
             for m_or_g in m_or_g_chosen:
-                affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-                correlation_derivs = plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
-
-                ecg_derivs += affected_derivs + correlation_derivs
-
+                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
+                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
 
         elif 'EOG' in metric.upper():
 
             eog_derivs += plot_sensors_3d_csv(tsv_path)
                 
             for m_or_g in m_or_g_chosen:
-                affected_derivs = plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-                correlation_derivs = plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
-
-                eog_derivs += affected_derivs + correlation_derivs 
+                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
+                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
 
             
         elif 'MUSCLE' in metric.upper():
@@ -341,6 +342,12 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     'Head': head_derivs,
     'Muscle': muscle_derivs,
     'Report_MNE': []}
+
+    #Sort all based on fig_order of QC_derivative:
+    #(To plot them in correct order in the report)
+    for metric, values in QC_derivs.items():
+        if values:
+            QC_derivs[metric] = sorted(values, key=lambda x: x.fig_order)
 
 
     if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
@@ -417,6 +424,12 @@ def make_plots_meg_qc(ds_paths):
                     tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
                     tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
                 
+                if metric == 'ECGs':
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ECGchannel', scope='derivatives')))
+
+                if metric == 'EOGs':
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'EOGchannel', scope='derivatives')))
+
                 tsvs_to_plot[metric] = tsv_path
 
             print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
@@ -425,8 +438,6 @@ def make_plots_meg_qc(ds_paths):
             for metric, tsv_paths in tsvs_to_plot.items():
                 #for n_tsv, tsv_path in enumerate(files):
 
-                print('__THIS TSVs: ', tsv_paths)
-
                 meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[counter]) #shell. empty derivative
                 meg_artifact.add_entity('desc', metric) #file name
                 meg_artifact.suffix = 'meg'
@@ -434,7 +445,6 @@ def make_plots_meg_qc(ds_paths):
 
                 # Here convert csv into figure and into html report:
                 deriv = csv_to_html_report(metric, tsv_paths, report_str_path, plot_settings)
-                print('___MEGqc___: ', '___HERE DERIV', deriv)
 
                 meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
                 counter += 1
