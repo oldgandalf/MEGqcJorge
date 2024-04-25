@@ -11,5 +11,5 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
 
 
-.. automodule:: meg_qc.source.universal_html_report
+.. automodule:: meg_qc.plotting.universal_html_report
     :members:

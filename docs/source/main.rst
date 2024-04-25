@@ -6,5 +6,5 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
 
 
-.. automodule:: meg_qc.meg_qc_pipeline
+.. automodule:: meg_qc.calculation.meg_qc_pipeline
    :members:

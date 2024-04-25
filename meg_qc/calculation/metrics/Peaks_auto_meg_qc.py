@@ -3,9 +3,8 @@
 
 import pandas as pd
 import mne
-from meg_qc.source.universal_plots import QC_derivative
-from typing import List
-from typing import Tuple
+from meg_qc.plotting.universal_plots import QC_derivative
+from typing import List, Tuple
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: List, bad_percent:  int, min_duration: float) -> Tuple[pd.DataFrame, List]:
 

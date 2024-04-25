@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import mne
 import copy
-from meg_qc.source.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
-from meg_qc.source.universal_html_report import simple_metric_basic
-from meg_qc.source.initial_meg_qc import chs_dict_to_csv
+from meg_qc.plotting.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
+from meg_qc.plotting.universal_html_report import simple_metric_basic
+from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 from IPython.display import display
 
 # In[2]:

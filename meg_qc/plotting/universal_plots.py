@@ -9,6 +9,7 @@ import mne
 import warnings
 import random
 import copy
+import os
 
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
@@ -16,7 +17,8 @@ import matplotlib #this is in case we will need to suppress mne matplotlib plots
 class MEG_channels:
 
     """ 
-    Channel with info for plotting: name, type, lobe area, color code, location, initial time series + other data calculated by QC metrics (assigned in each metric separately while plotting).
+    Channel with info for plotting: name, type, lobe area, color code, location, initial time series 
+    + other data calculated by QC metrics (assigned in each metric separately while plotting).
 
     """
 
@@ -55,6 +57,31 @@ class MEG_channels:
             The mean ECG artifact of the channel.
         mean_eog : float
             The mean EOG artifact of the channel.
+        mean_ecg_smoothed : float
+            The mean ECG artifact of the channel smoothed.
+        mean_eog_smoothed : float
+            The mean EOG artifact of the channel smoothed.
+        ecg_corr_coeff : float
+            The correlation coefficient of the channel with ECG.
+        ecg_pval : float
+            The p-value of the correlation coefficient of the channel with ECG.
+        eog_corr_coeff : float
+            The correlation coefficient of the channel with EOG.
+        eog_pval : float
+            The p-value of the correlation coefficient of the channel with EOG.
+        ecg_time : float
+            The time vector of the ECG artifact.
+        eog_time : float
+            The time vector of the EOG artifact.
+        muscle : float
+            The muscle artifact data of the channel.
+        head : float
+            The head movement artifact data of the channel.
+        muscle_time : float
+            The time vector of the muscle artifact.
+        head_time : float
+            The time vector of the head movement artifact.
+        
 
         """
 
@@ -88,22 +115,23 @@ class MEG_channels:
 
     def __repr__(self):
 
-
-
         """
         Returns the string representation of the object.
-        
-        TODO: add remaining metrics here
 
         """
 
-        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog]
-        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog']
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog, self.ecg_corr_coeff, self.ecg_pval, self.eog_corr_coeff, self.eog_pval, self.muscle, self.head]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head']
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
     
     def to_df(self):
+
+        '''
+        Returns the object as a pandas DataFrame. To be later exported into a tsv file.
+        '''
+
         data_dict = {}
         freqs = self.freq
 
@@ -146,6 +174,10 @@ class MEG_channels:
 
     def add_ecg_info(self, Avg_artif_list, artif_time_vector):
 
+        '''
+        Adds ECG artifact info to the channel object.
+        '''
+
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
                 self.mean_ecg = artif_ch.artif_data
@@ -155,6 +187,10 @@ class MEG_channels:
                 self.ecg_pval = artif_ch.p_value
                 
     def add_eog_info(self, Avg_artif_list, artif_time_vector):
+
+        '''
+        Adds EOG artifact info to the channel object.
+        '''
 
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
@@ -186,6 +222,8 @@ def assign_channels_properties(raw: mne.io.Raw):
     -------
     channels_objs : dict
         Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+    lobes_color_coding_str : str
+        A string with information about the color coding of the lobes.
 
     """
     channels_objs={'mag': [], 'grad': []}
@@ -459,7 +497,6 @@ class QC_derivative:
 
         """
         Returns the string representation of the object.
-        
         """
 
         return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
@@ -542,7 +579,8 @@ def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
-    Old version. Here we plot all channels of one lobe together, then all channels of next lobe - gives less visual separation of traces since they blend together.
+    Old version. 
+    Here we plot all channels of one lobe together, then all channels of next lobe - gives less visual separation of traces since they blend together.
 
     Parameters
     ----------
@@ -580,10 +618,12 @@ def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
+def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+
+    Currntly not used.
 
     Parameters
     ----------
@@ -623,8 +663,6 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-
-
     downsampling_factor = 1  # replace with your desired downsampling factor
     # Create a new list for the downsampled traces
     traces_downsampled = []
@@ -640,8 +678,6 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 
         # Add the downsampled trace to the list
         traces_downsampled.append(trace_downsampled)
-
-
 
 
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
@@ -663,16 +699,15 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
 def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
-    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
+    Plots data from a data frame as lines, each lobe has own color.
+    Data is taken from previously saved tsv file.
 
     Parameters
     ----------
-    chs_by_lobe : dict
-        Dictionary with lobes as keys and lists of channels as values.
-    df_data : pd.DataFrame
-        Data frame with data to plot.
-    x_values : list
-        List of x values for the plot.
+    f_path : str
+        Path to the csv file with the data to plot.
+    metric : str
+        The metric of the data to plot: 'psd', 'ecg', 'eog', 'smoothed_ecg', 'smoothed_eog'.
     
     Returns
     -------
@@ -724,8 +759,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-
-
     downsampling_factor = 1  # replace with your desired downsampling factor
     # Create a new list for the downsampled traces
     traces_downsampled = []
@@ -741,8 +774,6 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
 
         # Add the downsampled trace to the list
         traces_downsampled.append(trace_downsampled)
-
-
 
 
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
@@ -1200,15 +1231,18 @@ def plot_sensors_3d(chs_by_lobe: dict):
 def plot_sensors_3d_csv(sensors_csv_path: str):
 
     """
-    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
+    Plots the 3D locations of the sensors in the raw file. 
+    Plot both mags and grads (if both present) in 1 figure. 
     Can turn mags/grads visialisation on and off.
     Separete channels into brain areas by color coding.
+
+    Plot is made on base of the tsv file with sensors locations.
 
 
     Parameters
     ----------
-    chs_by_lobe : dict
-        A dictionary of channels by ch type and lobe.
+    sensors_csv_path : str
+        Path to the tsv file with the sensors locations.
     
     Returns
     -------
@@ -1219,9 +1253,12 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     df = pd.read_csv(sensors_csv_path, sep='\t')
 
-
     #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
 
+    #if there are no lobes in df - skip this plot:
+    if 'Lobe' not in df.columns:
+        return []
+    
     unique_lobes = df['Lobe'].unique().tolist()
 
     lobes_dict={}
@@ -1265,8 +1302,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         zaxis =dict(visible=False)
         )
     )
-
-    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
 
 
     # Add the button to have names show up on hover or always:
@@ -1492,26 +1527,20 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
 def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
-    TODO: adjust doctrings!
-
-
-
     Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
     Color tagged channels by lobes. 
     One box is one channel, boxes are on x axis. Epoch are inside as dots. Y axis shows the STD/PtP value.
+
+    On base of the data from tsv file.
     
     Parameters
     ----------
-    chs_by_lobe : dict
-        Dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
+    std_csv_path: str
+        Path to the tsv file with std data
     ch_type : str
         Type of the channel: 'mag', 'grad'
     what_data : str
         Type of the data: 'peaks' or 'stds'
-    x_axis_boxes : str
-        What to plot as boxplot on x axis: 'channels' or 'epochs'
     verbose_plots : bool
         True for showing plot in notebook.
 
@@ -1711,20 +1740,14 @@ def figure_x_axis(df, metric):
 def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
     """
-    Plotting Power Spectral Density for all channels.
+    Plotting Power Spectral Density for all channels based on dtaa from tsv file.
 
     Parameters
     ----------
     m_or_g : str
         'mag' or 'grad'
-    freqs : np.ndarray
-        frequencies
-    psds : np.ndarray
-        power spectral density for each channel
-    channels : list
-        list of channel names
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
+    f_path : str
+        Path to the tsv file with PSD data.
     method : str
         'welch' or 'multitaper' or other method
     verbose_plots : bool
@@ -1734,12 +1757,14 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     -------
     QC_derivative
         QC_derivative object with plotly figure as content
-
         
     """
 
     # First, get the epochs from csv and convert back into object.
     df = pd.read_csv(f_path, sep='\t') 
+
+    if 'Name' not in df.columns:
+        return []
 
     # Figure out frequencies:
     freqs = figure_x_axis(df, metric='psd')
@@ -1777,7 +1802,221 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
     
     fig_name='PSD_all_data_'+tit
 
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
+
+    return qc_derivative
+
+
+
+def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
+    
+    """
+    Plot pie chart representation of relative amplitude of each frequency band over the entire 
+    times series of mags or grads, not separated by individual channels.
+
+    Parameters
+    ----------
+    freq_amplitudes_relative : list
+        list of relative amplitudes of each frequency band
+    freq_amplitudes_absolute : list
+        list of absolute amplitudes of each frequency band 
+    total_freq_ampl : float
+        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
+    m_or_g : str
+        'mag' or 'grad'
+    bands_names : list
+        list of names of frequency bands
+    fig_tit : str
+        extra title to be added to the plot
+    fig_name : str
+        name of the figure to be saved
+    verbose_plots : bool
+        True for showing plot in notebook.
+    
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+    all_bands_names=bands_names.copy() 
+    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
+    #To keep them in original state outside the function, they are copied here.
+    all_mean_abs_values=amplitudes_abs.copy()
+    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
+
+    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
+    all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
+    relative_unknown=100-(sum(amplitudes_relative))*100
+    if relative_unknown>0:
+        all_mean_relative_values.append(relative_unknown)
+        all_bands_names.append('other frequencies')
+        all_mean_abs_values.append(total_amplitude - sum(amplitudes_abs))
+
+    labels=[None]*len(all_bands_names)
+    for n, name in enumerate(all_bands_names):
+        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
+
+    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
+    fig.update_layout(
+    title={
+    'text': fig_tit + ch_type_tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+
+    if verbose_plots is True:
+        fig.show()
+
+    fig_name=fig_name+ch_type_tit
+
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+
+    return qc_derivative
+
+
+def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal):
+
+     #Legend for the pie chart:
+    bands_names=[]
+    for fr_n, fr in enumerate(noisy_freqs):
+        bands_names.append(str(round(fr,1))+' Hz noise')
+
+    bands_names.append('Main signal')
+    
+    noise_and_signal_ampl = noise_ampl.copy()
+    noise_and_signal_ampl.append(total_amplitude-sum(noise_ampl)) #adding main signal ampl in the list
+
+    noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
+
+    #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+
+    return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
+
+
+def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str, verbose_plots : bool = False):
+    
+    """
+    Plot pie chart representation of relative amplitude of each frequency band over the entire 
+    times series of mags or grads, not separated by individual channels.
+
+    Parameters
+    ----------
+    tsv_pie_path: str
+        Path to the tsv file with pie chart data
+    m_or_g : str
+        'mag' or 'grad'
+    bands_names : list
+        list of names of frequency bands
+    fig_tit : str
+        extra title to be added to the plot
+    fig_name : str
+        name of the figure to be saved
+    verbose_plots : bool
+        True for showing plot in notebook.
+    
+    Returns
+    -------
+    QC_derivative
+        QC_derivative object with plotly figure as content
+
+    """
+
+    print('___Plot this', tsv_pie_path)
+
+    # Get the base name
+    base_name = os.path.basename(tsv_pie_path) #name of the fimal file
+    
+    #if not any(df.columns.str.contains(m_or_g)) and not any(df.index.str.contains(m_or_g)): 
+    if m_or_g not in base_name.lower():
+    #if it s not the right ch kind in the file
+        return []
+    
+    # Read the data from the TSV file into a DataFrame
+    df = pd.read_csv(tsv_pie_path, sep='\t')
+
+    if noise_or_waves == 'noise' and 'PSDnoise' in base_name:
+        #check that we input tsv file with the right data
+
+        fig_tit = "Ratio of signal and noise in the data: " 
+        fig_name = 'PSD_SNR_all_channels_'
+
+        # Extract the data
+        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
+        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
+        #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
+        total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
+        amplitudes_relative = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
+        
+        amplitudes_abs, amplitudes_relative, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, amplitudes_relative)
+
+    elif noise_or_waves == 'waves' and 'PSDwaves' in base_name:
+
+        fig_tit = "Relative amplitude of each band: " 
+        fig_name = 'PSD_Relative_band_amplitude_all_channels_'
+
+
+        # Set the first column as the index
+        df.set_index(df.columns[0], inplace=True)
+
+        print('__Check here__')
+        print(df)
+
+        # Extract total_amplitude into a separate variable
+        total_amplitude = df['total_amplitude'].loc['absolute_'+m_or_g]
+
+        #drop total ampl:
+        df_no_total = copy.deepcopy(df.drop('total_amplitude', axis=1))
+
+        # Extract rows into lists
+        amplitudes_abs = df_no_total.loc['absolute_'+m_or_g].tolist()
+        amplitudes_relative = df_no_total.loc['relative_'+m_or_g].tolist()
+        #take all values except the total in a list
+
+        # Extract column names into a separate list
+        bands_names = df_no_total.columns.tolist()
+
+    else:
+        return []
+
+    all_bands_names=bands_names.copy() 
+    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
+    #To keep them in original state outside the function, they are copied here.
+    all_mean_abs_values=amplitudes_abs.copy()
+    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
+
+    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
+    all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
+    relative_unknown=100-(sum(amplitudes_relative))*100
+    if relative_unknown>0:
+        all_mean_relative_values.append(relative_unknown)
+        all_bands_names.append('other frequencies')
+        all_mean_abs_values.append(total_amplitude - sum(all_mean_abs_values))
+
+    labels=[None]*len(all_bands_names)
+    for n, name in enumerate(all_bands_names):
+        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
+
+    print('___here issue___')
+    print(all_mean_relative_values)
+    print(labels)
+
+    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
+    fig.update_layout(
+    title={
+    'text': fig_tit + ch_type_tit,
+    'y':0.85,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+
+    if verbose_plots is True:
+        fig.show()
+
+    fig_name=fig_name+ch_type_tit
+
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return qc_derivative
 
@@ -1936,42 +2175,12 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
     return qc_derivative
 
 
-def csv_to_df_back(std_csv_path):
-
-    #TODO: why do I create it? dont even need cos we got df = pd.read_csv(std_csv_path) in the next func
-
-    df = pd.read_csv(std_csv_path, sep='\t')  
-
-    # Create an empty DataFrame to store the new data
-    df_new = pd.DataFrame()
-
-    for col in df.columns[6:7]:
-        for r_index, row in df.iterrows():
-            d = df.loc[r_index, col]
-            #lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] if pd.notna(x) else x
-            lambda_func = lambda x: [float(i) if i != 'nan' and i != 'None' else np.nan for i in str(x).strip('[]').split()] 
-            d = lambda_func(d)
-            
-            # Create a temporary DataFrame for the current row
-            df_temp = pd.DataFrame(d, columns=[col])
-            
-            # Add the other columns from the original DataFrame
-            for c in df.columns[:6]:
-                df_temp[c] = row[c]
-            
-            # Append the temporary DataFrame to the new DataFrame
-            df_new = pd.concat([df_new, df_temp], axis=0)
-
-    return df_new
-
-
 def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
 
     """
 
-    TODO: adjust doctrings!
-
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
+    On base of the data from tsv file
     
     Process: 
     Each box need to be plotted as a separate trace first.
@@ -1989,7 +2198,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     Parameters
     ----------
     std_csv_path: str
-
+        Path to the tsv file with std data
     ch_type : str
         'mag' or 'grad'
     what_data : str
@@ -2108,6 +2317,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbos
     each box represents 1 channel, each dot is std of 1 epoch in this channel
     Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
     The figure will be saved as an interactive html file.
+
+    Old version, not used.
 
     Parameters
     ----------
@@ -2266,6 +2477,8 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
     (box contains magnetometers or gradiomneters, not together): 
     each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
 
+    Old version.
+
     Parameters
     ----------
     chs_by_lobe : dict
@@ -2364,10 +2577,12 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
     (box contains magnetometers or gradiomneters, not together): 
     each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
 
+    On base of the data from tsv file.
+
     Parameters
     ----------
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
+    std_csv_path: str
+        Path to the tsv file with std data.
     ch_type : str
         'mag' or 'grad'
     channels : list
@@ -2463,34 +2678,22 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
     return qc_derivative
 
 
-
-
 def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
 
     """
     Plot the muscle events with the z-scores and the threshold.
+    On base of the data from tsv file.
     
     Parameters
     ----------
+    f_path: str
+        Path to tsv file with data.
     m_or_g : str
         The channel type used for muscle detection: 'mag' or 'grad'.
-    raw : mne.io.Raw
-        The raw data.
-    scores_muscle : np.ndarray
-        The z-scores of the muscle events.
-    threshold_muscle : float
-        The z-score threshold used for muscle detection.
-    muscle_times : np.ndarray
-        The times of the muscle events.
-    high_scores_muscle : np.ndarray
-        The z-scores of the muscle events over the threshold.
     verbose_plots : bool
         True for showing plot in notebook.
-    annot_muscle : mne.Annotations
-        The annotations of the muscle events. Used only for interactive_matplot.
-    interactive_matplot : bool
-        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report.
-
+    
+        
     Returns
     -------
     fig_derivs : list
@@ -2509,7 +2712,6 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
     
     fig.add_trace(go.Scatter(x=df['data_times'], y=df['scores_muscle'], mode='lines', name='high freq (muscle scores)'))
     fig.add_trace(go.Scatter(x=df['high_scores_muscle_times'], y=df['high_scores_muscle'], mode='markers', name='high freq (muscle) events'))
-    
     
     # #removed threshold, so this one is not plotted now:
     #fig.add_trace(go.Scatter(x=raw.times, y=[threshold_muscle]*len(raw.times), mode='lines', name='z score threshold: '+str(threshold_muscle)))
@@ -2557,14 +2759,12 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
 def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
 
     """ 
-    Plot positions and rotations of the head.
+    Plot positions and rotations of the head. On base of data from tsv file.
     
     Parameters
     ----------
-    raw : mne.io.Raw
-        Raw data.
-    head_pos : np.ndarray
-        Head positions and rotations.
+    f_path: str
+        Path to a file with data.
     verbose_plots : bool
         True for showing plot in notebook.
         
@@ -2658,6 +2858,25 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
 
 
 def figure_x_axis(df, metric):
+
+    ''''
+    Get the x axis for the plot based on the metric.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data frame with the data.
+    metric : str
+        The metric for which the x axis is needed. Can be 'PSD', 'ECG', 'EOG', 'Muscle', 'Head'.
+
+    Returns
+    -------
+    freqs : np.ndarray
+        Frequencies for the PSD plot.
+    time_vec : np.ndarray
+        Time vector for the ECG, EOG, Muscle, Head plots.
+    
+    '''
      
     if metric.lower() == 'psd':
         # Figure out frequencies:
@@ -2689,7 +2908,7 @@ def figure_x_axis(df, metric):
         return None
     
 
-def split_correlated_artifacts_into_3_groups_csv(df, metric):
+def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
 
     """
     Collect artif_per_ch into 3 lists - for plotting:
@@ -2699,8 +2918,10 @@ def split_correlated_artifacts_into_3_groups_csv(df, metric):
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of objects of class Avg_artif
+    df: pd.DataFrame
+        Data frame with the data.
+    metric : str
+        The metric for which the x axis is needed. Can be 'ECG' or 'EOG'.
 
     Returns
     -------
@@ -2754,13 +2975,12 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+    Based on the data from tsv file.
     
     Parameters
     ----------
-    artif_affected_channels : list
-        List of ECG/EOG artifact affected channels.
-    artifact_lvl : float
-        The threshold for the artifact amplitude: average over all channels*norm_lvl.
+    df : pd.DataFrame
+        Data frame with the data.
     t : np.ndarray
         Time vector.
     m_or_g : str
@@ -2836,33 +3056,23 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
+
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
 
     """
-    THE FINAL func
-
-    TODO:
-    maybe remove reading csv and pass directly the df here?
-    adjust docstrings
-
-
+    This is the final function.
     Plot average artifact for each channel, colored by lobe, 
     channels are split into 3 separate plots, based on their correlation with mean_rwave: equal number of channels in each group.
+    Based on the data from tsv file.
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of objects of class Avg_artif
-    tmin : float
-        Start time of the epoch (negative value)
-    tmax : float
-        End time of the epoch
+    f_path : str
+        Path to the tsv file with data.
     m_or_g : str
         Type of the channel: mag or grad
     ecg_or_eog : str
         Type of the artifact: ECG or EOG
-    chs_by_lobe : dict
-        Dictionary with channels split by lobe
     flip_data : bool
         Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
     verbose_plots : bool
@@ -2934,15 +3144,16 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     return affected_derivs
 
 
-def plot_correlation_csv(f_path, ecg_or_eog, m_or_g, verbose_plots=False):
+def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plots=False):
 
     """
     Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
+    Based on the data from tsv file.
 
     Parameters
     ----------
-    artif_per_ch : list
-        List of channels with Avg_artif objects.
+    f_path : str
+        Path to the tsv file with data.
     ecg_or_eog : str
         Either 'ECG' or 'EOG'.
     m_or_g : str
