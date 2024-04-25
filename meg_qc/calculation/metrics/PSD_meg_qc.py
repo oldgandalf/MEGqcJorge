@@ -12,6 +12,7 @@ from scipy.signal import find_peaks, peak_widths
 from IPython.display import display
 from typing import List
 import copy
+import re
 
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
@@ -151,7 +152,7 @@ def Plot_psd_old(m_or_g:str, freqs: np.ndarray, psds:np.ndarray, channels: list,
     return qc_derivative
 
 
-def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list):
+def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list, bands_names: list = None):
 
     """
     Calculate the area under the curve of frequency bands (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
@@ -171,6 +172,9 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
     channels : list
         List of channel names. Expects list of strings: ['MEG 0111', 'MEG 0112', ...] 
         If only one channel is given, it should be a list of one string: ['Average]
+    bands_names : list, optional
+        List of names of the bands. If None, the names will be generated automatically, by default None
+        Important! taht these names are in the same order as in freq_bands. 
 
         
     Returns
@@ -189,10 +193,28 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
 
     """
 
+    #Check that freq_bands correspond to band names corectly:
+    if bands_names is None:
+        bands_as_str=[str(band[0])+'-'+str(band[1])+'Hz' for band in freq_bands]
+    else:
+        bands_as_str = bands_names #assume everything is correct. then check:
+        # Iterate over wave_bands and bands_names
+        for band, name in zip(freq_bands, bands_names):
+            # Extract the frequency range from the name
+            freq_range = re.search(r'\((.*?) Hz\)', name).group(1).split('-')
+
+            freq_range = [float(freq) for freq in freq_range]
+
+            # If the frequency range doesn't match the band, correct bands_as_str
+            if freq_range != band:
+                bands_as_str = [str(band[0])+'-'+str(band[1])+'Hz' for band in freq_bands]
+                break
+
+
     freq_res = freqs[1] - freqs[0]
-    
+
     total_signal_amplitude = []
-    bands_as_str=[str(band[0])+'-'+str(band[1])+'Hz' for band in freq_bands]
+
     band_ampl_df = pd.DataFrame(index=channels, columns=bands_as_str)
     band_ampl_relative_to_signal_df = pd.DataFrame(index=channels, columns=bands_as_str)
     ampl_by_Nfreq_per_ch_list_df = pd.DataFrame(index=channels, columns=bands_as_str)
@@ -264,24 +286,18 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
     bands_names = ["delta (0.5-4 Hz)", "theta (4-8 Hz)", "alpha (8-12 Hz)", "beta (12-30 Hz)", "gamma (30-100 Hz)"]
 
-    abs_band_ampl_df, band_ampl_relative_to_signal_df, ampl_by_Nfreq_per_ch_list_df, _ = get_mean_bands_amplitude(wave_bands, freqs, psds, channels)
-
-    # Rename columns and extract to csv:
-    abs_band_ampl_df.columns = bands_names
-    ampl_by_Nfreq_per_ch_list_df.columns = bands_names
-    band_ampl_relative_to_signal_df.columns = bands_names
-
+    abs_band_ampl_df, relative_band_ampl_df, ampl_by_Nfreq_per_ch_list_df, _ = get_mean_bands_amplitude(wave_bands, freqs, psds, channels, bands_names)
 
     dfs_with_name = [
         QC_derivative(abs_band_ampl_df,'abs_ampl_'+m_or_g, 'df'),
-        QC_derivative(band_ampl_relative_to_signal_df, 'relative_ampl_'+m_or_g, 'df'),
+        QC_derivative(relative_band_ampl_df, 'relative_ampl_'+m_or_g, 'df'),
         QC_derivative(ampl_by_Nfreq_per_ch_list_df, 'ampl_by_Nfreq_'+m_or_g, 'df')]
 
     # Calculate the mean amplitude of each band over all channels:
-    abs_band_ampl_df, relative_band_ampl_df, _, total_ampl = get_mean_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'])
+    abs_mean_band_ampl_df, relative_mean_band_ampl_df, _, total_ampl = get_mean_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'], bands_names)
     
     # Merge the dataframes and with 'absolute' and 'relative' raw names:
-    brain_bands_df = pd.concat([abs_band_ampl_df, relative_band_ampl_df], axis=0)  
+    brain_bands_df = pd.concat([abs_mean_band_ampl_df, relative_mean_band_ampl_df], axis=0)  
     brain_bands_df.index = ['absolute_'+m_or_g, 'relative_'+m_or_g]
 
     #add total_ampl as a new column in 'Absolute' raw and None in 'Relative' raw:
@@ -293,8 +309,8 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     
     #convert results to a list:
 
-    mean_brain_waves_abs=abs_band_ampl_df.iloc[0, :].values.tolist()
-    mean_brain_waves_relative=relative_band_ampl_df.iloc[0, :].values.tolist()
+    mean_brain_waves_abs=abs_mean_band_ampl_df.iloc[0, :].values.tolist()
+    mean_brain_waves_relative=relative_mean_band_ampl_df.iloc[0, :].values.tolist()
 
     mean_brain_waves_dict= {bands_names[i]: {'mean_brain_waves_relative': np.round(mean_brain_waves_relative[i]*100, 2), 'mean_brain_waves_abs': mean_brain_waves_abs[i]} for i in range(len(bands_names))}
 

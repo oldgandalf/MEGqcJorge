@@ -37,12 +37,11 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
     
     Returns
     -------
-    similar_ampl : bool
-        True if peaks have similar amplitude
-    no_breaks : bool
-        True if there are up to allowed number of breaks in the data
-    no_bursts : bool
-        True if there are up to allowed number of bursts in the data
+    ecg_eval : dict
+        Dictionary with 3 booleans, indicating if the channel is good or bad according to 3 conditions:
+        - similar_ampl: True if peaks have similar amplitudes, False otherwise
+        - no_breaks: True if there are no breaks longer than normal max distance between peaks of hear beats, False otherwise
+        - no_bursts: True if there are no bursts: too short intervals between peaks, False otherwise
     fig : plotly.graph_objects.Figure
         Plot of the channel data and detected peaks
 
@@ -98,56 +97,9 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
         print("___MEGqc___: There are more than 2 bursts in the data, number: ", n_bursts)
         no_bursts = False
 
+    ecg_eval = {'similar_ampl': similar_ampl, 'no_breaks': no_breaks, 'no_bursts': no_bursts}
+    return ecg_eval, peaks
 
-    return (similar_ampl, no_breaks, no_bursts), peaks
-
-
-
-def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float, verbose_plots: bool):
-
-    """
-    Plot the ECG channel data and detected peaks
-    
-    Parameters
-    ----------
-    ch_data : list or np.ndarray
-        Data of the channel
-    peaks : list or np.ndarray
-        Indices of the peaks in the data
-    ch_name : str
-        Name of the channel
-    fs : int
-        Sampling frequency of the data
-    verbose_plots : bool
-        If True, show the figure in the notebook
-        
-    Returns
-    -------
-    fig : plotly.graph_objects.Figure
-        Plot of the channel data and detected peaks
-        
-    """
-
-    time = np.arange(len(ch_data))/fs
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
-    fig.update_layout(xaxis_title='time, s', 
-                yaxis = dict(
-                showexponent = 'all',
-                exponentformat = 'e'),
-                yaxis_title='Amplitude',
-                title={
-                'text': ch_name,
-                'y':0.85,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'})
-    
-    if verbose_plots is True:
-        fig.show()
-
-    return fig
 
 def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
     
@@ -189,10 +141,11 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     all_ch_data[0] : list
         data of the ECG channel recorded.
     ecg_eval : tuple
-        Tuple of 3 booleans, indicating if the channel is good or bad according to 3 conditions.
+        Tuple of 3 booleans, indicating if the channel is good or bad according to 3 conditions:
+        - similar_ampl: True if peaks have similar amplitudes, False otherwise
+        - no_breaks: True if there are no breaks longer than normal max distance between peaks of hear beats, False otherwise
+        - no_bursts: True if there are no bursts: too short intervals between peaks, False otherwise
 
-
-        
     """
 
     sfreq=raw.info['sfreq']
@@ -207,14 +160,16 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     ecg_eval, peaks = check_3_conditions(ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds, height_multiplier)
     print(f'___MEGqc___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
 
-    if all(ecg_eval):
-        print(f'___MEGqc___: Overall good {ecg_or_eog} channel: {ecg_ch}')
+    #If all values in disct are true:
+    if all(value == True for value in ecg_eval.values()):
         bad_ecg_eog[ecg_ch] = 'good'
     else:
-        print(f'___MEGqc___: Overall bad {ecg_or_eog} channel: {ecg_ch}')
         bad_ecg_eog[ecg_ch] = 'bad'
 
-    return bad_ecg_eog, ch_data, peaks, ecg_eval
+    ecg_eval_str = 'Overall ' + bad_ecg_eog[ecg_ch] + ' ' + ecg_or_eog + ' channel: ' + ecg_ch + ': \n - Peaks have similar amplitude: ' + str(ecg_eval["similar_ampl"]) + ' \n - No breaks (too long distances between peaks): ' + str(ecg_eval["no_breaks"]) + ' \n - No bursts (too short distances between peaks): ' + str(ecg_eval["no_bursts"]) + '\n'
+    print(f'___MEGqc___: ', ecg_eval_str)
+
+    return bad_ecg_eog, ch_data, peaks, ecg_eval_str
 
 
 def find_epoch_peaks(ch_data: np.ndarray, thresh_lvl_peakfinder: float):
@@ -313,8 +268,6 @@ class Avg_artif:
         color code for this channel according to the lobe it belongs to
     
 
-
-        
     Methods
     -------
     __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None)
@@ -322,7 +275,6 @@ class Avg_artif:
     __repr__(self)
         Returns a string representation of the object
 
-        
     """
 
     def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, lobe: str = None, color: str = None):
@@ -906,103 +858,6 @@ def plot_affected_channels(artif_affected_channels: list, artifact_lvl: float, t
         fig.show()
 
     return fig
-
-
-def plot_affected_channels_csv(artif_affected_channels: list, artifact_lvl: float, t: np.ndarray, ch_type: str, fig_tit: str, chs_by_lobe: dict, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
-
-    """
-    Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
-    
-    Parameters
-    ----------
-    artif_affected_channels : list
-        List of ECG/EOG artifact affected channels.
-    artifact_lvl : float
-        The threshold for the artifact amplitude: average over all channels*norm_lvl.
-    t : np.ndarray
-        Time vector.
-    ch_type : str
-        Either 'mag' or 'grad'.
-    fig_tit: str
-        The title of the figure.
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
-    flip_data : bool
-        If True, the absolute value of the data will be used for the calculation of the mean artifact amplitude. Default to 'flip'. 
-        'flip' means that the data will be flipped if the peak of the artifact is negative. 
-        This is donr to get the same sign of the artifact for all channels, then to get the mean artifact amplitude over all channels and the threshold for the artifact amplitude onbase of this mean
-        And also for the reasons of visualization: the artifact amplitude is always positive.
-    smoothed: bool
-        Plot smoothed data (true) or nonrmal (false)
-    verbose_plots : bool
-        True for showing plot in notebook.
-
-    Returns
-    -------
-    fig : plotly.graph_objects.Figure
-        The plotly figure with the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
-
-        
-    """
-
-    if artif_affected_channels: #if affected channels present:
-
-        #plot channels separated by lobes:
-        affected_names_list = []
-        affected_data_list = []
-        for ch in artif_affected_channels:
-            affected_names_list.append(ch.name)
-            if smoothed is True:
-                affected_data_list.append(ch.artif_data_smoothed)
-            else:
-                affected_data_list.append(ch.artif_data)
-
-        affected_data_arr = np.array(affected_data_list)
-
-        df_affected=pd.DataFrame(affected_data_arr.T, columns=affected_names_list)
-
-        #fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_affected, t)
-        fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'ecg', t, m_or_g)
-
-        #decorate the plot:
-        ch_type_tit, unit = get_tit_and_unit(ch_type)
-        fig.update_layout(
-            xaxis_title='Time in seconds',
-            yaxis = dict(
-                showexponent = 'all',
-                exponentformat = 'e'),
-            yaxis_title='Mean artifact magnitude in '+unit,
-            title={
-                'text': fig_tit+str(len(artif_affected_channels))+' '+ch_type_tit,
-                'y':0.85,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'})
-
-
-    else:
-        fig=go.Figure()
-        ch_type_tit, _ = get_tit_and_unit(ch_type)
-        title=fig_tit+'0 ' +ch_type_tit
-        fig.update_layout(
-            title={
-            'text': title,
-            'x': 0.5,
-            'y': 0.9,
-            'xanchor': 'center',
-            'yanchor': 'top'})
-        
-    #in any case - add the threshold on the plot
-    fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
-
-    if flip_data is False and artifact_lvl is not None: 
-        fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), line=dict(color='black'), name='-Thres=mean_peak/norm_lvl'))
-
-    if verbose_plots is True:
-        fig.show()
-
-    return fig
-
 
 
 def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq: int, params_internal: dict):
@@ -1866,7 +1721,7 @@ def plot_ecg_eog_mne(ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: flo
     return mne_ecg_derivs
 
 
-def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots: bool):
+def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     """
     Choose the method of finding affected channels based on the presense and quality of ECG channel.
@@ -1912,29 +1767,39 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, verbose_plots:
 
         ecg_ch = ecg_ch[0]
 
-        bad_ecg_eog, ecg_data, event_indexes, ecg_eval = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
+        bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
 
-        fig = plot_ECG_EOG_channel(ecg_data, event_indexes, ch_name = ecg_ch, fs = raw.info['sfreq'], verbose_plots = verbose_plots)
-        noisy_ch_derivs = [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+        #Collect the data into 1 df for plotting later. ecg_ch as name of first column, ecg_data as data, event_indexes as indexes of the events:
+        event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
+        fs_with_none = [raw.info['sfreq']] + [None] * (len(ecg_data) - 1)
+
+        ecg_ch_df = pd.DataFrame({
+            ecg_ch: ecg_data,
+            'event_indexes': event_indexes_with_none,
+            'fs': fs_with_none})
 
         if bad_ecg_eog[ecg_ch] == 'bad': #ecg channel present but noisy:
-            ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. '
+            ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. \n'
             print('___MEGqc___: ', ecg_str)
             raw.drop_channels(ecg_ch)
             use_method = 'correlation_reconstructed'
 
         elif bad_ecg_eog[ecg_ch] == 'good': #ecg channel present and good - use it
-            ecg_str = ecg_ch + ' is good and is used to identify hearbeats. '
+            ecg_str = ecg_ch + ' is used to identify hearbeats. \n'
             use_method = 'correlation'
 
     else: #no ecg channel present
 
-        noisy_ch_derivs, ecg_data, event_indexes = [], [], []
-        ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. '
+        ecg_ch_df, ecg_data, event_indexes = [], [], []
+        ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. \n'
         use_method = 'correlation_reconstructed'
         print('___MEGqc___: ', ecg_str)
 
-    return use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes
+    ecg_str_total = ecg_eval_str + ecg_str 
+    #Replace all \n with <br> for the html report:
+    ecg_str_total = ecg_str_total.replace('\n', '<br>')
+
+    return use_method, ecg_str_total, ecg_ch_df, ecg_data, event_indexes
 
 def get_EOG_data(raw: mne.io.Raw):
 
@@ -2074,7 +1939,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     #Plot:
     if mean_rwave.size > 0:
-        t = np.linspace(tmin, tmax, len(mean_rwave))
+        mean_rwave_time = np.linspace(tmin, tmax, len(mean_rwave))
         if use_method == 'correlation_reconstructed':
             title = 'Mean data of the RECONSTRUCTED '
         elif use_method == 'correlation':
@@ -2082,7 +1947,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
         else:
             title = 'Mean data of '
 
-        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(t, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
+        mean_rwave_fig = mean_rwave_obj.plot_epoch_and_peak(mean_rwave_time, title, ecg_or_eog, fig = None, plot_original = True, plot_smoothed = False)
         if verbose_plots is True:
             mean_rwave_fig.show()
 
@@ -2090,7 +1955,7 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     else:
         fig_derivs = []
 
-    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, fig_derivs
+    return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, mean_rwave_time, fig_derivs
 
 
 # Functions for alignment of ECG with meg channels:
@@ -2434,14 +2299,18 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
 
     ecg_derivs = []
-    use_method, ecg_str, noisy_ch_derivs, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params, verbose_plots)
+    use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     
-    #ecg_derivs += noisy_ch_derivs
 
-
-    mean_good, ecg_str_checked, mean_rwave, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time, rwave_derivs = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    
     ecg_str += ecg_str_checked
 
+    ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+    ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
+    print('___MEGqc___: mean_rwave_time:', ecg_ch_df['mean_rwave_time'])
+    ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
+    ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
     ecg_derivs += rwave_derivs
 
     if mean_good is False:
@@ -2519,6 +2388,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(affected_channels[m_or_g], artif_time_vector)
+
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
@@ -2602,7 +2472,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     use_method = 'correlation' #'mean_threshold' 
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion (if channel present) or fail.
 
-    mean_good, eog_str_checked, mean_blink, blink_derivs = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
+    mean_good, eog_str_checked, mean_blink, mean_rwave_time, blink_derivs = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder, verbose_plots)
     eog_str += eog_str_checked
 
     eog_derivs += blink_derivs
