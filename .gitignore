@@ -13,3 +13,4 @@
 **/.DS_Store
 docs/build/html/*
 dist/
+meg_qc/settings/
