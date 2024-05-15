@@ -2009,6 +2009,12 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
 
+            #align the mean ECG wave with the ECG artifacts found on meg channels:
+            #Find the correlation value between all variations of alignment the mean ECG wave with the ECG artifacts found on meg channels.
+            #The alignment with the highest correlation is chosen as the final one.
+            #Our target is best_affected_channels[m_or_g] - the channels that are most correlated with the mean ECG wave, after all variations of alignemnt were checked.
+            #We also get best_mean_corr and best_mean_shifted - mostely useful if we wanna plot them.
+
             mean_rwave_shifted_variations = align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax)
             
             best_mean_corr = 0
@@ -2027,11 +2033,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                     best_mean_corr = mean_corr
                     best_mean_shifted = mean_shifted
                     best_affected_channels[m_or_g] = affected_channels[m_or_g]
-
-            if verbose_plots is True:
-                plot_mean_rwave_shifted(best_mean_shifted, mean_rwave, 'ECG', tmin, tmax)
             
-
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2043,7 +2045,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         avg_objects_ecg.append(avg_overall_obj)
 
 
-    simple_metric_ECG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'ECG', bad_avg_str, use_method)
+    simple_metric_ECG = make_simple_metric_ECG_EOG(best_affected_channels, m_or_g_chosen, 'ECG', bad_avg_str, use_method)
 
     #Extract chs_by_lobe into a data frame
     artif_time_vector = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
@@ -2052,8 +2054,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     for m_or_g  in m_or_g_chosen:
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
             for lobe_ch in lobe_channels:
-                lobe_ch.add_ecg_info(affected_channels[m_or_g], artif_time_vector)
+                lobe_ch.add_ecg_info(best_affected_channels[m_or_g], artif_time_vector)
 
+    print('_____FIXED HERE____: ', best_affected_channels)
+    print('____WAS____: ', affected_channels)
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
