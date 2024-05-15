@@ -3493,3 +3493,49 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>', fig_order = 4+m_or_g_order)]
 
     return corr_derivs
+
+
+def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarray, ecg_or_eog: str, tmin: float, tmax: float):
+    
+    """
+    Only for demonstartion while running the pipeline. Dpesnt go into final report.
+
+    Plots the mean ECG wave and the mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    Probably will not be included into the report. Just for algorythm demosntration.
+    The already shifted mean ECG wave is plotted in the report.
+
+    Parameters
+    ----------
+    mean_rwave_shifted : np.ndarray
+        The mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    mean_rwave : np.ndarray
+        The mean ECG wave, not shifted, original.
+    ecg_or_eog : str
+        'ECG' or 'EOG'
+    tmin : float
+        The start time of the epoch.
+    tmax : float
+        The end time of the epoch.
+    verbose_plots : bool
+        If True, the plot will be shown in the notebook.
+
+    Returns
+    -------
+    fig_derivs : list
+        list with one QC_derivative object, which contains the plot. (in case want to input intot he report)
+    
+    """
+
+    t = np.linspace(tmin, tmax, len(mean_rwave_shifted))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+
+    fig.show()
+
+    #fig_derivs = [QC_derivative(fig, 'Mean_artifact_'+ecg_or_eog+'_shifted', 'plotly')] 
+    # #activate is you want to output the shift demonstration to the report, normally dont'
+    
+    fig_derivs = []
+
+    return fig_derivs
