@@ -190,7 +190,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_STD'] is True:
                     print('___MEGqc___: ', 'Starting STD...')
                     start_time = time.time()
-                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen, verbose_plots)
+                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
                     print('___MEGqc___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
     
                 if all_qc_params['default']['run_PSD'] is True:
@@ -270,9 +270,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': eog_derivs,
                 'Head movement artifacts': head_derivs,
                 'High frequency (Muscle) artifacts': muscle_derivs}
-
-                print('___MEGqc___: ', 'QC_derivs', QC_derivs)  
-
 
                 QC_simple={
                 'STD': simple_metrics_std, 
