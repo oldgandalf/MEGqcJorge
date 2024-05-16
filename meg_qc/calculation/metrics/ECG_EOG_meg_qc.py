@@ -2016,8 +2016,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                 #collect all correlation values for all channels:
                 all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
                 # #get 10 highest correlations:
-                # all_corr_values.sort(reverse=True)
-                # all_corr_values = all_corr_values[:10]
+                all_corr_values.sort(reverse=True)
+                all_corr_values = all_corr_values[:10]
                 mean_corr = np.mean(all_corr_values)
                 #if mean corr is better than the previous one - save it
 

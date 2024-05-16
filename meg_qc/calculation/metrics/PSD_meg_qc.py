@@ -707,15 +707,18 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
         noise_ampl_relative_to_signal = []
 
     if ch_name.lower() == 'average':
-        #need to save to tsv only if we are on the average psd curve, 
-        #dont need to save for every channel.
+
+        # Replace empty lists with [np.nan] in case no noise was found:
+        noisy_freqs = noisy_freqs if noisy_freqs else [np.nan]
+        noise_ampl = noise_ampl if noise_ampl else [np.nan]
+        noise_ampl_relative_to_signal = noise_ampl_relative_to_signal if noise_ampl_relative_to_signal else [np.nan]
 
         # Create a DataFrame
         df = pd.DataFrame({
             'noisy_freqs_'+m_or_g: noisy_freqs,
             'noise_ampl_'+m_or_g: noise_ampl,
             'noise_ampl_relative_to_signal_'+m_or_g: noise_ampl_relative_to_signal,
-            'total_amplitude_'+m_or_g: [total_amplitude] + [np.nan] * (len(noisy_freqs) - 1)})  # Add total_amplitude only once
+            'total_amplitude_'+m_or_g: [total_amplitude] + [np.nan] * (len(noisy_freqs) - len([total_amplitude]))})  # Add total_amplitude only once, rest fill with none
 
         noise_pie_df_deriv = QC_derivative(content=df, name='PSDnoise'+m_or_g.capitalize(), content_type = 'df')
 
