@@ -24,12 +24,10 @@
 
 import mne
 import pandas as pd
-mne.viz.set_browser_backend('matplotlib')
-import plotly.graph_objects as go
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
+from meg_qc.plotting.universal_plots import QC_derivative
 
 def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
 
@@ -90,74 +88,6 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict, muscle_s
     'zscore_thresholds': z_scores_dict}
 
     return simple_metric
-
-
-def plot_muscle(m_or_g: str, raw: mne.io.Raw, scores_muscle: np.ndarray, threshold_muscle: float, muscle_times: np.ndarray, high_scores_muscle: np.ndarray, verbose_plots: bool, annot_muscle: mne.Annotations = None, interactive_matplot:bool = False):
-
-    """
-    Plot the muscle events with the z-scores and the threshold.
-    
-    Parameters
-    ----------
-    m_or_g : str
-        The channel type used for muscle detection: 'mag' or 'grad'.
-    raw : mne.io.Raw
-        The raw data.
-    scores_muscle : np.ndarray
-        The z-scores of the muscle events.
-    threshold_muscle : float
-        The z-score threshold used for muscle detection.
-    muscle_times : np.ndarray
-        The times of the muscle events.
-    high_scores_muscle : np.ndarray
-        The z-scores of the muscle events over the threshold.
-    verbose_plots : bool
-        True for showing plot in notebook.
-    annot_muscle : mne.Annotations
-        The annotations of the muscle events. Used only for interactive_matplot.
-    interactive_matplot : bool
-        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report.
-
-    Returns
-    -------
-    fig_derivs : list
-        A list of QC_derivative objects with plotly figures for muscle events.
-
-    """
-    fig_derivs = []
-
-    fig=go.Figure()
-    tit, _ = get_tit_and_unit(m_or_g)
-    fig.add_trace(go.Scatter(x=raw.times, y=scores_muscle, mode='lines', name='high freq (muscle scores)'))
-    fig.add_trace(go.Scatter(x=muscle_times, y=high_scores_muscle, mode='markers', name='high freq (muscle) events'))
-    #removed threshold, so this one is not plotted now:
-    #fig.add_trace(go.Scatter(x=raw.times, y=[threshold_muscle]*len(raw.times), mode='lines', name='z score threshold: '+str(threshold_muscle)))
-    fig.update_layout(xaxis_title='time, (s)', yaxis_title='zscore', title={
-    'text': "Muscle z scores (high fequency artifacts) over time based on "+tit,
-    'y':0.85,
-    'x':0.5,
-    'xanchor': 'center',
-    'yanchor': 'top'})
-
-    if verbose_plots is True:
-        fig.show()
-
-    fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit, 'plotly')]
-
-    # ## View the annotations (interactive_matplot)
-    if interactive_matplot is True:
-        order = np.arange(144, 164)
-        raw.set_annotations(annot_muscle)
-        fig2=raw.plot(start=5, duration=20, order=order)
-        #Change settings to show all channels!
-
-        # No suppressing of plots should be done here. This one is matplotlib interactive plot, so it ll only work with %matplotlib qt.
-        # Makes no sense to suppress it. Also, adding to QC_derivative is just formal, cos whe extracting to html it s not interactive any more. 
-        # Should not be added to report. Kept here in case mne will allow to extract interactive later.
-
-        fig_derivs += [QC_derivative(fig2, 'muscle_annotations_'+tit, 'matplotlib')]
-
-    return fig_derivs
 
 
 def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: list = [110, 140]):
@@ -272,7 +202,7 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
     return raw
 
 
-def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined):
 
     muscle_derivs=[]
 
@@ -303,8 +233,6 @@ def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshol
             muscle_times = raw.times[peak_locs_pos]
             high_scores_muscle=scores_muscle[peak_locs_pos]
 
-            muscle_derivs += plot_muscle(m_or_g, raw, scores_muscle, threshold_muscle, muscle_times, high_scores_muscle, verbose_plots, interactive_matplot, annot_muscle)
-
             # collect all details for simple metric:
             z_score_details['muscle_event_times'] = muscle_times.tolist()
             z_score_details['muscle_event_zscore'] = high_scores_muscle.tolist()
@@ -317,7 +245,7 @@ def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshol
     return muscle_derivs, simple_metric, scores_muscle
 
 
-def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined):
+def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined):
 
     """
     annotate_muscle_zscore() requires threshold_muscle so define a minimal one here: 5 z-score.
@@ -378,7 +306,7 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
     return df_deriv
 
 
-def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, verbose_plots: bool, interactive_matplot:bool = False, attach_dummy:bool = True, cut_dummy:bool = True):
+def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -403,11 +331,6 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
         The powerline frequencies found in the data by previously running PSD_meg_qc.
     m_or_g_chosen : list
         The channel types chosen for the analysis: 'mag' or 'grad'.
-    verbose_plots : bool
-        True for showing plot in notebook.
-    interactive_matplot : bool
-        Whether to use interactive matplotlib plots or not. Default is False because it cant be extracted into the report. 
-        But might just be useful for beter undertanding while maintaining this function.
     attach_dummy : bool
         Whether to attach dummy data to the start and end of the recording to avoid filtering artifacts. Default is True.
     cut_dummy : bool
@@ -464,7 +387,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
-    #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
-    simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, verbose_plots, interactive_matplot, muscle_str_joined)
+    #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined)
+    simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined)
 
     return df_deriv, simple_metric, muscle_str_joined, scores_muscle, raw
