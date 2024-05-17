@@ -1,13 +1,28 @@
+#!/usr/bin/env python
+import sys, os
 from setuptools import setup
 import versioneer
 
-setup(
-    name='meg_qc',
-    version= versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
-    packages=['meg_qc'],
-    url='https://github.com/ANCPLabOldenburg/MEG-QC-code',
-    license='MIT',
-    author='ANCP',
-    author_email='aaron.reer@uol.de',
-)
+# Give setuptools a hint to complain if it's too old a version
+# 30.3.0 allows us to put most metadata in setup.cfg
+# Should match pyproject.toml
+SETUP_REQUIRES = ['setuptools >= 30.3.0']
+# This enables setuptools to install wheel on-the-fly
+SETUP_REQUIRES += ['wheel'] if 'bdist_wheel' in sys.argv else []
+INSTALL_REQUIRES = []
+
+
+if __name__ == '__main__':
+    REQ_FILE_PATH = os.path.dirname(os.path.realpath(__file__)) + "/requirements.txt"
+    with open(REQ_FILE_PATH) as f:
+        INSTALL_REQUIRES = list(f.read().splitlines())
+    setup(name='meg_qc',
+        version= versioneer.get_version(),
+        cmdclass=versioneer.get_cmdclass(),
+        setup_requires=SETUP_REQUIRES,
+        install_requires=INSTALL_REQUIRES,
+        packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting'],
+        url='https://github.com/AaronReer/MEGqc',
+        license='MIT',
+        author='ANCP',
+        author_email='aaron.reer@uol.de')

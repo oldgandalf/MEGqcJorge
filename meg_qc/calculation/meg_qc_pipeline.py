@@ -111,7 +111,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         if all_qc_params['default']['subjects'][0] != 'all':
             list_of_subs = all_qc_params['default']['subjects']
         elif all_qc_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()["sub"]))
+            list_of_subs = sorted(list(dataset.query_entities()["subject"]))
             print('___MEGqc___: ', 'list_of_subs', list_of_subs)
             if not list_of_subs:
                 print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
