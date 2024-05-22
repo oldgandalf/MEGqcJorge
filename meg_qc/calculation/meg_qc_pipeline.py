@@ -149,10 +149,11 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
-            print('list_of_sub_jsons')
-            print(list_of_sub_jsons)
+            print('___MEGqc___: ', 'list_of_sub_jsons', list_of_sub_jsons)
 
-            list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
+            #list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
+
+            counter = 0
 
             for fif_ind, data_file in enumerate(list_of_fifs): 
                 print('___MEGqc___: ', 'Take fif: ', data_file)
@@ -295,7 +296,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
                 QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
 
-
                 #if there are any derivs calculated in this section:
                 for section in (section for section in QC_derivs.values() if section):
                     # loop over section where deriv.content_type is not 'matplotlib' or 'plotly' or 'report'
@@ -321,6 +321,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
                         meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
+
+                        counter +=1
+                        print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
+
                         meg_artifact.add_entity('desc', deriv.name) #file name
                         meg_artifact.suffix = 'meg'
                         meg_artifact.extension = '.html'
