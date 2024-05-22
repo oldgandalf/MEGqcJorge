@@ -370,11 +370,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
-    for metric, values in QC_derivs.items():
-        if values and metric != 'Sensors':
-            QC_derivs['Report_MNE'] += [QC_derivative(report_html_string, 'REPORT_'+metric, 'report mne')]
-
-    return QC_derivs
+    return report_html_string 
 
 
 def make_plots_meg_qc(ds_paths):
@@ -440,42 +436,58 @@ def make_plots_meg_qc(ds_paths):
             print('___MEGqc___: metric', metric)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
-            for metric, tsv_paths_ in tsvs_to_plot.items():
+            #We have raw files with particular entities, this raw file will be used to assign entities to final reports:
+            #in this line: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            #To make sure we assign the righ report (created on base of tsv files) to the right raw file, 
+            #we need to match the entities of the raw file with the entities of the tsv files.
 
+            #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
+            # Get subject, session, task, and run from list_of_sub_jsons:
+            for sub_json in list_of_sub_jsons:
+                #First, loop over sub jsons - meaning over separate fif files belonging to the same subject:
 
-                #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
-                # Get subject, session, task, and run from list_of_sub_jsons:
-                # Find the matching JSON in list_of_sub_jsons
+                # Extract sub, ses, task, and run from the name field of the JSON
+                #TODO: try to query entities instead?
 
-                
-                for tsv_path in tsvs_to_plot[metric]:
-                    # Extract sub, ses, task, and run from the tsv_paths
-                    print('___MEGqc___: ', 'tsv_path', tsv_path)
-                    match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
-                    if match is not None:
-                        tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
-                        print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
-                
-                        for sub_json in list_of_sub_jsons:
-                            # Extract sub, ses, task, and run from the name field of the JSON
-                            match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', sub_json['name'])
+                match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', sub_json['name'])
+                if match is not None:
+                    json_sub, json_ses, json_task, json_run = match.groups()
+                    print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+
+                    for metric in tsvs_to_plot:
+                        #Second, loop over calculated metrics:
+
+                        tsv_paths_for_one_metric = []
+
+                        for tsv_path in tsvs_to_plot[metric]:
+                            # Extract sub, ses, task, and run from the tsv_paths
+                            print('___MEGqc___: ', 'tsv_path', tsv_path)
+                            match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
                             if match is not None:
-                                json_sub, json_ses, json_task, json_run = match.groups()
-                                print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+                                tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
+                                print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
+                    
+                                # Check if the entities match between the JSON and the TSV:
+                                if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
+                                    
+                                    tsv_paths_for_one_metric += [tsv_path]
+                                    #collect all tsvs for the same metric in one list 
+                                    #to later add them all to the same report for this metric
+                                    
 
+                        # Now prepare the derivative to be written:
+                        meg_artifact = subject_folder.create_artifact(raw=sub_json)
+                        meg_artifact.add_entity('desc', metric) #file name
+                        meg_artifact.suffix = 'meg'
+                        meg_artifact.extension = '.html'
 
-                            # Check if the values match
-                            if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
-                                # This is the matching JSON
-                                meg_artifact = subject_folder.create_artifact(raw=sub_json)
-                                meg_artifact.add_entity('desc', metric) #file name
-                                meg_artifact.suffix = 'meg'
-                                meg_artifact.extension = '.html'
+                        
+                        # Here convert tsvs into figures and into html report:
+                        deriv = csv_to_html_report(metric, tsv_paths_for_one_metric, report_str_path, plot_settings)
+                        print('___MEGqc___: ', 'deriv', deriv)
 
-                                # Here convert csv into figure and into html report:
-                                deriv = csv_to_html_report(metric, [tsv_path], report_str_path, plot_settings)
-
-                                meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
+                        #define method how the derivative will be written to file system:
+                        meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
 
     ancpbids.write_derivative(dataset, derivative) 
 
