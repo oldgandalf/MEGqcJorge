@@ -45,7 +45,7 @@ from meg_qc.plotting.universal_html_report import make_joined_report, make_joine
 
 def modify_entity_name(entities):
 
-    #old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+    #old_new_categories = {'desc': 'METRIC', 'subject': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
 
     old_new_categories = {'desc': 'METRIC'}
 
@@ -389,12 +389,12 @@ def make_plots_meg_qc(ds_paths):
 
         chosen_entities, plot_settings = selector(entities)
 
-        #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        #chosen_entities = {'subject': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
         print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
         print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
-        for sub in chosen_entities['sub']:
+        for sub in chosen_entities['subject']:
 
             print('_____sub____', sub)
 
