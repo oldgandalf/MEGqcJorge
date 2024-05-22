@@ -436,28 +436,22 @@ def make_plots_meg_qc(ds_paths):
 
             print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
 
-            counter = 0
-
             print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
             print('___MEGqc___: metric', metric)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
             for metric, tsv_paths_ in tsvs_to_plot.items():
 
-                print('___MEGqc___: ', 'counter', counter)
-
-                #for n_tsv, tsv_path in enumerate(files):
-
 
                 #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
                 # Get subject, session, task, and run from list_of_sub_jsons:
                 # Find the matching JSON in list_of_sub_jsons
 
-                # Extract sub, ses, task, and run from the tsv_paths
-
-                for tsv_paths in tsvs_to_plot[metric]:
-                    print('___MEGqc___: ', 'tsv_paths', tsv_paths)
-                    match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_paths)
+                
+                for tsv_path in tsvs_to_plot[metric]:
+                    # Extract sub, ses, task, and run from the tsv_paths
+                    print('___MEGqc___: ', 'tsv_path', tsv_path)
+                    match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
                     if match is not None:
                         tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
                         print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
@@ -475,25 +469,13 @@ def make_plots_meg_qc(ds_paths):
                                 # This is the matching JSON
                                 meg_artifact = subject_folder.create_artifact(raw=sub_json)
                                 meg_artifact.add_entity('desc', metric) #file name
-                                
-                                
-                                #break
-
-
-                                #meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[counter]) 
-                                #shell. empty derivative. which raw fif file does this artifact belong to?
-
-                                #meg_artifact.add_entity('desc', metric) #file name
                                 meg_artifact.suffix = 'meg'
                                 meg_artifact.extension = '.html'
 
                                 # Here convert csv into figure and into html report:
-                                deriv = csv_to_html_report(metric, [tsv_paths], report_str_path, plot_settings)
+                                deriv = csv_to_html_report(metric, [tsv_path], report_str_path, plot_settings)
 
                                 meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
-                                counter += 1
-                                print('___MEGqc___: ', 'Artifact created for ', metric)
-                
 
     ancpbids.write_derivative(dataset, derivative) 
 
