@@ -2,6 +2,7 @@ import sys
 import os
 import ancpbids
 import json
+import re
 
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
@@ -45,11 +46,12 @@ from meg_qc.plotting.universal_html_report import make_joined_report, make_joine
 
 def modify_entity_name(entities):
 
-    #old_new_categories = {'desc': 'METRIC', 'sub': 'SUBJECT', 'ses': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+    #old_new_categories = {'description': 'METRIC', 'subject': 'SUBJECT', 'session': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
 
-    old_new_categories = {'desc': 'METRIC'}
+    old_new_categories = {'description': 'METRIC'}
 
     categories_copy = entities.copy()
+
     for category, subcategories in categories_copy.items():
         # Convert the set of subcategories to a sorted list
         sorted_subcategories = sorted(subcategories, key=str)
@@ -216,7 +218,6 @@ def get_ds_entities(ds_paths):
 
 
         entities = dataset.query_entities()
-        print('___MEGqc___: ', 'entities', entities)
     
     return entities
 
@@ -369,11 +370,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
     report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
 
-    for metric, values in QC_derivs.items():
-        if values and metric != 'Sensors':
-            QC_derivs['Report_MNE'] += [QC_derivative(report_html_string, 'REPORT_'+metric, 'report mne')]
-
-    return QC_derivs
+    return report_html_string 
 
 
 def make_plots_meg_qc(ds_paths):
@@ -389,12 +386,12 @@ def make_plots_meg_qc(ds_paths):
 
         chosen_entities, plot_settings = selector(entities)
 
-        #chosen_entities = {'sub': ['009'], 'ses': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        #chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
         print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
         print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
-        for sub in chosen_entities['sub']:
+        for sub in chosen_entities['subject']:
 
             print('_____sub____', sub)
 
@@ -405,49 +402,92 @@ def make_plots_meg_qc(ds_paths):
             print(list_of_sub_jsons)
 
             try:
-                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
             except:
                 report_str_path = '' #in case none was created yet
                 print('___MEGqc___: No report strings were created for sub ', sub)
 
             tsvs_to_plot = {}
+
             for metric in chosen_entities['METRIC']:
                 # Creating the full list of files for each combination
                 additional_str = None  # or additional_str = 'your_string'
                 desc = metric + additional_str if additional_str else metric
                 
-                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
 
                 if metric == 'PSDs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseGrad', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseMag', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseGrad', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
                 
                 if metric == 'ECGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ECGchannel', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ECGchannel', scope='derivatives')))
 
                 if metric == 'EOGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['ses'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'EOGchannel', scope='derivatives')))
+                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'EOGchannel', scope='derivatives')))
 
                 tsvs_to_plot[metric] = tsv_path
 
             print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
 
-            counter = 0
-            for metric, tsv_paths in tsvs_to_plot.items():
-                #for n_tsv, tsv_path in enumerate(files):
+            print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
+            print('___MEGqc___: metric', metric)
+            print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
-                meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[counter]) #shell. empty derivative
-                meg_artifact.add_entity('desc', metric) #file name
-                meg_artifact.suffix = 'meg'
-                meg_artifact.extension = '.html'
+            #We have raw files with particular entities, this raw file will be used to assign entities to final reports:
+            #in this line: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            #To make sure we assign the righ report (created on base of tsv files) to the right raw file, 
+            #we need to match the entities of the raw file with the entities of the tsv files.
 
-                # Here convert csv into figure and into html report:
-                deriv = csv_to_html_report(metric, tsv_paths, report_str_path, plot_settings)
+            #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
+            # Get subject, session, task, and run from list_of_sub_jsons:
+            for sub_json in list_of_sub_jsons:
+                #First, loop over sub jsons - meaning over separate fif files belonging to the same subject:
 
-                meg_artifact.content = lambda file_path, cont=deriv['Report_MNE'][0].content: cont.save(file_path, overwrite=True, open_browser=False)
-                counter += 1
+                # Extract sub, ses, task, and run from the name field of the JSON
+                #TODO: try to query entities instead?
+
+                match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', sub_json['name'])
+                if match is not None:
+                    json_sub, json_ses, json_task, json_run = match.groups()
+                    print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+
+                    for metric in tsvs_to_plot:
+                        #Second, loop over calculated metrics:
+
+                        tsv_paths_for_one_metric = []
+
+                        for tsv_path in tsvs_to_plot[metric]:
+                            # Extract sub, ses, task, and run from the tsv_paths
+                            print('___MEGqc___: ', 'tsv_path', tsv_path)
+                            match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
+                            if match is not None:
+                                tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
+                                print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
+                    
+                                # Check if the entities match between the JSON and the TSV:
+                                if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
+                                    
+                                    tsv_paths_for_one_metric += [tsv_path]
+                                    #collect all tsvs for the same metric in one list 
+                                    #to later add them all to the same report for this metric
+                                    
+
+                        # Now prepare the derivative to be written:
+                        meg_artifact = subject_folder.create_artifact(raw=sub_json)
+                        meg_artifact.add_entity('desc', metric) #file name
+                        meg_artifact.suffix = 'meg'
+                        meg_artifact.extension = '.html'
+
+                        
+                        # Here convert tsvs into figures and into html report:
+                        deriv = csv_to_html_report(metric, tsv_paths_for_one_metric, report_str_path, plot_settings)
+                        print('___MEGqc___: ', 'deriv', deriv)
+
+                        #define method how the derivative will be written to file system:
+                        meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
 
     ancpbids.write_derivative(dataset, derivative) 
 
