@@ -128,7 +128,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
-        for sid in list_of_subs[4:5]: #[0:4]: 
+        for sid in list_of_subs[0:1]: #[0:4]: 
             print('___MEGqc___: ', 'Dataset: ', dataset_path)
             print('___MEGqc___: ', 'Take SID: ', sid)
             

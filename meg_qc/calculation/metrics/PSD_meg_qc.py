@@ -708,10 +708,15 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     if ch_name.lower() == 'average':
 
-        # Replace empty lists with [np.nan] in case no noise was found:
-        noisy_freqs = noisy_freqs if noisy_freqs else [np.nan]
-        noise_ampl = noise_ampl if noise_ampl else [np.nan]
-        noise_ampl_relative_to_signal = noise_ampl_relative_to_signal if noise_ampl_relative_to_signal else [np.nan]
+        # Replace empty lists with [0] in case no noise was found:
+        print('______NOISY FREQS', noisy_freqs)
+        print('______NOISE AMPL', noise_ampl)
+        print('______NOISE AMPL RELATIVE TO SIGNAL', noise_ampl_relative_to_signal)
+
+        noisy_freqs = noisy_freqs if len(noisy_freqs) else [0]
+        noise_ampl = noise_ampl if len(noise_ampl) else [0]
+        noise_ampl_relative_to_signal = noise_ampl_relative_to_signal if len(noise_ampl_relative_to_signal) else [0]
+        # will put 0 in the pie chart if no noise was found (if arrays/lists are empty and have 0 length)
 
         # Create a DataFrame
         df = pd.DataFrame({
