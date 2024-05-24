@@ -14,8 +14,8 @@ import os
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
-mne.viz.set_browser_backend('matplotlib')
-matplotlib.use('Agg') 
+# mne.viz.set_browser_backend('matplotlib')
+# matplotlib.use('Agg') 
 #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
 
@@ -1820,6 +1820,8 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
     
     """
+    OLD VERSION, no csv 
+
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
     times series of mags or grads, not separated by individual channels.
 
@@ -1887,10 +1889,15 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
 
 def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal):
 
-     #Legend for the pie chart:
+    #Legend for the pie chart:
+
     bands_names=[]
-    for fr_n, fr in enumerate(noisy_freqs):
-        bands_names.append(str(round(fr,1))+' Hz noise')
+    if noisy_freqs == [0]:
+        noisy_freqs, noise_ampl, noise_ampl_relative_to_signal = [], [], []
+        #empty lists so they dont show up on pie chart
+    else:
+        for fr_n, fr in enumerate(noisy_freqs):
+            bands_names.append(str(round(fr,1))+' Hz noise')
 
     bands_names.append('Main signal')
     
@@ -1933,7 +1940,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     """
 
     #if it s not the right ch kind in the file
-    base_name = os.path.basename(tsv_pie_path) #name of the fimal file
+    base_name = os.path.basename(tsv_pie_path) #name of the final file
     
     if m_or_g not in base_name.lower():
         return []
@@ -1948,12 +1955,12 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
         fig_name = 'PSD_SNR_all_channels_'
 
         # Extract the data
-        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
-        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
-        #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
         total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
+        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
+
+        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
         amplitudes_relative = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
-        
+
         amplitudes_abs, amplitudes_relative, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, amplitudes_relative)
 
     elif noise_or_waves == 'waves' and 'PSDwaves' in base_name:
@@ -2000,9 +2007,9 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     for n, name in enumerate(all_bands_names):
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
-    print('___here issue___')
-    print(all_mean_relative_values)
-    print(labels)
+        #if some of the all_mean_abs_values are zero - they should not be shown in pie chart:
+
+
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
