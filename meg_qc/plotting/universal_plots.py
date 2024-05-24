@@ -14,6 +14,11 @@ import os
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
+# mne.viz.set_browser_backend('matplotlib')
+# matplotlib.use('Agg') 
+#this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+
+
 class MEG_channels:
 
     """ 
@@ -1815,6 +1820,8 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
     
     """
+    OLD VERSION, no csv 
+
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
     times series of mags or grads, not separated by individual channels.
 
@@ -1882,10 +1889,15 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
 
 def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal):
 
-     #Legend for the pie chart:
+    #Legend for the pie chart:
+
     bands_names=[]
-    for fr_n, fr in enumerate(noisy_freqs):
-        bands_names.append(str(round(fr,1))+' Hz noise')
+    if noisy_freqs == [0]:
+        noisy_freqs, noise_ampl, noise_ampl_relative_to_signal = [], [], []
+        #empty lists so they dont show up on pie chart
+    else:
+        for fr_n, fr in enumerate(noisy_freqs):
+            bands_names.append(str(round(fr,1))+' Hz noise')
 
     bands_names.append('Main signal')
     
@@ -1928,7 +1940,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     """
 
     #if it s not the right ch kind in the file
-    base_name = os.path.basename(tsv_pie_path) #name of the fimal file
+    base_name = os.path.basename(tsv_pie_path) #name of the final file
     
     if m_or_g not in base_name.lower():
         return []
@@ -1943,12 +1955,12 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
         fig_name = 'PSD_SNR_all_channels_'
 
         # Extract the data
-        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
-        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
-        #total_amplitude = df['total_amplitude_'+m_or_g][0]  # Assuming total_amplitude is the same for all rows
         total_amplitude = df['total_amplitude_'+m_or_g].dropna().iloc[0]  # Get the first non-null value
+        noisy_freqs = df['noisy_freqs_'+m_or_g].tolist()
+
+        noise_ampl = df['noise_ampl_'+m_or_g].tolist()
         amplitudes_relative = df['noise_ampl_relative_to_signal_'+m_or_g].tolist()
-        
+
         amplitudes_abs, amplitudes_relative, bands_names = edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, amplitudes_relative)
 
     elif noise_or_waves == 'waves' and 'PSDwaves' in base_name:
@@ -1995,9 +2007,9 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     for n, name in enumerate(all_bands_names):
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
-    print('___here issue___')
-    print(all_mean_relative_values)
-    print(labels)
+        #if some of the all_mean_abs_values are zero - they should not be shown in pie chart:
+
+
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
@@ -2752,6 +2764,100 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     
     return fig_derivs
 
+def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
+
+    """ 
+    Plot positions and rotations of the head.
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    head_pos : np.ndarray
+        Head positions and rotations.
+    verbose_plots : bool
+        True for showing plot in notebook.
+        
+    Returns
+    -------
+    head_derivs : list 
+        List of QC_derivative objects containing figures with head positions and rotations.
+    head_pos_baselined : np.ndarray
+        Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
+    """
+
+    head_derivs = []
+
+    original_head_dev_t = mne.transforms.invert_transform(
+        raw.info['dev_head_t'])
+    average_head_dev_t = mne.transforms.invert_transform(
+        compute_average_dev_head_t(raw, head_pos))
+
+    if verbose_plots is False:
+        matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+
+    #plot using MNE:
+    fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
+    #fig1 = mne.viz.plot_head_positions(head_pos_degrees)
+    for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
+                        original_head_dev_t['trans'][:3, 3]):
+        ax.axhline(1000*val, color='r')
+        ax.axhline(1000*val_ori, color='g')
+        #print('___MEGqc___: ', 'val', val, 'val_ori', val_ori)
+    # The green horizontal lines represent the original head position, whereas the
+    # Red lines are the new head position averaged over all the time points.
+
+
+    head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average_mne', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+
+    #plot head_pos using PLOTLY:
+
+    # First, for each head position subtract the first point from all the other points to make it always deviate from 0:
+    head_pos_baselined=head_pos.copy()
+    #head_pos_baselined=head_pos_degrees.copy()
+    for i, pos in enumerate(head_pos_baselined.T[1:7]):
+        pos -= pos[0]
+        head_pos_baselined.T[i]=pos
+
+    t = head_pos.T[0]
+
+    average_head_pos=average_head_dev_t['trans'][:3, 3]
+    original_head_pos=original_head_dev_t['trans'][:3, 3]
+
+    fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quat)"))
+
+    # head_pos ndarray of shape (n_pos, 10): [t, q1, q2, q3, x, y, z, gof, err, v]
+    # https://mne.tools/stable/generated/mne.chpi.compute_head_pos.html
+    indexes=[4, 5, 6, 1, 2,3]
+    names=['x', 'y', 'z', 'q1', 'q2', 'q3']
+    for counter in [0, 1, 2]:
+        position=1000*-head_pos.T[indexes][counter]
+        #position=1000*-head_pos_baselined.T[indexes][counter]
+        name_pos=names[counter]
+        fig1p.add_trace(go.Scatter(x=t, y=position, mode='lines', name=name_pos), row=counter+1, col=1)
+        fig1p.update_yaxes(title_text=name_pos, row=counter+1, col=1)
+        #print('name', name_pos, 'position', position)
+        rotation=head_pos.T[indexes][counter+3]
+        #rotation=head_pos_baselined.T[indexes][counter+3]
+        name_rot=names[counter+3]
+        fig1p.add_trace(go.Scatter(x=t, y=rotation, mode='lines', name=name_rot), row=counter+1, col=2)
+        fig1p.update_yaxes(title_text=name_rot, row=counter+1, col=2)
+        #print('name', name_rot, 'rotation', rotation)
+
+        # fig1p.add_hline(y=1000*average_head_pos[counter], line_dash="dash", line_color="red", row=counter+1, col=1)
+        # fig1p.add_hline(y=1000*original_head_pos[counter], line_dash="dash", line_color="green", row=counter+1, col=1)
+
+    fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
+    fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
+
+    if verbose_plots is True:
+        fig1p.show()
+
+    head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
+
+    return head_derivs, head_pos_baselined
+
     
 def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
 
@@ -2813,7 +2919,6 @@ def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
     return head_derivs, head_pos_baselined
 
 
-
 def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
 
     """
@@ -2850,6 +2955,36 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
 
     return head_derivs
 
+def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
+
+    """
+    Plot raw data with annotated head movement. Currently not used.
+
+    
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data.
+    head_pos : np.ndarray
+        Head positions and rotations.
+        
+    Returns
+    -------
+    head_derivs : list
+        List of QC derivatives with annotated figures.
+        
+    """
+
+    head_derivs = []
+
+    mean_distance_limit = 0.0015  # in meters
+    annotation_movement, hpi_disp = annotate_movement(
+        raw, head_pos, mean_distance_limit=mean_distance_limit)
+    raw.set_annotations(annotation_movement)
+    fig2=raw.plot(n_channels=100, duration=20)
+    head_derivs += [QC_derivative(fig2, 'Head_position_annot', 'matplotlib')]
+
+    return head_derivs
 
 #__________ECG/EOG__________#
 
@@ -3368,3 +3503,49 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>', fig_order = 4+m_or_g_order)]
 
     return corr_derivs
+
+
+def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarray, ecg_or_eog: str, tmin: float, tmax: float):
+    
+    """
+    Only for demonstartion while running the pipeline. Dpesnt go into final report.
+
+    Plots the mean ECG wave and the mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    Probably will not be included into the report. Just for algorythm demosntration.
+    The already shifted mean ECG wave is plotted in the report.
+
+    Parameters
+    ----------
+    mean_rwave_shifted : np.ndarray
+        The mean ECG wave shifted to align with the ECG artifacts found on meg channels.
+    mean_rwave : np.ndarray
+        The mean ECG wave, not shifted, original.
+    ecg_or_eog : str
+        'ECG' or 'EOG'
+    tmin : float
+        The start time of the epoch.
+    tmax : float
+        The end time of the epoch.
+    verbose_plots : bool
+        If True, the plot will be shown in the notebook.
+
+    Returns
+    -------
+    fig_derivs : list
+        list with one QC_derivative object, which contains the plot. (in case want to input intot he report)
+    
+    """
+
+    t = np.linspace(tmin, tmax, len(mean_rwave_shifted))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+    fig.add_trace(go.Scatter(x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+
+    fig.show()
+
+    #fig_derivs = [QC_derivative(fig, 'Mean_artifact_'+ecg_or_eog+'_shifted', 'plotly')] 
+    # #activate is you want to output the shift demonstration to the report, normally dont'
+    
+    fig_derivs = []
+
+    return fig_derivs

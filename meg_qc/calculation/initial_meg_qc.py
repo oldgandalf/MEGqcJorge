@@ -84,7 +84,6 @@ def get_all_config_params(config_file_name: str):
             'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),
-            'verbose_plots': default_section.getboolean('verbose_plots'),
             'crop_tmin': tmin,
             'crop_tmax': tmax})
         all_qc_params['default'] = default_params
@@ -511,9 +510,6 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     else:
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series or(and) plot_interactive_time_series_average to True in settings.'
 
-
-    verbose_plots = default_settings['verbose_plots'] #will only be used for metrics plots. dont output time series and 3d of sensors in any case in the notebook.
-    
     clicking_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
 
     resample_str = '<p>' + resample_str + '</p>'
@@ -521,7 +517,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str, verbose_plots
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):

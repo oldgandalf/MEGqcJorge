@@ -474,7 +474,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list, verbose_plots: bool):
+def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
 
     """
     Main STD function. Calculates:
@@ -497,8 +497,6 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         raw data
     m_or_g_chosen : list
         list of strings with channel types chosen by user: ['mag', 'grad'] or ['mag'] or ['grad']
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
