@@ -14,8 +14,8 @@ import os
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
-mne.viz.set_browser_backend('matplotlib')
-matplotlib.use('Agg') 
+# mne.viz.set_browser_backend('matplotlib')
+# matplotlib.use('Agg') 
 #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
 
