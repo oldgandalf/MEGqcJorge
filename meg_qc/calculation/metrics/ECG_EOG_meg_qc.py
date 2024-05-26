@@ -1968,7 +1968,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
     ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
     ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
-    ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
 
     if mean_good is False:
         simple_metric_ECG = {'description': ecg_str}
@@ -2010,7 +2009,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             mean_rwave_shifted_variations = align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax)
             
             best_mean_corr = 0
-            best_mean_shifted = mean_rwave_shifted_variations[0] #preassign
+            best_mean_rwave_shifted = mean_rwave_shifted_variations[0] #preassign
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
                 #collect all correlation values for all channels:
@@ -2023,7 +2022,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
-                    best_mean_shifted = mean_shifted
+                    best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
             
             bad_avg_str[m_or_g] = ''
@@ -2033,12 +2032,18 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
+        ecg_ch_df['mean_rwave_shifted'] = best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+        ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
+
+        #TODO: delete this
         #calculate mean_corr for best_affected_channels and for affected_channels:
         all_corr_values = [abs(ch.corr_coef) for ch in best_affected_channels[m_or_g]]
         mean_corr = np.mean(all_corr_values)
+        print('_____mean corr BEST', mean_corr)
 
         all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
         mean_corr = np.mean(all_corr_values)
+        print('_____mean corr ALL', mean_corr)
 
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)

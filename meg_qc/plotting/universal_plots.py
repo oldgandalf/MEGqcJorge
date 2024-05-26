@@ -3298,7 +3298,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
-def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
+def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
 
     #if it s not the right ch kind in the file
     base_name = os.path.basename(f_path) #name of the final file
@@ -3340,6 +3340,47 @@ def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool)
 
     return mean_ecg_ch_deriv
 
+def plot_mean_rwave_shifted_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
+
+    #if it s not the right ch kind in the file
+    base_name = os.path.basename(f_path) #name of the final file
+    if ecg_or_eog.lower() + 'channel' not in base_name.lower():
+        return []
+
+    # Load the data from the .tsv file into a DataFrame
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Create a scatter plot
+    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines'))
+
+    # Set the plot's title and labels
+    if 'recorded' in df['recorded_or_reconstructed'][0]:
+        which = 'recorded'
+    elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
+        which = 'reconstructed'
+    else:
+        which = ''
+    
+    fig.update_layout(
+            xaxis_title='Time, s',
+            yaxis = dict(
+                showexponent = 'all',
+                exponentformat = 'e'),
+            yaxis_title='Signal amplitude, V',
+            title={
+                'text': 'Mean data (shifted) of the '+ which +' ' + ecg_or_eog.upper() + ' channel',
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'})
+    
+    # Show the plot
+    if verbose_plots is True:
+        fig.show()
+
+    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ecg_ch_data_shifted', 'plotly', fig_order = 2.1)]
+
+    return mean_ecg_ch_deriv
 
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
 
