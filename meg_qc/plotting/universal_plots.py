@@ -3301,7 +3301,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plots: bool):
 
     if shifted == 'shifted':
-        add_shifted_tit = 'shifted'
+        add_shifted_tit = 'shifted '
         add_shifted_tit_ = '_shifted'
     else:
         add_shifted_tit = ''

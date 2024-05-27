@@ -1827,12 +1827,12 @@ def find_t0_channels(artif_per_ch: list, tmin: float, tmax: float):
     return t0_channels
 
 
-def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
+def shift_mean_wave(mean_rwave: np.ndarray, ind_t0_channels: int, ind_t0_mean: int):
 
     """
     Shifts the mean ECG wave to align with the ECG artifacts found on meg channels.
-    np.roll is used to shift. meaning: foer example wjen shifte to the right: 
-    the end of array will be attached in the beginning to the leaft.
+    np.roll is used to shift. meaning: for example when shift to the right: 
+    the end of array will be attached in the beginning to the left.
     Usually ok, but it may cause issues if the array was originally very short or very strongly shifted, 
     then it may split the wave shape in half and the shifted wave will look completely unusable.
     Therefore, dont limit tmin and tmax too tight in config file (default is good). 
@@ -1854,7 +1854,7 @@ def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
     
     """
 
-    t0_shift = t0_channels - t0_mean
+    t0_shift = ind_t0_channels - ind_t0_mean
     mean_rwave_shifted = np.roll(mean_rwave, t0_shift)
 
     return mean_rwave_shifted
@@ -1899,13 +1899,26 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     t0_mean = find_t0_mean(mean_rwave)
     t0_time_mean = t[t0_mean]
 
-    print('t0_time_channels: ', t0_time_channels)
-    print('t0_time_mean: ', t0_time_mean)
+    print('___t0_time_channels: ', t0_time_channels)
+    print('___t0_time_mean: ', t0_time_mean)
 
     mean_rwave_shifted_variations = []
+    t0_shift_variations = []
     for t0_m in t0_mean:
         mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))
     
+
+    #plot every variation with plotly:
+
+    for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter (x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+        fig.add_trace(go.Scatter (x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+        fig.add_vline(x=t0_time_channels, line_dash="dash", line_color="red", name='t0_channels')
+        fig.add_vline(x=t0_time_mean, line_dash="dash", line_color="blue", name='t0_mean')
+        fig.update_layout(title='Mean R wave shifted to align with the ECG artifacts found on meg channels')
+        fig.show()
+
     return mean_rwave_shifted_variations
 
 
@@ -2060,8 +2073,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(best_affected_channels[m_or_g], artif_time_vector)
 
-    print('_____FIXED HERE____: ', best_affected_channels['mag'])
-    print('____WAS____: ', affected_channels['mag'])
+    #print('_____FIXED HERE____: ', best_affected_channels['mag'])
+    #print('____WAS____: ', affected_channels['mag'])
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
