@@ -3500,7 +3500,7 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
             'xanchor': 'center',
             'yanchor': 'top'},
         xaxis_title='Correlation coefficient',
-        yaxis_title = 'P-value') 
+        yaxis_title = 'P-value')
     
     if verbose_plots is True:
         fig.show()

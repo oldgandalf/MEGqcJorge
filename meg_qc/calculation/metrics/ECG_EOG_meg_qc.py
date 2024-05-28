@@ -1903,12 +1903,12 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     print('___t0_time_mean: ', t0_time_mean)
 
     mean_rwave_shifted_variations = []
-    t0_shift_variations = []
     for t0_m in t0_mean:
         mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))
     
 
     #plot every variation with plotly:
+    #TODO: remove this
 
     for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
         fig = go.Figure()
@@ -2009,7 +2009,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         if use_method == 'mean_threshold':
             artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, ecg_params_internal)
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', ecg_params_internal, thresh_lvl_peakfinder, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
-            correlation_derivs = []
+
 
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
 
@@ -2023,21 +2023,46 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             
             best_mean_corr = 0
             best_mean_rwave_shifted = mean_rwave_shifted_variations[0] #preassign
+            itera=0
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
                 #collect all correlation values for all channels:
                 all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
-                # #get 10 highest correlations:
+                #get 10 highest correlations:
                 all_corr_values.sort(reverse=True)
-                all_corr_values = all_corr_values[:10]
-                mean_corr = np.mean(all_corr_values)
+                mean_corr = np.mean(all_corr_values[0:10]) #[0:10]
                 #if mean corr is better than the previous one - save it
+
+                print('_____mean corr ALL', mean_corr, 'iter', itera)
+                itera += 1
 
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
+                    print('_____best mean corr', best_mean_corr)
                     best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
-            
+
+            #TODO: del
+            #One more time calculate correlation of the best mean_rwave_shifted with all channels:
+
+            print('___best mean shifted', best_mean_rwave_shifted)
+
+            affected_channels_check = {}
+            affected_channels_check[m_or_g] = find_affected_by_correlation(best_mean_rwave_shifted, artif_per_ch)
+            all_corr_values = [abs(ch.corr_coef) for ch in affected_channels_check[m_or_g]]
+            # #get 10 highest correlations:
+            all_corr_values.sort(reverse=True)
+            mean_corr_check1 = np.mean(all_corr_values)
+
+            all_corr_values_mean = all_corr_values[:10].copy()
+            mean_corr_check_mean = np.mean(all_corr_values_mean)
+
+            print('_____best mean corr', best_mean_corr)
+
+            print('_____mean corr CHECK', mean_corr_check1)
+            print('_____mean corr MEAN', mean_corr_check_mean)
+
+
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2052,11 +2077,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         #calculate mean_corr for best_affected_channels and for affected_channels:
         all_corr_values = [abs(ch.corr_coef) for ch in best_affected_channels[m_or_g]]
         mean_corr = np.mean(all_corr_values)
-        print('_____mean corr BEST', mean_corr)
-
-        all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
-        mean_corr = np.mean(all_corr_values)
-        print('_____mean corr ALL', mean_corr)
+        print('_____mean corr BEST__', mean_corr)
 
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
