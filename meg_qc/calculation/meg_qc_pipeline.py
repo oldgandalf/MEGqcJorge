@@ -280,18 +280,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'MUSCLE': simple_metrics_muscle}  
 
 
-                # Testing errors:
-                # for key, value in QC_simple.items():
-                #     if isinstance(value, set):
-                #         print(f"Set type of data found in key '{key}'")
-                
-
-                #Make report and add to QC_derivs (old report version):
-                # report_html_string = make_joined_report(QC_derivs, shielding_str, m_or_g_skipped_str, epoching_skipped_str, no_ecg_str, no_eog_str, no_head_pos_str, muscle_str)
-                # QC_derivs['Report']= [QC_derivative(report_html_string, 'Report', 'report')]
-
-                report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
-                QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
+                # report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
+                # QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
 
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
                 QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
