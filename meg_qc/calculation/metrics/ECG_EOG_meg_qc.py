@@ -1132,6 +1132,7 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
         return
 
     for ch in artif_per_ch:
+        print('_____len(mean_rwave): ', len(mean_rwave), 'len(ch.artif_data): ', len(ch.artif_data))
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
     
     return artif_per_ch
