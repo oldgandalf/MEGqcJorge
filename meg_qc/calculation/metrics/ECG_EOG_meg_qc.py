@@ -1138,7 +1138,6 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
         return
 
     for ch in artif_per_ch:
-        print('_____len(mean_rwave): ', len(mean_rwave), 'len(ch.artif_data): ', len(ch.artif_data))
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
     
     return artif_per_ch
@@ -1149,15 +1148,44 @@ def rms_amplitude(wave):
     '''
     return np.sqrt(np.mean(np.square(wave)))
 
+def ptp_amplitude(wave):
+
+    #TODO: maybe here make not just max/min but actually find peaks and valleys and calculate the difference between them
+    #Like:
+
+    # Function to find the two most prominent peaks and valleys
+    # def prominent_peaks_and_valleys(wave):
+    #     # Find all peaks
+    #     peaks, _ = find_peaks(wave)
+
+    #     # Find all valleys (negative peaks)
+    #     valleys, _ = find_peaks(-wave)
+
+    #     # Sort peaks by their prominence (highest values first)
+    #     top_peaks = sorted(wave[peaks], reverse=True)[:2]
+
+    #     # Sort valleys by their prominence (lowest values first)
+    #     bottom_peaks = sorted(wave[valleys])[:2]
+
+    #     return top_peaks, bottom_peaks
+
+    # # Function to calculate peak-to-peak amplitude using the most prominent peaks and valleys
+    # def ptp_amplitude_prominent(wave):
+    #     top_peaks, bottom_peaks = prominent_peaks_and_valleys(wave)
+    #     if top_peaks and bottom_peaks:
+    #         return max(top_peaks) - min(bottom_peaks)
+    
+    return np.max(wave) - np.min(wave)
+
 def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
     #RMS amplitude of all comparison waves
+    #rms_all_comp_waves = np.mean([rms_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])
+    ptp_all_comp_waves = np.mean([ptp_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
 
-    rms_all_comp_waves = np.mean([rms_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])
     for ch in artif_per_ch:
-        ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
-
-        print('____', ch.name, 'amplitude_ratio: ', ch.amplitude_ratio)
+        #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
+        ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
 
     return artif_per_ch
 
@@ -1169,8 +1197,6 @@ def find_affected_by_similarity_score(artif_per_ch: list):
 
     for ch in artif_per_ch:
         ch.similarity_score = abs(ch.corr_coef) * abs(ch.amplitude_ratio)
-
-        print('____', ch.name, 'similarity_score: ', ch.similarity_score)
     
     return artif_per_ch
 
@@ -1946,7 +1972,7 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     
 
     #plot every variation with plotly:
-    #TODO: remove this
+    #TODO: remove this plotting or make helper_plots input
 
     for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
         fig = go.Figure()
@@ -2061,7 +2087,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             
             best_mean_corr = 0
             best_mean_rwave_shifted = mean_rwave_shifted_variations[0] #preassign
-            itera=0
+
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
                 #collect all correlation values for all channels:
@@ -2071,12 +2097,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                 mean_corr = np.mean(all_corr_values[0:10]) #[0:10]
                 #if mean corr is better than the previous one - save it
 
-                print('_____mean corr ALL', mean_corr, 'iter', itera)
-                itera += 1
-
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
-                    print('_____best mean corr', best_mean_corr)
                     best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
 
@@ -2089,27 +2111,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             best_affected_channels[m_or_g] = find_affected_by_similarity_score(best_affected_channels[m_or_g])
 
 
-            #TODO: del
-            #One more time calculate correlation of the best mean_rwave_shifted with all channels:
-
-            print('___best mean shifted', best_mean_rwave_shifted)
-
-            affected_channels_check = {}
-            affected_channels_check[m_or_g] = find_affected_by_correlation(best_mean_rwave_shifted, artif_per_ch)
-            all_corr_values = [abs(ch.corr_coef) for ch in affected_channels_check[m_or_g]]
-            # #get 10 highest correlations:
-            all_corr_values.sort(reverse=True)
-            mean_corr_check1 = np.mean(all_corr_values)
-
-            all_corr_values_mean = all_corr_values[:10].copy()
-            mean_corr_check_mean = np.mean(all_corr_values_mean)
-
-            print('_____best mean corr', best_mean_corr)
-
-            print('_____mean corr CHECK', mean_corr_check1)
-            print('_____mean corr MEAN', mean_corr_check_mean)
-
-
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2119,12 +2120,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
         ecg_ch_df['mean_rwave_shifted'] = best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
         ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
-
-        #TODO: delete this
-        #calculate mean_corr for best_affected_channels and for affected_channels:
-        all_corr_values = [abs(ch.corr_coef) for ch in best_affected_channels[m_or_g]]
-        mean_corr = np.mean(all_corr_values)
-        print('_____mean corr BEST__', mean_corr)
 
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
@@ -2141,8 +2136,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(best_affected_channels[m_or_g], artif_time_vector)
 
-    #print('_____FIXED HERE____: ', best_affected_channels['mag'])
-    #print('____WAS____: ', affected_channels['mag'])
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 

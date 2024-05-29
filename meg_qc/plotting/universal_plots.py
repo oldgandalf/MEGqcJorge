@@ -3209,12 +3209,6 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
     #New approach: sort by SIMILARITY SCORE, not by correlation coefficient:
     df_sorted = df.reindex(df[metric.lower()+'_similarity_score'].abs().sort_values(ascending=False).index)
 
-    #print out the name of the channels and the corr_coeff of this channel in the sorted list:
-    #TODO: remove this print
-    print('________Now print the sorted df. Number of raws: ', len(df_sorted))
-    print(df_sorted[['Name', metric.lower()+'_corr_coeff']])
-
-
     most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
     least_correlated = df_sorted.copy()[-int(len(df_sorted)/3):]
     middle_correlated = df_sorted.copy()[int(len(df_sorted)/3):-int(len(df_sorted)/3)]
