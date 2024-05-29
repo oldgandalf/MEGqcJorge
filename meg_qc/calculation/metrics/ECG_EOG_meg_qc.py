@@ -262,6 +262,10 @@ class Avg_artif:
         correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
     p_value : float
         p-value of the correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
+    amplitude_ratio: float
+        relation of the amplitude of a particular channel to all other channels
+    similarity_score: float
+        similarity score of the mean ecg/eog data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
     lobe: str
         which lobe his channel belongs to
     color: str
@@ -277,7 +281,7 @@ class Avg_artif:
 
     """
 
-    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, lobe: str = None, color: str = None):
+    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, amplitude_ratio: float = None, similarity_score: float = None, lobe: str = None, color: str = None):
         """Constructor"""
         
         self.name =  name
@@ -297,6 +301,8 @@ class Avg_artif:
         self.main_peak_magnitude_smoothed = main_peak_magnitude_smoothed
         self.corr_coef = corr_coef
         self.p_value = p_value
+        self.amplitude_ratio = amplitude_ratio
+        self.similarity_score = similarity_score
         self.lobe = lobe
         self.color = color
 
@@ -1134,6 +1140,37 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
     for ch in artif_per_ch:
         print('_____len(mean_rwave): ', len(mean_rwave), 'len(ch.artif_data): ', len(ch.artif_data))
         ch.corr_coef, ch.p_value = pearsonr(ch.artif_data_smoothed, mean_rwave)
+    
+    return artif_per_ch
+
+def rms_amplitude(wave):
+    '''
+    Function to calculate the Root Mean Square (RMS) amplitude
+    '''
+    return np.sqrt(np.mean(np.square(wave)))
+
+def find_affected_by_amplitude_ratio(artif_per_ch: list):
+
+    #RMS amplitude of all comparison waves
+
+    rms_all_comp_waves = np.mean([rms_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])
+    for ch in artif_per_ch:
+        ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
+
+        print('____', ch.name, 'amplitude_ratio: ', ch.amplitude_ratio)
+
+    return artif_per_ch
+
+def find_affected_by_similarity_score(artif_per_ch: list):
+
+    '''
+    Combine the two metrics like: similarity_score = correlation * amplitude_ratio
+    '''
+
+    for ch in artif_per_ch:
+        ch.similarity_score = abs(ch.corr_coef) * abs(ch.amplitude_ratio)
+
+        print('____', ch.name, 'similarity_score: ', ch.similarity_score)
     
     return artif_per_ch
 
@@ -2042,6 +2079,15 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
                     print('_____best mean corr', best_mean_corr)
                     best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
+
+
+            # Now that we found best correlation values, next step is to calculate magnitude ratios of every channel
+            # Then, ca;culate similarity value comprised of correlation and magnitude ratio:
+
+            best_affected_channels[m_or_g] = find_affected_by_amplitude_ratio(best_affected_channels[m_or_g])
+
+            best_affected_channels[m_or_g] = find_affected_by_similarity_score(best_affected_channels[m_or_g])
+
 
             #TODO: del
             #One more time calculate correlation of the best mean_rwave_shifted with all channels:
