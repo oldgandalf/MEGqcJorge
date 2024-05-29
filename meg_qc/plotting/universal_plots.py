@@ -27,7 +27,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, eog_corr_coeff = None, eog_pval = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -70,10 +70,18 @@ class MEG_channels:
             The correlation coefficient of the channel with ECG.
         ecg_pval : float
             The p-value of the correlation coefficient of the channel with ECG.
+        ecg_amplitude_ratio : float
+            relation of the amplitude of a particular channel to all other channels for ECG contamination.
+        ecg_similarity_score : float
+            similarity score of the mean ecg data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
         eog_corr_coeff : float
             The correlation coefficient of the channel with EOG.
         eog_pval : float
             The p-value of the correlation coefficient of the channel with EOG.
+        eog_amplitude_ratio : float
+            relation of the amplitude of a particular channel to all other channels for EOG contamination.
+        eog_similarity_score : float
+            similarity score of the mean eog data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
         ecg_time : float
             The time vector of the ECG artifact.
         eog_time : float
@@ -108,8 +116,12 @@ class MEG_channels:
         self.mean_eog_smoothed = mean_eog_smoothed
         self.ecg_corr_coeff = ecg_corr_coeff
         self.ecg_pval = ecg_pval
+        self.ecg_amplitude_ratio = ecg_amplitude_ratio
+        self.ecg_similarity_score = ecg_similarity_score
         self.eog_corr_coeff = eog_corr_coeff
         self.eog_pval = eog_pval
+        self.eog_amplitude_ratio = eog_amplitude_ratio
+        self.eog_similarity_score = eog_similarity_score
         self.ecg_time = ecg_time
         self.eog_time = eog_time
         self.muscle = muscle
@@ -125,8 +137,8 @@ class MEG_channels:
 
         """
 
-        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog, self.ecg_corr_coeff, self.ecg_pval, self.eog_corr_coeff, self.eog_pval, self.muscle, self.head]
-        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head']
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog, self.ecg_corr_coeff, self.ecg_pval, self.ecg_amplitude_ratio, self.ecg_similarity_score, self.eog_corr_coeff, self.eog_pval, self.eog_amplitude_ratio, self.eog_similarity_score, self.muscle, self.head]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'muscle', 'head']
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
@@ -140,8 +152,8 @@ class MEG_channels:
         data_dict = {}
         freqs = self.freq
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'eog_corr_coeff', 'eog_pval', 'Muscle', 'Head']):
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score','muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'Muscle', 'Head']):
             
             
             #adding psds/ecg/eog/etc over time or over freqs for plotting later:
@@ -190,6 +202,8 @@ class MEG_channels:
                 self.ecg_time = artif_time_vector
                 self.ecg_corr_coeff = artif_ch.corr_coef
                 self.ecg_pval = artif_ch.p_value
+                self.ecg_amplitude_ratio = artif_ch.amplitude_ratio
+                self.ecg_similarity_score = artif_ch.similarity_score
                 
     def add_eog_info(self, Avg_artif_list, artif_time_vector):
 
@@ -204,6 +218,8 @@ class MEG_channels:
                 self.eog_time = artif_time_vector
                 self.eog_corr_coeff = artif_ch.corr_coef
                 self.eog_pval = artif_ch.p_value
+                self.eog_amplitude_ratio = artif_ch.amplitude_ratio
+                self.eog_similarity_score = artif_ch.similarity_score
 
                 #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
                 # but artif_ch doesnt have this separation to ecg/eog. 
@@ -3184,15 +3200,14 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
 
     """
 
-    #sort by correlation coef. Take abs of the corr coeff, because the channels might be just flipped due to their location against magnetic field::
-    #artif_per_ch.sort(key=lambda x: abs(x.corr_coef), reverse=True)
-
     if metric.lower() != 'ecg' and metric.lower() != 'eog':
         print('Wrong metric in split_correlated_artifacts_into_3_groups_csv()')
 
+    #Sort in reverse order by an absolute value of the correlation coefficient:
+    #df_sorted = df.reindex(df[metric.lower()+'_corr_coeff'].abs().sort_values(ascending=False).index)
 
-    df_sorted = df.copy()    
-    df_sorted.sort_values(by = metric.lower()+'_corr_coeff') 
+    #New approach: sort by SIMILARITY SCORE, not by correlation coefficient:
+    df_sorted = df.reindex(df[metric.lower()+'_similarity_score'].abs().sort_values(ascending=False).index)
 
     most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
     least_correlated = df_sorted.copy()[-int(len(df_sorted)/3):]
@@ -3298,7 +3313,14 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
-def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
+def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plots: bool):
+
+    if shifted == 'shifted':
+        add_shifted_tit = 'shifted '
+        add_shifted_tit_ = '_shifted'
+    else:
+        add_shifted_tit = ''
+        add_shifted_tit_ = ''
 
     #if it s not the right ch kind in the file
     base_name = os.path.basename(f_path) #name of the final file
@@ -3309,7 +3331,7 @@ def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool)
     df = pd.read_csv(f_path, sep='\t')
 
     # Create a scatter plot
-    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines'))
+    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'+add_shifted_tit_], mode='lines'))
 
     # Set the plot's title and labels
     if 'recorded' in df['recorded_or_reconstructed'][0]:
@@ -3326,7 +3348,7 @@ def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool)
                 exponentformat = 'e'),
             yaxis_title='Signal amplitude, V',
             title={
-                'text': 'Mean data of the '+ which +' ' + ecg_or_eog.upper() + ' channel',
+                'text': 'Mean data of the '+add_shifted_tit + which +' ' + ecg_or_eog.upper() + ' channel',
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
@@ -3336,10 +3358,9 @@ def plot_mean_ecg_ch_data_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool)
     if verbose_plots is True:
         fig.show()
 
-    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ecg_ch_data', 'plotly', fig_order = 2)]
+    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data' + add_shifted_tit_, 'plotly', fig_order = 2)]
 
     return mean_ecg_ch_deriv
-
 
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
 
@@ -3494,7 +3515,7 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
             'xanchor': 'center',
             'yanchor': 'top'},
         xaxis_title='Correlation coefficient',
-        yaxis_title = 'P-value') 
+        yaxis_title = 'P-value')
     
     if verbose_plots is True:
         fig.show()

@@ -262,6 +262,10 @@ class Avg_artif:
         correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
     p_value : float
         p-value of the correlation coefficient between the ECG/EOG channels data and average data of this mag/grad channel
+    amplitude_ratio: float
+        relation of the amplitude of a particular channel to all other channels
+    similarity_score: float
+        similarity score of the mean ecg/eog data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
     lobe: str
         which lobe his channel belongs to
     color: str
@@ -277,7 +281,7 @@ class Avg_artif:
 
     """
 
-    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, lobe: str = None, color: str = None):
+    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, amplitude_ratio: float = None, similarity_score: float = None, lobe: str = None, color: str = None):
         """Constructor"""
         
         self.name =  name
@@ -297,6 +301,8 @@ class Avg_artif:
         self.main_peak_magnitude_smoothed = main_peak_magnitude_smoothed
         self.corr_coef = corr_coef
         self.p_value = p_value
+        self.amplitude_ratio = amplitude_ratio
+        self.similarity_score = similarity_score
         self.lobe = lobe
         self.color = color
 
@@ -1136,6 +1142,64 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
     
     return artif_per_ch
 
+def rms_amplitude(wave):
+    '''
+    Function to calculate the Root Mean Square (RMS) amplitude
+    '''
+    return np.sqrt(np.mean(np.square(wave)))
+
+def ptp_amplitude(wave):
+
+    #TODO: maybe here make not just max/min but actually find peaks and valleys and calculate the difference between them
+    #Like:
+
+    # Function to find the two most prominent peaks and valleys
+    # def prominent_peaks_and_valleys(wave):
+    #     # Find all peaks
+    #     peaks, _ = find_peaks(wave)
+
+    #     # Find all valleys (negative peaks)
+    #     valleys, _ = find_peaks(-wave)
+
+    #     # Sort peaks by their prominence (highest values first)
+    #     top_peaks = sorted(wave[peaks], reverse=True)[:2]
+
+    #     # Sort valleys by their prominence (lowest values first)
+    #     bottom_peaks = sorted(wave[valleys])[:2]
+
+    #     return top_peaks, bottom_peaks
+
+    # # Function to calculate peak-to-peak amplitude using the most prominent peaks and valleys
+    # def ptp_amplitude_prominent(wave):
+    #     top_peaks, bottom_peaks = prominent_peaks_and_valleys(wave)
+    #     if top_peaks and bottom_peaks:
+    #         return max(top_peaks) - min(bottom_peaks)
+    
+    return np.max(wave) - np.min(wave)
+
+def find_affected_by_amplitude_ratio(artif_per_ch: list):
+
+    #RMS amplitude of all comparison waves
+    #rms_all_comp_waves = np.mean([rms_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])
+    ptp_all_comp_waves = np.mean([ptp_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
+
+    for ch in artif_per_ch:
+        #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
+        ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
+
+    return artif_per_ch
+
+def find_affected_by_similarity_score(artif_per_ch: list):
+
+    '''
+    Combine the two metrics like: similarity_score = correlation * amplitude_ratio
+    '''
+
+    for ch in artif_per_ch:
+        ch.similarity_score = abs(ch.corr_coef) * abs(ch.amplitude_ratio)
+    
+    return artif_per_ch
+
 
 def split_correlated_artifacts_into_3_groups(artif_per_ch):
 
@@ -1827,12 +1891,12 @@ def find_t0_channels(artif_per_ch: list, tmin: float, tmax: float):
     return t0_channels
 
 
-def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
+def shift_mean_wave(mean_rwave: np.ndarray, ind_t0_channels: int, ind_t0_mean: int):
 
     """
     Shifts the mean ECG wave to align with the ECG artifacts found on meg channels.
-    np.roll is used to shift. meaning: foer example wjen shifte to the right: 
-    the end of array will be attached in the beginning to the leaft.
+    np.roll is used to shift. meaning: for example when shift to the right: 
+    the end of array will be attached in the beginning to the left.
     Usually ok, but it may cause issues if the array was originally very short or very strongly shifted, 
     then it may split the wave shape in half and the shifted wave will look completely unusable.
     Therefore, dont limit tmin and tmax too tight in config file (default is good). 
@@ -1854,7 +1918,7 @@ def shift_mean_wave(mean_rwave: np.ndarray, t0_channels: int, t0_mean: int):
     
     """
 
-    t0_shift = t0_channels - t0_mean
+    t0_shift = ind_t0_channels - ind_t0_mean
     mean_rwave_shifted = np.roll(mean_rwave, t0_shift)
 
     return mean_rwave_shifted
@@ -1899,13 +1963,26 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     t0_mean = find_t0_mean(mean_rwave)
     t0_time_mean = t[t0_mean]
 
-    print('t0_time_channels: ', t0_time_channels)
-    print('t0_time_mean: ', t0_time_mean)
+    print('___t0_time_channels: ', t0_time_channels)
+    print('___t0_time_mean: ', t0_time_mean)
 
     mean_rwave_shifted_variations = []
     for t0_m in t0_mean:
         mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))
     
+
+    #plot every variation with plotly:
+    #TODO: remove this plotting or make helper_plots input
+
+    for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter (x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+        fig.add_trace(go.Scatter (x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+        fig.add_vline(x=t0_time_channels, line_dash="dash", line_color="red", name='t0_channels')
+        fig.add_vline(x=t0_time_mean, line_dash="dash", line_color="blue", name='t0_mean')
+        fig.update_layout(title='Mean R wave shifted to align with the ECG artifacts found on meg channels')
+        fig.show()
+
     return mean_rwave_shifted_variations
 
 
@@ -1968,7 +2045,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
     ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
     ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
-    ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
 
     if mean_good is False:
         simple_metric_ECG = {'description': ecg_str}
@@ -1997,7 +2073,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         if use_method == 'mean_threshold':
             artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, ecg_params_internal)
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', ecg_params_internal, thresh_lvl_peakfinder, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
-            correlation_derivs = []
+
 
         elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
 
@@ -2010,22 +2086,31 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             mean_rwave_shifted_variations = align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax)
             
             best_mean_corr = 0
-            best_mean_shifted = mean_rwave_shifted_variations[0] #preassign
+            best_mean_rwave_shifted = mean_rwave_shifted_variations[0] #preassign
+
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
                 #collect all correlation values for all channels:
                 all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
-                # #get 10 highest correlations:
+                #get 10 highest correlations:
                 all_corr_values.sort(reverse=True)
-                all_corr_values = all_corr_values[:10]
-                mean_corr = np.mean(all_corr_values)
+                mean_corr = np.mean(all_corr_values[0:10]) #[0:10]
                 #if mean corr is better than the previous one - save it
 
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
-                    best_mean_shifted = mean_shifted
+                    best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
-            
+
+
+            # Now that we found best correlation values, next step is to calculate magnitude ratios of every channel
+            # Then, ca;culate similarity value comprised of correlation and magnitude ratio:
+
+            best_affected_channels[m_or_g] = find_affected_by_amplitude_ratio(best_affected_channels[m_or_g])
+
+            best_affected_channels[m_or_g] = find_affected_by_similarity_score(best_affected_channels[m_or_g])
+
+
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
@@ -2033,12 +2118,8 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation')
         
 
-        #calculate mean_corr for best_affected_channels and for affected_channels:
-        all_corr_values = [abs(ch.corr_coef) for ch in best_affected_channels[m_or_g]]
-        mean_corr = np.mean(all_corr_values)
-
-        all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
-        mean_corr = np.mean(all_corr_values)
+        ecg_ch_df['mean_rwave_shifted'] = best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+        ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
 
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
         avg_objects_ecg.append(avg_overall_obj)
@@ -2055,8 +2136,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             for lobe_ch in lobe_channels:
                 lobe_ch.add_ecg_info(best_affected_channels[m_or_g], artif_time_vector)
 
-    print('_____FIXED HERE____: ', best_affected_channels['mag'])
-    print('____WAS____: ', affected_channels['mag'])
 
     ecg_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'ECGs')
 
