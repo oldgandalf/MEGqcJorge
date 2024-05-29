@@ -3192,24 +3192,23 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
 
     #Sort in reverse order by an absolute value of the correlation coefficient:
     
-    df_sorted0 = df.copy()    
-    #df_sorted = df_sorted.sort_values(by=metric.lower()+'_corr_coeff', ascending=False)
+    #df_sorted0 = df.copy()    
 
-    # Create a series with the absolute values
-    abs_series = df_sorted0[metric.lower()+'_corr_coeff'].abs()
+    # # Create a series with the absolute values
+    # abs_series = df_sorted0[metric.lower()+'_corr_coeff'].abs()
 
-    # Sort this series in descending order
-    sorted_series = abs_series.sort_values(ascending=False)
+    # # Sort this series in descending order
+    # sorted_series = abs_series.sort_values(ascending=False)
 
-    # Use the index of the sorted series to sort the original dataframe
-    df_sorted = df_sorted0.loc[sorted_series.index]
+    # # Use the index of the sorted series to sort the original dataframe
+    # df_sorted = df_sorted0.loc[sorted_series.index]
 
-    #df_sorted = df.reindex(df[metric.lower()+'_corr_coeff'].abs().sort_values(ascending=False).index)
+    df_sorted = df.reindex(df[metric.lower()+'_corr_coeff'].abs().sort_values(ascending=False).index)
 
-    #print out the name of the channels and the corr_coeff og this cjannel in the sorted list:
-    for index, row in df_sorted.iterrows():
-        print('______', row['Name'], row[metric.lower()+'_corr_coeff'])
-
+    #print out the name of the channels and the corr_coeff of this channel in the sorted list:
+    print('________Now print the sorted df. Number of raws: ', len(df_sorted))
+    print(df_sorted[['Name', metric.lower()+'_corr_coeff']])
+    #print(df_sorted.head(10))
 
 
     most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
