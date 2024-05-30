@@ -3209,20 +3209,33 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
     #New approach: sort by SIMILARITY SCORE, not by correlation coefficient:
     df_sorted = df.reindex(df[metric.lower()+'_similarity_score'].abs().sort_values(ascending=False).index)
 
-    most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
-    least_correlated = df_sorted.copy()[-int(len(df_sorted)/3):]
-    middle_correlated = df_sorted.copy()[int(len(df_sorted)/3):-int(len(df_sorted)/3)]
+    total_rows = len(df_sorted)
+    third = total_rows // 3
+
+    most_correlated = df_sorted.copy()[:third]
+    middle_correlated = df_sorted.copy()[third:2*third]
+    least_correlated = df_sorted.copy()[2*third:]
 
     #get correlation values of all most correlated channels:
     all_most_correlated = most_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
     all_middle_correlated = middle_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
     all_least_correlated = least_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
 
+    print('___all_most_correlated', all_most_correlated)
+    print('___all_middle_correlated', all_middle_correlated)
+    print('___all_least_correlated', all_least_correlated)
+
+
     #find the correlation value of the last channel in the list of the most correlated channels:
     # this is needed for plotting correlation values, to know where to put separation rectangles.
     corr_val_of_last_most_correlated = max(all_most_correlated)
     corr_val_of_last_middle_correlated = max(all_middle_correlated)
     corr_val_of_last_least_correlated = max(all_least_correlated)
+
+    print('___corr_val_of_last_most_correlated', corr_val_of_last_most_correlated)
+    print('___corr_val_of_last_middle_correlated', corr_val_of_last_middle_correlated)
+    print('___corr_val_of_last_least_correlated', corr_val_of_last_least_correlated)
+
 
     return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
 
@@ -3498,10 +3511,20 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
 
     tit, _ = get_tit_and_unit(m_or_g)
 
+    # for index, row in df.iterrows():
+    #     traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
+
+
     for index, row in df.iterrows():
         traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
 
+    # Create the figure with the traces
     fig = go.Figure(data=traces)
+
+    # # Reverse the x and y axes
+    # fig.update_xaxes(autorange="reversed")
+    # fig.update_yaxes(autorange="reversed")
+
 
     fig.add_shape(type="rect", xref="x", yref="y", x0=0, y0=-0.1, x1=corr_val_of_last_least_correlated, y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
     fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)
