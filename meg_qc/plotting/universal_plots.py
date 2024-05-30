@@ -141,7 +141,7 @@ class MEG_channels:
         all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'muscle', 'head']
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])}, | ecg_corr_coeff {self.ecg_corr_coeff}, eog_corr_coeff {self.eog_corr_coeff}, ecg_amplitude_ratio {self.ecg_amplitude_ratio}, eog_amplitude_ratio {self.eog_amplitude_ratio}, ecg_similarity_score {self.ecg_similarity_score}, eog_similarity_score {self.eog_similarity_score})'
     
     def to_df(self):
 
