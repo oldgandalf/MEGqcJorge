@@ -1187,6 +1187,12 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
         #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
         ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
 
+    #scale all amplitude ratios from 0 to 1, where 1 is the highes over all channels:
+    max_amplitude_ratio = max([ch.amplitude_ratio for ch in artif_per_ch])
+    for ch in artif_per_ch:
+        ch.amplitude_ratio = ch.amplitude_ratio / max_amplitude_ratio
+        
+
     return artif_per_ch
 
 def find_affected_by_similarity_score(artif_per_ch: list):
