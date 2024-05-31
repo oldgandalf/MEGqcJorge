@@ -3215,16 +3215,11 @@ def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: st
     middle_affected = df_sorted.copy()[third:2*third]
     least_affected = df_sorted.copy()[2*third:]
 
-    #get correlation values of all most correlated channels:
-    vals_most = most_affected[metric.lower()+'_'+split_by].abs().tolist()
-    vals_middle = middle_affected[metric.lower()+'_'+split_by].abs().tolist()
-    vals_least = least_affected[metric.lower()+'_'+split_by].abs().tolist()
-
     #find the correlation value of the last channel in the list of the most correlated channels:
     # this is needed for plotting correlation values, to know where to put separation rectangles.
-    val_of_last_most_affected = max(vals_most)
-    val_of_last_middle_affected = max(vals_middle)
-    val_of_last_least_affected = max(vals_least)
+    val_of_last_most_affected = max(most_affected[metric.lower()+'_'+split_by].abs().tolist())
+    val_of_last_middle_affected = max(middle_affected[metric.lower()+'_'+split_by].abs().tolist())
+    val_of_last_least_affected = max(least_affected[metric.lower()+'_'+split_by].abs().tolist())
 
     return most_affected, middle_affected, least_affected, val_of_last_most_affected, val_of_last_middle_affected, val_of_last_least_affected
 
