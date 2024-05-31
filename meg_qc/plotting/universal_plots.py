@@ -3165,7 +3165,7 @@ def figure_x_axis(df, metric):
         return None
     
 
-def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
+def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: str = 'similarity_score' or 'corr_coeff'):
 
     """
     Collect artif_per_ch into 3 lists - for plotting:
@@ -3179,6 +3179,8 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
         Data frame with the data.
     metric : str
         The metric for which the x axis is needed. Can be 'ECG' or 'EOG'.
+    split_by : str
+        The metric by which the channels will be split. Can be 'corr_coeff' or 'similarity_score'.
 
     Returns
     -------
@@ -3201,43 +3203,30 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
     """
 
     if metric.lower() != 'ecg' and metric.lower() != 'eog':
-        print('Wrong metric in split_correlated_artifacts_into_3_groups_csv()')
+        print('Wrong metric in split_affected_into_3_groups_csv()')
 
-    #Sort in reverse order by an absolute value of the correlation coefficient:
-    #df_sorted = df.reindex(df[metric.lower()+'_corr_coeff'].abs().sort_values(ascending=False).index)
-
-    #New approach: sort by SIMILARITY SCORE, not by correlation coefficient:
-    df_sorted = df.reindex(df[metric.lower()+'_similarity_score'].abs().sort_values(ascending=False).index)
+    #sort the data frame by the correlation coefficient or similarity score and split into 3 groups:
+    df_sorted = df.reindex(df[metric.lower()+'_'+split_by].abs().sort_values(ascending=False).index)
 
     total_rows = len(df_sorted)
     third = total_rows // 3
 
-    most_correlated = df_sorted.copy()[:third]
-    middle_correlated = df_sorted.copy()[third:2*third]
-    least_correlated = df_sorted.copy()[2*third:]
+    most_affected = df_sorted.copy()[:third]
+    middle_affected = df_sorted.copy()[third:2*third]
+    least_affected = df_sorted.copy()[2*third:]
 
     #get correlation values of all most correlated channels:
-    all_most_correlated = most_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
-    all_middle_correlated = middle_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
-    all_least_correlated = least_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
-
-    print('___all_most_correlated', all_most_correlated)
-    print('___all_middle_correlated', all_middle_correlated)
-    print('___all_least_correlated', all_least_correlated)
-
+    vals_most = most_affected[metric.lower()+'_'+split_by].abs().tolist()
+    vals_middle = middle_affected[metric.lower()+'_'+split_by].abs().tolist()
+    vals_least = least_affected[metric.lower()+'_'+split_by].abs().tolist()
 
     #find the correlation value of the last channel in the list of the most correlated channels:
     # this is needed for plotting correlation values, to know where to put separation rectangles.
-    corr_val_of_last_most_correlated = max(all_most_correlated)
-    corr_val_of_last_middle_correlated = max(all_middle_correlated)
-    corr_val_of_last_least_correlated = max(all_least_correlated)
+    val_of_last_most_affected = max(vals_most)
+    val_of_last_middle_affected = max(vals_middle)
+    val_of_last_least_affected = max(vals_least)
 
-    print('___corr_val_of_last_most_correlated', corr_val_of_last_most_correlated)
-    print('___corr_val_of_last_middle_correlated', corr_val_of_last_middle_correlated)
-    print('___corr_val_of_last_least_correlated', corr_val_of_last_least_correlated)
-
-
-    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+    return most_affected, middle_affected, least_affected, val_of_last_most_affected, val_of_last_middle_affected, val_of_last_least_affected
 
 
 def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
@@ -3421,12 +3410,12 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
 
-    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+    most_similar, mid_similar, least_similar, _, _, _ = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='similarity_score')
 
     smoothed = True
-    fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
 
 
     #set the same Y axis limits for all 3 figures for clear comparison:
@@ -3505,7 +3494,7 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
-    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='corr_coeff')
 
     traces = []
 
