@@ -313,7 +313,7 @@ class Avg_artif:
         
         """
 
-        return 'Mean artifact for: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n - wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n - corr_coef: ' + str(self.corr_coef) + '\n - p_value: ' + str(self.p_value) + '\n - lobe: ' + str(self.lobe) + '\n - color: ' + str(self.color) + '\n - peak_loc_smoothed: ' + str(self.peak_loc_smoothed) + '\n - peak_magnitude_smoothed: ' + str(self.peak_magnitude_smoothed) + '\n - wave_shape_smoothed: ' + str(self.wave_shape_smoothed) + '\n - artif_over_threshold_smoothed: ' + str(self.artif_over_threshold_smoothed) + '\n - main_peak_loc_smoothed: ' + str(self.main_peak_loc_smoothed) + '\n - main_peak_magnitude_smoothed: ' + str(self.main_peak_magnitude_smoothed) + '\n'
+        return 'Mean artifact for: ' + str(self.name) + '\n - peak location inside artifact epoch: ' + str(self.peak_loc) + '\n - peak magnitude: ' + str(self.peak_magnitude) +'\n - main_peak_loc: '+ str(self.main_peak_loc) +'\n - main_peak_magnitude: '+str(self.main_peak_magnitude)+'\n - wave_shape: '+ str(self.wave_shape) + '\n - artifact magnitude over threshold: ' + str(self.artif_over_threshold)+ '\n - corr_coef: ' + str(self.corr_coef) + '\n - p_value: ' + str(self.p_value) + '\n - amplitude_ratio: ' + str(self.amplitude_ratio) + '\n - similarity_score: ' + str(self.similarity_score) + '\n - lobe: ' + str(self.lobe) + '\n - color: ' + str(self.color) + '\n - peak_loc_smoothed: ' + str(self.peak_loc_smoothed) + '\n - peak_magnitude_smoothed: ' + str(self.peak_magnitude_smoothed) + '\n - wave_shape_smoothed: ' + str(self.wave_shape_smoothed) + '\n - artif_over_threshold_smoothed: ' + str(self.artif_over_threshold_smoothed) + '\n - main_peak_loc_smoothed: ' + str(self.main_peak_loc_smoothed) + '\n - main_peak_magnitude_smoothed: ' + str(self.main_peak_magnitude_smoothed) + '\n'
     
 
 
@@ -1174,7 +1174,7 @@ def ptp_amplitude(wave):
     #     top_peaks, bottom_peaks = prominent_peaks_and_valleys(wave)
     #     if top_peaks and bottom_peaks:
     #         return max(top_peaks) - min(bottom_peaks)
-    
+
     return np.max(wave) - np.min(wave)
 
 def find_affected_by_amplitude_ratio(artif_per_ch: list):
@@ -1187,7 +1187,18 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
         #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
         ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
 
+
+    #TODO: tried to normalize here, but maybe we dont need that? cos without it will give raw results
+    #That can be used for in-betweeen-data sets camprarison
+
+    #scale all amplitude ratios from 0 to 1, where 1 is the highes over all channels 
+    # max_amplitude_ratio = max([ch.amplitude_ratio for ch in artif_per_ch])
+    # for ch in artif_per_ch:
+    #     ch.amplitude_ratio = ch.amplitude_ratio / max_amplitude_ratio
+
+
     return artif_per_ch
+
 
 def find_affected_by_similarity_score(artif_per_ch: list):
 
@@ -1197,7 +1208,7 @@ def find_affected_by_similarity_score(artif_per_ch: list):
 
     for ch in artif_per_ch:
         ch.similarity_score = abs(ch.corr_coef) * abs(ch.amplitude_ratio)
-    
+
     return artif_per_ch
 
 
@@ -2104,7 +2115,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
             # Now that we found best correlation values, next step is to calculate magnitude ratios of every channel
-            # Then, ca;culate similarity value comprised of correlation and magnitude ratio:
+            # Then, calculate similarity value comprised of correlation and magnitude ratio:
 
             best_affected_channels[m_or_g] = find_affected_by_amplitude_ratio(best_affected_channels[m_or_g])
 
@@ -2218,6 +2229,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     affected_channels={}
     bad_avg_str = {}
     avg_objects_eog=[]
+    best_affected_channels={}
     
     for m_or_g  in m_or_g_chosen:
 
@@ -2226,6 +2238,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         # eog_derivs += plot_ecg_eog_mne(eog_epochs, m_or_g, tmin, tmax)
 
         artif_per_ch = calculate_artifacts_on_channels(eog_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=eog_params_internal, gaussian_sigma=gaussian_sigma)
+
 
         #2 options:
         #1. find channels with peaks above threshold defined by average over all channels+multiplier set by user
@@ -2242,6 +2255,19 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
             bad_avg_str[m_or_g] = ''
             avg_overall_obj = None
 
+            #ADDED:
+
+            best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
+
+            # Now that we found best correlation values, next step is to calculate magnitude ratios of every channel
+            # Then, calculate similarity value comprised of correlation and magnitude ratio:
+
+            best_affected_channels[m_or_g] = find_affected_by_amplitude_ratio(best_affected_channels[m_or_g])
+
+            best_affected_channels[m_or_g] = find_affected_by_similarity_score(best_affected_channels[m_or_g])
+
+
+
         else:
             raise ValueError('use_method should be either mean_threshold or correlation')
         
@@ -2249,7 +2275,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         avg_objects_eog.append(avg_overall_obj)
 
 
-    simple_metric_EOG = make_simple_metric_ECG_EOG(affected_channels, m_or_g_chosen, 'EOG', bad_avg_str, use_method)
+    simple_metric_EOG = make_simple_metric_ECG_EOG(best_affected_channels, m_or_g_chosen, 'EOG', bad_avg_str, use_method)
 
     #Extract chs_by_lobe into a data frame
     artif_time_vector = np.round(np.arange(tmin, tmax+1/sfreq, 1/sfreq), 3) #yes, you need to round
@@ -2258,7 +2284,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     for m_or_g  in m_or_g_chosen:
         for lobe, lobe_channels in chs_by_lobe[m_or_g].items():
             for lobe_ch in lobe_channels:
-                lobe_ch.add_eog_info(affected_channels[m_or_g], artif_time_vector)
+                lobe_ch.add_eog_info(best_affected_channels[m_or_g], artif_time_vector)
 
     eog_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
 

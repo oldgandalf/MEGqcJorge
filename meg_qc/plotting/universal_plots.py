@@ -141,7 +141,7 @@ class MEG_channels:
         all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'muscle', 'head']
         non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
 
-        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])})'
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])}, | ecg_corr_coeff {self.ecg_corr_coeff}, eog_corr_coeff {self.eog_corr_coeff}, ecg_amplitude_ratio {self.ecg_amplitude_ratio}, eog_amplitude_ratio {self.eog_amplitude_ratio}, ecg_similarity_score {self.ecg_similarity_score}, eog_similarity_score {self.eog_similarity_score})'
     
     def to_df(self):
 
@@ -3165,7 +3165,7 @@ def figure_x_axis(df, metric):
         return None
     
 
-def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
+def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: str = 'similarity_score' or 'corr_coeff'):
 
     """
     Collect artif_per_ch into 3 lists - for plotting:
@@ -3179,6 +3179,8 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
         Data frame with the data.
     metric : str
         The metric for which the x axis is needed. Can be 'ECG' or 'EOG'.
+    split_by : str
+        The metric by which the channels will be split. Can be 'corr_coeff' or 'similarity_score'.
 
     Returns
     -------
@@ -3201,30 +3203,25 @@ def split_correlated_artifacts_into_3_groups_csv(df: pd.DataFrame, metric: str):
     """
 
     if metric.lower() != 'ecg' and metric.lower() != 'eog':
-        print('Wrong metric in split_correlated_artifacts_into_3_groups_csv()')
+        print('Wrong metric in split_affected_into_3_groups_csv()')
 
-    #Sort in reverse order by an absolute value of the correlation coefficient:
-    #df_sorted = df.reindex(df[metric.lower()+'_corr_coeff'].abs().sort_values(ascending=False).index)
+    #sort the data frame by the correlation coefficient or similarity score and split into 3 groups:
+    df_sorted = df.reindex(df[metric.lower()+'_'+split_by].abs().sort_values(ascending=False).index)
 
-    #New approach: sort by SIMILARITY SCORE, not by correlation coefficient:
-    df_sorted = df.reindex(df[metric.lower()+'_similarity_score'].abs().sort_values(ascending=False).index)
+    total_rows = len(df_sorted)
+    third = total_rows // 3
 
-    most_correlated = df_sorted.copy()[:int(len(df_sorted)/3)]
-    least_correlated = df_sorted.copy()[-int(len(df_sorted)/3):]
-    middle_correlated = df_sorted.copy()[int(len(df_sorted)/3):-int(len(df_sorted)/3)]
-
-    #get correlation values of all most correlated channels:
-    all_most_correlated = most_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
-    all_middle_correlated = middle_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
-    all_least_correlated = least_correlated[metric.lower()+'_corr_coeff'].abs().tolist()
+    most_affected = df_sorted.copy()[:third]
+    middle_affected = df_sorted.copy()[third:2*third]
+    least_affected = df_sorted.copy()[2*third:]
 
     #find the correlation value of the last channel in the list of the most correlated channels:
     # this is needed for plotting correlation values, to know where to put separation rectangles.
-    corr_val_of_last_most_correlated = max(all_most_correlated)
-    corr_val_of_last_middle_correlated = max(all_middle_correlated)
-    corr_val_of_last_least_correlated = max(all_least_correlated)
+    val_of_last_most_affected = max(most_affected[metric.lower()+'_'+split_by].abs().tolist())
+    val_of_last_middle_affected = max(middle_affected[metric.lower()+'_'+split_by].abs().tolist())
+    val_of_last_least_affected = max(least_affected[metric.lower()+'_'+split_by].abs().tolist())
 
-    return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
+    return most_affected, middle_affected, least_affected, val_of_last_most_affected, val_of_last_middle_affected, val_of_last_least_affected
 
 
 def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
@@ -3408,12 +3405,12 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
 
     artif_time_vector = figure_x_axis(df, metric=ecg_or_eog)
 
-    most_correlated, middle_correlated, least_correlated, _, _, _ = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+    most_similar, mid_similar, least_similar, _, _, _ = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='similarity_score')
 
     smoothed = True
-    fig_most_affected = plot_affected_channels_csv(most_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels_csv(middle_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_least_affected = plot_affected_channels_csv(least_correlated, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
 
 
     #set the same Y axis limits for all 3 figures for clear comparison:
@@ -3492,16 +3489,26 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
     df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
     df = df.drop(df[df['Type'] != m_or_g].index) #remove non needed channel kind
 
-    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_correlated_artifacts_into_3_groups_csv(df, ecg_or_eog)
+    _, _, _, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='corr_coeff')
 
     traces = []
 
     tit, _ = get_tit_and_unit(m_or_g)
 
+    # for index, row in df.iterrows():
+    #     traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
+
+
     for index, row in df.iterrows():
         traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
 
+    # Create the figure with the traces
     fig = go.Figure(data=traces)
+
+    # # Reverse the x and y axes
+    # fig.update_xaxes(autorange="reversed")
+    # fig.update_yaxes(autorange="reversed")
+
 
     fig.add_shape(type="rect", xref="x", yref="y", x0=0, y0=-0.1, x1=corr_val_of_last_least_correlated, y1=1.1, line=dict(color="Green", width=2), fillcolor="Green", opacity=0.1)
     fig.add_shape(type="rect", xref="x", yref="y", x0=corr_val_of_last_least_correlated, y0=-0.1, x1=corr_val_of_last_middle_correlated, y1=1.1, line=dict(color="Yellow", width=2), fillcolor="Yellow", opacity=0.1)

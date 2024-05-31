@@ -549,6 +549,7 @@ def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
         # If there are, drop the 'STD epoch' column
         df_fin = df_fin.drop(columns='EOG')
 
+
     df_deriv = [QC_derivative(content = df_fin, name = file_name_prefix, content_type = 'df')]
 
     return df_deriv
