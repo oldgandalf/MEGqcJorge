@@ -3310,14 +3310,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
-def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plots: bool):
-
-    if shifted == 'shifted':
-        add_shifted_tit = 'shifted '
-        add_shifted_tit_ = '_shifted'
-    else:
-        add_shifted_tit = ''
-        add_shifted_tit_ = ''
+def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
 
     #if it s not the right ch kind in the file
     base_name = os.path.basename(f_path) #name of the final file
@@ -3327,16 +3320,33 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plot
     # Load the data from the .tsv file into a DataFrame
     df = pd.read_csv(f_path, sep='\t')
 
-    # Create a scatter plot
-    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'+add_shifted_tit_], mode='lines'))
-
     # Set the plot's title and labels
     if 'recorded' in df['recorded_or_reconstructed'][0]:
-        which = 'recorded'
+        which = ' recorded'
     elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
-        which = 'reconstructed'
+        which = ' reconstructed'
     else:
         which = ''
+    
+    #TODO: can there be the case that no shift was done and column is empty? should not be...
+    # Create a scatter plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines', name='Shifted'))
+    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines', name='Original'))
+    fig.update_layout(
+        title='Mean' + which + ' R wave was shifted to align with the ECG artifacts found on MEG channels.',
+        annotations=[
+        dict(
+            x=0.5,
+            y=-0.25,
+            showarrow=False,
+            text="The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording.",
+            xref="paper",
+            yref="paper",
+            font=dict(size=12),
+            align="center"
+        )])
+
     
     fig.update_layout(
             xaxis_title='Time, s',
@@ -3345,7 +3355,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plot
                 exponentformat = 'e'),
             yaxis_title='Signal amplitude, V',
             title={
-                'text': 'Mean data of the '+add_shifted_tit + which +' ' + ecg_or_eog.upper() + ' channel',
+                'text': 'Original and shifted mean data of the ' + ecg_or_eog.upper() + ' channel',
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
@@ -3355,7 +3365,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plot
     if verbose_plots is True:
         fig.show()
 
-    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data' + add_shifted_tit_, 'plotly', fig_order = 2)]
+    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data', 'plotly', fig_order = 2)]
 
     return mean_ecg_ch_deriv
 
