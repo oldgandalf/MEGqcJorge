@@ -742,11 +742,15 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     """
     if f_path is not None:
         df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    else:
+        df = df
+
 
     fig = go.Figure()
     traces_lobes=[]
     traces_chs=[]
 
+    add_scores = False #in most cases except ecg/eog we dont add scores to the plot
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
     elif metric.lower() == 'ecg':
@@ -755,8 +759,14 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
         col_prefix = 'mean_eog_sec_'
     elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
         col_prefix = 'smoothed_mean_ecg_sec_'
+        #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
+        ecg_eog_scores = ['ecg_corr_coeff', 'ecg_amplitude_ratio', 'ecg_similarity_score']
+        add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
         col_prefix = 'smoothed_mean_eog_sec_'
+        #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
+        ecg_eog_scores = ['eog_corr_coeff', 'eog_amplitude_ratio', 'eog_similarity_score']
+        add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     else:
         print('No proper column in df! Check the metric!')
 
@@ -776,33 +786,42 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
             
             color = row['Lobe Color']
 
-            traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
-            #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
+            #traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
 
+            if add_scores:
+
+                traces_chs += [go.Scatter(
+                    x=x_values, 
+                    y=ch_data, 
+                    line=dict(color=color), 
+                    name=row['Name'],
+                    legendgroup=row['Lobe'],
+                    legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)),
+
+                    hovertemplate = (
+                    '<b>'+row['Name']+'</b><br>' +
+                    'time: %{x}, magnitude: %{y}<br>' +
+                    '<i>corr_coeff: </i>'+'{:.2f}'.format(row[ecg_eog_scores[0]])+'<br>' +
+                    '<i>amplitude_ratio: </i>'+'{:.2f}'.format(row[ecg_eog_scores[1]])+'<br>' +
+                    '<i>similarity_score: </i>'+'{:.2f}'.format(row[ecg_eog_scores[2]])+'<br>'
+                ))]
+            else:
+                traces_chs += [go.Scatter(
+                    x=x_values, 
+                    y=ch_data, 
+                    line=dict(color=color), 
+                    name=row['Name'],
+                    legendgroup=row['Lobe'],
+                    legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color))
+                )]
+               
     # sort traces in random order:
     # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-    downsampling_factor = 1  # replace with your desired downsampling factor
-    # Create a new list for the downsampled traces
-    traces_downsampled = []
-
-    # Go through each trace
-    for trace in traces:
-        # Downsample the x and y values of the trace
-        x_downsampled = trace['x'][::downsampling_factor]
-        y_downsampled = trace['y'][::downsampling_factor]
-
-        # Create a new trace with the downsampled values
-        trace_downsampled = go.Scatter(x=x_downsampled, y=y_downsampled, line=trace['line'], name=trace['name'], legendgroup=trace['legendgroup'], legendgrouptitle=trace['legendgrouptitle'])
-
-        # Add the downsampled trace to the list
-        traces_downsampled.append(trace_downsampled)
-
-
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
-    fig = go.Figure(data=traces_downsampled)
+    fig = go.Figure(data=traces)
 
     fig.update_layout(legend_traceorder='grouped', legend_tracegroupgap=12, legend_groupclick='toggleitem')
     #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
@@ -3300,6 +3319,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             'yanchor': 'top'})
         
     #in any case - add the threshold on the plot
+    #TODO: remove threshold?
     fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
 
     if flip_data is False and artifact_lvl is not None: 
