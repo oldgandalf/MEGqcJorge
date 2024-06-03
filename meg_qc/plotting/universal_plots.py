@@ -3321,9 +3321,9 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
     df = pd.read_csv(f_path, sep='\t')
 
     # Set the plot's title and labels
-    if 'recorded' in df['recorded_or_reconstructed'][0]:
+    if 'recorded' in df['recorded_or_reconstructed'][0].lower():
         which = ' recorded'
-    elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
+    elif 'reconstructed' in df['recorded_or_reconstructed'][0].lower():
         which = ' reconstructed'
     else:
         which = ''
@@ -3333,21 +3333,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
     fig = go.Figure()
     fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines', name='Shifted'))
     fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines', name='Original'))
-    fig.update_layout(
-        title='Mean' + which + ' R wave was shifted to align with the ECG artifacts found on MEG channels.',
-        annotations=[
-        dict(
-            x=0.5,
-            y=-0.25,
-            showarrow=False,
-            text="The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording.",
-            xref="paper",
-            yref="paper",
-            font=dict(size=12),
-            align="center"
-        )])
 
-    
     fig.update_layout(
             xaxis_title='Time, s',
             yaxis = dict(
@@ -3355,11 +3341,22 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, verbose_plots: bool):
                 exponentformat = 'e'),
             yaxis_title='Signal amplitude, V',
             title={
-                'text': 'Original and shifted mean data of the ' + ecg_or_eog.upper() + ' channel',
+                'text': 'Mean' + which + ' R wave was shifted to align with the ' + ecg_or_eog.upper() + ' signal found on MEG channels.',
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
-                'yanchor': 'top'})
+                'yanchor': 'top'},
+            annotations=[
+                dict(
+                x=0.5,
+                y=-0.25,
+                showarrow=False,
+                text="The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording.",
+                xref="paper",
+                yref="paper",
+                font=dict(size=12),
+                align="center"
+        )])
     
     # Show the plot
     if verbose_plots is True:
