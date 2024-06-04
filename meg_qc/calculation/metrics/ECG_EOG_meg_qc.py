@@ -1400,7 +1400,7 @@ def make_dict_global_ECG_EOG(channels_ranked: list, use_method: str):
     channels_ranked : list
         List of all affected channels
     use_method : str
-        Method used for detection of ECG/EOG artifacts: correlation, correlation_reconstructed or mean_threshold.
+        Method used for detection of ECG/EOG artifacts: correlation_recorded, correlation_reconstructed or mean_threshold.
         Depending in this the dictionary will have difefrent structure and descriptions.
         
     Returns
@@ -1418,7 +1418,7 @@ def make_dict_global_ECG_EOG(channels_ranked: list, use_method: str):
             metric_global_content = {'details':  affected_chs}
         else:
             metric_global_content = {'details':  None}
-    elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+    elif use_method == 'correlation_recorded' or use_method == 'correlation_reconstructed':
         all_affected_channels_sorted = sorted(channels_ranked, key=lambda ch: abs(ch.corr_coef), reverse=True)
         affected_chs = {ch.name: [ch.corr_coef, ch.p_value] for ch in all_affected_channels_sorted}
         metric_global_content = {'details':  affected_chs}
@@ -1446,7 +1446,7 @@ def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_o
     avg_artif_str : dict
         Dict with strings with info about the ECG/EOG channel and average artifact.
     use_method : str
-        Method used for detection of ECG/EOG artifacts: correlation, correlation_reconstructed or mean_threshold.
+        Method used for detection of ECG/EOG artifacts: correlation_recorded, correlation_reconstructed or mean_threshold.
         Depending in this the dictionary will have difefrent structure and descriptions.
         
     Returns
@@ -1462,7 +1462,7 @@ def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_o
 
     if use_method == 'mean_threshold':
         metric_global_description = 'Here presented the channels with average (over '+ecg_or_eog+' epochs of this channel) ' +ecg_or_eog+ ' artifact above the threshold. Channels are listed here in order from the highest to lowest artifact amplitude. Non affected channels are not listed. Threshld is defined as average '+ecg_or_eog+' artifact peak magnitude over al channels * norm_lvl. norm_lvl is defined in the config file. Channels are presented in the form: ch.name: ch.main_peak_magnitude.'
-    elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+    elif use_method == 'correlation_recorded' or use_method == 'correlation_reconstructed':
         metric_global_description = 'Here the channels are ranked by correlation coefficient between the channel and the averaged '+ecg_or_eog+' channel (recorded or reconstructed). Channels are listed here in order from the highest to lowest correlation coefficient. Channels are presented in the form: ch.name: [ch.corr_coef, ch.p_value]. Sign of the correlation value is kept to reflect the position of the channel toward the magnetic fild omly, it does not reflect the level of contamination (absolute value should be considered for this).'
 
     for m_or_g in m_or_g_chosen:
@@ -1588,7 +1588,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
         elif bad_ecg_eog[ecg_ch] == 'good': #ecg channel present and good - use it
             ecg_str = ecg_ch + ' is used to identify hearbeats. \n'
-            use_method = 'correlation'
+            use_method = 'correlation_recorded'
 
     else: #no ecg channel present
 
@@ -2086,7 +2086,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', ecg_params_internal, thresh_lvl_peakfinder, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
 
 
-        elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+        elif use_method == 'correlation_recorded' or use_method == 'correlation_reconstructed':
 
             #align the mean ECG wave with the ECG artifacts found on meg channels:
             #Find the correlation value between all variations of alignment the mean ECG wave with the ECG artifacts found on meg channels.
@@ -2126,7 +2126,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             avg_overall_obj = None
 
         else:
-            raise ValueError('use_method should be either mean_threshold or correlation')
+            raise ValueError('use_method should be either mean_threshold or correlation_recorded or correlation_reconstructed')
         
 
         ecg_ch_df['mean_rwave_shifted'] = best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
@@ -2214,12 +2214,26 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     event_indexes = event_indexes[0]
     print('___MEG_QC___: Blinks will be detected based on channel: ', eog_ch_name)
 
-    
-    use_method = 'correlation' #'mean_threshold' 
-    #no need to choose method in EOG because we cant reconstruct channel, always correlaion (if channel present) or fail.
+    use_method = 'correlation_recorded' #'mean_threshold' 
+    #no need to choose method in EOG because we cant reconstruct channel, always correlaion on recorded ch (if channel present) or fail.
 
+    
     mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
     eog_str += eog_str_checked
+
+
+    #save to df:
+    event_indexes_with_none = event_indexes + [None] * (len(eog_data) - len(event_indexes))
+    fs_with_none = [raw.info['sfreq']] + [None] * (len(eog_data) - 1)
+    
+    eog_ch_df = pd.DataFrame({
+        eog_ch_name: eog_data,
+        'event_indexes': event_indexes_with_none,
+        'fs': fs_with_none,
+        'mean_rwave': mean_blink.tolist() + [None] * (len(eog_data) - len(mean_blink)),
+        'mean_rwave_time': mean_rwave_time.tolist() + [None] * (len(eog_data) - len(mean_rwave_time)),
+        'recorded_or_reconstructed': [use_method] + [None] * (len(eog_data) - 1)})
+    
 
     if mean_good is False:
         simple_metric_EOG = {'description': eog_str}
@@ -2249,7 +2263,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'EOG', eog_params_internal, thresh_lvl_peakfinder, m_or_g=m_or_g, chs_by_lobe=chs_by_lobe[m_or_g], norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
             correlation_derivs = []
 
-        elif use_method == 'correlation' or use_method == 'correlation_reconstructed':
+        elif use_method == 'correlation_recorded' or use_method == 'correlation_reconstructed':
             
             affected_channels[m_or_g] = find_affected_by_correlation(mean_blink, artif_per_ch)
             bad_avg_str[m_or_g] = ''
@@ -2289,5 +2303,6 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     eog_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
 
     eog_derivs += eog_csv_deriv
+    eog_derivs += [QC_derivative(content=eog_ch_df, name='EOGchannel', content_type = 'df')]
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog

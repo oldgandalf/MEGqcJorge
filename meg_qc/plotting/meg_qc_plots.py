@@ -126,7 +126,6 @@ def selector(entities):
     # Define the categories and subcategories
     categories = modify_entity_name(entities)
     categories['m_or_g'] = ['_ALL_', 'mag', 'grad']
-    categories['verbose_plots'] = ['True', 'False']
 
     selected = {}
     # Create a list of values with category titles
@@ -154,9 +153,9 @@ def selector(entities):
     #Separate into selected_entities and plot_settings:
         selected_entities, plot_settings = {}, {}
         for key, values in selected.items():
-            if key != 'verbose_plots' and key != 'm_or_g':
+            if key != 'm_or_g':
                 selected_entities[key] = values
-            elif key == 'verbose_plots' or key == 'm_or_g':
+            elif key == 'm_or_g':
                 plot_settings[key] = values
             else:
                 print('___MEGqc__: wow, weird key in selector()! check it.')
@@ -174,9 +173,6 @@ def select_subcategory(subcategories, category_title, title="What would you like
         # Each tuple represents a checkbox item and should contain two elements:
         # A string that will be returned when the checkbox is selected.
         # A string that will be displayed as the label of the checkbox.
-
-    if category_title =='verbose_plots':
-        title = 'Do you want to see plots while running the script? (True) Or only after inside the report? (False)'
 
     results = checkboxlist_dialog(
         title=title,
@@ -225,7 +221,6 @@ def get_ds_entities(ds_paths):
 def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_settings):
 
     m_or_g_chosen = plot_settings['m_or_g'] 
-    verbose_plots = bool(plot_settings['verbose_plots'][0]=='True')
 
     raw = [] # TODO: if empty - we cant print raw information. 
     # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
@@ -244,13 +239,9 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
         
             for m_or_g in m_or_g_chosen:
 
-                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
-                fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
-                fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds', verbose_plots=verbose_plots)
-
-                #older versions, no color coding:
-                #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
-                #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds')
 
                 std_derivs += [fig_all_time] + [fig_std_epoch0] + [fig_std_epoch1] 
 
@@ -263,13 +254,9 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
         
             for m_or_g in m_or_g_chosen:
 
-                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
-                fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
-                fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks', verbose_plots=verbose_plots)
-
-                #older versions, no color coding:
-                #fig_std_epoch1 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='channels', verbose_plots=verbose_plots)] #old version
-                #fig_std_epoch2 += [boxplot_epochs(df_mg=df_std, ch_type=m_or_g, what_data='stds', x_axis_boxes='epochs', verbose_plots=verbose_plots)]
+                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
 
                 ptp_manual_derivs += [fig_all_time] + [fig_ptp_epoch0] + [fig_ptp_epoch1] 
 
@@ -281,36 +268,38 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             for m_or_g in m_or_g_chosen:
 
-                psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method, verbose_plots)
+                psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method)
 
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise', verbose_plots=verbose_plots)
+                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise')
 
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves', verbose_plots=verbose_plots)
+                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves')
 
         elif 'ECG' in metric.upper():
 
             ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
-            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path, verbose_plots)
+            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path)
 
-            ecg_derivs += plot_mean_rwave_csv(tsv_path, 'ECG', 'original', verbose_plots)
-
-            ecg_derivs += plot_mean_rwave_csv(tsv_path, 'ECG', 'shifted', verbose_plots)
+            ecg_derivs += plot_mean_rwave_csv(tsv_path, 'ECG')
 
             #TODO: add ch description like here? export it as separate report strings?
             #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
             for m_or_g in m_or_g_chosen:
-                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False, verbose_plots=verbose_plots)
-                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g, verbose_plots=verbose_plots)
+                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False)
+                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
         elif 'EOG' in metric.upper():
 
             eog_derivs += plot_sensors_3d_csv(tsv_path)
+
+            eog_derivs += plot_ECG_EOG_channel_csv(tsv_path)
+
+            eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
                 
             for m_or_g in m_or_g_chosen:
-                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False, verbose_plots=verbose_plots)
-                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g, verbose_plots=verbose_plots)
+                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
+                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
             
         elif 'MUSCLE' in metric.upper():
@@ -323,12 +312,12 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
 
 
-            muscle_derivs +=  plot_muscle_csv(tsv_path, m_or_g_decided[0], verbose_plots = verbose_plots)
+            muscle_derivs +=  plot_muscle_csv(tsv_path, m_or_g_decided[0])
 
             
         elif 'HEAD' in metric.upper():
                 
-            head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path, verbose_plots=verbose_plots)
+            head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path)
             # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
             # head_pos_derivs += head_pos_derivs2
             head_derivs += head_pos_derivs

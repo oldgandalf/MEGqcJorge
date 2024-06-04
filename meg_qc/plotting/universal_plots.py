@@ -742,11 +742,15 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     """
     if f_path is not None:
         df = pd.read_csv(f_path, sep='\t') #TODO: maybe remove reading csv and pass directly the df here?
+    else:
+        df = df
+
 
     fig = go.Figure()
     traces_lobes=[]
     traces_chs=[]
 
+    add_scores = False #in most cases except ecg/eog we dont add scores to the plot
     if metric.lower() == 'psd':
         col_prefix = 'PSD_Hz_'
     elif metric.lower() == 'ecg':
@@ -755,8 +759,14 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
         col_prefix = 'mean_eog_sec_'
     elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
         col_prefix = 'smoothed_mean_ecg_sec_'
+        #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
+        ecg_eog_scores = ['ecg_corr_coeff', 'ecg_amplitude_ratio', 'ecg_similarity_score']
+        add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
         col_prefix = 'smoothed_mean_eog_sec_'
+        #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
+        ecg_eog_scores = ['eog_corr_coeff', 'eog_amplitude_ratio', 'eog_similarity_score']
+        add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     else:
         print('No proper column in df! Check the metric!')
 
@@ -776,33 +786,43 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
             
             color = row['Lobe Color']
 
-            traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
-            #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
+            #traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
 
+            if add_scores:
+
+                traces_chs += [go.Scatter(
+                    x=x_values, 
+                    y=ch_data, 
+                    line=dict(color=color), 
+                    name=row['Name'],
+                    legendgroup=row['Lobe'],
+                    legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)),
+
+                    hovertemplate = (
+                    '<b>'+row['Name']+'</b><br>' +
+                    'time: %{x} s<br>'+
+                    'magnitude: %{y} T<br>' +
+                    '<i>corr_coeff: </i>'+'{:.2f}'.format(row[ecg_eog_scores[0]])+'<br>' +
+                    '<i>amplitude_ratio: </i>'+'{:.2f}'.format(row[ecg_eog_scores[1]])+'<br>' +
+                    '<i>similarity_score: </i>'+'{:.2f}'.format(row[ecg_eog_scores[2]])+'<br>'
+                ))]
+            else:
+                traces_chs += [go.Scatter(
+                    x=x_values, 
+                    y=ch_data, 
+                    line=dict(color=color), 
+                    name=row['Name'],
+                    legendgroup=row['Lobe'],
+                    legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color))
+                )]
+               
     # sort traces in random order:
     # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
-    downsampling_factor = 1  # replace with your desired downsampling factor
-    # Create a new list for the downsampled traces
-    traces_downsampled = []
-
-    # Go through each trace
-    for trace in traces:
-        # Downsample the x and y values of the trace
-        x_downsampled = trace['x'][::downsampling_factor]
-        y_downsampled = trace['y'][::downsampling_factor]
-
-        # Create a new trace with the downsampled values
-        trace_downsampled = go.Scatter(x=x_downsampled, y=y_downsampled, line=trace['line'], name=trace['name'], legendgroup=trace['legendgroup'], legendgrouptitle=trace['legendgrouptitle'])
-
-        # Add the downsampled trace to the list
-        traces_downsampled.append(trace_downsampled)
-
-
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
-    fig = go.Figure(data=traces_downsampled)
+    fig = go.Figure(data=traces)
 
     fig.update_layout(legend_traceorder='grouped', legend_tracegroupgap=12, legend_groupclick='toggleitem')
     #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
@@ -1339,7 +1359,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     return qc_derivative 
 
 
-def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str, verbose_plots: bool):
+def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_boxes: str):
 
     """
     Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
@@ -1358,8 +1378,6 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
         Type of the data: 'peaks' or 'stds'
     x_axis_boxes : str
         What to plot as boxplot on x axis: 'channels' or 'epochs'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -1431,15 +1449,13 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             'yanchor': 'top'},
         legend_title=legend_title)
         
-    if verbose_plots is True:
-        fig.show()
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return fig_deriv
 
 
-def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str):
 
     """
     Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
@@ -1458,8 +1474,6 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
         Type of the data: 'peaks' or 'stds'
     x_axis_boxes : str
         What to plot as boxplot on x axis: 'channels' or 'epochs'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -1541,15 +1555,13 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
             'yanchor': 'top'},)
         #legend_title=legend_title)
         
-    if verbose_plots is True:
-        fig.show()
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return fig_deriv
 
 
-def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
     Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
@@ -1566,8 +1578,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
         Type of the channel: 'mag', 'grad'
     what_data : str
         Type of the data: 'peaks' or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -1659,9 +1669,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             'xanchor': 'center',
             'yanchor': 'top'},)
         #legend_title=legend_title)
-        
-    if verbose_plots is True:
-        fig.show()
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
@@ -1762,7 +1769,7 @@ def figure_x_axis(df, metric):
         return None
 
 
-def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
+def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
 
     """
     Plotting Power Spectral Density for all channels based on dtaa from tsv file.
@@ -1775,8 +1782,6 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
         Path to the tsv file with PSD data.
     method : str
         'welch' or 'multitaper' or other method
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -1821,9 +1826,6 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
     #Add buttons to switch scale between log and linear:
     fig = add_log_buttons(fig)
-
-    if verbose_plots is True:
-        fig.show()
     
     fig_name='PSD_all_data_'+tit
 
@@ -1833,7 +1835,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str, verbose_plots: bool):
 
 
 
-def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str, verbose_plots : bool):
+def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str):
     
     """
     OLD VERSION, no csv 
@@ -1857,8 +1859,6 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
         extra title to be added to the plot
     fig_name : str
         name of the figure to be saved
-    verbose_plots : bool
-        True for showing plot in notebook.
     
     Returns
     -------
@@ -1893,8 +1893,6 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
     'xanchor': 'center',
     'yanchor': 'top'})
 
-    if verbose_plots is True:
-        fig.show()
 
     fig_name=fig_name+ch_type_tit
 
@@ -1922,12 +1920,12 @@ def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_rel
 
     noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
 
-    #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_', verbose_plots=verbose_plots)
+    #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
 
     return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
 
 
-def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str, verbose_plots : bool = False):
+def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str):
     
     """
     Plot pie chart representation of relative amplitude of each frequency band over the entire 
@@ -1945,8 +1943,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
         extra title to be added to the plot
     fig_name : str
         name of the figure to be saved
-    verbose_plots : bool
-        True for showing plot in notebook.
     
     Returns
     -------
@@ -2036,9 +2032,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     'xanchor': 'center',
     'yanchor': 'top'})
 
-    if verbose_plots is True:
-        fig.show()
-
     fig_name=fig_name+ch_type_tit
 
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
@@ -2083,7 +2076,7 @@ def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
     return chs_by_lobe
 
 
-def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str):
 
     """
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
@@ -2111,8 +2104,6 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
         'mag' or 'grad'
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2191,16 +2182,13 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
             'xanchor': 'center',
             'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
-    
-    if verbose_plots is True:
-        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
 
@@ -2228,8 +2216,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         'mag' or 'grad'
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2326,16 +2312,13 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             'xanchor': 'center',
             'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
-    
-    if verbose_plots is True:
-        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbose_plots: bool) -> QC_derivative:
+def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
 
     """
     Create representation of calculated data as multiple boxplots: 
@@ -2353,8 +2336,6 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbos
         title, like "Magnetometers", or "Gradiometers", 
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2410,16 +2391,13 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str, verbos
             'xanchor': 'center',
             'yanchor': 'top'},
         legend_title="Epochs")
-        
-    if verbose_plots is True:
-        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, what_data: str, verbose_plots: bool):
+def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, what_data: str):
 
     """
     Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
@@ -2436,8 +2414,6 @@ def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, wha
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2487,15 +2463,13 @@ def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, wha
         'xanchor': 'center',
         'yanchor': 'top'})
         
-    if verbose_plots is True:
-        fig.show()
 
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
 
-def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
 
     """
     Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
@@ -2514,8 +2488,6 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2587,15 +2559,13 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str, verbose_pl
         'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
     
-    if verbose_plots is True:
-        fig.show()
 
     description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
 
     return qc_derivative
 
-def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbose_plots: bool):
+def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
     Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
@@ -2614,8 +2584,6 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
         list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -2693,9 +2661,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
         'xanchor': 'center',
         'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
-    
-    if verbose_plots is True:
-        fig.show()
+
 
     description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
     qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
@@ -2703,7 +2669,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str, verbos
     return qc_derivative
 
 
-def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
+def plot_muscle_csv(f_path, m_or_g: str):
 
     """
     Plot the muscle events with the z-scores and the threshold.
@@ -2715,8 +2681,6 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
         Path to tsv file with data.
     m_or_g : str
         The channel type used for muscle detection: 'mag' or 'grad'.
-    verbose_plots : bool
-        True for showing plot in notebook.
     
         
     Returns
@@ -2746,9 +2710,6 @@ def plot_muscle_csv(f_path, m_or_g: str, verbose_plots: bool):
     'x':0.5,
     'xanchor': 'center',
     'yanchor': 'top'})
-
-    if verbose_plots is True:
-        fig.show()
 
     fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit, 'plotly')]
     
@@ -2780,7 +2741,7 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     
     return fig_derivs
 
-def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
+def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray):
 
     """ 
     Plot positions and rotations of the head.
@@ -2791,8 +2752,6 @@ def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
         Raw data.
     head_pos : np.ndarray
         Head positions and rotations.
-    verbose_plots : bool
-        True for showing plot in notebook.
         
     Returns
     -------
@@ -2809,8 +2768,8 @@ def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
     average_head_dev_t = mne.transforms.invert_transform(
         compute_average_dev_head_t(raw, head_pos))
 
-    if verbose_plots is False:
-        matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+
+    matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
     #plot using MNE:
     fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
@@ -2867,15 +2826,12 @@ def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
 
-    if verbose_plots is True:
-        fig1p.show()
-
     head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
     return head_derivs, head_pos_baselined
 
     
-def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
+def make_head_pos_plot_csv(f_path: str):
 
     """ 
     Plot positions and rotations of the head. On base of data from tsv file.
@@ -2884,8 +2840,6 @@ def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
     ----------
     f_path: str
         Path to a file with data.
-    verbose_plots : bool
-        True for showing plot in notebook.
         
     Returns
     -------
@@ -2927,15 +2881,12 @@ def make_head_pos_plot_csv(f_path: str, verbose_plots: bool):
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
     fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
 
-    if verbose_plots is True:
-        fig1p.show()
-
     head_derivs = [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
 
     return head_derivs, head_pos_baselined
 
 
-def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots: bool):
+def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray):
 
     """
 
@@ -2951,9 +2902,7 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray, verbose_plots:
     average_head_dev_t = mne.transforms.invert_transform(
         compute_average_dev_head_t(raw, head_pos))
     
-
-    if verbose_plots is False:
-        matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+    matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
     #plot using MNE:
     fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
@@ -3004,7 +2953,7 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
 #__________ECG/EOG__________#
 
-def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float, verbose_plots: bool):
+def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
 
     """
     Plot the ECG channel data and detected peaks
@@ -3019,8 +2968,6 @@ def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list,
         Name of the channel
     fs : int
         Sampling frequency of the data
-    verbose_plots : bool
-        If True, show the figure in the notebook
         
     Returns
     -------
@@ -3031,27 +2978,27 @@ def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list,
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name,
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks',
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
     fig.update_layout(xaxis_title='time, s', 
                 yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-                yaxis_title='Amplitude',
+                yaxis_title='Amplitude, V',
                 title={
                 'text': ch_name,
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'})
-    
-    if verbose_plots is True:
-        fig.show()
+
 
     return fig
 
 
-def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
+def plot_ECG_EOG_channel_csv(f_path):
 
     """
     Plot the ECG channel data and detected peaks
@@ -3066,8 +3013,6 @@ def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
         Name of the channel
     fs : int
         Sampling frequency of the data
-    verbose_plots : bool
-        If True, show the figure in the notebook
         
     Returns
     -------
@@ -3093,13 +3038,15 @@ def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name,
+                             hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peak',
+                             hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
     fig.update_layout(xaxis_title='time, s', 
                 yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-                yaxis_title='Amplitude',
+                yaxis_title='Amplitude, V',
                 title={
                 'text': ch_name,
                 'y':0.85,
@@ -3108,9 +3055,6 @@ def plot_ECG_EOG_channel_csv(f_path, verbose_plots: bool):
                 'yanchor': 'top'})
     
     ch_deriv = [QC_derivative(fig, ch_name, 'plotly', fig_order = 1)]
-
-    if verbose_plots is True:
-        fig.show()
 
     return ch_deriv
 
@@ -3224,7 +3168,7 @@ def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: st
     return most_affected, middle_affected, least_affected, val_of_last_most_affected, val_of_last_middle_affected, val_of_last_least_affected
 
 
-def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False, verbose_plots: bool = True):
+def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False):
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
@@ -3251,8 +3195,6 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
         And also for the reasons of visualization: the artifact amplitude is always positive.
     smoothed: bool
         Plot smoothed data (true) or nonrmal (false)
-    verbose_plots : bool
-        True for showing plot in notebook.
 
     Returns
     -------
@@ -3300,24 +3242,15 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             'yanchor': 'top'})
         
     #in any case - add the threshold on the plot
+    #TODO: remove threshold?
     fig.add_trace(go.Scatter(x=t, y=[(artifact_lvl)]*len(t), line=dict(color='red'), name='Thres=mean_peak/norm_lvl')) #add threshold level
 
     if flip_data is False and artifact_lvl is not None: 
         fig.add_trace(go.Scatter(x=t, y=[(-artifact_lvl)]*len(t), line=dict(color='black'), name='-Thres=mean_peak/norm_lvl'))
 
-    if verbose_plots is True:
-        fig.show()
-
     return fig
 
-def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plots: bool):
-
-    if shifted == 'shifted':
-        add_shifted_tit = 'shifted '
-        add_shifted_tit_ = '_shifted'
-    else:
-        add_shifted_tit = ''
-        add_shifted_tit_ = ''
+def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
 
     #if it s not the right ch kind in the file
     base_name = os.path.basename(f_path) #name of the final file
@@ -3327,39 +3260,60 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str, shifted: str, verbose_plot
     # Load the data from the .tsv file into a DataFrame
     df = pd.read_csv(f_path, sep='\t')
 
-    # Create a scatter plot
-    fig = go.Figure(data=go.Scatter(x=df['mean_rwave_time'], y=df['mean_rwave'+add_shifted_tit_], mode='lines'))
-
     # Set the plot's title and labels
-    if 'recorded' in df['recorded_or_reconstructed'][0]:
-        which = 'recorded'
-    elif 'reconstructed' in df['recorded_or_reconstructed'][0]:
-        which = 'reconstructed'
+    if 'recorded' in df['recorded_or_reconstructed'][0].lower():
+        which = ' recorded'
+    elif 'reconstructed' in df['recorded_or_reconstructed'][0].lower():
+        which = ' reconstructed'
     else:
         which = ''
     
+    #TODO: can there be the case that no shift was done and column is empty? should not be...
+    # Create a scatter plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines', name='Original '+ ecg_or_eog.upper(),
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    if ecg_or_eog.lower() == 'ecg':
+        fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines', name='Shifted ' + ecg_or_eog.upper(),
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+
+    if ecg_or_eog.lower() == 'ecg':
+        plot_tit = 'Mean' + which + ' R wave was shifted to align with the ' + ecg_or_eog.upper() + ' signal found on MEG channels.'
+        annot_text = "The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording."
+    elif ecg_or_eog.lower() == 'eog':
+        plot_tit = 'Mean' + which + ' blink signal'
+        annot_text = ""
+
     fig.update_layout(
             xaxis_title='Time, s',
             yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-            yaxis_title='Signal amplitude, V',
+            yaxis_title='Amplitude, V',
             title={
-                'text': 'Mean data of the '+add_shifted_tit + which +' ' + ecg_or_eog.upper() + ' channel',
+                'text': plot_tit,
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
-                'yanchor': 'top'})
-    
-    # Show the plot
-    if verbose_plots is True:
-        fig.show()
+                'yanchor': 'top'},
+            annotations=[
+                dict(
+                x=0.5,
+                y=-0.25,
+                showarrow=False,
+                text=annot_text,
+                xref="paper",
+                yref="paper",
+                font=dict(size=12),
+                align="center"
+        )])
 
-    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data' + add_shifted_tit_, 'plotly', fig_order = 2)]
+    mean_ecg_eog_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data', 'plotly', fig_order = 2)]
 
-    return mean_ecg_ch_deriv
+    return mean_ecg_eog_ch_deriv
 
-def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool, verbose_plots: bool):
+
+def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool):
 
     """
     This is the final function.
@@ -3377,8 +3331,6 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
         Type of the artifact: ECG or EOG
     flip_data : bool
         Use True or False, doesnt matter here. It is only passed into the plotting function and influences the threshold presentation. But since treshold is not used in correlation method, this is not used.
-    verbose_plots : bool
-        If True, plots are shown in the notebook.
 
     Returns
     -------
@@ -3408,9 +3360,9 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     most_similar, mid_similar, least_similar, _, _, _ = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='similarity_score')
 
     smoothed = True
-    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
-    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, verbose_plots=False)
+    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
+    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
+    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
 
 
     #set the same Y axis limits for all 3 figures for clear comparison:
@@ -3438,11 +3390,6 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     fig_most_affected.update_layout(yaxis_range=ylim)
     fig_middle_affected.update_layout(yaxis_range=ylim)
     fig_least_affected.update_layout(yaxis_range=ylim)
-
-    if verbose_plots is True:
-        fig_most_affected.show()
-        fig_middle_affected.show()
-        fig_least_affected.show()
     
     m_or_g_order = 0.1 if m_or_g == 'mag' else 0.2
     affected_derivs = []
@@ -3454,7 +3401,7 @@ def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog:
     return affected_derivs
 
 
-def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plots=False):
+def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str):
 
     """
     Plot correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
@@ -3468,8 +3415,6 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
         Either 'ECG' or 'EOG'.
     m_or_g : str
         Either 'mag' or 'grad'.
-    verbose_plots : bool
-        If True, plot will be displayed in a notebook.
 
     Returns
     -------
@@ -3523,9 +3468,6 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str, verbose_plot
             'yanchor': 'top'},
         xaxis_title='Correlation coefficient',
         yaxis_title = 'P-value')
-    
-    if verbose_plots is True:
-        fig.show()
 
     m_or_g_order = 0.1 if m_or_g == 'mag' else 0.2
     corr_derivs = [QC_derivative(fig, 'Corr_values_'+ecg_or_eog, 'plotly', description_for_user='Absolute value of the correlation coefficient is shown here. The sign would only represent the position of the channel towards magnetic field. <p>- Green: 33% of all channels that have the weakest correlation with mean ' +ecg_or_eog +'; </p> <p>- Yellow: 33% of all channels that have mild correlation with mean ' +ecg_or_eog +';</p> <p>- Red: 33% of all channels that have the stronges correlation with mean ' +ecg_or_eog +'. </p>', fig_order = 4+m_or_g_order)]
@@ -3554,8 +3496,6 @@ def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarr
         The start time of the epoch.
     tmax : float
         The end time of the epoch.
-    verbose_plots : bool
-        If True, the plot will be shown in the notebook.
 
     Returns
     -------
