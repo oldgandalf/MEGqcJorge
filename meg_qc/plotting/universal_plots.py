@@ -800,8 +800,8 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
 
                     hovertemplate = (
                     '<b>'+row['Name']+'</b><br>' +
-                    'time: %{x} <br>'+
-                    'magnitude: %{y}<br>' +
+                    'time: %{x} s<br>'+
+                    'magnitude: %{y} T<br>' +
                     '<i>corr_coeff: </i>'+'{:.2f}'.format(row[ecg_eog_scores[0]])+'<br>' +
                     '<i>amplitude_ratio: </i>'+'{:.2f}'.format(row[ecg_eog_scores[1]])+'<br>' +
                     '<i>similarity_score: </i>'+'{:.2f}'.format(row[ecg_eog_scores[2]])+'<br>'
@@ -2978,13 +2978,15 @@ def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list,
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name,
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks',
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
     fig.update_layout(xaxis_title='time, s', 
                 yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-                yaxis_title='Amplitude',
+                yaxis_title='Amplitude, V',
                 title={
                 'text': ch_name,
                 'y':0.85,
@@ -3036,13 +3038,15 @@ def plot_ECG_EOG_channel_csv(f_path):
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name + ' data'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks'))
+    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name,
+                             hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peak',
+                             hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
     fig.update_layout(xaxis_title='time, s', 
                 yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-                yaxis_title='Amplitude',
+                yaxis_title='Amplitude, V',
                 title={
                 'text': ch_name,
                 'y':0.85,
@@ -3267,17 +3271,27 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
     #TODO: can there be the case that no shift was done and column is empty? should not be...
     # Create a scatter plot
     fig = go.Figure()
-    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines', name='Shifted'))
-    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines', name='Original'))
+    fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave'], mode='lines', name='Original '+ ecg_or_eog.upper(),
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+    if ecg_or_eog.lower() == 'ecg':
+        fig.add_trace(go.Scatter (x=df['mean_rwave_time'], y=df['mean_rwave_shifted'], mode='lines', name='Shifted ' + ecg_or_eog.upper(),
+        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
+
+    if ecg_or_eog.lower() == 'ecg':
+        plot_tit = 'Mean' + which + ' R wave was shifted to align with the ' + ecg_or_eog.upper() + ' signal found on MEG channels.'
+        annot_text = "The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording."
+    elif ecg_or_eog.lower() == 'eog':
+        plot_tit = 'Mean' + which + ' blink signal'
+        annot_text = ""
 
     fig.update_layout(
             xaxis_title='Time, s',
             yaxis = dict(
                 showexponent = 'all',
                 exponentformat = 'e'),
-            yaxis_title='Signal amplitude, V',
+            yaxis_title='Amplitude, V',
             title={
-                'text': 'Mean' + which + ' R wave was shifted to align with the ' + ecg_or_eog.upper() + ' signal found on MEG channels.',
+                'text': plot_tit,
                 'y':0.85,
                 'x':0.5,
                 'xanchor': 'center',
@@ -3287,16 +3301,17 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
                 x=0.5,
                 y=-0.25,
                 showarrow=False,
-                text="The alignment is necessary for performing Pearson correlation between ECG signal found in each channel and reference mean signal of the ECG recording.",
+                text=annot_text,
                 xref="paper",
                 yref="paper",
                 font=dict(size=12),
                 align="center"
         )])
 
-    mean_ecg_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data', 'plotly', fig_order = 2)]
+    mean_ecg_eog_ch_deriv = [QC_derivative(fig, ecg_or_eog+'mean_ch_data', 'plotly', fig_order = 2)]
 
-    return mean_ecg_ch_deriv
+    return mean_ecg_eog_ch_deriv
+
 
 def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool):
 

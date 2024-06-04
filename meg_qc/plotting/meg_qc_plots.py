@@ -292,6 +292,10 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
         elif 'EOG' in metric.upper():
 
             eog_derivs += plot_sensors_3d_csv(tsv_path)
+
+            eog_derivs += plot_ECG_EOG_channel_csv(tsv_path)
+
+            eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
                 
             for m_or_g in m_or_g_chosen:
                 eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
