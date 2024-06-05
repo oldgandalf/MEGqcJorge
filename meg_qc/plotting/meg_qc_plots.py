@@ -287,7 +287,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             for m_or_g in m_or_g_chosen:
                 ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False)
-                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
+                #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
         elif 'EOG' in metric.upper():
 
@@ -299,7 +299,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 
             for m_or_g in m_or_g_chosen:
                 eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
-                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
+                #eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
             
         elif 'MUSCLE' in metric.upper():
