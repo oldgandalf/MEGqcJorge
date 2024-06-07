@@ -1179,10 +1179,12 @@ def ptp_amplitude(wave):
 
 def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
-    #RMS amplitude of all comparison waves
-    #rms_all_comp_waves = np.mean([rms_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])
+    #Find MEAN peak to peak amlitude over all waves we have:
     ptp_all_comp_waves = np.mean([ptp_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
 
+    # Find amplitude ratio for each channel: 
+    # dibvide the peak to peak amplitude of the channel by the MEAN peak to peak amplitude of all channels
+    # So we see which of the channles have higher amplutude than the average over all channels
     for ch in artif_per_ch:
         #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
         ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
