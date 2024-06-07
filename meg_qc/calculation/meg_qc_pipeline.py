@@ -84,25 +84,25 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-        print('_____BIDS data info___')
-        print(schema)
-        print(dataset)
-        print(type(dataset.derivatives))
+        # print('_____BIDS data info___')
+        # print(schema)
+        # print(dataset)
+        # print(type(dataset.derivatives))
 
-        print('___MEGqc___: ', schema)
-        print('___MEGqc___: ', schema.Artifact)
+        # print('___MEGqc___: ', schema)
+        # print('___MEGqc___: ', schema.Artifact)
 
-        print('___MEGqc___: ', dataset.files)
-        print('___MEGqc___: ', dataset.folders)
-        print('___MEGqc___: ', dataset.derivatives)
-        print('___MEGqc___: ', dataset.items())
-        print('___MEGqc___: ', dataset.keys())
-        print('___MEGqc___: ', dataset.code)
-        print('___MEGqc___: ', dataset.name)
+        # print('___MEGqc___: ', dataset.files)
+        # print('___MEGqc___: ', dataset.folders)
+        # print('___MEGqc___: ', dataset.derivatives)
+        # print('___MEGqc___: ', dataset.items())
+        # print('___MEGqc___: ', dataset.keys())
+        # print('___MEGqc___: ', dataset.code)
+        # print('___MEGqc___: ', dataset.name)
 
-        entities = dataset.query_entities()
-        print('___MEGqc___: ', 'entities', entities)
-        print('______')
+        # entities = dataset.query_entities()
+        # print('___MEGqc___: ', 'entities', entities)
+        # print('______')
 
         #return
 

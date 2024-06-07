@@ -1724,11 +1724,11 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
         ecg_str_checked = 'No expected wave shape was detected in the averaged event of '+ecg_or_eog+' channel.'
         print('___MEGqc___: ', ecg_str_checked)
 
-        return False, ecg_str_checked, np.empty((0, 0)), []
+        return False, ecg_str_checked, np.empty((0, 0)), np.empty((0, 0))
 
     mean_rwave = find_mean_rwave_blink(ecg_data, event_indexes, tmin, tmax, sfreq)  
 
-    mean_rwave_obj=Avg_artif(name='Mean_rwave',artif_data=mean_rwave)
+    mean_rwave_obj=Avg_artif(name='Mean_rwave', artif_data=mean_rwave)
 
     #detect peaks and wave for the average overall artifact:
     mean_rwave_obj.get_peaks_wave(max_n_peaks_allowed=max_n_peaks_allowed_for_avg, thresh_lvl_peakfinder=thresh_lvl_peakfinder)
@@ -1742,6 +1742,9 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
 
     if mean_rwave.size > 0:
         mean_rwave_time = np.linspace(tmin, tmax, len(mean_rwave))
+    else:
+        #empty array
+        mean_rwave_time = np.empty((0, 0))
 
     return mean_rwave_obj.wave_shape, ecg_str_checked, mean_rwave, mean_rwave_time
 
@@ -1987,14 +1990,14 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     #plot every variation with plotly:
     #TODO: remove this plotting or make helper_plots input
 
-    for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
-        fig = go.Figure()
-        fig.add_trace(go.Scatter (x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
-        fig.add_trace(go.Scatter (x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
-        fig.add_vline(x=t0_time_channels, line_dash="dash", line_color="red", name='t0_channels')
-        fig.add_vline(x=t0_time_mean, line_dash="dash", line_color="blue", name='t0_mean')
-        fig.update_layout(title='Mean R wave shifted to align with the ECG artifacts found on meg channels')
-        fig.show()
+    # for i, mean_rwave_shifted in enumerate(mean_rwave_shifted_variations):
+    #     fig = go.Figure()
+    #     fig.add_trace(go.Scatter (x=t, y=mean_rwave_shifted, mode='lines', name='mean_rwave_shifted'))
+    #     fig.add_trace(go.Scatter (x=t, y=mean_rwave, mode='lines', name='mean_rwave'))
+    #     fig.add_vline(x=t0_time_channels, line_dash="dash", line_color="red", name='t0_channels')
+    #     fig.add_vline(x=t0_time_mean, line_dash="dash", line_color="blue", name='t0_mean')
+    #     fig.update_layout(title='Mean R wave shifted to align with the ECG artifacts found on meg channels')
+    #     fig.show()
 
     return mean_rwave_shifted_variations
 
@@ -2071,11 +2074,13 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     for m_or_g  in m_or_g_chosen:
 
+
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
 
         # ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
         artif_per_ch = calculate_artifacts_on_channels(ecg_epochs, channels[m_or_g], chs_by_lobe=chs_by_lobe[m_or_g], thresh_lvl_peakfinder=thresh_lvl_peakfinder, tmin=tmin, tmax=tmax, params_internal=ecg_params_internal, gaussian_sigma=gaussian_sigma)
+
 
         #use_method = 'mean_threshold' 
 
@@ -2098,23 +2103,29 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
             mean_rwave_shifted_variations = align_mean_rwave(mean_rwave, artif_per_ch, tmin, tmax)
             
+            #preassign default value:
             best_mean_corr = 0
-            best_mean_rwave_shifted = mean_rwave_shifted_variations[0] #preassign
-
+            
             for mean_shifted in mean_rwave_shifted_variations:
                 affected_channels[m_or_g] = find_affected_by_correlation(mean_shifted, artif_per_ch)
+
+
                 #collect all correlation values for all channels:
                 all_corr_values = [abs(ch.corr_coef) for ch in affected_channels[m_or_g]]
                 #get 10 highest correlations:
                 all_corr_values.sort(reverse=True)
-                mean_corr = np.mean(all_corr_values[0:10]) #[0:10]
-                #if mean corr is better than the previous one - save it
-
+                print(all_corr_values)
+                mean_corr = np.nanmean(all_corr_values[0:10]) #[0:10]
+                #here use nanmean, not just nan, because in rare cases 
+                # pearson calculates nan which can mess up all further calculations.
+                # this can happen if all values of the mave are the same, flat channel 
+                # or if they contain naan values.
+                
+                #if mean corr is better than the previous one - save it:
                 if mean_corr > best_mean_corr:
                     best_mean_corr = mean_corr
                     best_mean_rwave_shifted = mean_shifted
                     best_affected_channels[m_or_g] = copy.deepcopy(affected_channels[m_or_g])
-
 
             # Now that we found best correlation values, next step is to calculate magnitude ratios of every channel
             # Then, calculate similarity value comprised of correlation and magnitude ratio:
@@ -2227,7 +2238,8 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     #save to df:
     event_indexes_with_none = event_indexes + [None] * (len(eog_data) - len(event_indexes))
     fs_with_none = [raw.info['sfreq']] + [None] * (len(eog_data) - 1)
-    
+
+
     eog_ch_df = pd.DataFrame({
         eog_ch_name: eog_data,
         'event_indexes': event_indexes_with_none,
