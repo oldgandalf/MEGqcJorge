@@ -1148,7 +1148,7 @@ def rms_amplitude(wave):
     '''
     return np.sqrt(np.mean(np.square(wave)))
 
-def ptp_amplitude(wave):
+def minmax_amplitude(wave):
 
     #TODO: maybe here make not just max/min but actually find peaks and valleys and calculate the difference between them
     #Like:
@@ -1180,14 +1180,14 @@ def ptp_amplitude(wave):
 def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
     #Find MEAN peak to peak amlitude over all waves we have:
-    ptp_all_comp_waves = np.mean([ptp_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
+    ptp_all_comp_waves = np.mean([minmax_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
 
     # Find amplitude ratio for each channel: 
     # dibvide the peak to peak amplitude of the channel by the MEAN peak to peak amplitude of all channels
     # So we see which of the channles have higher amplutude than the average over all channels
     for ch in artif_per_ch:
         #ch.amplitude_ratio = rms_amplitude(ch.artif_data_smoothed) / rms_all_comp_waves
-        ch.amplitude_ratio = ptp_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
+        ch.amplitude_ratio = minmax_amplitude(ch.artif_data_smoothed) / ptp_all_comp_waves
 
 
     #TODO: tried to normalize here, but maybe we dont need that? cos without it will give raw results
