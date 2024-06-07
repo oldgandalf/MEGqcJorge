@@ -405,19 +405,44 @@ def make_plots_meg_qc(ds_paths):
                 additional_str = None  # or additional_str = 'your_string'
                 desc = metric + additional_str if additional_str else metric
                 
-                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+
+                # We call query with entities that always must present + entities that might present, might not:
+                #This is how the call would look if we had all entities:
+                #tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+
+                entities = {
+                    'subj': sub,
+                    'suffix': 'meg',
+                    'extension': 'tsv',
+                    'return_type': 'filename',
+                    'desc': desc,
+                    'scope': 'derivatives',
+                }
+
+                if 'session' in chosen_entities and chosen_entities['session']:
+                    entities['session'] = chosen_entities['session']
+
+                if 'task' in chosen_entities and chosen_entities['task']:
+                    entities['task'] = chosen_entities['task']
+
+                if 'run' in chosen_entities and chosen_entities['run']:
+                    entities['run'] = chosen_entities['run']
+
 
                 if metric == 'PSDs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseGrad', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
-                
-                if metric == 'ECGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ECGchannel', scope='derivatives')))
+                    descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+                elif metric == 'ECGs':
+                    descriptions = ['ECGchannel', 'ECGs']
+                elif metric == 'EOGs':
+                    descriptions = ['EOGchannel', 'EOGs']
+                else:
+                    descriptions = [metric]
 
-                if metric == 'EOGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'EOGchannel', scope='derivatives')))
+                #Now call query and get the tsvs:
+                tsv_path = []
+                for desc in descriptions:
+                    entities['desc'] = desc
+                    tsv_path += sorted(list(dataset.query(**entities)))
 
                 tsvs_to_plot[metric] = tsv_path
 
@@ -487,6 +512,6 @@ def make_plots_meg_qc(ds_paths):
 
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
