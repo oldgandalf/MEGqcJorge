@@ -457,26 +457,27 @@ def make_plots_meg_qc(ds_paths):
             #and for each raw file create a report with all tsv files that match the entities of the raw file.
 
 
-            for sub_json in list_of_sub_jsons:
-                #First, loop over sub jsons - meaning over separate fif files belonging to the same subject:
+            for metric in tsvs_to_plot:
+                #Loop over calculated metrics:
 
-                #take everything in sub_json['name'] before '_meg.fif', it will contain all entities:
-                raw_bids_name = sub_json['name'].split('_meg.fif')[0]
+                tsv_paths_for_one_metric = []
 
-                for metric in tsvs_to_plot:
-                    #Second, loop over calculated metrics:
+                for tsv_path in tsvs_to_plot[metric]:
 
-                    tsv_paths_for_one_metric = []
+                    #get the last part of the path containig the file name:
+                    file_name = tsv_path.split('/')[-1]
 
-                    for tsv_path in tsvs_to_plot[metric]:
+                    #get the part of the file name that is the same as the raw file name, 
+                    #so everything before '_desc', will contain all entities:
+                    # (only derivatives have _desc in their name, raw should not):
+                    tsv_bids_name = file_name.split('_desc')[0]
 
-                        #get the last part of the path containig the file name:
-                        file_name = tsv_path.split('/')[-1]
+                    for sub_json in list_of_sub_jsons:
+                        #Loop over sub jsons - meaning over separate fif files belonging to the same subject:
 
-                        #get the part of the file name that is the same as the raw file name, 
-                        #so everything before '_desc', again will contain all entities:
-                        # (TODO: only derivatives have _desc in their name?):
-                        tsv_bids_name = file_name.split('_desc')[0]
+                        #take everything in sub_json['name'] before '_meg.fif', it will contain all entities:
+                        raw_bids_name = sub_json['name'].split('_meg.fif')[0]
+
 
                         #if the raw file name and the tsv file name match - we found the right tsv file for this raw file
                         # Now we can create a derivative on base of this TSV and save it in connection the right raw file:
