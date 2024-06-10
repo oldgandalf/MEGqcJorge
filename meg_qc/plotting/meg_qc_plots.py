@@ -389,9 +389,6 @@ def make_plots_meg_qc(ds_paths):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
-            print('______list_of_sub_jsons')
-            print(list_of_sub_jsons)
-
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
             except:
@@ -446,16 +443,30 @@ def make_plots_meg_qc(ds_paths):
 
                 tsvs_to_plot[metric] = tsv_path
 
-            print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
+            # tsvs_to_plot is a dictionary with metrics as keys and lists of tsv paths as values
+            # it contains ALL tsv files that have been created for CHOSEN in selector sub, ses, task, run and metrics.
 
             print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
             print('___MEGqc___: metric', metric)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
-            #We have raw files with particular entities, this raw file will be used to assign entities to final reports:
-            #in this line: meg_artifact = subject_folder.create_artifact(raw=sub_json)
-            #To make sure we assign the righ report (created on base of tsv files) to the right raw file, 
-            #we need to match the entities of the raw file with the entities of the tsv files.
+            #Next, we need to create a report of the metrcis and save it with the right bids entities. 
+            #Problem is, we cant just parce entities from tsv and put them in report name. 
+            # We need to create a report on base of raw file: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            #so we need to match the entities of the raw file with the entities of the tsv files. 
+            #and for each raw file create a report with all tsv files that match the entities of the raw file.
+
+            #1. Get entities of each of tsvs_to_plot, save them into a dictionary with the tsv path as key and entities as values.
+
+            #2. Loop: get entities of 1 json(raw).
+
+                #3. Match the entities of the json with the entities of the tsvs.
+
+                #4. If match: create a derivative from these tsvs.
+
+                #5. Save this derivative with the entities of the json.
+
+                
 
             #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
             # Get subject, session, task, and run from list_of_sub_jsons:
@@ -464,11 +475,41 @@ def make_plots_meg_qc(ds_paths):
 
                 # Extract sub, ses, task, and run from the name field of the JSON
                 #TODO: try to query entities instead?
+                #BECAUSE IT DOESNT MATCH! WE DONT HAVE RUN
 
-                match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', sub_json['name'])
-                if match is not None:
-                    json_sub, json_ses, json_task, json_run = match.groups()
-                    print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+                #check which of the following entities are contained in the json file name: sub, ses, task, run
+
+                json_entitities = []
+                for entity in ['sub', 'ses', 'task', 'run']:
+                    if entity in sub_json['name']:
+                        json_entitities.append(entity)
+
+                #now combine json_entitities in a string and find values for them in the json file name:
+                #then compare them with the values of the tsv file name:
+
+                match_str = ''
+                for entity in json_entitities:
+                    match_str += entity + '-(\w+)_'
+                #cut the underscore at the end:
+                match_str = match_str[:-1]
+                #shouldd look like:
+                #match_str = 'sub-(\w+)_ses-(\w+)_task-(\w+)_run-(\w+)'
+
+                
+                match_json = re.search(match_str, sub_json['name'])
+                                  
+                if match_json is not None:
+                    # json_sub = match.group(1) if match.group(1) else None
+                    # json_ses = match.group(2) if match.group(2) else None
+                    # json_task = match.group(3) if match.group(3) else None
+                    # json_run = match.group(4) if match.group(4) else None
+                    # print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+
+
+                    print('Its a match! json')
+
+                    for group in range(1, match_json.lastindex+1):
+                        print('___MEGqc___: ', 'group', group, match_json.group(group))
 
                     for metric in tsvs_to_plot:
                         #Second, loop over calculated metrics:
@@ -476,16 +517,53 @@ def make_plots_meg_qc(ds_paths):
                         tsv_paths_for_one_metric = []
 
                         for tsv_path in tsvs_to_plot[metric]:
+
+                            #get the last part of the path containig the file name:
+                            file_name = tsv_path.split('/')[-1]
+
+                            json_entitities = []
+                            for entity in ['sub', 'ses', 'task', 'run']:
+                                if entity in file_name:
+                                    json_entitities.append(entity)
+
                             # Extract sub, ses, task, and run from the tsv_paths
-                            print('___MEGqc___: ', 'tsv_path', tsv_path)
-                            match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
-                            if match is not None:
-                                tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
-                                print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
+                            print('___MEGqc___: ', 'tsv_path', file_name)
+                            #match = re.search(r'sub-(\w+)(_ses-(\w+))?(_task-(\w+))?(_run-(\w+))?', file_name)
+
+                            match_str = ''
+                            for entity in json_entitities:
+                                match_str += entity + '-(\w+)_'
+                            #cut the underscore at the end:
+                            match_str = match_str[:-1]
+                            #shouldd look like:
+                            #match_str = 'sub-(\w+)_ses-(\w+)_task-(\w+)_run-(\w+)'
+
+                            
+                            match_tsv = re.search(match_str, file_name)
+
+                            if match_tsv is not None:
+
+                                print('Its a match! tsv') #if we got here, it means that the entities in the json file name and in the tsv file name match.
+                                #print all match groups:
+
+                                for group in range(1, match_tsv.lastindex+1):
+                                    print('___MEGqc___: ', 'group', group, match_tsv.group(group))
+                                
+                                # tsv_sub = match.group(1) if match.group(1) else None
+                                # tsv_ses = match.group(2) if match.group(2) else None
+                                # tsv_task = match.group(3) if match.group(3) else None
+                                # tsv_run = match.group(4) if match.group(4) else None
+
+                                # print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
                     
                                 # Check if the entities match between the JSON and the TSV:
-                                if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
+                                #if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
                                     
+                                #check if all groups of match_json are same as of match_tsv:
+                                if match_json.groups() == match_tsv.groups():
+                                
+                                    print('___MEGqc___: ', 'Match found in the JSON file name!')
+
                                     tsv_paths_for_one_metric += [tsv_path]
                                     #collect all tsvs for the same metric in one list 
                                     #to later add them all to the same report for this metric
@@ -504,6 +582,9 @@ def make_plots_meg_qc(ds_paths):
 
                         #define method how the derivative will be written to file system:
                         meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
+                    
+                else:
+                    print('___MEGqc___: ', 'No match found in the JSON file name!')
 
     ancpbids.write_derivative(dataset, derivative) 
 
@@ -512,6 +593,6 @@ def make_plots_meg_qc(ds_paths):
 
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
