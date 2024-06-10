@@ -152,6 +152,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
 
             print('___MEGqc___: ', 'list_of_sub_jsons', list_of_sub_jsons)
+            print('One_name', list_of_sub_jsons[0]['name'])
+            for sub_json in list_of_sub_jsons:
+                print(sub_json['name'].split('_meg.fif')[0])
 
             #list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
 
