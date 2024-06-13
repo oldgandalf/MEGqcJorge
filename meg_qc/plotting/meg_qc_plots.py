@@ -482,14 +482,10 @@ def make_plots_meg_qc(ds_paths):
                         #if the raw file name and the tsv file name match - we found the right tsv file for this raw file
                         # Now we can create a derivative on base of this TSV and save it in connection the right raw file:
                         if raw_bids_name == tsv_bids_name:
-                            
-                            print('___MEGqc___: ', 'Match found!', 'raw_bids_name:', raw_bids_name, ', tsv_bids_name:', tsv_bids_name)
-
                             tsv_paths_for_one_metric += [tsv_path]
                             #collect all tsvs for the same metric in one list 
                             #to later add them all to the same report for this metric
                         else:
-                            print('___MEGqc___: ', 'No match found in the JSON file name!' , 'raw_bids_name:', raw_bids_name, ', tsv_bids_name:', tsv_bids_name)
                             #skip to next tsv file:
                             continue
 
@@ -516,6 +512,6 @@ def make_plots_meg_qc(ds_paths):
 
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
