@@ -67,6 +67,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     for dataset_path in ds_paths: #run over several data sets
 
+        print(dataset_path)
+
         try:
             dataset = ancpbids.load_dataset(dataset_path)
             schema = dataset.get_schema()
@@ -82,16 +84,12 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
 
-        # print('_____derivs here___')
+        # print('_____BIDS data info___')
+        # print(schema)
+        # print(dataset)
         # print(type(dataset.derivatives))
-        # deriv = dataset.derivatives.folders['Meg_QC'].files
-        # print(deriv)
-
-        # schema = dataset.get_schema()
-        # artifacts = filter(lambda m: isinstance(m, schema.Artifact), query(folder, scope=scope))
 
         # print('___MEGqc___: ', schema)
-        # print('___MEGqc___: ', "\n")
         # print('___MEGqc___: ', schema.Artifact)
 
         # print('___MEGqc___: ', dataset.files)
@@ -102,16 +100,18 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         # print('___MEGqc___: ', dataset.code)
         # print('___MEGqc___: ', dataset.name)
 
-        #return
-
         # entities = dataset.query_entities()
         # print('___MEGqc___: ', 'entities', entities)
+        # print('______')
+
+        #return
+
 
         # list_of_subs = list(entities["sub"])
         if all_qc_params['default']['subjects'][0] != 'all':
             list_of_subs = all_qc_params['default']['subjects']
         elif all_qc_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()["subject"]))
+            list_of_subs = sorted(list(dataset.query_entities()['subject']))
             print('___MEGqc___: ', 'list_of_subs', list_of_subs)
             if not list_of_subs:
                 print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs[0:1]: #[0:4]: 
+        for sid in list_of_subs[5:12]: #[0:4]: 
     
             print('___MEGqc___: ', 'Dataset: ', dataset_path)
             print('___MEGqc___: ', 'Take SID: ', sid)

@@ -287,7 +287,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
             for m_or_g in m_or_g_chosen:
                 ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False)
-                ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
+                #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
         elif 'EOG' in metric.upper():
 
@@ -299,7 +299,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 
             for m_or_g in m_or_g_chosen:
                 eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
-                eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
+                #eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
             
         elif 'MUSCLE' in metric.upper():
@@ -389,9 +389,6 @@ def make_plots_meg_qc(ds_paths):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
-            print('______list_of_sub_jsons')
-            print(list_of_sub_jsons)
-
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
             except:
@@ -405,66 +402,93 @@ def make_plots_meg_qc(ds_paths):
                 additional_str = None  # or additional_str = 'your_string'
                 desc = metric + additional_str if additional_str else metric
                 
-                tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+
+                # We call query with entities that always must present + entities that might present, might not:
+                #This is how the call would look if we had all entities:
+                #tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+
+                entities = {
+                    'subj': sub,
+                    'suffix': 'meg',
+                    'extension': 'tsv',
+                    'return_type': 'filename',
+                    'desc': desc,
+                    'scope': 'derivatives',
+                }
+
+                if 'session' in chosen_entities and chosen_entities['session']:
+                    entities['session'] = chosen_entities['session']
+
+                if 'task' in chosen_entities and chosen_entities['task']:
+                    entities['task'] = chosen_entities['task']
+
+                if 'run' in chosen_entities and chosen_entities['run']:
+                    entities['run'] = chosen_entities['run']
+
 
                 if metric == 'PSDs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDnoiseGrad', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesMag', scope='derivatives')))
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'PSDwavesGrad', scope='derivatives')))
-                
-                if metric == 'ECGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ECGchannel', scope='derivatives')))
+                    descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+                elif metric == 'ECGs':
+                    descriptions = ['ECGchannel', 'ECGs']
+                elif metric == 'EOGs':
+                    descriptions = ['EOGchannel', 'EOGs']
+                else:
+                    descriptions = [metric]
 
-                if metric == 'EOGs':
-                    tsv_path += sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'EOGchannel', scope='derivatives')))
+                #Now call query and get the tsvs:
+                tsv_path = []
+                for desc in descriptions:
+                    entities['desc'] = desc
+                    tsv_path += sorted(list(dataset.query(**entities)))
 
                 tsvs_to_plot[metric] = tsv_path
 
-            print('___MEGqc___: TSVs to plot: ', tsvs_to_plot)
+            # tsvs_to_plot is a dictionary with metrics as keys and lists of tsv paths as values
+            # it contains ALL tsv files that have been created for CHOSEN in selector sub, ses, task, run and metrics.
 
             print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
             print('___MEGqc___: metric', metric)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
-            #We have raw files with particular entities, this raw file will be used to assign entities to final reports:
-            #in this line: meg_artifact = subject_folder.create_artifact(raw=sub_json)
-            #To make sure we assign the righ report (created on base of tsv files) to the right raw file, 
-            #we need to match the entities of the raw file with the entities of the tsv files.
+            #Next, we need to create a report of the metrcis and save it with the right bids entities. 
+            #Problem is, we cant just parce entities from tsv and put them in report name. 
+            # We need to create a report on base of raw file: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            #so we need to match the entities of the raw file with the entities of the tsv files. 
+            #and for each raw file create a report with all tsv files that match the entities of the raw file.
 
-            #Among list_of_sub_jsons  find the one with the same subject, session, task, and run as the tsv file of tsv_paths:
-            # Get subject, session, task, and run from list_of_sub_jsons:
-            for sub_json in list_of_sub_jsons:
-                #First, loop over sub jsons - meaning over separate fif files belonging to the same subject:
 
-                # Extract sub, ses, task, and run from the name field of the JSON
-                #TODO: try to query entities instead?
+            for metric in tsvs_to_plot:
+                #Loop over calculated metrics:
 
-                match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', sub_json['name'])
-                if match is not None:
-                    json_sub, json_ses, json_task, json_run = match.groups()
-                    print('___MEGqc___: ', 'json_sub', json_sub, 'json_ses', json_ses, 'json_task', json_task, 'json_run', json_run)
+                tsv_paths_for_one_metric = []
 
-                    for metric in tsvs_to_plot:
-                        #Second, loop over calculated metrics:
+                for tsv_path in tsvs_to_plot[metric]:
 
-                        tsv_paths_for_one_metric = []
+                    #get the last part of the path containig the file name:
+                    file_name = tsv_path.split('/')[-1]
 
-                        for tsv_path in tsvs_to_plot[metric]:
-                            # Extract sub, ses, task, and run from the tsv_paths
-                            print('___MEGqc___: ', 'tsv_path', tsv_path)
-                            match = re.search(r'sub-(\d+)_ses-(\d+)_task-(\w+)_run-(\d+)', tsv_path)
-                            if match is not None:
-                                tsv_sub, tsv_ses, tsv_task, tsv_run = match.groups()
-                                print('___MEGqc___: ', 'tsv_sub', tsv_sub, 'tsv_ses', tsv_ses, 'tsv_task', tsv_task, 'tsv_run', tsv_run)
-                    
-                                # Check if the entities match between the JSON and the TSV:
-                                if tsv_sub == json_sub and tsv_ses == json_ses and tsv_task == json_task and tsv_run == json_run:
-                                    
-                                    tsv_paths_for_one_metric += [tsv_path]
-                                    #collect all tsvs for the same metric in one list 
-                                    #to later add them all to the same report for this metric
-                                    
+                    #get the part of the file name that is the same as the raw file name, 
+                    #so everything before '_desc', will contain all entities:
+                    # (only derivatives have _desc in their name, raw should not):
+                    tsv_bids_name = file_name.split('_desc')[0]
+
+                    for sub_json in list_of_sub_jsons:
+                        #Loop over sub jsons - meaning over separate fif files belonging to the same subject:
+
+                        #take everything in sub_json['name'] before '_meg.fif', it will contain all entities:
+                        raw_bids_name = sub_json['name'].split('_meg.fif')[0]
+
+
+                        #if the raw file name and the tsv file name match - we found the right tsv file for this raw file
+                        # Now we can create a derivative on base of this TSV and save it in connection the right raw file:
+                        if raw_bids_name == tsv_bids_name:
+                            tsv_paths_for_one_metric += [tsv_path]
+                            #collect all tsvs for the same metric in one list 
+                            #to later add them all to the same report for this metric
+                        else:
+                            #skip to next tsv file:
+                            continue
+
 
                         # Now prepare the derivative to be written:
                         meg_artifact = subject_folder.create_artifact(raw=sub_json)
@@ -479,7 +503,8 @@ def make_plots_meg_qc(ds_paths):
 
                         #define method how the derivative will be written to file system:
                         meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
-
+                    
+                        
     ancpbids.write_derivative(dataset, derivative) 
 
     return tsvs_to_plot
@@ -487,5 +512,6 @@ def make_plots_meg_qc(ds_paths):
 
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 

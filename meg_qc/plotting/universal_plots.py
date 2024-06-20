@@ -760,12 +760,12 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     elif metric.lower() == 'smoothed_ecg' or metric.lower() == 'ecg_smoothed':
         col_prefix = 'smoothed_mean_ecg_sec_'
         #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
-        ecg_eog_scores = ['ecg_corr_coeff', 'ecg_amplitude_ratio', 'ecg_similarity_score']
+        ecg_eog_scores = ['ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score']
         add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     elif metric.lower() == 'smoothed_eog' or metric.lower() == 'eog_smoothed':
         col_prefix = 'smoothed_mean_eog_sec_'
         #Need to check if all 3 columns exist in df, are not empty and are not none - if so, add scores to hovertemplate:
-        ecg_eog_scores = ['eog_corr_coeff', 'eog_amplitude_ratio', 'eog_similarity_score']
+        ecg_eog_scores = ['eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score']
         add_scores = all(column_name in df.columns and not df[column_name].empty and df[column_name].notnull().any() for column_name in ecg_eog_scores)
     else:
         print('No proper column in df! Check the metric!')
@@ -803,8 +803,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
                     'time: %{x} s<br>'+
                     'magnitude: %{y} T<br>' +
                     '<i>corr_coeff: </i>'+'{:.2f}'.format(row[ecg_eog_scores[0]])+'<br>' +
-                    '<i>amplitude_ratio: </i>'+'{:.2f}'.format(row[ecg_eog_scores[1]])+'<br>' +
-                    '<i>similarity_score: </i>'+'{:.2f}'.format(row[ecg_eog_scores[2]])+'<br>'
+                    '<i>p-value: </i>'+str(row[ecg_eog_scores[1]])+'<br>' +
+                    '<i>amplitude_ratio: </i>'+'{:.2f}'.format(row[ecg_eog_scores[2]])+'<br>' +
+                    '<i>similarity_score: </i>'+'{:.2f}'.format(row[ecg_eog_scores[3]])+'<br>'
                 ))]
             else:
                 traces_chs += [go.Scatter(
