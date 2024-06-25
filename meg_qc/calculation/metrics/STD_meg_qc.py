@@ -5,7 +5,6 @@ import copy
 from meg_qc.plotting.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
-from IPython.display import display
 
 # In[2]:
 
@@ -314,6 +313,8 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
         # Now check if the epoch has over 70% of noisy/flat channels in it -> it is a noisy/flat epoch:
         df_noisy_epoch.iloc[-1,ep] = df_noisy_epoch.iloc[:-3,ep].sum() > len(df_noisy_epoch)*percent_noisy_flat_allowed/100
         df_flat_epoch.iloc[-1,ep] = df_flat_epoch.iloc[:-3,ep].sum() > len(df_flat_epoch)*percent_noisy_flat_allowed/100
+
+        #TODO: these values above will be True or Fslsde. Pandas doesnt want to support them in the future, so look what they can be replaced with.
 
 
     # Create derivatives:
