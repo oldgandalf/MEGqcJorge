@@ -1979,9 +1979,6 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     t0_mean = find_t0_mean(mean_rwave)
     t0_time_mean = t[t0_mean]
 
-    print('___t0_time_channels: ', t0_time_channels)
-    print('___t0_time_mean: ', t0_time_mean)
-
     mean_rwave_shifted_variations = []
     for t0_m in t0_mean:
         mean_rwave_shifted_variations.append(shift_mean_wave(mean_rwave, t0_channels, t0_m))

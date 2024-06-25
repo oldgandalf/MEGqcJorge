@@ -129,7 +129,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs[5:12]: #[0:4]: 
+        for sid in list_of_subs: #[0:4]: 
     
             print('___MEGqc___: ', 'Dataset: ', dataset_path)
             print('___MEGqc___: ', 'Take SID: ', sid)
