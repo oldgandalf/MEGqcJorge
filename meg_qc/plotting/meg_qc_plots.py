@@ -130,7 +130,12 @@ def selector(entities):
     selected = {}
     # Create a list of values with category titles
     for key, values in categories.items():
-        subcategory = select_subcategory(categories[key], key)
+        subcategory, quit_selector = select_subcategory(categories[key], key)
+
+        if quit_selector: # if user clicked cancel - stop:
+            print('___MEGqc___: You clicked cancel. Please start over.')
+            return None, None
+        
         selected[key] = subcategory
 
 
@@ -139,10 +144,10 @@ def selector(entities):
 
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
-            subcategory = select_subcategory(categories[key], key, title)
+            subcategory, quit_selector = select_subcategory(categories[key], key, title)
             if not subcategory: # if nothing was chosen again - stop:
                 print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
-                return None
+                return None, None
             
         else:
             for item in values:
@@ -164,6 +169,8 @@ def selector(entities):
 
 
 def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
+
+    quit_selector = False
 
     # Create a list of values with category titles
     values = []
@@ -189,7 +196,10 @@ def select_subcategory(subcategories, category_title, title="What would you like
         })
     ).run()
 
-    return results
+    # Set quit_selector to True if the user clicked Cancel (results is None)
+    quit_selector = results is None
+
+    return results, quit_selector
 
 
 def get_ds_entities(ds_paths):
@@ -366,7 +376,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
 def make_plots_meg_qc(ds_paths):
 
-    for dataset_path in ds_paths[0:1]: #run over several data sets
+    for dataset_path in ds_paths: #run over several data sets
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
 
@@ -375,7 +385,11 @@ def make_plots_meg_qc(ds_paths):
 
         entities = get_ds_entities(ds_paths) 
 
+        print('_____All entities of ds:', entities)
+
         chosen_entities, plot_settings = selector(entities)
+        if not chosen_entities:
+            return
 
         #chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
