@@ -135,6 +135,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             print('___MEGqc___: ', 'Take SID: ', sid)
             
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+            calculation_folder = subject_folder.create_folder(name='calculation')
 
             list_of_fifs = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
             print('___MEGqc___: ', 'list_of_fifs', list_of_fifs)
@@ -312,10 +313,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #         #'with'command doesnt work in lambda
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
+                        meg_artifact = calculation_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
 
                         counter +=1
-                        print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
+                        print('___MEGqc___: ', 'counter of calculation_folder.create_artifact', counter)
 
                         meg_artifact.add_entity('desc', deriv.name) #file name
                         meg_artifact.suffix = 'meg'

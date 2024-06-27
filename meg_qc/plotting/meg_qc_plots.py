@@ -387,6 +387,7 @@ def make_plots_meg_qc(ds_paths):
             print('_____sub____', sub)
 
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
+            reports_folder = subject_folder.create_folder(name='reports')
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
             try:
@@ -452,7 +453,7 @@ def make_plots_meg_qc(ds_paths):
 
             #Next, we need to create a report of the metrcis and save it with the right bids entities. 
             #Problem is, we cant just parce entities from tsv and put them in report name. 
-            # We need to create a report on base of raw file: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            # We need to create a report on base of raw file: meg_artifact = reports_folder.create_artifact(raw=sub_json)
             #so we need to match the entities of the raw file with the entities of the tsv files. 
             #and for each raw file create a report with all tsv files that match the entities of the raw file.
 
@@ -491,7 +492,8 @@ def make_plots_meg_qc(ds_paths):
 
 
                         # Now prepare the derivative to be written:
-                        meg_artifact = subject_folder.create_artifact(raw=sub_json)
+                        meg_artifact = reports_folder.create_artifact(raw=sub_json)
+
                         meg_artifact.add_entity('desc', metric) #file name
                         meg_artifact.suffix = 'meg'
                         meg_artifact.extension = '.html'
