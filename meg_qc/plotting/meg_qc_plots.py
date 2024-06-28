@@ -130,7 +130,12 @@ def selector(entities):
     selected = {}
     # Create a list of values with category titles
     for key, values in categories.items():
-        subcategory = select_subcategory(categories[key], key)
+        subcategory, quit_selector = select_subcategory(categories[key], key)
+
+        if quit_selector: # if user clicked cancel - stop:
+            print('___MEGqc___: You clicked cancel. Please start over.')
+            return None, None
+        
         selected[key] = subcategory
 
 
@@ -139,10 +144,10 @@ def selector(entities):
 
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
-            subcategory = select_subcategory(categories[key], key, title)
+            subcategory, quit_selector = select_subcategory(categories[key], key, title)
             if not subcategory: # if nothing was chosen again - stop:
                 print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
-                return None
+                return None, None
             
         else:
             for item in values:
@@ -164,6 +169,8 @@ def selector(entities):
 
 
 def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
+
+    quit_selector = False
 
     # Create a list of values with category titles
     values = []
@@ -189,7 +196,10 @@ def select_subcategory(subcategories, category_title, title="What would you like
         })
     ).run()
 
-    return results
+    # Set quit_selector to True if the user clicked Cancel (results is None)
+    quit_selector = results is None
+
+    return results, quit_selector
 
 
 def get_ds_entities(ds_paths):
@@ -212,8 +222,8 @@ def get_ds_entities(ds_paths):
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-
-        entities = dataset.query_entities()
+        entities = dataset.query_entities(scope='derivatives')
+        #we only get entities of calculated derivatives here, not entire raw ds.
     
     return entities
 
@@ -366,7 +376,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
 def make_plots_meg_qc(ds_paths):
 
-    for dataset_path in ds_paths[0:1]: #run over several data sets
+    for dataset_path in ds_paths: #run over several data sets
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
 
@@ -375,7 +385,11 @@ def make_plots_meg_qc(ds_paths):
 
         entities = get_ds_entities(ds_paths) 
 
+        print('_____All entities of ds derivs:', entities)
+
         chosen_entities, plot_settings = selector(entities)
+        if not chosen_entities:
+            return
 
         #chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         
@@ -384,9 +398,8 @@ def make_plots_meg_qc(ds_paths):
 
         for sub in chosen_entities['subject']:
 
-            print('_____sub____', sub)
-
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
+            reports_folder = subject_folder.create_folder(name='reports')
             list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
 
             try:
@@ -447,42 +460,42 @@ def make_plots_meg_qc(ds_paths):
             # it contains ALL tsv files that have been created for CHOSEN in selector sub, ses, task, run and metrics.
 
             print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
-            print('___MEGqc___: metric', metric)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
             #Next, we need to create a report of the metrcis and save it with the right bids entities. 
             #Problem is, we cant just parce entities from tsv and put them in report name. 
-            # We need to create a report on base of raw file: meg_artifact = subject_folder.create_artifact(raw=sub_json)
+            # We need to create a report on base of raw file: meg_artifact = reports_folder.create_artifact(raw=sub_json)
             #so we need to match the entities of the raw file with the entities of the tsv files. 
             #and for each raw file create a report with all tsv files that match the entities of the raw file.
 
 
-            for metric in tsvs_to_plot:
+            for sub_json in list_of_sub_jsons:
+                #Loop over sub jsons - meaning over separate fif (raw) files belonging to the same subject:
+
+                for metric in tsvs_to_plot:
                 #Loop over calculated metrics:
+                    
+                    tsv_paths_for_one_metric_one_raw = []
 
-                tsv_paths_for_one_metric = []
+                    for tsv_path in tsvs_to_plot[metric]:
 
-                for tsv_path in tsvs_to_plot[metric]:
 
-                    #get the last part of the path containig the file name:
-                    file_name = tsv_path.split('/')[-1]
+                        #get the last part of the path containig the file name:
+                        file_name = tsv_path.split('/')[-1]
 
-                    #get the part of the file name that is the same as the raw file name, 
-                    #so everything before '_desc', will contain all entities:
-                    # (only derivatives have _desc in their name, raw should not):
-                    tsv_bids_name = file_name.split('_desc')[0]
-
-                    for sub_json in list_of_sub_jsons:
-                        #Loop over sub jsons - meaning over separate fif files belonging to the same subject:
+                        #get the part of the file name that is the same as the raw file name, 
+                        #so everything before '_desc', will contain all entities:
+                        # (only derivatives have _desc in their name, raw should not):
+                        tsv_bids_name = file_name.split('_desc')[0]
 
                         #take everything in sub_json['name'] before '_meg.fif', it will contain all entities:
                         raw_bids_name = sub_json['name'].split('_meg.fif')[0]
 
-
                         #if the raw file name and the tsv file name match - we found the right tsv file for this raw file
-                        # Now we can create a derivative on base of this TSV and save it in connection the right raw file:
+                        # Now we can create a derivative on base of this TSV and save it in connection with the right raw file:
                         if raw_bids_name == tsv_bids_name:
-                            tsv_paths_for_one_metric += [tsv_path]
+
+                            tsv_paths_for_one_metric_one_raw += [tsv_path]
                             #collect all tsvs for the same metric in one list 
                             #to later add them all to the same report for this metric
                         else:
@@ -490,19 +503,18 @@ def make_plots_meg_qc(ds_paths):
                             continue
 
 
-                        # Now prepare the derivative to be written:
-                        meg_artifact = subject_folder.create_artifact(raw=sub_json)
-                        meg_artifact.add_entity('desc', metric) #file name
-                        meg_artifact.suffix = 'meg'
-                        meg_artifact.extension = '.html'
+                    # Now prepare the derivative to be written:
+                    meg_artifact = reports_folder.create_artifact(raw=sub_json)
 
-                        
-                        # Here convert tsvs into figures and into html report:
-                        deriv = csv_to_html_report(metric, tsv_paths_for_one_metric, report_str_path, plot_settings)
-                        print('___MEGqc___: ', 'deriv', deriv)
+                    meg_artifact.add_entity('desc', metric) #file name
+                    meg_artifact.suffix = 'meg'
+                    meg_artifact.extension = '.html'
 
-                        #define method how the derivative will be written to file system:
-                        meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
+
+                    deriv = csv_to_html_report(metric, tsv_paths_for_one_metric_one_raw, report_str_path, plot_settings)
+
+                    #define method how the derivative will be written to file system:
+                    meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
                     
                         
     ancpbids.write_derivative(dataset, derivative) 
