@@ -1,56 +1,54 @@
-
 import mne
+from universal_plots import get_tit_and_unit 
 
-#from source.universal_plots import get_tit_and_unit #for terminal
-#from universal_plots import get_tit_and_unit #for notebook
 
-#To avaoid import issues just added the func here from universal_plots:
-#TODO: remover when import issues arer fixed.
+# def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
-def get_tit_and_unit(m_or_g: str, psd: bool = False):
+#     """
+#     Return title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
 
-    """
-    Return title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
+#     #To avaoid import issues just added the func here from universal_plots:
+#     #TODO: remove when import issues are fixed.
     
-    Parameters
-    ----------
-    m_or_g : str
-        'mag' or 'grad'
-    psd : bool, optional
-        True if psd plot, False if not, by default False
+#     Parameters
+#     ----------
+#     m_or_g : str
+#         'mag' or 'grad'
+#     psd : bool, optional
+#         True if psd plot, False if not, by default False
 
-    Returns
-    -------
-    m_or_g_tit : str
-        'Magnetometers' or 'Gradiometers'
-    unit : str
-        'T' or 'T/m' or 'T/Hz' or 'T/m / Hz'
+#     Returns
+#     -------
+#     m_or_g_tit : str
+#         'Magnetometers' or 'Gradiometers'
+#     unit : str
+#         'T' or 'T/m' or 'T/Hz' or 'T/m / Hz'
 
-    """
+#     """
     
-    if m_or_g=='mag':
-        m_or_g_tit='Magnetometers'
-        if psd is False:
-            unit='Tesla'
-        elif psd is True:
-            unit='Tesla/Hz'
-    elif m_or_g=='grad':
-        m_or_g_tit='Gradiometers'
-        if psd is False:
-            unit='Tesla/m'
-        elif psd is True:
-            unit='Tesla/m / Hz'
-    elif m_or_g == 'ECG':
-        m_or_g_tit = 'ECG channel'
-        unit = 'V'
-    elif m_or_g == 'EOG':
-        m_or_g_tit = 'EOG channel'
-        unit = 'V'
-    else:
-        m_or_g_tit = '?'
-        unit='?'
+#     if m_or_g=='mag':
+#         m_or_g_tit='Magnetometers'
+#         if psd is False:
+#             unit='Tesla'
+#         elif psd is True:
+#             unit='Tesla/Hz'
+#     elif m_or_g=='grad':
+#         m_or_g_tit='Gradiometers'
+#         if psd is False:
+#             unit='Tesla/m'
+#         elif psd is True:
+#             unit='Tesla/m / Hz'
+#     elif m_or_g == 'ECG':
+#         m_or_g_tit = 'ECG channel'
+#         unit = 'V'
+#     elif m_or_g == 'EOG':
+#         m_or_g_tit = 'EOG channel'
+#         unit = 'V'
+#     else:
+#         m_or_g_tit = '?'
+#         unit='?'
 
-    return m_or_g_tit, unit
+#     return m_or_g_tit, unit
 
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
@@ -292,7 +290,8 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     -------
     simple_metric : dict
         Dictionary with the whole simple metric to be converted into json in main script.
-        """
+        
+    """
     
     _, unit_mag = get_tit_and_unit('mag', psd=psd)
     _, unit_grad = get_tit_and_unit('grad', psd=psd)
