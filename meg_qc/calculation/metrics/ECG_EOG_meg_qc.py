@@ -1076,7 +1076,7 @@ def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
 
 def align_artif_data(ch_wave, mean_rwave):
 
-    '''
+    """
     Align the channel data with the mean R wave by finding the time shift that maximizes the correlation between the two signals.
     
     Parameters
@@ -1095,7 +1095,7 @@ def align_artif_data(ch_wave, mean_rwave):
     best_correlation : float
         Correlation between the mean R wave and the aligned channel data in the best alignment.
         
-    '''
+    """
 
     # Find peaks in mean_rwave
     peaks1, _ = find_peaks(mean_rwave)
@@ -1135,7 +1135,7 @@ def align_artif_data(ch_wave, mean_rwave):
 
 def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
-    """"
+    """
     Calculate correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
     Higher correlation coefficient means that the channel is more likely to be affected by ECG artifact.
 
@@ -1170,7 +1170,7 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
 
 def rms_amplitude(wave):
 
-    '''
+    """
     Function to calculate the Root Mean Square (RMS) amplitude
 
     Parameters
@@ -1182,14 +1182,14 @@ def rms_amplitude(wave):
     -------
     rms : float
         RMS amplitude of the waveform.
-    '''
+    """
 
     return np.sqrt(np.mean(np.square(wave)))
 
 
 def minmax_amplitude(wave):
 
-    '''
+    """
     Calculate the amplitude between the maximum and minimum values of the waveform.
     
     Parameters
@@ -1202,7 +1202,7 @@ def minmax_amplitude(wave):
     amplitude : float
         Amplitude between the maximum and minimum values of the waveform.
         
-    '''
+    """
 
     #TODO: maybe here make not just max/min but actually find peaks and valleys and calculate the difference between them
     #Like:
@@ -1233,7 +1233,7 @@ def minmax_amplitude(wave):
 
 def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
-    '''
+    """
     Calculate the amplitude ratio for each channel.
     
     Parameters
@@ -1246,7 +1246,7 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
     artif_per_ch : list
         List of channels with Avg_artif objects, now with assigned amplitude ratio.
         
-    '''
+    """
 
     #Find MEAN peak to peak amlitude over all waves we have:
     ptp_all_comp_waves = np.mean([minmax_amplitude(ch.artif_data_smoothed) for ch in artif_per_ch])    
@@ -1273,7 +1273,7 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
 def find_affected_by_similarity_score(artif_per_ch: list):
 
-    '''
+    """
     Combine the two metrics like: similarity_score = correlation * amplitude_ratio
 
     Parameters
@@ -1286,7 +1286,7 @@ def find_affected_by_similarity_score(artif_per_ch: list):
     artif_per_ch : list
         List of channels with Avg_artif objects, now with assigned similarity score.
 
-    '''
+    """
 
     for ch in artif_per_ch:
         ch.similarity_score = abs(ch.corr_coef) * abs(ch.amplitude_ratio)
