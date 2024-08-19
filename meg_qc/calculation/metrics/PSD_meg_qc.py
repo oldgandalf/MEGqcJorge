@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
 
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ from meg_qc.plotting.universal_html_report import simple_metric_basic
 
 # ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
 # COULDNT SPLIT  when filtered data - check with new psd version
-# In[42]:
+
 
 #%%
 def add_log_buttons(fig: go.Figure):
@@ -730,7 +729,7 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
 
 
-def get_ampl_of_noisy_freqs(channels, freqs, avg_psd, psds, m_or_g, helper_plots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple'):
+def get_ampl_of_noisy_freqs(channels: list, freqs: list, avg_psd: list, psds: list, m_or_g: str, helper_plots: bool = False, cut_noise_from_psd: bool = False, prominence_lvl_pos_avg: int = 50, prominence_lvl_pos_channels: int = 15, simple_or_complex: str = 'simple'):
 
     """
     Find noisy frequencies, their absolute and relative amplitude for averages over all channel (mag or grad) PSD and for each separate channel.
@@ -940,35 +939,33 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     sfreq=raw.info['sfreq']
     nfft=int(sfreq/psd_step_size)
     nperseg=int(sfreq/psd_step_size)
+
     return nfft, nperseg
 
 
-def assign_psds_to_channels(chs_by_lobe, freqs, psds):
+def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
 
     """
-
-    TODO: fix docstrings 
-    TODO: move as a part of MEG_channels in plots
-
 
     Assign std or ptp values of each epoch as list to each channel. 
     This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
     
     Parameters
     ----------
-    what_data : str
-        'peaks' for peak-to-peak amplitudes or 'stds'
     chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
-    
-        
+        dictionary with channel objects sorted by ch type and lobe
+    freqs : list
+        list of frequencies
+    psds : list
+        list of psd values for each channel
+
     Returns
     -------
     chs_by_lobe : dict
-        updated dictionary with channel objects sorted by lobe - with info about std or ptp of epochs.
+        dictionary with channel objects sorted by ch type and lobe with added psd and freq values
+
     """
+
     for lobe in chs_by_lobe:
         for ch_n, ch in enumerate(chs_by_lobe[lobe]):
             ch.psd = psds[ch_n]
