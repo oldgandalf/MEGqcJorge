@@ -114,6 +114,23 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
 
 def head_pos_to_csv(file_name_prefix, head_pos):
 
+    """
+    Save head positions to csv file for future visualization.
+
+    Parameters
+    ----------
+    file_name_prefix : str
+        Prefix for the file name. Example: 'Head'.
+    head_pos : np.ndarray
+        Head positions as numpy array calculated by MNE. The shape of the array should be (n_timepoints, 10).
+    
+    Returns 
+    -------
+    df_deriv : QC_derivative
+        QC derivative with head positions.
+    """
+
+
     names = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']
     df = pd.DataFrame(data=head_pos, columns=names)
 
@@ -217,6 +234,10 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw):
         Dictionary with simple metrics for head movement.
     head_str : str
         String with information about head positions if they were not calculated, otherwise empty. For report
+    df_head_pos : pandas dataframe
+        Head positions as pandas dataframe just for visualization and check.
+    head_pos : np.ndarray
+        Head positions and rotations calculated by MNE.
 
     """
 
