@@ -14,3 +14,6 @@
 docs/build/html/*
 dist/
 meg_qc/settings/*
+check/run_megqc.py
+check/settings.ini
+check/settings_internal.ini
