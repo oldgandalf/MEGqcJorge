@@ -249,14 +249,14 @@ def assign_channels_properties(raw: mne.io.Raw):
     """
     channels_objs={'mag': [], 'grad': []}
     if 'mag' in raw:
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_locs = raw.copy().pick('mag').info['chs']
         for ch in mag_locs:
             channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
     else:
         channels_objs['mag'] = []
 
     if 'grad' in raw:
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_locs = raw.copy().pick('grad').info['chs']
         for ch in grad_locs:
             channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
     else:
@@ -264,7 +264,7 @@ def assign_channels_properties(raw: mne.io.Raw):
 
 
     # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+    # mag_locs = raw.copy().pick('mag').info['chs']
     # mag_pos = [ch['loc'][:3] for ch in mag_locs]
     # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
 
@@ -1031,7 +1031,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
     if 'mag' in m_or_g_chosen:
 
         # Extract the sensor locations and names for magnetometers
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_locs = raw.copy().pick('mag').info['chs']
         mag_pos = [ch['loc'][:3] for ch in mag_locs]
         mag_names = [ch['ch_name'] for ch in mag_locs]
 
@@ -1063,7 +1063,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
     if 'grad' in m_or_g_chosen:
 
         # Extract the sensor locations and names for gradiometers
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_locs = raw.copy().pick('grad').info['chs']
         grad_pos = [ch['loc'][:3] for ch in grad_locs]
         grad_names = [ch['ch_name'] for ch in grad_locs]
 

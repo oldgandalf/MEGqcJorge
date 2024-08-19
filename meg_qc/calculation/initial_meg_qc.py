@@ -3,7 +3,7 @@ import configparser
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from meg_qc.plotting.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative, assign_channels_properties, sort_channel_by_lobe
+from meg_qc.plotting.universal_plots import QC_derivative, assign_channels_properties, sort_channel_by_lobe
 
 
 def get_all_config_params(config_file_name: str):
@@ -288,6 +288,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     if stim_channel is None:
         picks_stim = mne.pick_types(data.info, stim=True)
+
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
@@ -301,13 +302,14 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     except:
         print('___MEGqc___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
         events = mne.find_events(data, stim_channel=None, min_duration=event_dur)
-        #here for info pn how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
+        #here for info on how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
     n_events=len(events)
 
     if n_events == 0:
         print('___MEGqc___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         epochs_grad, epochs_mag = None, None
     else:
+        print('___MEGqc___: ', 'Events found:', n_events)
         epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
         epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
 
@@ -491,19 +493,22 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channel_by_lobe(channels_objs)
+    print('___MEGqc___: ', 'Channels sorted by lobe.')
 
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
 
     #Plot time series:
+    #TODO: we still plot time series here? Decide if we dont need it at all or if we need it in some other form.
+
     time_series_derivs = []
     
-    for m_or_g in m_or_g_chosen:
-        if default_settings['plot_interactive_time_series'] is True:
-            time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
-        if default_settings['plot_interactive_time_series_average'] is True:
-            time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
+    # for m_or_g in m_or_g_chosen:
+    #     if default_settings['plot_interactive_time_series'] is True:
+    #         time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
+    #     if default_settings['plot_interactive_time_series_average'] is True:
+    #         time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
 
     if time_series_derivs:
         time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
