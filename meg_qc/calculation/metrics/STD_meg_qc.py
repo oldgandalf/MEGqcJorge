@@ -281,6 +281,10 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     df_flat_epoch=df_std_with_mean.copy()
     df_epoch_vs_mean=df_std_with_mean.copy()
 
+    # Convert the entire DataFrame to boolean type to avoid type errors:
+    df_noisy_epoch = df_noisy_epoch.astype(bool)
+    df_flat_epoch = df_flat_epoch.astype(bool)
+
     # Now see which channles in epoch are over std_level or under -std_level:
     
     #append raws to df_noisy_epoch to hold the % of noisy/flat channels in each epoch:

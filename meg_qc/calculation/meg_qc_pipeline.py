@@ -67,7 +67,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     for dataset_path in ds_paths: #run over several data sets
 
-        print(dataset_path)
+        print('___DS path:', dataset_path)
 
         try:
             dataset = ancpbids.load_dataset(dataset_path)
