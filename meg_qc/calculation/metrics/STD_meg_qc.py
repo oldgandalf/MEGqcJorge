@@ -49,6 +49,7 @@ def RMSE(data_m_or_g: np.array or list):
 
     return rmse_np
 
+
 def get_std_all_data(data: mne.io.Raw, channels: list):
 
     """
@@ -63,8 +64,8 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
 
     Returns
     -------
-    dict
-        rmse/std for each channel
+    std_channels_named : dict
+        dictionary with channel names and their std values
     
     """
 
@@ -105,12 +106,13 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: li
 
     Returns
     -------
-    dict
+    noisy_channels : dict
         dictionary with channel names and their stds/ptp values. Noisy channels.
-    dict
+    flat_channels : dict
         dictionary with channel names and their stds/ptp values. Flat channels.
 
     """
+
     # Put all values in 1 array from the dictionsry:
     ptp_or_std_channels = np.array(list(ptp_or_std_channels_named.values()))
 
@@ -187,6 +189,23 @@ def get_big_small_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_lvl: in
 
     Parameters
     ----------
+    df_std : pd.DataFrame
+        dataframe with std/ptp values for each channel and each epoch
+    ch_type : str
+        channel type, 'mag', 'grad'
+    std_lvl : int
+        number of standard deviations to use as a threshold
+    std_or_ptp : str
+        'std' or 'ptp' - to use std or peak to peak amplitude as a metric
+    
+    Returns
+    -------
+
+    list
+        list of 3 MEG_QC_derivative objects: 
+        - df_std_per_epoch: std of data for each channel in each epoch
+        - big_std_per_epoch: True/False values for each channel in each epoch, True if this channel is over std_level
+        - Small_std_per_epoch: True/False values for each channel in each epoch, True if this channel is under std_level
 
     """
 
@@ -330,13 +349,8 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     return noisy_flat_epochs_derivs
 
 
+def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list[dict], small_std_with_value_all_data: list[dict], channels: list[str], std_or_ptp: str):
 
-# def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list, small_std_with_value_all_data: list, channels: list[str], std_or_ptp: str):
-
-from typing import List
-
-def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], std_or_ptp: str):
-    # rest of the code here
 
     """Make a dictionary with global metric content for std or ptp metric.
     Global means that it is calculated over entire data series, not over epochs.
@@ -356,7 +370,7 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
 
     Returns
     -------
-    dict
+    metric_global_content : dict
         dictionary with global metric content for std or ptp metric
     """
 
@@ -377,7 +391,8 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
 
 def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame, flat_epochs_df: pd.DataFrame):
 
-    """Make a dictionary with local metric content for std or ptp metric.
+    """
+    Make a dictionary with local metric content for std or ptp metric.
     Local means that it is calculated over epochs.
 
     Parameters
@@ -391,7 +406,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
     
     Returns
     -------
-    dict
+    metric_local_content : dict
         dictionary with local metric content for std or ptp metric
 
     """
@@ -423,9 +438,10 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
 
 
 
-def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: List[dict]):
+def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list[dict], small_std_with_value_all_data: list[dict], channels: list[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: list[dict]):
 
-    """Make simple metric for STD.
+    """
+    Make simple metric for STD.
 
     Parameters
     ----------
@@ -452,7 +468,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[
     dict
         dictionary with simple metric for std/ptp
 
-"""
+    """
 
     metric_global_name = 'STD_all_time_series'
     metric_global_description = 'Standard deviation of the data over the entire time series (not epoched): the number of noisy channels depends on the std of the data over all channels. The std level is set by the user. Noisy channel: The channel where std of data is higher than threshod: mean_over_all_stds_channel + (std_of_all_channels*std_lvl). Flat: where std of data is lower than threshld: mean_over_all_stds_channel - (std_of_all_channels*std_lvl). In details only the noisy/flat channels are listed. Channels with normal std are not listed. If needed to see all channels data - use csv files.'
@@ -505,15 +521,14 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
 
     Returns
     -------
-    list
+    derivs_std : list
         list of QC_derivative objects containing data frames and figures for std metric.
-    dict
+    simple_metric_std : dict
         dictionary with simple metric for std/ptp.
     std_str : str
         String with notes about STD for report
     
     """
-
 
     big_std_with_value_all_data = {}
     small_std_with_value_all_data = {}
@@ -541,7 +556,7 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
 
     if dict_epochs_mg['mag'] is not None or dict_epochs_mg['grad'] is not None: #If epochs are present
         for m_or_g in m_or_g_chosen:
-            df_std=get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
+            df_std = get_std_epochs(channels[m_or_g], dict_epochs_mg[m_or_g])
 
             chs_by_lobe_std[m_or_g] = assign_epoched_std_ptp_to_channels(what_data='stds', chs_by_lobe=chs_by_lobe_std[m_or_g], df_std_ptp=df_std) #for easier plotting
 
