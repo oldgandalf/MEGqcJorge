@@ -2,10 +2,10 @@ import sys
 import os
 import ancpbids
 import json
-import re
-
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
+from meg_qc.plotting.universal_plots import *
+from meg_qc.plotting.universal_html_report import make_joined_report_mne
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -15,12 +15,12 @@ gradparent_dir = os.path.dirname(parent_dir)
 sys.path.append(parent_dir)
 sys.path.append(gradparent_dir)
 
+# Bunch of relative imports for sphynx, read the doscs, etc, cos they all see the script from different places:
+
 # from meg_qc.source.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv
 # from meg_qc.source.universal_html_report import make_joined_report, make_joined_report_mne
 
 # from meg_qc.plotting.universal_plots import QC_derivative, boxplot_all_time_csv, boxplot_epoched_xaxis_channels_csv, boxplot_epoched_xaxis_epochs_csv, Plot_psd_csv, plot_artif_per_ch_correlated_lobes_csv, plot_correlation_csv, plot_muscle_csv, make_head_pos_plot_csv, plot_sensors_3d_csv, plot_pie_chart_freq_csv, plot_ECG_EOG_channel
-from meg_qc.plotting.universal_plots import *
-from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 
 
 # # Needed to import the modules without specifying the full path, for command line and jupyter notebook
@@ -36,15 +36,28 @@ from meg_qc.plotting.universal_html_report import make_joined_report, make_joine
 # sys.path.append('../../../meg_qc/source/')
 # sys.path.append('../../../../meg_qc/source/')
 
+# ____________________________
 
-# What we want: 
-# save in the right folders the csvs - to do in pipeline as qc derivative
-# get it from the folders fro plotting - over ancp bids again??
-# plot only whst is requested by user: separate config + if condition like in pipeline?
-# do we save them as derivatives to write over abcp bids as report as before?
+# How plotting in MEGqc works:
+# During calculation save in the right folders the csvs with data for plotting
+# During plotting step - read the csvs (find using ancpbids), plot them, save them as htmls in the right folders.
 
 
 def modify_entity_name(entities):
+
+    """
+    Modify the names of the entities to be comply with ancpbids.
+
+    Parameters
+    ----------
+    entities : dict
+        A dictionary of entities and their subcategories.
+    
+    Returns
+    -------
+    dict
+        A dictionary of entities and their subcategories with modified names
+    """
 
     #old_new_categories = {'description': 'METRIC', 'subject': 'SUBJECT', 'session': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
 
@@ -78,49 +91,28 @@ def modify_entity_name(entities):
 
     return entities
 
-def selector_one_window(entities):
-
-    ''' Old version where everything is done in 1 window'''
-
-    # Define the categories and subcategories
-    categories = modify_entity_name(entities)
-
-    # Create a list of values with category titles
-    values = []
-    for category, items in categories.items():
-        values.append((f'== {category} ==', f'== {category} =='))
-        for item in items:
-            values.append((str(item), str(item)))
-
-    results = checkboxlist_dialog(
-        title="Select metrics to plot:",
-        text="Select subcategories:",
-        values=values,
-        style=Style.from_dict({
-            'dialog': 'bg:#cdbbb3',
-            'button': 'bg:#bf99a4',
-            'checkbox': '#e8612c',
-            'dialog.body': 'bg:#a9cfd0',
-            'dialog shadow': 'bg:#c98982',
-            'frame.label': '#fcaca3',
-            'dialog.body label': '#fd8bb6',
-        })
-    ).run()
-
-    # Ignore the category titles
-    selected_subcategories = [result for result in results if not result.startswith('== ')]
-
-    print('___MEGqc___: You selected:', selected_subcategories)
-
-    return selected_subcategories
-
 
 def selector(entities):
 
-    '''
+    """
+    Creates a in-terminal visual selector for the user to choose the entities and settings for plotting.
+
     Loop over categories (keys)
     for every key use a subfunction that will create a selector for the subcategories.
-    '''
+
+    Parameters
+    ----------
+    entities : dict
+        A dictionary of entities and their subcategories.
+
+    Returns
+    -------
+    selected_entities : dict
+        A dictionary of selected entities.
+    plot_settings : dict
+        A dictionary of selected settings for plotting.
+
+    """
 
     # SELECT ENTITIES and SETTINGS
     # Define the categories and subcategories
@@ -170,6 +162,29 @@ def selector(entities):
 
 def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
 
+    """
+    Create a checkbox list dialog for the user to select subcategories.
+    Example:
+    sub: 009, 012, 013
+
+    Parameters
+    ----------
+    subcategories : list
+        A list of subcategories, such as: sub, ses, task, run, metric, mag/grad.
+    category_title : str
+        The title of the category.
+    title : str
+        The title of the checkbox list dialog, for visual.
+
+    Returns
+    -------
+    results : list
+        A list of selected subcategories.
+    quit_selector : bool
+        A boolean indicating whether the user clicked Cancel.
+
+    """
+
     quit_selector = False
 
     # Create a list of values with category titles
@@ -202,33 +217,65 @@ def select_subcategory(subcategories, category_title, title="What would you like
     return results, quit_selector
 
 
-def get_ds_entities(ds_paths):
+def get_ds_entities(dataset_path: str):
 
-    for dataset_path in ds_paths: #run over several data sets
+    """
+    Get the entities of the dataset using ancpbids.
 
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
+    Parameters
+    ----------
+    dataset_path : str
+        The path to the dataset.
+    
+    Returns
+    -------
+    entities : dict
+        A dictionary of entities and their subcategories.
 
-            #schema = dataset.get_schema() #Remove?
+    """
 
-        except:
-            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
+    try:
+        dataset = ancpbids.load_dataset(dataset_path)
 
-        #create derivatives folder first:
-        if os.path.isdir(dataset_path+'/derivatives')==False: 
-                os.mkdir(dataset_path+'/derivatives')
+    except:
+        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+        return
 
-        derivative = dataset.create_derivative(name="Meg_QC")
-        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+    #create derivatives folder first:
+    if os.path.isdir(dataset_path+'/derivatives')==False: 
+            os.mkdir(dataset_path+'/derivatives')
 
-        entities = dataset.query_entities(scope='derivatives')
-        #we only get entities of calculated derivatives here, not entire raw ds.
+    derivative = dataset.create_derivative(name="Meg_QC")
+    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+    entities = dataset.query_entities(scope='derivatives')
+    #we only get entities of calculated derivatives here, not entire raw ds.
     
     return entities
 
 
 def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_settings):
+
+    """
+    Create an HTML report from the CSV files.
+
+    Parameters
+    ----------
+    metric : str
+        The metric to be plotted.
+    tsv_paths : list
+        A list of paths to the CSV files.
+    report_str_path : str
+        The path to the JSON file containing the report strings.
+    plot_settings : dict
+        A dictionary of selected settings for plotting.
+    
+    Returns
+    -------
+    report_html_string : str
+        The HTML report as a string.
+    
+    """
 
     m_or_g_chosen = plot_settings['m_or_g'] 
 
@@ -374,16 +421,32 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     return report_html_string 
 
 
-def make_plots_meg_qc(ds_paths):
+def make_plots_meg_qc(ds_paths: list):
 
-    for dataset_path in ds_paths: #run over several data sets
+    """
+    Create plots for the MEG QC pipeline.
+
+    Parameters
+    ----------
+    ds_paths : list
+        A list of paths to the datasets.
+    
+    Returns
+    -------
+    tsvs_to_plot : dict
+        A dictionary of metrics and their corresponding TSV files.
+    
+    """
+
+    for dataset_path in ds_paths: #run over several data sets #TODO: do we even need several??
+
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
 
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-        entities = get_ds_entities(ds_paths) 
+        entities = get_ds_entities(dataset_path) 
 
         print('_____All entities of ds derivs:', entities)
 
@@ -391,7 +454,8 @@ def make_plots_meg_qc(ds_paths):
         if not chosen_entities:
             return
 
-        #chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+        # uncomment for debugging, so no need to start sekector every time
         
         print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
         print('___MEGqc___: CHOSEN settings: ', plot_settings)
@@ -417,8 +481,8 @@ def make_plots_meg_qc(ds_paths):
                 
 
                 # We call query with entities that always must present + entities that might present, might not:
-                #This is how the call would look if we had all entities:
-                #tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+                # This is how the call would look if we had all entities:
+                # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
 
                 entities = {
                     'subj': sub,
@@ -448,7 +512,7 @@ def make_plots_meg_qc(ds_paths):
                 else:
                     descriptions = [metric]
 
-                #Now call query and get the tsvs:
+                # Now call query and get the tsvs:
                 tsv_path = []
                 for desc in descriptions:
                     entities['desc'] = desc
@@ -502,7 +566,6 @@ def make_plots_meg_qc(ds_paths):
                             #skip to next tsv file:
                             continue
 
-
                     # Now prepare the derivative to be written:
                     meg_artifact = reports_folder.create_artifact(raw=sub_json)
 
@@ -510,20 +573,17 @@ def make_plots_meg_qc(ds_paths):
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-
                     deriv = csv_to_html_report(metric, tsv_paths_for_one_metric_one_raw, report_str_path, plot_settings)
 
                     #define method how the derivative will be written to file system:
                     meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
                     
-                        
     ancpbids.write_derivative(dataset, derivative) 
 
     return tsvs_to_plot
 
-
+# ____________________________
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
 tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
-
