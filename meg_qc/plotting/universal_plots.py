@@ -1277,13 +1277,10 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     #if there are no lobes in df - skip this plot:
 
-    # Convert column names to lowercase
-    df.columns = df.columns.str.lower()
-
-    if 'lobe' not in df.columns:
+    if 'Lobe' not in df.columns:
         return []
     
-    unique_lobes = df['lobe'].unique().tolist()
+    unique_lobes = df['Lobe'].unique().tolist()
 
     lobes_dict={}
     for lobe in unique_lobes:
@@ -1940,12 +1937,8 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         Path to the tsv file with pie chart data
     m_or_g : str
         'mag' or 'grad'
-    bands_names : list
-        list of names of frequency bands
-    fig_tit : str
-        extra title to be added to the plot
-    fig_name : str
-        name of the figure to be saved
+    noise_or_waves: str
+        do we plot SNR or brain waves percentage (alpha, beta, etc)
     
     Returns
     -------
@@ -2321,7 +2314,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     return qc_derivative
 
 
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
+def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str):
 
     """
     Create representation of calculated data as multiple boxplots: 
@@ -2342,8 +2335,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
 
     Returns
     -------
-    fig : go.Figure
-        plottly figure
+    QC_derivative
+        QC_derivative object with plotly figure as content
 
     """
 
@@ -2487,8 +2480,6 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
         dictionary with channel objects sorted by lobe.
     ch_type : str
         'mag' or 'grad'
-    channels : list
-        list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
 
@@ -2568,6 +2559,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
 
     return qc_derivative
 
+
 def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
@@ -2583,8 +2575,6 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
         Path to the tsv file with std data.
     ch_type : str
         'mag' or 'grad'
-    channels : list
-        list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
 
@@ -2672,7 +2662,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
     return qc_derivative
 
 
-def plot_muscle_csv(f_path, m_or_g: str):
+def plot_muscle_csv(f_path: str, m_or_g: str):
 
     """
     Plot the muscle events with the z-scores and the threshold.
@@ -2726,7 +2716,7 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     Currently not used since cant be added into HTML report
 
     '''
-    # ## View the annotations (interactive_matplot)
+    # View the annotations (interactive_matplot)
 
     tit, _ = get_tit_and_unit(m_or_g)
     fig_derivs = []
@@ -2743,6 +2733,7 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
         fig_derivs += [QC_derivative(fig2, 'muscle_annotations_'+tit, 'matplotlib')]
     
     return fig_derivs
+
 
 def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray):
 

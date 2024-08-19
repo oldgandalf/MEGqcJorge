@@ -4,8 +4,7 @@ import ancpbids
 import json
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
-from meg_qc.plotting.universal_plots import *
-from meg_qc.plotting.universal_html_report import make_joined_report_mne
+
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -14,6 +13,12 @@ gradparent_dir = os.path.dirname(parent_dir)
 # Add the parent directory to sys.path
 sys.path.append(parent_dir)
 sys.path.append(gradparent_dir)
+
+from meg_qc.plotting.universal_plots import *
+from meg_qc.plotting.universal_html_report import make_joined_report_mne
+
+# IMPORTANT: keep this order of imports, first need to add parent dir to sys.path, then import from it.
+
 
 # Bunch of relative imports for sphynx, read the doscs, etc, cos they all see the script from different places:
 
