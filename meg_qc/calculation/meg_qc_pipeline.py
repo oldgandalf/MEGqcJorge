@@ -36,10 +36,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     """ 
     Main function of MEG QC:
     
-    * Parse parameters from config
+    * Parse parameters from config: user config + internal config
     * Get the data .fif file for each subject using ancpbids
     * Run initial processing (filtering, epoching, resampling)
-    * Run whole QC analysis for every subject, every fif
+    * Run whole QC analysis for every subject, every fif (only chosen metrics from config)
     * Save derivatives (csvs, html reports) into the file system using ancpbids.
     
     Parameters
@@ -48,11 +48,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         Path the config file with all the parameters for the QC analysis and data directory path.
     internal_config_file_path : str
         Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
-        
-    Returns
-    -------
-        raw : mne.io.Raw
-            The raw MEG data.
 
     """
 
