@@ -5,17 +5,17 @@ import json
 import sys
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
-sys.path.append('./')
-sys.path.append('./meg_qc/calculation/')
+sys.path.append(os.path.join('.'))
+sys.path.append(os.path.join('.', 'meg_qc', 'calculation'))
 
 # relative path for `make html` (docs)
-sys.path.append('../meg_qc/calculation/')
+sys.path.append(os.path.join('..', 'meg_qc', 'calculation'))
 
 # relative path for `make html` (docs) run from https://readthedocs.org/
-# every time rst file is nested insd of another, need to add one more path level here:
-sys.path.append('../../meg_qc/calculation/')
-sys.path.append('../../../meg_qc/calculation/')
-sys.path.append('../../../../meg_qc/calculation/')
+# every time rst file is nested inside of another, need to add one more path level here:
+sys.path.append(os.path.join('..', '..', 'meg_qc', 'calculation'))
+sys.path.append(os.path.join('..', '..', '..', 'meg_qc', 'calculation'))
+sys.path.append(os.path.join('..', '..', '..', '..', 'meg_qc', 'calculation'))
 
 
 from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
@@ -59,7 +59,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     ds_paths = all_qc_params['default']['dataset_path']
 
-
     for dataset_path in ds_paths: #run over several data sets
 
         print('___DS path:', dataset_path)
@@ -72,8 +71,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             return
 
         #create derivatives folder first:
-        if os.path.isdir(dataset_path+'/derivatives')==False: 
-                os.mkdir(dataset_path+'/derivatives')
+        derivatives_path = os.path.join(dataset_path, 'derivatives')
+        if not os.path.isdir(derivatives_path):
+            os.mkdir(derivatives_path)
 
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
@@ -182,9 +182,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 noisy_freqs_global = None #if we run PSD, this will be properly defined. It is used as an input for Muscle and is supposed to represent powerline noise.
                 std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs = [],[],[],[],[], [],  [], []
                 simple_metrics_psd, simple_metrics_std, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-                df_head_pos, head_pos = [], []
-                scores_muscle_all1, scores_muscle_all2, scores_muscle_all3 = [], [], []
-                raw1, raw2, raw3 = [], [], []
+
 
                 if all_qc_params['default']['run_STD'] is True:
                     print('___MEGqc___: ', 'Starting STD...')
