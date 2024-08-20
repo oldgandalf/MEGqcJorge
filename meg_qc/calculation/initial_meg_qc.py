@@ -1,3 +1,4 @@
+import os
 import mne
 import configparser
 import numpy as np
@@ -365,7 +366,47 @@ def sanity_check(m_or_g_chosen, channels_objs):
     return m_or_g_chosen, m_or_g_skipped_str
 
 
-def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, data_file: str):
+def load_data(file_path):
+
+    """
+    Load MEG data from a file. It can be a CTF data or a FIF file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the fif file with MEG data.
+
+    Returns
+    -------
+    raw : mne.io.Raw
+        MEG data.
+    shielding_str : str
+        String with information about active shielding.
+
+    """
+
+    shielding_str = ''
+
+    if os.path.isdir(file_path) and file_path.endswith('.ds'):
+        # It's a CTF data directory
+        print("___MEGqc___: ", "Loading CTF data...")
+        raw = mne.io.read_raw_ctf(file_path, preload=True)
+    elif os.path.isfile(file_path) and file_path.endswith('.fif'):
+        # It's a FIF file
+        print("___MEGqc___: ", "Loading FIF data...")
+        try:
+            raw = mne.io.read_raw_fif(file_path, on_split_missing='ignore')
+        except: 
+            raw = mne.io.read_raw_fif(file_path, allow_maxshield=True, on_split_missing='ignore')
+            shielding_str=''' <p>This fif file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p>'''
+
+    else:
+        raise ValueError("Unsupported file format or file does not exist. The pipeline works with CTF data directories and FIF files.")
+    
+    return raw, shielding_str
+
+
+def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, file_path: str):
 
     """
     Here all the initial actions needed to analyse MEG data are done: 
@@ -428,15 +469,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     """
 
 
-    print('___MEGqc___: ', 'Reading data from file:', data_file)
+    print('___MEGqc___: ', 'Reading data from file:', file_path)
 
-    try:
-        raw = mne.io.read_raw_fif(data_file, on_split_missing='ignore')
-        shielding_str = ''
-    except: 
-        raw = mne.io.read_raw_fif(data_file, allow_maxshield=True, on_split_missing='ignore')
-        shielding_str=''' <p>This file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p>'''
-
+    raw, shielding_str = load_data(file_path)
     display(raw)
 
     #crop the data to calculate faster:
