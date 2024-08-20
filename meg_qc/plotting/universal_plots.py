@@ -1894,12 +1894,17 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
     return qc_derivative
 
 
-def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal):
+def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: float, noise_ampl_relative_to_signal: list):
 
     """
     Edit the legend for pie chart of signal to noise ratio.
 
+    Parameters
+    ----------
 
+    
+
+    
 
     """
 
@@ -1919,8 +1924,6 @@ def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_rel
     noise_and_signal_ampl.append(total_amplitude-sum(noise_ampl)) #adding main signal ampl in the list
 
     noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
-
-    #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
 
     return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
 

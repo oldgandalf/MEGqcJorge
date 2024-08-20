@@ -1,54 +1,18 @@
 import mne
-from universal_plots import get_tit_and_unit 
+import os
+import sys
 
+# Get the absolute path of the parent directory of the current script
+parent_dir = os.path.dirname(os.getcwd())
+gradparent_dir = os.path.dirname(parent_dir)
 
-# def get_tit_and_unit(m_or_g: str, psd: bool = False):
+# Add the parent directory to sys.path
+sys.path.append(parent_dir)
+sys.path.append(gradparent_dir)
 
-#     """
-#     Return title and unit for a given type of data (magnetometers or gradiometers) and type of plot (psd or not)
+from meg_qc.plotting.universal_plots import get_tit_and_unit 
 
-#     #To avaoid import issues just added the func here from universal_plots:
-#     #TODO: remove when import issues are fixed.
-    
-#     Parameters
-#     ----------
-#     m_or_g : str
-#         'mag' or 'grad'
-#     psd : bool, optional
-#         True if psd plot, False if not, by default False
-
-#     Returns
-#     -------
-#     m_or_g_tit : str
-#         'Magnetometers' or 'Gradiometers'
-#     unit : str
-#         'T' or 'T/m' or 'T/Hz' or 'T/m / Hz'
-
-#     """
-    
-#     if m_or_g=='mag':
-#         m_or_g_tit='Magnetometers'
-#         if psd is False:
-#             unit='Tesla'
-#         elif psd is True:
-#             unit='Tesla/Hz'
-#     elif m_or_g=='grad':
-#         m_or_g_tit='Gradiometers'
-#         if psd is False:
-#             unit='Tesla/m'
-#         elif psd is True:
-#             unit='Tesla/m / Hz'
-#     elif m_or_g == 'ECG':
-#         m_or_g_tit = 'ECG channel'
-#         unit = 'V'
-#     elif m_or_g == 'EOG':
-#         m_or_g_tit = 'EOG channel'
-#         unit = 'V'
-#     else:
-#         m_or_g_tit = '?'
-#         unit='?'
-
-#     return m_or_g_tit, unit
+# Keep imports in this order!
 
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
