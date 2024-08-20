@@ -19,7 +19,7 @@ sys.path.append(os.path.join('..', '..', '..', '..', 'meg_qc', 'calculation'))
 
 
 from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
-from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
+# from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
 from meg_qc.calculation.metrics.STD_meg_qc import STD_meg_qc

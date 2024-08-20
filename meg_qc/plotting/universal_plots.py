@@ -1900,13 +1900,12 @@ def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: fl
     Edit the legend for pie chart of signal to noise ratio.
 
     Parameters
-    ----------
-
-    
+    __________
 
     
 
     """
+    
 
     #Legend for the pie chart:
 

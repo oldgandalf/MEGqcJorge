@@ -1,12 +1,9 @@
 
-# !!! Automatically choose peak and flat values by averaging the data maybe?
-
-import pandas as pd
 import mne
 from meg_qc.plotting.universal_plots import QC_derivative
-from typing import List, Tuple
 
-def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: List, bad_percent:  int, min_duration: float) -> Tuple[pd.DataFrame, List]:
+
+def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float):
     
     """
     Create peak-to-peak amplitude annotations for every channel separately
@@ -20,7 +17,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
     flat : float
         Flat value.
     channels : list
-        List of channel names.
+        list of channel names.
     bad_percent : int
         Percent of bad data allowed to still cound channels as good.
     min_duration : float
@@ -31,7 +28,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
     df_ptp_amlitude_annot : pd.DataFrame
         Dataframe with peak-to-peak amplitude annotations.
     bad_channels : list
-        List of bad channels.
+        list of bad channels.
     """
     
     amplit_annot_with_ch_names=mne.Annotations(onset=[], duration=[], description=[], orig_time=raw.annotations.orig_time) #initialize 
@@ -61,18 +58,18 @@ def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_
     ptp_auto_params : dict
         Dictionary with parameters for peak-to-peak amplitude annotations.
     channels : list
-        List of channels.
+        list of channels.
     data : mne.io.Raw
         Raw data.
     m_or_g_chosen : list
-        List of channels types.
+        list of channels types.
         
     Returns
     -------
     deriv_ptp_auto : list
-        List of QC_derivative objects containing dataframes with peak-to-peak amplitude annotations.
+        list of QC_derivative objects containing dataframes with peak-to-peak amplitude annotations.
     bad_channels : list
-        List of bad channels.
+        list of bad channels.
     pp_auto_str : str
         string with notes about PtP auto for report
         
