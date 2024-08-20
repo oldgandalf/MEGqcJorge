@@ -1,24 +1,15 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-
 import numpy as np
 import pandas as pd
 import mne
 import plotly.graph_objects as go
 from scipy.integrate import simpson
 from scipy.signal import find_peaks, peak_widths
-from IPython.display import display
-from typing import List
 import copy
 import re
 
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 from meg_qc.plotting.universal_html_report import simple_metric_basic
-
-# ISSUE IN /Volumes/M2_DATA/MEG_QC_stuff/data/from openneuro/ds004107/sub-mind004/ses-01/meg/sub-mind004_ses-01_task-auditory_meg.fif...
-# COULDNT SPLIT  when filtered data - check with new psd version
 
 
 #%%
@@ -95,17 +86,17 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
     Parameters
     ----------
     freq_bands : list
-        List of lists of frequencies. Expects list of lists: [[f_low, f_high], [f_low, f_high], ...]
+        list of lists of frequencies. Expects list of lists: [[f_low, f_high], [f_low, f_high], ...]
     freqs : list
-        List of frequencies.
+        list of frequencies.
     psds : np.ndarray or list
         numpy array (or list) of power spectrum dencities. Expects array of arrays: channels*psds. (or list of lists)
         Will not work properly if 1 dimentional array given. In this case do: np.array([your_1d_array])
     channels : list
-        List of channel names. Expects list of strings: ['MEG 0111', 'MEG 0112', ...] 
+        list of channel names. Expects list of strings: ['MEG 0111', 'MEG 0112', ...] 
         If only one channel is given, it should be a list of one string: ['Average]
     bands_names : list, optional
-        List of names of the bands. If None, the names will be generated automatically, by default None
+        list of names of the bands. If None, the names will be generated automatically, by default None
         Important! taht these names are in the same order as in freq_bands. 
 
         
@@ -120,7 +111,7 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
         Dataframe of amplitudes of each frequency band divided by the number of frequencies in the band.
         (This is done to compare with RMSE later. But not used any more).
     total_signal_amplitude : list
-        List of total signal amplitude for each channel.
+        list of total signal amplitude for each channel.
 
 
     """
@@ -187,7 +178,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     Parameters
     ----------
     channels : list
-        List of channel names
+        list of channel names
     m_or_g : str
         'mag' or 'grad' - to choose which channels to calculate amplitude for.
     freqs : np.ndarray
@@ -203,7 +194,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
         If plotflag is True, returns one QC_derivative object with data for pie plot.
         If plotflag is False, returns empty list.
     dfs_with_name : list
-        List of dataframes with amplitude of each frequency band in each channel
+        list of dataframes with amplitude of each frequency band in each channel
         (dfs: absolute amplitude, relative amplitude, amplitude divided by number of frequencies in the band)
     mean_brain_waves_dict : dict
         Dictionary of mean amplitude of each frequency band (used for simple metric json)
@@ -245,7 +236,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     return waves_pie_df_deriv, dfs_with_name, mean_brain_waves_dict
 
 
-def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
+def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list[dict], noisy_freqs_indexes:list[dict]):
 
     """
     If there are 2 bands that are blended together, split them at the lowest point between 2 central noise frequencies.
@@ -291,7 +282,7 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[list], one_
     return noisy_bands_final_indexes, split_indexes
 
 
-def cut_the_noise_from_psd(noisy_bands_indexes: List[dict], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
+def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
 
     """
     Cut the noise peaks out of PSD curve. By default, it is not used, but can be turned on.
@@ -402,7 +393,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: List[dict], freqs: list, one_psd
     return psd_only_peaks_baselined
 
 
-def plot_one_psd(ch_name: str, freqs: List, one_psd: List, peak_indexes: List, noisy_freq_bands_indexes: List[list], unit: str):
+def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str):
     
     """
     Plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
