@@ -3,7 +3,7 @@ import configparser
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from meg_qc.plotting.universal_plots import plot_time_series, plot_time_series_avg, QC_derivative, assign_channels_properties, sort_channel_by_lobe
+from meg_qc.plotting.universal_plots import QC_derivative, assign_channels_properties, sort_channel_by_lobe
 
 
 def get_all_config_params(config_file_name: str):
@@ -288,6 +288,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     if stim_channel is None:
         picks_stim = mne.pick_types(data.info, stim=True)
+
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
@@ -301,13 +302,14 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     except:
         print('___MEGqc___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
         events = mne.find_events(data, stim_channel=None, min_duration=event_dur)
-        #here for info pn how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
+        #here for info on how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
     n_events=len(events)
 
     if n_events == 0:
         print('___MEGqc___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
         epochs_grad, epochs_mag = None, None
     else:
+        print('___MEGqc___: ', 'Events found:', n_events)
         epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
         epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
 
@@ -332,8 +334,6 @@ def sanity_check(m_or_g_chosen, channels_objs):
     
     Returns
     -------
-    channels_objs : dict
-        Dictionary with channel objects for each channel type: mag, grad. 
     m_or_g_chosen : list
         List with channel types to analize: mag, grad.
     m_or_g_skipped_str : str
@@ -360,7 +360,7 @@ def sanity_check(m_or_g_chosen, channels_objs):
     else:
         m_or_g_skipped_str = ''
     
-    #Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
+    # Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
         
     return m_or_g_chosen, m_or_g_skipped_str
 
@@ -394,6 +394,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     chs_by_lobe : dict
         Dictionary with channel objects for each channel type: mag, grad. And by lobe. Each obj hold info about the channel name, 
         lobe area and color code, locations and (in the future) pther info, like: if it has noise of any sort.
+    channels : dict
+        Dictionary with channel names for each channel type: mag, grad.
     raw_crop_filtered : mne.io.Raw
         Filtered and cropped MEG data.
     raw_crop_filtered_resampled : mne.io.Raw
@@ -402,12 +404,29 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         Cropped MEG data.
     raw : mne.io.Raw
         MEG data.
-    active_shielding_used : bool
-        True if active shielding was used during recording.
+    shielding_str : str
+        String with information about active shielding.
     epoching_str : str
         String with information about epoching.
+    sensors_derivs : list
+        List with data frames with sensors info.
+    time_series_derivs : list
+        List with data frames with time series info.
+    time_series_str : str
+        String with information about time series plotting for report.
+    m_or_g_chosen : list
+        List with channel types to analize: mag, grad.
+    m_or_g_skipped_str : str
+        String with information about which channel types were skipped.
+    lobes_color_coding_str : str
+        String with information about color coding for lobes.
+    plot_legend_use_str : str
+        String with information about using the plot legend, where to click to hide/show channels.
+    resample_str : str
+        String with information about resampling.
     
     """
+
 
     print('___MEGqc___: ', 'Reading data from file:', data_file)
 
@@ -491,36 +510,57 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channel_by_lobe(channels_objs)
+    print('___MEGqc___: ', 'Channels sorted by lobe.')
 
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
 
     #Plot time series:
+    #TODO: we still plot time series here? Decide if we dont need it at all or if we need it in some other form.
+
     time_series_derivs = []
     
-    for m_or_g in m_or_g_chosen:
-        if default_settings['plot_interactive_time_series'] is True:
-            time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
-        if default_settings['plot_interactive_time_series_average'] is True:
-            time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
+    # for m_or_g in m_or_g_chosen:
+    #     if default_settings['plot_interactive_time_series'] is True:
+    #         time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
+    #     if default_settings['plot_interactive_time_series_average'] is True:
+    #         time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
 
     if time_series_derivs:
         time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
     else:
         time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series or(and) plot_interactive_time_series_average to True in settings.'
 
-    clicking_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
+    plot_legend_use_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
 
     resample_str = '<p>' + resample_str + '</p>'
 
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str
+    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
+
+    """
+    Convert dictionary with channels objects to a data frame and save it as a csv file.
+
+    Parameters
+    ----------
+    chs_by_lobe : dict
+        Dictionary with channel objects for each channel type: mag, grad. And by lobe. Each obj hold info about the channel name, 
+        lobe area and color code, locations and (in the future) pther info, like: if it has noise of any sort.
+    file_name_prefix : str
+        Prefix for the file name. Example: 'Sensors' will result in file name 'Sensors.csv'.
+
+    Returns
+    -------
+    df_deriv : list
+        List with data frames with sensors info.
+
+    """
 
     #Extract chs_by_lobe into a data frame
     chs_by_lobe_df = {k1: {k2: pd.concat([channel.to_df() for channel in v2]) for k2, v2 in v1.items()} for k1, v1 in chs_by_lobe.items()}

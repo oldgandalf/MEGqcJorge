@@ -10,7 +10,6 @@ import warnings
 import random
 import copy
 import os
-
 from mne.preprocessing import compute_average_dev_head_t
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
@@ -145,9 +144,10 @@ class MEG_channels:
     
     def to_df(self):
 
-        '''
+        """
         Returns the object as a pandas DataFrame. To be later exported into a tsv file.
-        '''
+
+        """
 
         data_dict = {}
         freqs = self.freq
@@ -188,12 +188,21 @@ class MEG_channels:
                 data_dict[column_name] = [value]
 
         return pd.DataFrame(data_dict)
+    
 
-    def add_ecg_info(self, Avg_artif_list, artif_time_vector):
+    def add_ecg_info(self, Avg_artif_list: list, artif_time_vector: list):
 
-        '''
+        """
         Adds ECG artifact info to the channel object.
-        '''
+
+        Parameters
+        ----------
+        Avg_artif_list : list
+            List of the average artifact objects.
+        artif_time_vector : list
+            Time vector of the artifact.
+
+        """
 
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
@@ -205,11 +214,20 @@ class MEG_channels:
                 self.ecg_amplitude_ratio = artif_ch.amplitude_ratio
                 self.ecg_similarity_score = artif_ch.similarity_score
                 
-    def add_eog_info(self, Avg_artif_list, artif_time_vector):
 
-        '''
+    def add_eog_info(self, Avg_artif_list: list, artif_time_vector: list):
+
+        """
         Adds EOG artifact info to the channel object.
-        '''
+
+        Parameters
+        ----------
+        Avg_artif_list : list
+            List of the average artifact objects.
+        artif_time_vector : list
+            Time vector of the artifact.
+
+        """
 
         for artif_ch in Avg_artif_list:
             if artif_ch.name == self.name:
@@ -249,14 +267,14 @@ def assign_channels_properties(raw: mne.io.Raw):
     """
     channels_objs={'mag': [], 'grad': []}
     if 'mag' in raw:
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_locs = raw.copy().pick('mag').info['chs']
         for ch in mag_locs:
             channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
     else:
         channels_objs['mag'] = []
 
     if 'grad' in raw:
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_locs = raw.copy().pick('grad').info['chs']
         for ch in grad_locs:
             channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
     else:
@@ -264,7 +282,7 @@ def assign_channels_properties(raw: mne.io.Raw):
 
 
     # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+    # mag_locs = raw.copy().pick('mag').info['chs']
     # mag_pos = [ch['loc'][:3] for ch in mag_locs]
     # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
 
@@ -371,6 +389,7 @@ def sort_channel_by_lobe(channels_objs: dict):
 
     return chs_by_lobe
 
+
 def check_num_channels_correct(chs_by_lobe: dict, note: str):
 
     """ 
@@ -383,8 +402,6 @@ def check_num_channels_correct(chs_by_lobe: dict, note: str):
     note : str
         A note to print with the total number of channels.
     
-    Returns
-    -------
     
     """
     for m_or_g in ['mag', 'grad']:
@@ -439,34 +456,6 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
     return m_or_g_tit, unit
 
-def get_ch_color_knowing_name(ch_name: str, chs_by_lobe: dict):
-
-    """
-    Get channel color from chs_by_lobe knowing its name.
-    Currently not used in pipeline. Might be useful later.
-
-    Parameters
-    ----------
-    ch_name : str
-        channel name
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe
-    
-    Returns
-    -------
-    color : str
-        color of the channel
-
-    """
-
-    color = 'black'
-    for lobe, ch_obj_list in chs_by_lobe.items():
-        for ch_obj in ch_obj_list:
-            if ch_obj.name == ch_name:
-                color = ch_obj.lobe_color
-                break
-
-    return color
 
 class QC_derivative:
 
@@ -600,48 +589,6 @@ class QC_derivative:
         else:  
             warnings.warn("Check description of this QC_derivative instance: " + self.name)
 
-def plot_df_of_channels_data_as_lines_by_lobe_OLD(chs_by_lobe: dict, df_data: pd.DataFrame, x_values):
-
-    """
-    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
-    Old version. 
-    Here we plot all channels of one lobe together, then all channels of next lobe - gives less visual separation of traces since they blend together.
-
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        Dictionary with lobes as keys and lists of channels as values.
-    df_data : pd.DataFrame
-        Data frame with data to plot.
-    x_values : list
-        List of x values for the plot.
-    
-    Returns
-    -------
-    fig : plotly.graph_objects.Figure
-        Plotly figure.
-
-    """
-
-    fig = go.Figure()
-
-    for lobe, ch_list in chs_by_lobe.items():
-        
-        #Add lobe as a category to the plot
-        #No unfortunatelly you can make it so when you click on lobe you activate/hide all related channels. It is not a proper category in plotly, it is in fact just one more trace.
-        fig.add_trace(go.Scatter(x=x_values, y=[None]*len(x_values), mode='markers', marker=dict(size=5, color=ch_list[0].lobe_color), showlegend=True, name=lobe.upper()))
-
-        for ch_obj in ch_list:
-            if ch_obj.name in df_data.columns:
-                ch_data=df_data[ch_obj.name].values
-                color = ch_obj.lobe_color 
-                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
-                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
-
-                fig.add_trace(go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=ch_obj.name))
-
-    return fig
-
 
 def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
 
@@ -733,6 +680,10 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
         Path to the csv file with the data to plot.
     metric : str
         The metric of the data to plot: 'psd', 'ecg', 'eog', 'smoothed_ecg', 'smoothed_eog'.
+    x_values : list
+        List of x values for the plot.
+    m_or_g : str
+        'mag' or 'grad'.
     
     Returns
     -------
@@ -847,7 +798,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     ----------
     raw : mne.io.Raw
         The raw file to be plotted.
-    m_or_g_chosen : str
+    m_or_g : str
         The type of the channels to be plotted: 'mag' or 'grad'.
     chs_by_lobe : dict
         A dictionary with the keys as the names of the lobes and the values as the lists of the channels in the lobe.
@@ -1031,7 +982,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
     if 'mag' in m_or_g_chosen:
 
         # Extract the sensor locations and names for magnetometers
-        mag_locs = raw.copy().pick_types(meg='mag').info['chs']
+        mag_locs = raw.copy().pick('mag').info['chs']
         mag_pos = [ch['loc'][:3] for ch in mag_locs]
         mag_names = [ch['ch_name'] for ch in mag_locs]
 
@@ -1063,7 +1014,7 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
     if 'grad' in m_or_g_chosen:
 
         # Extract the sensor locations and names for gradiometers
-        grad_locs = raw.copy().pick_types(meg='grad').info['chs']
+        grad_locs = raw.copy().pick('grad').info['chs']
         grad_pos = [ch['loc'][:3] for ch in grad_locs]
         grad_names = [ch['ch_name'] for ch in grad_locs]
 
@@ -1107,7 +1058,30 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
 
     return qc_derivative
 
-def keep_unique_locs(ch_list):
+
+def keep_unique_locs(ch_list: list):
+
+    """
+    Combines channel names that have the same location and returns the unique locations and combined channel names for 3D plotting.
+
+    Parameters
+    ----------
+    ch_list : list
+        A list of channel objects.
+
+    Returns
+    -------
+    new_locations : list
+        A list of unique locations.
+    new_names : list
+        A list of combined channel names.
+    new_colors : list
+        A list of colors for each unique location.
+    new_lobes : list
+        A list of lobes for each unique location.
+
+    """
+
 
     channel_names = [ch.name for ch in ch_list]
     channel_locations = [ch.loc for ch in ch_list]
@@ -1302,6 +1276,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
 
     #if there are no lobes in df - skip this plot:
+
     if 'Lobe' not in df.columns:
         return []
     
@@ -1473,8 +1448,6 @@ def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, 
         Type of the channel: 'mag', 'grad'
     what_data : str
         Type of the data: 'peaks' or 'stds'
-    x_axis_boxes : str
-        What to plot as boxplot on x axis: 'channels' or 'epochs'
 
     Returns
     -------
@@ -1739,6 +1712,25 @@ def add_log_buttons(fig: go.Figure):
 
 
 def figure_x_axis(df, metric):
+
+    """
+    Figure out the x axis for plotting based on the metric.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data Frame with the data to be plotted.
+    metric : str
+        The metric of the data: 'psd', 'eog', 'ecg', 'muscle', 'head'.
+
+    Returns
+    -------
+    freqs : np.array
+        Array of frequencies for the PSD data.
+    time_vec : np.array
+        Array of time values for the EOG, ECG, muscle, or head data.
+    
+    """
      
     if metric.lower() == 'psd':
         # Figure out frequencies:
@@ -1902,7 +1894,19 @@ def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_a
     return qc_derivative
 
 
-def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_relative_to_signal):
+def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: float, noise_ampl_relative_to_signal: list):
+
+    """
+    Edit the legend for pie chart of signal to noise ratio.
+
+    Parameters
+    ----------
+
+    
+
+    
+
+    """
 
     #Legend for the pie chart:
 
@@ -1921,8 +1925,6 @@ def edit_legend_pie_SNR(noisy_freqs, noise_ampl, total_amplitude, noise_ampl_rel
 
     noise_ampl_relative_to_signal.append(1-sum(noise_ampl_relative_to_signal)) #adding main signal relative ampl in the list
 
-    #noise_pie_derivative = plot_pie_chart_freq(freq_amplitudes_relative=noise_ampl_relative_to_signal, freq_amplitudes_absolute = noise_and_signal_ampl, total_freq_ampl = total_amplitude, m_or_g=m_or_g, bands_names=bands_names, fig_tit = "Ratio of signal and noise in the data: ", fig_name = 'PSD_SNR_all_channels_')
-
     return  noise_and_signal_ampl, noise_ampl_relative_to_signal, bands_names
 
 
@@ -1938,12 +1940,8 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         Path to the tsv file with pie chart data
     m_or_g : str
         'mag' or 'grad'
-    bands_names : list
-        list of names of frequency bands
-    fig_tit : str
-        extra title to be added to the plot
-    fig_name : str
-        name of the figure to be saved
+    noise_or_waves: str
+        do we plot SNR or brain waves percentage (alpha, beta, etc)
     
     Returns
     -------
@@ -2319,7 +2317,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     return qc_derivative
 
 
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_derivative:
+def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str):
 
     """
     Create representation of calculated data as multiple boxplots: 
@@ -2340,8 +2338,8 @@ def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str) -> QC_
 
     Returns
     -------
-    fig : go.Figure
-        plottly figure
+    QC_derivative
+        QC_derivative object with plotly figure as content
 
     """
 
@@ -2485,8 +2483,6 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
         dictionary with channel objects sorted by lobe.
     ch_type : str
         'mag' or 'grad'
-    channels : list
-        list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
 
@@ -2566,6 +2562,7 @@ def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
 
     return qc_derivative
 
+
 def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
@@ -2581,8 +2578,6 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
         Path to the tsv file with std data.
     ch_type : str
         'mag' or 'grad'
-    channels : list
-        list of channel names
     what_data : str
         'peaks' for peak-to-peak amplitudes or 'stds'
 
@@ -2670,7 +2665,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
     return qc_derivative
 
 
-def plot_muscle_csv(f_path, m_or_g: str):
+def plot_muscle_csv(f_path: str, m_or_g: str):
 
     """
     Plot the muscle events with the z-scores and the threshold.
@@ -2724,7 +2719,7 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     Currently not used since cant be added into HTML report
 
     '''
-    # ## View the annotations (interactive_matplot)
+    # View the annotations (interactive_matplot)
 
     tit, _ = get_tit_and_unit(m_or_g)
     fig_derivs = []
@@ -2741,6 +2736,7 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
         fig_derivs += [QC_derivative(fig2, 'muscle_annotations_'+tit, 'matplotlib')]
     
     return fig_derivs
+
 
 def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray):
 

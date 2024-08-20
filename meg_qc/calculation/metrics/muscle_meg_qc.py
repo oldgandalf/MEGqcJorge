@@ -31,9 +31,28 @@ from meg_qc.plotting.universal_plots import QC_derivative
 
 def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
 
+    """
+    Find powerline noise in the data.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data.
+    psd_params : dict
+        The parameters for PSD calculation originally defined in the config file.
+    m_or_g_chosen : list
+        The channel types chosen for the analysis: 'mag' or 'grad'.
+    
+    Returns
+    -------
+    noisy_freqs : dict
+        The noisy frequencies found in the data separated by channel type.
+    
+    """
+
     method = 'welch'
     prominence_lvl_pos = 50 #this is a good level for average psd over all channels. Same should be used for PSD module.
-    #WE CAN PUT THESE 2 ABOVE INTO CONFIG AS WELL.  BUT THEY ACTUALLY SHOULD NOT BE CHANGED BY USER. OR MAKE A SEPARATE CONFIG ONLY ACCED BY DEVELOPERS FOR SETTING DEFAULTS?
+    #TODO: WE CAN PUT THESE 2 ABOVE INTO CONFIG AS WELL.  BUT THEY ACTUALLY SHOULD NOT BE CHANGED BY USER. OR MAKE A SEPARATE CONFIG ONLY ACCED BY DEVELOPERS FOR SETTING DEFAULTS?
 
 
     psd_step_size = psd_params['psd_step_size']
@@ -110,7 +129,9 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     Returns
     -------
     raw : mne.io.Raw
-        The raw data with filtered noise or not filtered if no noise was found."""
+        The raw data with filtered noise or not filtered if no noise was found.
+        
+    """
 
     #print(noisy_freqs_global, 'noisy_freqs_global')
 
@@ -135,10 +156,6 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
             if freq*i not in powerline_found and muscle_freqs[0]<freq*i<muscle_freqs[1]:
                 powerline_found.append(freq*i)
 
-    # DELETE THESE?
-    # - detect other noisy freqs in range of muscle artifacts: DECIDED NOT TO DO IT: MIGHT JUST FILTER OUT MUSCLES THIS WAY.
-    # extra_noise_freqs = [x for x in noisy_freqs if muscle_freqs[0]<x<muscle_freqs[1]]
-    # noisy_freqs_all = list(set(powerline_freqs+extra_noise_freqs)) #leave only unique values
 
     noisy_freqs_all = powerline_found
 
@@ -174,7 +191,9 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
     Returns
     -------
     raw : mne.io.Raw
-        The raw data with dummy start attached."""
+        The raw data with dummy start attached.
+        
+    """
     
     print('Duration original: ', raw.n_times / raw.info['sfreq'])
     # Attach a dummy start to the data to avoid filtering artifacts at the beginning of the recording:
@@ -202,53 +221,44 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
     return raw
 
 
-def calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined):
-
-    muscle_derivs=[]
-
-    for m_or_g in m_or_g_decided: #generally no need for loop, we will use just 1 type here. Left in case we change the principle.
-
-        z_scores_dict={}
-        for threshold_muscle in threshold_muscle_list:
-
-            z_score_details={}
-
-            annot_muscle, scores_muscle = annotate_muscle_zscore(
-            raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
-            filter_freq=muscle_freqs)
-
-            #cut attached beginning and end from annot_muscle, scores_muscle:
-            if cut_dummy is True:
-                # annot_muscle = annot_muscle[annot_muscle['onset']>attach_sec]
-                # annot_muscle['onset'] = annot_muscle['onset']-attach_sec
-                # annot_muscle['duration'] = annot_muscle['duration']-attach_sec
-                scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
-                raw = raw.crop(tmin=attach_sec, tmax=raw.times[int(-attach_sec*raw.info['sfreq'])])
-
-
-
-            # Plot muscle z-scores across recording
-            peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
-
-            muscle_times = raw.times[peak_locs_pos]
-            high_scores_muscle=scores_muscle[peak_locs_pos]
-
-            # collect all details for simple metric:
-            z_score_details['muscle_event_times'] = muscle_times.tolist()
-            z_score_details['muscle_event_zscore'] = high_scores_muscle.tolist()
-            z_scores_dict[threshold_muscle] = {
-                'number_muscle_events': len(muscle_times), 
-                'Details': z_score_details}
-            
-        simple_metric = make_simple_metric_muscle(m_or_g_decided[0], z_scores_dict, muscle_str_joined)
-
-    return muscle_derivs, simple_metric, scores_muscle
-
 
 def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined):
 
     """
+    Calculate muscle artifacts without thresholding by user.
+
+    We still kinda have to use threshold_muscle here, even if we do not want to use it:
     annotate_muscle_zscore() requires threshold_muscle so define a minimal one here: 5 z-score.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data.
+    m_or_g_decided : list
+        The channel types chosen for the analysis: 'mag' or 'grad'.
+    muscle_params : dict
+        The parameters for muscle artifact detection originally defined in the config file.
+    threshold_muscle : float
+        The z-score threshold for muscle detection.
+    muscle_freqs : list
+        The frequencies of muscle artifacts, usually 110 and 140 Hz.
+    cut_dummy : bool
+        Whether to cut the dummy data after filtering. Dummy data is attached to the start and end of the recording to avoid filtering artifacts. Default is True.
+    attach_sec : int
+        The number of seconds to attach to the start and end of the recording.
+    min_distance_between_different_muscle_events : int
+        The minimum distance between different muscle events in seconds.
+    muscle_str_joined : str
+        Notes about muscle detection to use as description.
+    
+    Returns
+    -------
+    simple_metric : dict
+        A simple metric dict for muscle events.
+    scores_muscle : np.ndarray
+        The muscle scores.
+    df_deriv : list
+        A list of QC_derivative objects for muscle events containing figures.
     
     """
 
@@ -291,7 +301,30 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
     return simple_metric, scores_muscle, df_deriv
 
 
-def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np.ndarray, high_scores_muscle_times: np.ndarray, high_scores_muscle: np.ndarray, threshold_muscle: float = None):
+def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np.ndarray, high_scores_muscle_times: np.ndarray, high_scores_muscle: np.ndarray):
+
+    """
+    Save muscle artifacts to a CSV file.
+
+    Parameters
+    ----------
+    file_name_prefix : str
+        The prefix for the file name. Example: 'Muscle'.
+    raw : mne.io.Raw
+        The raw data.
+    scores_muscle : np.ndarray
+        The muscle scores.
+    high_scores_muscle_times : np.ndarray
+        The times of the high muscle scores.
+    high_scores_muscle : np.ndarray
+        The high muscle scores.
+    
+    Returns
+    -------
+    df_deriv : list
+        A list of QC_derivative objects for muscle events containing figures.
+    
+    """
 
     data_times = raw.times
     data = [data_times, scores_muscle, high_scores_muscle_times, high_scores_muscle]
@@ -342,8 +375,12 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
         A list of QC_derivative objects for muscle events containing figures.
     simple_metric : dict
         A simple metric dict for muscle events.
-    muscle_str : str
+    muscle_str_joined : str
         String with notes about muscle artifacts for report
+    scores_muscle : np.ndarray
+        The muscle scores.
+    raw : mne.io.Raw
+        The raw data with filtered noise or not filtered if no noise was found.
 
     """
 
@@ -387,7 +424,6 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
     
-    #muscle_derivs, simple_metric, scores_muscle = calculate_muscle_over_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined)
     simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined)
 
     return df_deriv, simple_metric, muscle_str_joined, scores_muscle, raw

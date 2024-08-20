@@ -7,7 +7,6 @@ from meg_qc.plotting.universal_plots import QC_derivative
 from typing import List, Tuple
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: List, bad_percent:  int, min_duration: float) -> Tuple[pd.DataFrame, List]:
-
     
     """
     Create peak-to-peak amplitude annotations for every channel separately
@@ -48,6 +47,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
             amplit_annot_with_ch_names.append(onset=amplit_annot[0][0]['onset'], duration=amplit_annot[0][0]['duration'], description=amplit_annot[0][0]['description'], ch_names=[[channel]])
 
     df_ptp_amlitude_annot=amplit_annot_with_ch_names.to_data_frame()
+    
     return df_ptp_amlitude_annot, bad_channels
 
 
