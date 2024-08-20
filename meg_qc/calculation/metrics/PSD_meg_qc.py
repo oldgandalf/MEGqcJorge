@@ -97,7 +97,7 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
         If only one channel is given, it should be a list of one string: ['Average]
     bands_names : list, optional
         list of names of the bands. If None, the names will be generated automatically, by default None
-        Important! taht these names are in the same order as in freq_bands. 
+        Important! these names are in the same order as in freq_bands. 
 
         
     Returns
@@ -221,8 +221,8 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
 
     #add total_ampl as a new column in 'Absolute' raw and None in 'Relative' raw:
     brain_bands_df['total_amplitude'] = None
-    brain_bands_df['total_amplitude']['absolute_'+m_or_g] = total_ampl[0]
-    brain_bands_df['total_amplitude']['relative_'+m_or_g] = 1
+    brain_bands_df.loc['total_amplitude', 'absolute_' + m_or_g] = total_ampl[0]
+    brain_bands_df['total_amplitude', 'relative_'+m_or_g] = 1
 
     waves_pie_df_deriv = [QC_derivative(content=brain_bands_df, name='PSDwaves'+m_or_g.capitalize(), content_type = 'df')]
     
@@ -1042,7 +1042,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
 
     for m_or_g in m_or_g_chosen:
 
-        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
+        psds[m_or_g], freqs[m_or_g] = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         psds[m_or_g]=np.sqrt(psds[m_or_g]) # amplitude of the noise in this band. without sqrt it is power.
 
         # Add psds and freqs into chs_by_lobe dict:
