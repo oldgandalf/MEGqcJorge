@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from scipy.signal import find_peaks
-import matplotlib #this is in case we will need to suppress mne matplotlib plots
+#import matplotlib #this is in case we will need to suppress mne matplotlib plots
 import copy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr

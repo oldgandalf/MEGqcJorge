@@ -3,7 +3,6 @@ import mne
 import configparser
 import numpy as np
 import pandas as pd
-from IPython.display import display
 from meg_qc.plotting.universal_plots import QC_derivative, assign_channels_properties, sort_channel_by_lobe
 
 
@@ -472,7 +471,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     print('___MEGqc___: ', 'Reading data from file:', file_path)
 
     raw, shielding_str = load_data(file_path)
-    display(raw)
+
+    # from IPython.display import display
+    # display(raw)
 
     #crop the data to calculate faster:
     tmax=default_settings['crop_tmax']

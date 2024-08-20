@@ -12,7 +12,7 @@ sys.path.append(gradparent_dir)
 
 from meg_qc.plotting.universal_plots import get_tit_and_unit 
 
-# Keep imports in this order!
+# Keep imports in this order! 
 
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
@@ -82,13 +82,6 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
         <br></br>
         <br></br>
         </center>"""
-
-    # The way to get figures if need to open them from saved files:
-    # figures = {}
-    # figures_report= {}
-    # for x in range(0, len(fig_derivs_section)):
-    #     with open(fig_derivs_section[x], 'r') as figures["f{0}".format(x)]:
-    #         figures_report["f{0}".format(x)] = figures["f{0}".format(x)].read()
 
     return html_section_str
 
