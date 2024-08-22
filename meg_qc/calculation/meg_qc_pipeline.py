@@ -75,13 +75,40 @@ def get_files_list(dataset_path, dataset, sid):
 
     if has_fif:
         list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
+        
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif')
+        # sort list_of_sub_jsons by name key to get same order as list_of_files
+        entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
+
     elif has_ctf:
         list_of_files = ctf_workaround(dataset, sid)
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4')
+
+        # entities_per_file is a list of Artifact objects of ancpbids created from raw files. (fif for fif files and res4 for ctf files)
+        # TODO: this assumes every .ds directory has a single corresponding .res4 file. 
+        # Is it always so?
+        # Used because I cant get entities_per_file from .ds folders, ancpbids doesnt support folder query.
+        # But we need entities_per_file to pass into calculation_folder.create_artifact(), 
+        # so that it can add automatically all the entities to the new derivative on base of entities from raw file.
+    
+        
+        # sort list_of_sub_jsons by name key to get same order as list_of_files
+        entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
     else:
         list_of_files = []
         raise ValueError('No fif or ctf files found in the dataset.')
+    
 
-    return list_of_files
+    # check that entities_per_file have exactly same name before extension as the last file in every entry of list_of_files before extension:
+    for i in range(len(list_of_files)):
+        file_name_in_path_list = os.path.basename(list_of_files[i]).split('.')[0]
+        file_name_in_obj_list = entities_per_file[i]['name'].split('.')[0]
+        if file_name_in_path_list != file_name_in_obj_list:
+            raise ValueError('Different names in list_of_files and entities_per_file')
+
+    # we can also check that final file of path in list of files is same as name in jsons
+
+    return list_of_files, entities_per_file
     
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
@@ -185,10 +212,11 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
             calculation_folder = subject_folder.create_folder(name='calculation')
 
-            list_of_files = get_files_list(dataset_path, dataset, sid)
+            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sid)
 
             print('___MEGqc___: ', 'list_of_files', list_of_files)
             print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
+            print('___MEGqc___: ', 'entities_per_file', entities_per_file)
 
 
             # GET all derivs!
@@ -199,13 +227,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             print('___MEGqc___: ', 'entities', entities)
 
 
-            #list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
-            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg')
             #TODO; check here that order is really the same as in list_of_fifs
             #same as list_of_fifs, but return type is not filename, but dict
 
-
-            print('___MEGqc___: ', 'list_of_sub_jsons', list_of_sub_jsons)
 
             counter = 0
 
@@ -365,7 +389,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #         #'with'command doesnt work in lambda
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        meg_artifact = calculation_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
+                        meg_artifact = calculation_folder.create_artifact(raw=entities_per_file[fif_ind]) #shell. empty derivative
 
                         counter +=1
                         print('___MEGqc___: ', 'counter of calculation_folder.create_artifact', counter)
