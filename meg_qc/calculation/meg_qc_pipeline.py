@@ -30,6 +30,59 @@ from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
+def ctf_workaround(dataset, sid):
+
+    artifacts = dataset.query(suffix="meg", return_type="object", subj=sid)
+    # convert to folders of found files
+    folders = map(lambda a: a.get_parent().get_absolute_path(), artifacts)
+    # remove duplicates
+    folders = set(folders)
+    # convert to liust before filtering
+    folders = list(folders)
+
+    # filter for folders which end with ".ds" (including os specific path separator)
+    # folders = list(filter(lambda f: f.endswith(f"{os.sep}.ds"), folders))
+
+    # Filter for folders which end with ".ds"
+    filtered_folders = [f for f in folders if f.endswith('.ds')]
+
+    return sorted(filtered_folders)
+
+
+def get_files_list(dataset_path, dataset, sid):
+
+    """
+    Different ways for fif, ctf, etc...
+    Using ancpbids to get the list of files for each subject in ds.
+    """
+
+    has_fif = False
+    has_ctf = False
+
+    for root, dirs, files in os.walk(dataset_path):
+        # Check for .fif files
+        if any(file.endswith('.fif') for file in files):
+            has_fif = True
+        
+        # Check for folders ending with .ds
+        if any(dir.endswith('.ds') for dir in dirs):
+            has_ctf = True
+
+        # If both are found, no need to continue walking
+        if has_fif and has_ctf:
+            raise ValueError('Both fif and ctf files found in the dataset. Can not define how to read the ds.')
+
+
+    if has_fif:
+        list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
+    elif has_ctf:
+        list_of_files = ctf_workaround(dataset, sid)
+    else:
+        list_of_files = []
+        raise ValueError('No fif or ctf files found in the dataset.')
+
+    return list_of_files
+    
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
@@ -132,29 +185,35 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
             calculation_folder = subject_folder.create_folder(name='calculation')
 
-            list_of_fifs = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
-            print('___MEGqc___: ', 'list_of_fifs', list_of_fifs)
-            print('___MEGqc___: ', 'TOTAL fifs: ', len(list_of_fifs))
+            list_of_files = get_files_list(dataset_path, dataset, sid)
+
+            print('___MEGqc___: ', 'list_of_files', list_of_files)
+            print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
 
 
             # GET all derivs!
             # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
             # print('___MEGqc___: ', 'derivs_list', derivs_list)
 
-            # entities = dataset.query_entities()
-            # print('___MEGqc___: ', 'entities', entities)
+            entities = dataset.query_entities()
+            print('___MEGqc___: ', 'entities', entities)
 
 
-            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+            #list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg')
+            #TODO; check here that order is really the same as in list_of_fifs
+            #same as list_of_fifs, but return type is not filename, but dict
+
 
             print('___MEGqc___: ', 'list_of_sub_jsons', list_of_sub_jsons)
 
-            #list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
-
             counter = 0
 
-            for fif_ind, data_file in enumerate(list_of_fifs): 
-                print('___MEGqc___: ', 'Take fif: ', data_file)
+            #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
+
+
+            for fif_ind, data_file in enumerate(list_of_files): 
+                print('___MEGqc___: ', 'Take data: ', data_file)
 
                 if 'acq-crosstalk' in data_file:
                     print('___MEGqc___: ', 'Skipping crosstalk file ', data_file)
