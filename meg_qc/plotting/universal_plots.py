@@ -3262,7 +3262,27 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     return fig
 
+
 def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
+
+    """
+    Plon mean rwave(ECG) or mean blink (EOG) from data in CSV file.
+
+
+    Parameters
+    ----------
+    f_path: str
+        Path to csv file
+    ecg_or_eog: str
+        plot ECG or EOG data
+
+    Returns
+    -------
+    fig_derivs : list
+        list with one QC_derivative object, which contains the plot.
+
+
+    """
 
     #if it s not the right ch kind in the file
     base_name = os.path.basename(f_path) #name of the final file
