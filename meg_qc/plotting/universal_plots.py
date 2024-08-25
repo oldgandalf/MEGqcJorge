@@ -1902,8 +1902,24 @@ def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: fl
     Parameters
     __________
 
-    
+    noisy_freqs: list
+        list of noisy frequencies
+    noise_ampl: list
+        list of their amplitudes
+    total_amplitude: float
+        Total amplitude of all frequencies
+    noise_ampl_relative_to_signal: list
+        list of relative (to entire signal) values of noise freq's amplitude
 
+    Returns
+    -------
+    noise_and_signal_ampl:
+        list of amplitudes of noise freqs + total signal amplitude
+    noise_ampl_relative_to_signal:
+        list of relative noise freqs + amplitude of clean signal
+    bands_names:
+        names of freq bands 
+    
     """
     
 
