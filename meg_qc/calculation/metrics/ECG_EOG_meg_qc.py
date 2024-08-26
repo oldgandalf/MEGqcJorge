@@ -73,9 +73,9 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
     # 2. Calculate RR intervals (time differences between consecutive R peaks)
     rr_intervals = np.diff(peaks) / fs
 
-    if ecg_or_eog == 'ECG':
+    if ecg_or_eog.upper() == 'ECG':
         rr_dist_allowed = [0.6, 1.6] #take possible pulse rate of 100-40 bpm (hense distance between peaks is 0.6-1.6 seconds)
-    elif ecg_or_eog == 'EOG':
+    elif ecg_or_eog.upper() == 'EOG':
         rr_dist_allowed = [1, 10] #take possible blink rate of 60-5 per minute (hense distance between peaks is 1-10 seconds). Yes, 60 is a very high rate, but I see this in some data sets often.
 
 
@@ -98,6 +98,7 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
         no_bursts = False
 
     ecg_eval = {'similar_ampl': similar_ampl, 'no_breaks': no_breaks, 'no_bursts': no_bursts}
+    
     return ecg_eval, peaks
 
 
@@ -1643,6 +1644,8 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     ecg_ch = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
 
+    print ('___MEGqc___: ECG channel names:', ecg_ch)
+
     if len(ecg_ch)>=1: #ecg channel present
 
         if len(ecg_ch)>1: #more than 1 ecg channel present
@@ -1667,16 +1670,39 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
             raw.drop_channels(ecg_ch)
             use_method = 'correlation_reconstructed'
 
+
         elif bad_ecg_eog[ecg_ch] == 'good': #ecg channel present and good - use it
             ecg_str = ecg_ch + ' is used to identify hearbeats. \n'
             use_method = 'correlation_recorded'
 
     else: #no ecg channel present
 
-        ecg_ch_df, ecg_data, event_indexes = [], [], []
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. \n'
         use_method = 'correlation_reconstructed'
-        print('___MEGqc___: ', ecg_str)
+
+        # _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
+        # # here the RECONSTRUCTED ecg data will be outputted (based on magnetometers), and only if u set return_ecg=True and no real ec channel present).
+        # ecg_data = ecg_data[0]
+
+    if use_method == 'correlation_reconstructed':
+        ecg_ch = 'Reconstructed'
+        bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = reconstruct_ecg_and_check(raw, ecg_params['n_breaks_bursts_allowed_per_10min'], ecg_params['allowed_range_of_peaks_stds'], ecg_params['height_multiplier'])
+        
+        if bad_ecg_eog[ecg_ch] == 'bad':
+            use_method = 'skip'
+            #pass here, cos we dont need to do anything with the data if it is bad
+
+
+    #Collect the data into 1 df for plotting later. ecg_ch as name of first column, ecg_data as data, event_indexes as indexes of the events:
+    event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
+    fs_with_none = [raw.info['sfreq']] + [None] * (len(ecg_data) - 1)
+
+    ecg_ch_df = pd.DataFrame({
+    ecg_ch: ecg_data,
+    'event_indexes': event_indexes_with_none,
+    'fs': fs_with_none})
+            
+    print('___MEGqc___: ', ecg_str)
 
     ecg_str_total = ecg_eval_str + ecg_str 
     #Replace all \n with <br> for the html report:
@@ -1749,7 +1775,36 @@ def get_EOG_data(raw: mne.io.Raw):
     return eog_str, eog_data, event_indexes_all, eog_channel_names
 
 
-def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float):
+
+
+def reconstruct_ecg_and_check(raw: mne.io.Raw, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
+
+    ecg_ch = 'Reconstructed'
+    sfreq = raw.info['sfreq']
+
+    _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
+    # here the RECONSTRUCTED ecg data will be outputted (based on magnetometers), 
+    # and only if u set return_ecg=True and no real ecg channel present).
+    ecg_data = ecg_data[0]
+    
+    ecg_eval, peaks = check_3_conditions(ecg_data, sfreq, 'ECG', n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds, height_multiplier)
+    print(f'___MEGqc___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
+
+    bad_ecg_eog = {}
+    #If all values in disct are true:
+    if all(value == True for value in ecg_eval.values()):
+        bad_ecg_eog[ecg_ch] = 'good'
+    else:
+        bad_ecg_eog[ecg_ch] = 'bad'
+
+    ecg_eval_str = 'Overall ' + bad_ecg_eog[ecg_ch] + ' '  + ecg_ch + ' ECG channel: \n - Peaks have similar amplitude: ' + str(ecg_eval["similar_ampl"]) + ' \n - No breaks (too long distances between peaks): ' + str(ecg_eval["no_breaks"]) + ' \n - No bursts (too short distances between peaks): ' + str(ecg_eval["no_bursts"]) + '\n'
+    print(f'___MEGqc___: ', ecg_eval_str)
+
+    return bad_ecg_eog, ecg_data, peaks, ecg_eval_str
+
+
+
+def check_mean_wave(raw: mne.io.Raw, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float):
 
     """
     Calculate mean R wave based on either real ECG channel data or on reconstructed data (depends on the method used) 
@@ -1791,13 +1846,6 @@ def check_mean_wave(raw: mne.io.Raw, use_method: str, ecg_data: np.ndarray, ecg_
     """
 
     max_n_peaks_allowed_for_avg=params_internal['max_n_peaks_allowed_for_avg']
-
-    if use_method == 'correlation_reconstructed':
-        _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
-        # here the RECONSTRUCTED ecg data will be outputted (based on magnetometers), and only if u set return_ecg=True and no real ec channel present).
-        ecg_data = ecg_data[0]
-
-    #Now check if ecg_data (reconstructed or original) is good enough:
 
     #Calculate average over the whole reconstrcted channels and check if it has an R wave shape:
 
@@ -2133,8 +2181,11 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     ecg_derivs = []
     use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     
+    if use_method == 'skip': # data was reconstricted and is bad - dont continue
+        simple_metric_ECG = {'description': ecg_str}
+        return ecg_derivs, simple_metric_ECG, ecg_str, []
 
-    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(raw, use_method, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
+    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(raw, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
     
     ecg_str += ecg_str_checked
 
@@ -2142,7 +2193,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
     ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
 
-    if mean_good is False:
+    if mean_good is False: #mean ECG wave is bad - dont continue
         simple_metric_ECG = {'description': ecg_str}
         return ecg_derivs, simple_metric_ECG, ecg_str, []
 
@@ -2313,7 +2364,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion on recorded ch (if channel present) or fail.
 
     
-    mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(raw, use_method, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
+    mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(raw, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
     eog_str += eog_str_checked
 
 
