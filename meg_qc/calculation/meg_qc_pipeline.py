@@ -223,8 +223,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
             # print('___MEGqc___: ', 'derivs_list', derivs_list)
 
-            entities = dataset.query_entities()
-            print('___MEGqc___: ', 'entities', entities)
+            # entities = dataset.query_entities()
+            # print('___MEGqc___: ', 'entities', entities)
 
 
             #TODO; check here that order is really the same as in list_of_fifs
@@ -236,7 +236,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
 
 
-            for fif_ind, data_file in enumerate(list_of_files): 
+            for file_ind, data_file in enumerate(list_of_files): 
                 print('___MEGqc___: ', 'Take data: ', data_file)
 
                 if 'acq-crosstalk' in data_file:
@@ -389,7 +389,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #         #'with'command doesnt work in lambda
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        meg_artifact = calculation_folder.create_artifact(raw=entities_per_file[fif_ind]) #shell. empty derivative
+                        meg_artifact = calculation_folder.create_artifact(raw=entities_per_file[file_ind]) #shell. empty derivative
 
                         counter +=1
                         print('___MEGqc___: ', 'counter of calculation_folder.create_artifact', counter)

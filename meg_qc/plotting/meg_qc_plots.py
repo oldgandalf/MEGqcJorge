@@ -5,6 +5,16 @@ import json
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 
+# Get the absolute path of the parent directory of the current script
+parent_dir = os.path.dirname(os.getcwd())
+gradparent_dir = os.path.dirname(parent_dir)
+
+# Add the parent directory to sys.path
+sys.path.append(parent_dir)
+sys.path.append(gradparent_dir)
+
+from meg_qc.calculation.meg_qc_pipeline import get_files_list
+
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -445,8 +455,12 @@ def make_plots_meg_qc(ds_paths: list):
 
     for dataset_path in ds_paths: #run over several data sets #TODO: do we even need several??
 
-        dataset = ancpbids.load_dataset(dataset_path)
-        schema = dataset.get_schema()
+        try:
+            dataset = ancpbids.load_dataset(dataset_path)
+            schema = dataset.get_schema()
+        except:
+            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+            return
 
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
@@ -469,7 +483,12 @@ def make_plots_meg_qc(ds_paths: list):
 
             subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
             reports_folder = subject_folder.create_folder(name='reports')
-            list_of_sub_jsons = dataset.query(sub=sub, suffix='meg', extension='.fif')
+
+            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sub)
+
+            print('___MEGqc___: ', 'list_of_files', list_of_files)
+            print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
+            print('___MEGqc___: ', 'entities_per_file', entities_per_file)
 
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
@@ -528,7 +547,7 @@ def make_plots_meg_qc(ds_paths: list):
             # tsvs_to_plot is a dictionary with metrics as keys and lists of tsv paths as values
             # it contains ALL tsv files that have been created for CHOSEN in selector sub, ses, task, run and metrics.
 
-            print('___MEGqc___: list_of_sub_jsons', list_of_sub_jsons)
+            print('___MEGqc___: entities_per_file', entities_per_file)
             print('___MEGqc___: tsvs_to_plot', tsvs_to_plot)
 
             #Next, we need to create a report of the metrcis and save it with the right bids entities. 
@@ -538,7 +557,7 @@ def make_plots_meg_qc(ds_paths: list):
             #and for each raw file create a report with all tsv files that match the entities of the raw file.
 
 
-            for sub_json in list_of_sub_jsons:
+            for one_raw_entities in entities_per_file:
                 #Loop over sub jsons - meaning over separate fif (raw) files belonging to the same subject:
 
                 for metric in tsvs_to_plot:
@@ -558,7 +577,7 @@ def make_plots_meg_qc(ds_paths: list):
                         tsv_bids_name = file_name.split('_desc')[0]
 
                         #take everything in sub_json['name'] before '_meg.fif', it will contain all entities:
-                        raw_bids_name = sub_json['name'].split('_meg.fif')[0]
+                        raw_bids_name = one_raw_entities['name'].split('_meg.')[0]
 
                         #if the raw file name and the tsv file name match - we found the right tsv file for this raw file
                         # Now we can create a derivative on base of this TSV and save it in connection with the right raw file:
@@ -572,7 +591,7 @@ def make_plots_meg_qc(ds_paths: list):
                             continue
 
                     # Now prepare the derivative to be written:
-                    meg_artifact = reports_folder.create_artifact(raw=sub_json)
+                    meg_artifact = reports_folder.create_artifact(raw=one_raw_entities)
 
                     meg_artifact.add_entity('desc', metric) #file name
                     meg_artifact.suffix = 'meg'
@@ -590,5 +609,6 @@ def make_plots_meg_qc(ds_paths: list):
 # ____________________________
 # RUN IT:
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
