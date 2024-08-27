@@ -2700,7 +2700,7 @@ def plot_muscle_csv(f_path: str, m_or_g: str):
         A list of QC_derivative objects with plotly figures for muscle events.
 
     """
-
+    print('___MEGqc___: ', 'f_path', f_path, 'm_or_g', m_or_g)
     df = pd.read_csv(f_path, sep='\t')  
 
     fig_derivs = []
