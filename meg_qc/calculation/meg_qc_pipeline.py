@@ -32,7 +32,7 @@ from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
 def ctf_workaround(dataset, sid):
 
-    artifacts = dataset.query(suffix="meg", return_type="object", subj=sid)
+    artifacts = dataset.query(suffix="meg", return_type="object", subj=sid, scope='raw')
     # convert to folders of found files
     folders = map(lambda a: a.get_parent().get_absolute_path(), artifacts)
     # remove duplicates
@@ -74,15 +74,18 @@ def get_files_list(dataset_path, dataset, sid):
 
 
     if has_fif:
-        list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
+        list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid, scope='raw')))
         
-        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif')
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif', scope='raw')
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
 
+        print('___MEGqc___: ', 'entities_per_file', entities_per_file)
+        print('___MEGqc___: ', 'list_of_files', list_of_files)
+
     elif has_ctf:
         list_of_files = ctf_workaround(dataset, sid)
-        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4')
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4', scope='raw')
 
         # entities_per_file is a list of Artifact objects of ancpbids created from raw files. (fif for fif files and res4 for ctf files)
         # TODO: this assumes every .ds directory has a single corresponding .res4 file. 
@@ -94,16 +97,23 @@ def get_files_list(dataset_path, dataset, sid):
         
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
+
     else:
         list_of_files = []
         raise ValueError('No fif or ctf files found in the dataset.')
     
 
-    # check that entities_per_file have exactly same name before extension as the last file in every entry of list_of_files before extension:
+    # check that entities_per_file have exactly same name before extension as 
+    # the last file in every entry of list_of_files before extension:
+    # Update: they might be not EXACTLY the same, apparetntly ancpbids might not place all the entities into the dict (file_name_in_obj).
+    # This is why we need to check that file name fully include what it written in dict as a name to amke sure we work with the same data 
+    # file when open it nd when save the results.
+
     for i in range(len(list_of_files)):
-        file_name_in_path_list = os.path.basename(list_of_files[i]).split('.')[0]
-        file_name_in_obj_list = entities_per_file[i]['name'].split('.')[0]
-        if file_name_in_path_list != file_name_in_obj_list:
+        file_name_in_path = os.path.basename(list_of_files[i]).split('_meg.')[0]
+        file_name_in_obj = entities_per_file[i]['name'].split('_meg.')[0]
+
+        if file_name_in_obj not in file_name_in_path:
             raise ValueError('Different names in list_of_files and entities_per_file')
 
     # we can also check that final file of path in list of files is same as name in jsons
@@ -236,7 +246,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
 
 
-            for file_ind, data_file in enumerate(list_of_files): 
+            for file_ind, data_file in enumerate(list_of_files[0:1]): #run over several data files
+
                 print('___MEGqc___: ', 'Take data: ', data_file)
 
                 if 'acq-crosstalk' in data_file:
@@ -250,12 +261,18 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 print('___MEGqc___: ', 'Starting initial processing...')
                 start_time = time.time()
 
-                try:
-                    dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
-                except:
-                    print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
-                    #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
-                    continue
+                dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                
+                # Commented out this, because it would cover the actual error while allowing to continue processing.
+                # I wanna see the actual error. Often it happens while reading raw and says: 
+                # file '...' does not start with a file id tag
+                
+                # try:
+                #     dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                # except:
+                #     print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
+                #     #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
+                #     continue
                 
                 print('___MEGqc___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
