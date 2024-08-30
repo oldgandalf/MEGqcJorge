@@ -209,7 +209,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         avg_eog=[]
 
         print('___MEGqc___: ', 'TOTAL subs', len(list_of_subs))
-        print('___MEGqc___: ', 'EMPTY room?', sorted(list_of_subs)[0], sorted(list_of_subs)[-1])
+
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful

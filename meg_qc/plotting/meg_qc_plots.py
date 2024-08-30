@@ -235,7 +235,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
 def get_ds_entities(dataset_path: str):
 
     """
-    Get the entities of the dataset using ancpbids.
+    Get the entities of the dataset using ancpbids, only get derivatove entities, not all raw data.
 
     Parameters
     ----------
@@ -265,6 +265,8 @@ def get_ds_entities(dataset_path: str):
 
     entities = dataset.query_entities(scope='derivatives')
     #we only get entities of calculated derivatives here, not entire raw ds.
+
+    print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
     
     return entities
 
@@ -533,9 +535,9 @@ def make_plots_meg_qc(ds_paths: list):
                 tsv_path = []
                 for desc in descriptions:
                     entities['desc'] = desc
-                    tsv_path += sorted(list(dataset.query(**entities)))
+                    tsv_path += list(dataset.query(**entities))
 
-                tsvs_to_plot[metric] = tsv_path
+                tsvs_to_plot[metric] = sorted(tsv_path)
 
 
                 #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
@@ -555,8 +557,11 @@ def make_plots_meg_qc(ds_paths: list):
             # 1. Check that we got same entities_per_file and tsvs_to_plot:
             
             # 2. we can have several tsvs for one metric with same raw entities, 
-            # all these tsvs have to be added to obe report later.
+            # all these tsvs have to be added to one report later.
             # so we create a dict: {metric: {entities: [tsv1, tsv2, tsv3]}}
+
+            print('___MEGqc___: ', 'entities_per_file', entities_per_file)
+            print('___MEGqc___: ', 'tsvs_to_plot', tsvs_to_plot)
 
             tsvs_by_metric = {}
             for (tsv_metric, tsv_paths), (entity_metric, entity_vals) in zip(tsvs_to_plot.items(), entities_per_file.items()):
@@ -575,6 +580,13 @@ def make_plots_meg_qc(ds_paths: list):
 
                     # Here start part 2:
                     # Initialize the dictionary for the metric if it doesn't exist
+
+                    
+                    #this is the collection of entities belonging to the same raw file disregarding the desc part 
+                    # (desc appears from derivatives, but we care about the basic raw entitites).
+                    #from entity_val name remove the description part:
+                    entity_val['name'] = entity_val['name'].split('_desc')[0]
+
                     if tsv_metric not in tsvs_by_metric:
                         tsvs_by_metric[tsv_metric] = {}
 
@@ -585,16 +597,39 @@ def make_plots_meg_qc(ds_paths: list):
                     # Append the tsv_path to the list
                     tsvs_by_metric[tsv_metric][entity_val].append(tsv_path)
 
+            #For every metric, if we got same raw entitites, we can combine dwerivatives for the same raw into a list.
+            #Since we collected entities not from raw but from derivatives, we need to remove the desc part from the name.
+            #After that we combine files with the same 'name' in entity_val objects in 1 list:
+
+            tsvs_by_metric_combined = {}
+            for metric, vals in tsvs_by_metric.items():
+                
+                #first remove the desc part from the name:
+                for entity_val, tsv_paths in vals.items():
+                    entity_val_raw = entity_val['name'].split('_desc')[0]
+                
+                #then combine the tsvs for the same raw entity into 1 list and use entity_val_raw as a key:
+                
+
+
+                    
+
 
             # Now we have the dictionary with the structure we need.
             # We can loop over it and create the derivatives: all tsvs for 1 metric used to create 1 report
             # Then save report with the same entities from original tsv derivatives
+
+            # tsvs_by_metric 
             
+            print('___MEGqc___: ', 'tsvs_by_metric', tsvs_by_metric)
+
             for metric, vals in tsvs_by_metric.items():
 
                 for entity_val, tsv_paths in vals.items():
-                
+
+                    print('___MEGqc___: ', 'metric', metric)
                     print('___MEGqc___: ', 'entity_val', entity_val)
+                    print('___MEGqc___: ', 'entity_val name', entity_val['name'])
                     print('___MEGqc___: ', 'tsv_paths', tsv_paths)
 
                     # Now prepare the derivative to be written:
@@ -620,4 +655,5 @@ def make_plots_meg_qc(ds_paths: list):
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
