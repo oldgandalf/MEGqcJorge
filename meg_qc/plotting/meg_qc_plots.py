@@ -5,6 +5,7 @@ import json
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 from collections import defaultdict
+import re
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -442,7 +443,9 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
 # Function to create a key from the object excluding the 'desc' attribute
 def create_key_from_obj(obj):
-    return (obj.name, obj.extension, obj.suffix)
+    # Remove the 'desc' part from the name
+    name_without_desc = re.sub(r'_desc-[^_]+', '', obj.name)
+    return (name_without_desc, obj.extension, obj.suffix)
 
 
 def make_plots_meg_qc(ds_paths: list):
@@ -592,9 +595,7 @@ def make_plots_meg_qc(ds_paths: list):
                     #this is the collection of entities belonging to the same raw file disregarding the desc part 
                     # (desc appears from derivatives, but we care about the basic raw entitites).
                     #from entity_val name remove the description part:
-                    entity_val['name'] = entity_val['name'].split('_desc')[0]
-                    entity_val['desc'] = None
-                    entity_val['description'] = None
+
 
                     if tsv_metric not in tsvs_by_metric:
                         tsvs_by_metric[tsv_metric] = {}
