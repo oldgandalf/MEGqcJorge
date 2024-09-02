@@ -414,6 +414,46 @@ def create_key_from_obj(obj):
     name_without_desc = re.sub(r'_desc-[^_]+', '', obj.name)
     return (name_without_desc, obj.extension, obj.suffix)
 
+def combine_tsvs_dict(tsvs_by_metric: dict):
+
+    """
+    For every metric, if we got same raw entitites, we can combine dwerivatives for the same raw into a list.
+    Since we collected entities not from raw but from derivatives, we need to remove the desc part from the name.
+    After that we combine files with the same 'name' in entity_val objects in 1 list:
+
+    Parameters
+    ----------
+    tsvs_by_metric : dict
+        A dictionary of metrics and their corresponding TSV files.
+    
+    Returns
+    -------
+    combined_tsvs_by_metric : dict
+        A dictionary of metrics and their corresponding TSV files combined by raw entity
+
+    """
+
+    combined_tsvs_by_metric = {}
+
+    for metric, obj_dict in tsvs_by_metric.items():
+        combined_dict = defaultdict(list)
+        
+        for obj, tsv_path in obj_dict.items():
+            key = create_key_from_obj(obj)
+            combined_dict[key].extend(tsv_path)
+        
+        # Convert keys back to original objects
+        final_dict = {}
+        for key, paths in combined_dict.items():
+            # Find the first object with the same key
+            for obj in obj_dict.keys():
+                if create_key_from_obj(obj) == key:
+                    final_dict[obj] = paths
+                    break
+    
+        combined_tsvs_by_metric[metric] = final_dict
+
+    return combined_tsvs_by_metric
 
 def make_plots_meg_qc(ds_paths: list):
 
@@ -574,65 +614,15 @@ def make_plots_meg_qc(ds_paths: list):
                     # Append the tsv_path to the list
                     tsvs_by_metric[tsv_metric][entity_val].append(tsv_path)
 
+            tsvs_by_metric = combine_tsvs_dict(tsvs_by_metric)
 
-
-            #For every metric, if we got same raw entitites, we can combine dwerivatives for the same raw into a list.
-            #Since we collected entities not from raw but from derivatives, we need to remove the desc part from the name.
-            #After that we combine files with the same 'name' in entity_val objects in 1 list:
-
-
-            # New dictionary to store combined entries
-            combined_tsvs_by_metric = {}
-
-            for metric, obj_dict in tsvs_by_metric.items():
-                combined_dict = defaultdict(list)
-                
-                for obj, tsv_path in obj_dict.items():
-                    key = create_key_from_obj(obj)
-                    combined_dict[key].extend(tsv_path)
-                
-                # Convert keys back to original objects
-                final_dict = {}
-                for key, paths in combined_dict.items():
-                    # Find the first object with the same key
-                    for obj in obj_dict.keys():
-                        if create_key_from_obj(obj) == key:
-                            final_dict[obj] = paths
-                            break
-            
-            combined_tsvs_by_metric[metric] = final_dict
-
-            # Replace the original dictionary with the combined one
-            tsvs_by_metric = combined_tsvs_by_metric
-
-            # Print the result
-            for metric, vals in tsvs_by_metric.items():
-                for obj, tsv_paths in vals.items():
-                    print(f'Metric: {metric}')
-                    print(f'Object: {obj}')
-                    print(f'TSV Paths: {tsv_paths}')
-
-
-                    
-
-
-            # Now we have the dictionary with the structure we need.
-            # We can loop over it and create the derivatives: all tsvs for 1 metric used to create 1 report
+            # We can loop over the dict and create the derivatives: all tsvs for 1 metric used to create 1 report
             # Then save report with the same entities from original tsv derivatives
 
-            # tsvs_by_metric 
-            
-            print('___MEGqc___: ', 'tsvs_by_metric', tsvs_by_metric)
 
             for metric, vals in tsvs_by_metric.items():
 
                 for entity_val, tsv_paths in vals.items():
-
-                    print('___MEGqc___: ', 'metric', metric)
-                    print('___MEGqc___: ', 'entity_val', entity_val)
-                    print('___MEGqc___: ', 'entity_val name', entity_val['name'])
-                    print('___MEGqc___: ', 'tsv_paths', tsv_paths)
-                    print('___MEGqc___: ', 'entity_val attributes', vars(entity_val))
 
                     # Now prepare the derivative to be written:
                     meg_artifact = reports_folder.create_artifact(raw=entity_val) 
@@ -651,6 +641,8 @@ def make_plots_meg_qc(ds_paths: list):
     ancpbids.write_derivative(dataset, derivative) 
 
     return tsvs_to_plot
+
+
 
 # ____________________________
 # RUN IT:
