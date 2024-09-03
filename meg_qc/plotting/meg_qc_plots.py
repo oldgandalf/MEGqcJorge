@@ -286,7 +286,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds')
                 fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds')
 
-                std_derivs += [fig_all_time] + [fig_std_epoch0] + [fig_std_epoch1] 
+                std_derivs += fig_all_time + fig_std_epoch0 + fig_std_epoch1
 
         if 'PTP' in metric.upper():
 
@@ -301,7 +301,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
                 fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
                 fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
 
-                ptp_manual_derivs += [fig_all_time] + [fig_ptp_epoch0] + [fig_ptp_epoch1] 
+                ptp_manual_derivs += fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
 
         elif 'PSD' in metric.upper():
 
@@ -377,6 +377,24 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     'Head': head_derivs,
     'Muscle': muscle_derivs,
     'Report_MNE': []}
+
+
+    # print('____Number of figs in QC_derivs[STD]: ', len(QC_derivs['STD']))
+
+    # # Filter out empty figures from QC_derivs:
+    # for metric, fig_list in QC_derivs.items():
+    #     if fig_list:
+    #         QC_derivs[metric] = [
+    #             fig_deriv for fig_deriv in fig_list 
+    #             if fig_deriv.content.data and any(
+    #                 (hasattr(trace, 'x') and hasattr(trace, 'y') and len(trace.x) > 0 and len(trace.y) > 0) or
+    #                 (trace.type == 'pie' and hasattr(trace, 'labels') and hasattr(trace, 'values') and len(trace.labels) > 0 and len(trace.values) > 0)
+    #                 for trace in fig_deriv.content.data
+    #             )
+    #         ]
+
+
+    # print('____Number of figs in QC_derivs[STD] NEW: ', len(QC_derivs['STD']))
 
     #Sort all based on fig_order of QC_derivative:
     #(To plot them in correct order in the report)
@@ -649,5 +667,5 @@ def make_plots_meg_qc(ds_paths: list):
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
