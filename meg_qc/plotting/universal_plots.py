@@ -243,6 +243,73 @@ class MEG_channels:
                 # but artif_ch doesnt have this separation to ecg/eog. 
                 # Need to just make sure that the function is called in the right place.
 
+def add_CTF_lobes(channels_objs):
+
+    # Initialize dictionary to store channels by lobe and side
+    lobes_ctf = {
+        'Left Frontal': [],
+        'Right Frontal': [],
+        'Left Temporal': [],
+        'Right Temporal': [],
+        'Left Parietal': [],
+        'Right Parietal': [],
+        'Left Occipital': [],
+        'Right Occipital': [],
+        'Central': [],
+        'Reference': [],
+        'EEG/EOG/ECG': []
+    }
+
+    # Iterate through the channel names and categorize them
+    for key, value in channels_objs.items():
+        for ch in value:
+            if ch.name.startswith('MLF'):  # Left Frontal
+                lobes_ctf['Left Frontal'].append(ch.name)
+            elif ch.name.startswith('MRF'):  # Right Frontal
+                lobes_ctf['Right Frontal'].append(ch.name)
+            elif ch.name.startswith('MLT'):  # Left Temporal
+                lobes_ctf['Left Temporal'].append(ch.name)
+            elif ch.name.startswith('MRT'):  # Right Temporal
+                lobes_ctf['Right Temporal'].append(ch.name)
+            elif ch.name.startswith('MLP'):  # Left Parietal
+                lobes_ctf['Left Parietal'].append(ch.name)
+            elif ch.name.startswith('MRP'):  # Right Parietal
+                lobes_ctf['Right Parietal'].append(ch.name)
+            elif ch.name.startswith('MLO'):  # Left Occipital
+                lobes_ctf['Left Occipital'].append(ch.name)
+            elif ch.name.startswith('MRO'):  # Right Occipital
+                lobes_ctf['Right Occipital'].append(ch.name)
+            elif ch.name.startswith('MLC') or ch.name.startswith('MRC'):  # Central (Midline)
+                lobes_ctf['Central'].append(ch.name)
+            elif ch.name.startswith('MZ'):  # Reference Sensors
+                lobes_ctf['Reference'].append(ch.name)
+            elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
+                lobes_ctf['EEG/EOG/ECG'].append(ch.name)
+                
+
+    lobe_colors = {
+        'Left Frontal': '#1f77b4',
+        'Right Frontal': '#ff7f0e',
+        'Left Temporal': '#2ca02c',
+        'Right Temporal': '#9467bd',
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf',
+        'Central': '#8c564b',
+        'Reference': '#7f7f7f',
+        'EEG/EOG/ECG': '#bcbd22'}
+
+    lobes_color_coding_str='Color coding by lobe is applied as per CTF system.'
+    for key, value in channels_objs.items():
+        for ch in value:
+            for lobe in lobes_ctf.keys():
+                if ch.name in lobes_ctf[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
+
+    return channels_objs, lobes_color_coding_str
+
 
 def assign_channels_properties(raw: mne.io.Raw):
 
@@ -343,18 +410,22 @@ def assign_channels_properties(raw: mne.io.Raw):
                         ch.lobe = lobe
                         ch.lobe_color = lobe_colors[lobe]
     else:
-        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
-        print('___MEGqc___: ' + lobes_color_coding_str)
 
-        for key, value in channels_objs.items():
-            for ch in value:
-                ch.lobe = 'All channels'
-                #take random color from lobe_colors:
-                ch.lobe_color = random.choice(list(lobe_colors.values()))
+        channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
+
+        # lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        # print('___MEGqc___: ' + lobes_color_coding_str)
+
+        # for key, value in channels_objs.items():
+        #     for ch in value:
+        #         ch.lobe = 'All channels'
+        #         #take random color from lobe_colors:
+        #         ch.lobe_color = random.choice(list(lobe_colors.values()))
 
     #sort channels by name:
     for key, value in channels_objs.items():
         channels_objs[key] = sorted(value, key=lambda x: x.name)
+
 
     return channels_objs, lobes_color_coding_str
 
@@ -384,8 +455,9 @@ def sort_channel_by_lobe(channels_objs: dict):
         for ch in channels_objs[m_or_g]:
             lobes_dict[ch.lobe].append(ch) 
 
-        #sort the dict by lobes names:
-        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+        # Sort the dictionary by lobes names (by the second word in the key, if it exists)
+        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1] if len(x[0].split()) > 1 else ''))
+
 
     return chs_by_lobe
 
