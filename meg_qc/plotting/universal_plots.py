@@ -243,48 +243,95 @@ class MEG_channels:
                 # but artif_ch doesnt have this separation to ecg/eog. 
                 # Need to just make sure that the function is called in the right place.
 
+def add_CTF_lobes(channels_objs):
 
-def assign_channels_properties(raw: mne.io.Raw):
+    # Initialize dictionary to store channels by lobe and side
+    lobes_ctf = {
+        'Left Frontal': [],
+        'Right Frontal': [],
+        'Left Temporal': [],
+        'Right Temporal': [],
+        'Left Parietal': [],
+        'Right Parietal': [],
+        'Left Occipital': [],
+        'Right Occipital': [],
+        'Central': [],
+        'Reference': [],
+        'EEG/EOG/ECG': []
+    }
 
-    """
-    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
+    # Iterate through the channel names and categorize them
+    for key, value in channels_objs.items():
+        for ch in value:
+            # Magnetometers (assuming they start with 'M')
+            if ch.name.startswith('MLF'):  # Left Frontal
+                lobes_ctf['Left Frontal'].append(ch.name)
+            elif ch.name.startswith('MRF'):  # Right Frontal
+                lobes_ctf['Right Frontal'].append(ch.name)
+            elif ch.name.startswith('MLT'):  # Left Temporal
+                lobes_ctf['Left Temporal'].append(ch.name)
+            elif ch.name.startswith('MRT'):  # Right Temporal
+                lobes_ctf['Right Temporal'].append(ch.name)
+            elif ch.name.startswith('MLP'):  # Left Parietal
+                lobes_ctf['Left Parietal'].append(ch.name)
+            elif ch.name.startswith('MRP'):  # Right Parietal
+                lobes_ctf['Right Parietal'].append(ch.name)
+            elif ch.name.startswith('MLO'):  # Left Occipital
+                lobes_ctf['Left Occipital'].append(ch.name)
+            elif ch.name.startswith('MRO'):  # Right Occipital
+                lobes_ctf['Right Occipital'].append(ch.name)
+            elif ch.name.startswith('MLC') or ch.name.startswith('MRC'):  # Central (Midline)
+                lobes_ctf['Central'].append(ch.name)
+            elif ch.name.startswith('MZ'):  # Reference Sensors
+                lobes_ctf['Reference'].append(ch.name)
+            elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
+                lobes_ctf['EEG/EOG/ECG'].append(ch.name)
+            
+            # Gradiometers (assuming they have a different prefix or suffix, such as 'G')
+            elif ch.name.startswith('GLF'):  # Left Frontal Gradiometers
+                lobes_ctf['Left Frontal'].append(ch.name)
+            elif ch.name.startswith('GRF'):  # Right Frontal Gradiometers
+                lobes_ctf['Right Frontal'].append(ch.name)
+            elif ch.name.startswith('GLT'):  # Left Temporal Gradiometers
+                lobes_ctf['Left Temporal'].append(ch.name)
+            elif ch.name.startswith('GRT'):  # Right Temporal Gradiometers
+                lobes_ctf['Right Temporal'].append(ch.name)
+            elif ch.name.startswith('GLP'):  # Left Parietal Gradiometers
+                lobes_ctf['Left Parietal'].append(ch.name)
+            elif ch.name.startswith('GRP'):  # Right Parietal Gradiometers
+                lobes_ctf['Right Parietal'].append(ch.name)
+            elif ch.name.startswith('GLO'):  # Left Occipital Gradiometers
+                lobes_ctf['Left Occipital'].append(ch.name)
+            elif ch.name.startswith('GRO'):  # Right Occipital Gradiometers
+                lobes_ctf['Right Occipital'].append(ch.name)
+            elif ch.name.startswith('GLC') or ch.name.startswith('GRC'):  # Central (Midline) Gradiometers
+                lobes_ctf['Central'].append(ch.name)
 
-    Can later try to make this function a method of the MEG_channels class. 
-    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
 
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        Raw data set.
+    lobe_colors = {
+        'Left Frontal': '#1f77b4',
+        'Right Frontal': '#ff7f0e',
+        'Left Temporal': '#2ca02c',
+        'Right Temporal': '#9467bd',
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf',
+        'Central': '#8c564b',
+        'Reference': '#7f7f7f',
+        'EEG/EOG/ECG': '#bcbd22'}
 
-    Returns
-    -------
-    channels_objs : dict
-        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
-    lobes_color_coding_str : str
-        A string with information about the color coding of the lobes.
+    lobes_color_coding_str='Color coding by lobe is applied as per CTF system.'
+    for key, value in channels_objs.items():
+        for ch in value:
+            for lobe in lobes_ctf.keys():
+                if ch.name in lobes_ctf[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
 
-    """
-    channels_objs={'mag': [], 'grad': []}
-    if 'mag' in raw:
-        mag_locs = raw.copy().pick('mag').info['chs']
-        for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
-    else:
-        channels_objs['mag'] = []
+    return channels_objs, lobes_color_coding_str
 
-    if 'grad' in raw:
-        grad_locs = raw.copy().pick('grad').info['chs']
-        for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
-    else:
-        channels_objs['grad'] = []
-
-
-    # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick('mag').info['chs']
-    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
-    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+def add_Triux_lobes(channels_objs):
 
     lobes_treux = {
             'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
@@ -332,16 +379,72 @@ def assign_channels_properties(raw: mne.io.Raw):
     #     'Left Occipital': '#2ca02c',
     #     'Right Occipital': '#d62728'}
     
-    #assign treux labels to the channels:
-    if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
-        #loop over all values in the dictionary:
-        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
-        for key, value in channels_objs.items():
-            for ch in value:
-                for lobe in lobes_treux.keys():
-                    if ch.name in lobes_treux[lobe]:
-                        ch.lobe = lobe
-                        ch.lobe_color = lobe_colors[lobe]
+    
+    #loop over all values in the dictionary:
+    lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
+    for key, value in channels_objs.items():
+        for ch in value:
+            for lobe in lobes_treux.keys():
+                if ch.name in lobes_treux[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
+
+    return channels_objs, lobes_color_coding_str
+
+def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
+
+    """
+    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
+
+    Can later try to make this function a method of the MEG_channels class. 
+    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data set.
+    meg_system: str
+        CTF, Triux, None...
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+    lobes_color_coding_str : str
+        A string with information about the color coding of the lobes.
+
+    """
+    channels_objs={'mag': [], 'grad': []}
+    if 'mag' in raw:
+        mag_locs = raw.copy().pick('mag').info['chs']
+        for ch in mag_locs:
+            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
+    else:
+        channels_objs['mag'] = []
+
+    if 'grad' in raw:
+        grad_locs = raw.copy().pick('grad').info['chs']
+        for ch in grad_locs:
+            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
+    else:
+        channels_objs['grad'] = []
+
+
+    # for understanding how the locations are obtained. They can be extracted as:
+    # mag_locs = raw.copy().pick('mag').info['chs']
+    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
+    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+
+    
+    # Assign lobe labels to the channels:
+
+    if meg_system.upper() == 'TRIUX' and len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: 
+        #for 306 channel data in Elekta/Neuromag Treux system
+        channels_objs, lobes_color_coding_str = add_Triux_lobes(channels_objs)
+
+    elif meg_system.upper() == 'CTF':
+        channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
+
     else:
         lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
         print('___MEGqc___: ' + lobes_color_coding_str)
@@ -355,6 +458,7 @@ def assign_channels_properties(raw: mne.io.Raw):
     #sort channels by name:
     for key, value in channels_objs.items():
         channels_objs[key] = sorted(value, key=lambda x: x.name)
+
 
     return channels_objs, lobes_color_coding_str
 
@@ -384,8 +488,9 @@ def sort_channel_by_lobe(channels_objs: dict):
         for ch in channels_objs[m_or_g]:
             lobes_dict[ch.lobe].append(ch) 
 
-        #sort the dict by lobes names:
-        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1]))
+        # Sort the dictionary by lobes names (by the second word in the key, if it exists)
+        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1] if len(x[0].split()) > 1 else ''))
+
 
     return chs_by_lobe
 
@@ -773,6 +878,9 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
 
+    if not traces:
+        return None
+
     # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
     fig = go.Figure(data=traces)
 
@@ -829,6 +937,9 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     df_data=pd.DataFrame(data.T, columns=ch_names)
 
     fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
+
+    if fig is None:
+        return []
 
     # Add title, x axis title, x axis slider and y axis units+title:
     fig.update_layout(
@@ -986,30 +1097,31 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
         mag_pos = [ch['loc'][:3] for ch in mag_locs]
         mag_names = [ch['ch_name'] for ch in mag_locs]
 
-        # Create the magnetometer plot with markers only
+        if mag_pos:
+            # Create the magnetometer plot with markers only
 
-        mag_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in mag_pos],
-                                            y=[pos[1] for pos in mag_pos],
-                                            z=[pos[2] for pos in mag_pos],
-                                            mode='markers',
-                                            marker=dict(size=5),
-                                            text=mag_names,
-                                            hovertemplate='%{text}')],
-                                            layout=go.Layout(width=800, height=800))
+            mag_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in mag_pos],
+                                                y=[pos[1] for pos in mag_pos],
+                                                z=[pos[2] for pos in mag_pos],
+                                                mode='markers',
+                                                marker=dict(size=5),
+                                                text=mag_names,
+                                                hovertemplate='%{text}')],
+                                                layout=go.Layout(width=800, height=800))
 
-        mag_fig.update_layout(
-            title={
-            'text': 'Magnetometers positions',
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-            hoverlabel=dict(font=dict(size=10)))
-        
+            mag_fig.update_layout(
+                title={
+                'text': 'Magnetometers positions',
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'},
+                hoverlabel=dict(font=dict(size=10)))
+            
 
-        mag_fig = switch_names_on_off(mag_fig)
+            mag_fig = switch_names_on_off(mag_fig)
 
-        qc_derivative += [QC_derivative(content=mag_fig, name='Magnetometers_positions', content_type='plotly')]
+            qc_derivative += [QC_derivative(content=mag_fig, name='Magnetometers_positions', content_type='plotly')]
 
     if 'grad' in m_or_g_chosen:
 
@@ -1018,43 +1130,45 @@ def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
         grad_pos = [ch['loc'][:3] for ch in grad_locs]
         grad_names = [ch['ch_name'] for ch in grad_locs]
 
-        #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
+        if grad_pos:
 
-        grad_pos_together = []
-        grad_names_together = []
+            #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
 
-        for i in range(len(grad_pos)-1):
-            if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
-                grad_pos_together += [grad_pos[i]]
-                grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
-            else:
-                pass
+            grad_pos_together = []
+            grad_names_together = []
 
-
-        # Add both sets of gradiometer positions to the plot:
-        grad_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in grad_pos_together],
-                                                y=[pos[1] for pos in grad_pos_together],
-                                                z=[pos[2] for pos in grad_pos_together],
-                                                mode='markers',
-                                                marker=dict(size=5),
-                                                text=grad_names_together,
-                                                hovertemplate='%{text}')],
-                                                layout=go.Layout(width=800, height=800))
-
-        grad_fig.update_layout(
-            title={
-            'text': 'Gradiometers positions',
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-            hoverlabel=dict(font=dict(size=10)))
+            for i in range(len(grad_pos)-1):
+                if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
+                    grad_pos_together += [grad_pos[i]]
+                    grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
+                else:
+                    pass
 
 
-        # Add the button to have names show up on hover or always:
-        grad_fig = switch_names_on_off(grad_fig)
+            # Add both sets of gradiometer positions to the plot:
+            grad_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in grad_pos_together],
+                                                    y=[pos[1] for pos in grad_pos_together],
+                                                    z=[pos[2] for pos in grad_pos_together],
+                                                    mode='markers',
+                                                    marker=dict(size=5),
+                                                    text=grad_names_together,
+                                                    hovertemplate='%{text}')],
+                                                    layout=go.Layout(width=800, height=800))
 
-        qc_derivative += [QC_derivative(content=grad_fig, name='Gradiometers_positions', content_type='plotly')]
+            grad_fig.update_layout(
+                title={
+                'text': 'Gradiometers positions',
+                'y':0.85,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'},
+                hoverlabel=dict(font=dict(size=10)))
+
+
+            # Add the button to have names show up on hover or always:
+            grad_fig = switch_names_on_off(grad_fig)
+
+            qc_derivative += [QC_derivative(content=grad_fig, name='Gradiometers_positions', content_type='plotly')]
 
     return qc_derivative
 
@@ -1216,6 +1330,9 @@ def plot_sensors_3d(chs_by_lobe: dict):
 
     print(lobes_dict)
 
+    if not traces:
+        return []
+
     fig = go.Figure(data=traces)
 
     fig.update_layout(
@@ -1304,7 +1421,9 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         for i, _ in enumerate(ch_locs):
             traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
 
-
+    if not traces:
+        return []
+    
     fig = go.Figure(data=traces)
 
     fig.update_layout(
@@ -1608,6 +1727,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
 
             elif what_data == 'peaks':
                 data = [row['PtP epoch_'+str(n)] for n in epochs_names]
+
             
             boxes_names += [row['Name']]
 
@@ -1624,6 +1744,10 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             line_color=row['Lobe Color'],
             text=epochs_names))
 
+    # Check if the figure has any traces
+    if not fig.data:
+        return []
+    
     fig.update_traces(hovertemplate=hovertemplate)
 
     fig.update_layout(
@@ -1644,7 +1768,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             'yanchor': 'top'},)
         #legend_title=legend_title)
 
-    fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    fig_deriv = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return fig_deriv
 
@@ -1800,6 +1924,9 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
         channels.append(row['Name'])
 
     fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
+
+    if fig is None:
+        return []
 
     tit, unit = get_tit_and_unit(m_or_g)
     fig.update_layout(
@@ -2029,12 +2156,15 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         all_bands_names.append('other frequencies')
         all_mean_abs_values.append(total_amplitude - sum(all_mean_abs_values))
 
+
+    if not all_mean_relative_values:
+        return []
+    
     labels=[None]*len(all_bands_names)
     for n, name in enumerate(all_bands_names):
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
         #if some of the all_mean_abs_values are zero - they should not be shown in pie chart:
-
 
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
@@ -2304,6 +2434,11 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     #Collect all traces and add them to the figure:
 
     all_traces = box_traces+dot_traces
+
+    if not dot_traces:
+        return []
+    
+    
     fig = go.Figure(data=all_traces)
         
     #more settings:
@@ -2327,7 +2462,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
             'yanchor': 'top'},
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
 
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return qc_derivative
 
@@ -2652,6 +2787,10 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
     
     #Colllect all traces and add them to the figure:
     all_traces = [box_trace]+traces
+
+    if not traces:
+        return []
+    
     fig = go.Figure(data=all_traces)
 
     #Add hover text to the dots, remove too many digits after coma.
@@ -2675,7 +2814,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
 
 
     description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)]
 
     return qc_derivative
 
@@ -2700,8 +2839,11 @@ def plot_muscle_csv(f_path: str, m_or_g: str):
         A list of QC_derivative objects with plotly figures for muscle events.
 
     """
-
+    print('___MEGqc___: ', 'f_path', f_path, 'm_or_g', m_or_g)
     df = pd.read_csv(f_path, sep='\t')  
+
+    if df['scores_muscle'].empty or df['scores_muscle'].isna().all():
+        return []
 
     fig_derivs = []
 
@@ -2865,6 +3007,11 @@ def make_head_pos_plot_csv(f_path: str):
 
     #drop first column. cos index is being created as an extra column when transforming from csv back to df:
     head_pos.drop(columns=head_pos.columns[0], axis=1, inplace=True)
+
+    # Check if all specified columns are empty or contain only NaN values
+    columns_to_check = ['x', 'y', 'z', 'q1', 'q2', 'q3']
+    if head_pos[columns_to_check].isna().all().all() or head_pos[columns_to_check].empty:
+        return [],[]
 
     #plot head_pos using PLOTLY:
 
@@ -3044,6 +3191,10 @@ def plot_ECG_EOG_channel_csv(f_path):
     #name of the first column if it starts with 'ECG' or 'EOG':
     ch_name = df.columns[1]
     ch_data = df[ch_name].values
+
+    if not ch_data:
+        return []
+    
     peaks = df['event_indexes'].dropna()
     peaks = [int(x) for x in peaks]
     fs = int(df['fs'].dropna())
@@ -3069,6 +3220,7 @@ def plot_ECG_EOG_channel_csv(f_path):
     ch_deriv = [QC_derivative(fig, ch_name, 'plotly', fig_order = 1)]
 
     return ch_deriv
+
 
 def figure_x_axis(df, metric):
 
@@ -3225,6 +3377,9 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             metric = ecg_or_eog
         fig = plot_df_of_channels_data_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
 
+        if fig is None:
+            return go.Figure()
+
         #decorate the plot:
         ch_type_tit, unit = get_tit_and_unit(m_or_g)
         fig.update_layout(
@@ -3291,6 +3446,9 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
 
     # Load the data from the .tsv file into a DataFrame
     df = pd.read_csv(f_path, sep='\t')
+
+    if df['mean_rwave'].empty or df['mean_rwave'].isna().all():
+        return []
 
     # Set the plot's title and labels
     if 'recorded' in df['recorded_or_reconstructed'][0].lower():
@@ -3479,6 +3637,9 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str):
     for index, row in df.iterrows():
         traces += [go.Scatter(x=[abs(row[ecg_or_eog.lower()+'_corr_coeff'])], y=[row[ecg_or_eog.lower()+'_pval']], mode='markers', marker=dict(size=5, color=row['Lobe Color']), name=row['Name'], legendgroup=row['Lobe Color'], legendgrouptitle=dict(text=row['Lobe'].upper()), hovertemplate='Corr coeff: '+str(row[ecg_or_eog.lower()+'_corr_coeff'])+'<br>p-value: '+str(abs(row[ecg_or_eog.lower()+'_pval'])))]
 
+    if not traces:
+        return []
+    
     # Create the figure with the traces
     fig = go.Figure(data=traces)
 
