@@ -386,12 +386,18 @@ def load_data(file_path):
 
     shielding_str = ''
 
+    meg_system = None
+
     if os.path.isdir(file_path) and file_path.endswith('.ds'):
         # It's a CTF data directory
         print("___MEGqc___: ", "Loading CTF data...")
         raw = mne.io.read_raw_ctf(file_path, preload=True)
+        meg_system = 'CTF'
+
     elif os.path.isfile(file_path) and file_path.endswith('.fif'):
         # It's a FIF file
+        meg_system = 'Triux'
+
         print("___MEGqc___: ", "Loading FIF data...")
         try:
             raw = mne.io.read_raw_fif(file_path, on_split_missing='ignore')
@@ -402,7 +408,7 @@ def load_data(file_path):
     else:
         raise ValueError("Unsupported file format or file does not exist. The pipeline works with CTF data directories and FIF files.")
     
-    return raw, shielding_str
+    return raw, shielding_str, meg_system
 
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, file_path: str):
@@ -470,7 +476,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     print('___MEGqc___: ', 'Reading data from file:', file_path)
 
-    raw, shielding_str = load_data(file_path)
+    raw, shielding_str, meg_system = load_data(file_path)
 
     # from IPython.display import display
     # display(raw)
@@ -539,7 +545,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
     #In this dict channels are separated by mag/grads. not by lobes.
-    channels_objs, lobes_color_coding_str = assign_channels_properties(raw)
+    channels_objs, lobes_color_coding_str = assign_channels_properties(raw, meg_system)
 
     #Check if there are channels to analyze according to info in config file:
     m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
@@ -575,7 +581,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):

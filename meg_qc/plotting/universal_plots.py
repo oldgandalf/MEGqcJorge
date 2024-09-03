@@ -263,6 +263,7 @@ def add_CTF_lobes(channels_objs):
     # Iterate through the channel names and categorize them
     for key, value in channels_objs.items():
         for ch in value:
+            # Magnetometers (assuming they start with 'M')
             if ch.name.startswith('MLF'):  # Left Frontal
                 lobes_ctf['Left Frontal'].append(ch.name)
             elif ch.name.startswith('MRF'):  # Right Frontal
@@ -285,7 +286,27 @@ def add_CTF_lobes(channels_objs):
                 lobes_ctf['Reference'].append(ch.name)
             elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
                 lobes_ctf['EEG/EOG/ECG'].append(ch.name)
-                
+            
+            # Gradiometers (assuming they have a different prefix or suffix, such as 'G')
+            elif ch.name.startswith('GLF'):  # Left Frontal Gradiometers
+                lobes_ctf['Left Frontal'].append(ch.name)
+            elif ch.name.startswith('GRF'):  # Right Frontal Gradiometers
+                lobes_ctf['Right Frontal'].append(ch.name)
+            elif ch.name.startswith('GLT'):  # Left Temporal Gradiometers
+                lobes_ctf['Left Temporal'].append(ch.name)
+            elif ch.name.startswith('GRT'):  # Right Temporal Gradiometers
+                lobes_ctf['Right Temporal'].append(ch.name)
+            elif ch.name.startswith('GLP'):  # Left Parietal Gradiometers
+                lobes_ctf['Left Parietal'].append(ch.name)
+            elif ch.name.startswith('GRP'):  # Right Parietal Gradiometers
+                lobes_ctf['Right Parietal'].append(ch.name)
+            elif ch.name.startswith('GLO'):  # Left Occipital Gradiometers
+                lobes_ctf['Left Occipital'].append(ch.name)
+            elif ch.name.startswith('GRO'):  # Right Occipital Gradiometers
+                lobes_ctf['Right Occipital'].append(ch.name)
+            elif ch.name.startswith('GLC') or ch.name.startswith('GRC'):  # Central (Midline) Gradiometers
+                lobes_ctf['Central'].append(ch.name)
+
 
     lobe_colors = {
         'Left Frontal': '#1f77b4',
@@ -310,48 +331,7 @@ def add_CTF_lobes(channels_objs):
 
     return channels_objs, lobes_color_coding_str
 
-
-def assign_channels_properties(raw: mne.io.Raw):
-
-    """
-    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
-
-    Can later try to make this function a method of the MEG_channels class. 
-    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
-
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        Raw data set.
-
-    Returns
-    -------
-    channels_objs : dict
-        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
-    lobes_color_coding_str : str
-        A string with information about the color coding of the lobes.
-
-    """
-    channels_objs={'mag': [], 'grad': []}
-    if 'mag' in raw:
-        mag_locs = raw.copy().pick('mag').info['chs']
-        for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
-    else:
-        channels_objs['mag'] = []
-
-    if 'grad' in raw:
-        grad_locs = raw.copy().pick('grad').info['chs']
-        for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
-    else:
-        channels_objs['grad'] = []
-
-
-    # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick('mag').info['chs']
-    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
-    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+def add_Triux_lobes(channels_objs):
 
     lobes_treux = {
             'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
@@ -399,28 +379,81 @@ def assign_channels_properties(raw: mne.io.Raw):
     #     'Left Occipital': '#2ca02c',
     #     'Right Occipital': '#d62728'}
     
-    #assign treux labels to the channels:
-    if len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: #for 306 channel data in Elekta/Neuromag Treux system
-        #loop over all values in the dictionary:
-        lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
-        for key, value in channels_objs.items():
-            for ch in value:
-                for lobe in lobes_treux.keys():
-                    if ch.name in lobes_treux[lobe]:
-                        ch.lobe = lobe
-                        ch.lobe_color = lobe_colors[lobe]
-    else:
+    
+    #loop over all values in the dictionary:
+    lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
+    for key, value in channels_objs.items():
+        for ch in value:
+            for lobe in lobes_treux.keys():
+                if ch.name in lobes_treux[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
 
+    return channels_objs, lobes_color_coding_str
+
+def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
+
+    """
+    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
+
+    Can later try to make this function a method of the MEG_channels class. 
+    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data set.
+    meg_system: str
+        CTF, Triux, None...
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
+    lobes_color_coding_str : str
+        A string with information about the color coding of the lobes.
+
+    """
+    channels_objs={'mag': [], 'grad': []}
+    if 'mag' in raw:
+        mag_locs = raw.copy().pick('mag').info['chs']
+        for ch in mag_locs:
+            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
+    else:
+        channels_objs['mag'] = []
+
+    if 'grad' in raw:
+        grad_locs = raw.copy().pick('grad').info['chs']
+        for ch in grad_locs:
+            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
+    else:
+        channels_objs['grad'] = []
+
+
+    # for understanding how the locations are obtained. They can be extracted as:
+    # mag_locs = raw.copy().pick('mag').info['chs']
+    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
+    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
+
+    
+    # Assign lobe labels to the channels:
+
+    if meg_system.upper() == 'TRIUX' and len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: 
+        #for 306 channel data in Elekta/Neuromag Treux system
+        channels_objs, lobes_color_coding_str = add_Triux_lobes(channels_objs)
+
+    elif meg_system.upper() == 'CTF':
         channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
 
-        # lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
-        # print('___MEGqc___: ' + lobes_color_coding_str)
+    else:
+        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        print('___MEGqc___: ' + lobes_color_coding_str)
 
-        # for key, value in channels_objs.items():
-        #     for ch in value:
-        #         ch.lobe = 'All channels'
-        #         #take random color from lobe_colors:
-        #         ch.lobe_color = random.choice(list(lobe_colors.values()))
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.lobe = 'All channels'
+                #take random color from lobe_colors:
+                ch.lobe_color = random.choice(list(lobe_colors.values()))
 
     #sort channels by name:
     for key, value in channels_objs.items():
