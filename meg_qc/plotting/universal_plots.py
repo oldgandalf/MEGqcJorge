@@ -257,56 +257,81 @@ def add_CTF_lobes(channels_objs):
         'Right Occipital': [],
         'Central': [],
         'Reference': [],
-        'EEG/EOG/ECG': []
+        'EEG/EOG/ECG': [],
+        'Extra': []  # Add 'Extra' lobe
     }
 
     # Iterate through the channel names and categorize them
     for key, value in channels_objs.items():
         for ch in value:
+            categorized = False  # Track if the channel is categorized
             # Magnetometers (assuming they start with 'M')
             if ch.name.startswith('MLF'):  # Left Frontal
                 lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRF'):  # Right Frontal
                 lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLT'):  # Left Temporal
                 lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRT'):  # Right Temporal
                 lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLP'):  # Left Parietal
                 lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRP'):  # Right Parietal
                 lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLO'):  # Left Occipital
                 lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRO'):  # Right Occipital
                 lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLC') or ch.name.startswith('MRC'):  # Central (Midline)
                 lobes_ctf['Central'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MZ'):  # Reference Sensors
                 lobes_ctf['Reference'].append(ch.name)
+                categorized = True
             elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
                 lobes_ctf['EEG/EOG/ECG'].append(ch.name)
+                categorized = True
             
             # Gradiometers (assuming they have a different prefix or suffix, such as 'G')
             elif ch.name.startswith('GLF'):  # Left Frontal Gradiometers
                 lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRF'):  # Right Frontal Gradiometers
                 lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLT'):  # Left Temporal Gradiometers
                 lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRT'):  # Right Temporal Gradiometers
                 lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLP'):  # Left Parietal Gradiometers
                 lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRP'):  # Right Parietal Gradiometers
                 lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLO'):  # Left Occipital Gradiometers
                 lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRO'):  # Right Occipital Gradiometers
                 lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLC') or ch.name.startswith('GRC'):  # Central (Midline) Gradiometers
                 lobes_ctf['Central'].append(ch.name)
-
+                categorized = True
+            
+            # If the channel was not categorized, add it to 'Extra'
+            if not categorized:
+                lobes_ctf['Extra'].append(ch.name)
 
     lobe_colors = {
         'Left Frontal': '#1f77b4',
@@ -319,9 +344,11 @@ def add_CTF_lobes(channels_objs):
         'Right Occipital': '#17becf',
         'Central': '#8c564b',
         'Reference': '#7f7f7f',
-        'EEG/EOG/ECG': '#bcbd22'}
+        'EEG/EOG/ECG': '#bcbd22',
+        'Extra': '#d3d3d3'  
+    }
 
-    lobes_color_coding_str='Color coding by lobe is applied as per CTF system.'
+    lobes_color_coding_str = 'Color coding by lobe is applied as per CTF system.'
     for key, value in channels_objs.items():
         for ch in value:
             for lobe in lobes_ctf.keys():
@@ -330,6 +357,7 @@ def add_CTF_lobes(channels_objs):
                     ch.lobe_color = lobe_colors[lobe]
 
     return channels_objs, lobes_color_coding_str
+
 
 def add_Triux_lobes(channels_objs):
 
@@ -341,7 +369,8 @@ def add_Triux_lobes(channels_objs):
             'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
             'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
             'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
-            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133']}
+            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
+            'Extra': []}  # Add 'Extra' lobe
 
     # These were just for Aarons presentation:
     # lobes_treux = {
@@ -366,7 +395,8 @@ def add_Triux_lobes(channels_objs):
         'Left Parietal': '#e377c2',
         'Right Parietal': '#d62728',
         'Left Occipital': '#bcbd22',
-        'Right Occipital': '#17becf'}
+        'Right Occipital': '#17becf',
+        'Extra': '#d3d3d3'}
     
     # These were just for Aarons presentation:
     # lobe_colors = {
@@ -384,10 +414,17 @@ def add_Triux_lobes(channels_objs):
     lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
     for key, value in channels_objs.items():
         for ch in value:
+            categorized = False
             for lobe in lobes_treux.keys():
                 if ch.name in lobes_treux[lobe]:
                     ch.lobe = lobe
                     ch.lobe_color = lobe_colors[lobe]
+                    categorized = True
+                    break
+            # If the channel was not categorized, assign it to 'extra' lobe
+            if not categorized:
+                ch.lobe = 'Extra'
+                ch.lobe_color = lobe_colors[lobe]
 
     return channels_objs, lobes_color_coding_str
 
