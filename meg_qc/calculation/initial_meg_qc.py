@@ -288,7 +288,6 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     if stim_channel is None:
         picks_stim = mne.pick_types(data.info, stim=True)
-
         stim_channel = []
         for ch in picks_stim:
             stim_channel.append(data.info['chs'][ch]['ch_name'])
@@ -297,22 +296,30 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     picks_magn = data.copy().pick('mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick('grad').ch_names if 'grad' in data else None
 
+    if not stim_channel:
+        print('___MEGqc___: ', 'No stimulus channel detected. Setting stimulus channel to None to allow mne to detect events autamtically.')
+        stim_channel = None
+        #here for info on how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
+        #even if stim is None, mne will check once more when creating events.
+
+
+    epochs_grad, epochs_mag = None, None
+
     try:
         events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
-    except:
-        print('___MEGqc___: ', 'Could not find events using stimulus channels: ', stim_channel, '. Setting stimulus channels to None to alom mne to detect events autamtically')
-        events = mne.find_events(data, stim_channel=None, min_duration=event_dur)
-        #here for info on how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
-    n_events=len(events)
 
-    if n_events == 0:
-        print('___MEGqc___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
-        epochs_grad, epochs_mag = None, None
-    else:
-        print('___MEGqc___: ', 'Events found:', n_events)
-        epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
-        epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
+        if len(events) < 1:
+            print('___MEGqc___: ', 'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
+        else:
+            print('___MEGqc___: ', 'Events found:', len(events))
+            epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
+            epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True, baseline = None, event_repeated=epoching_params['event_repeated'])
 
+    except: #case when we use stim_channel=None, mne checks once more,  finds no other stim ch and no events and throws error:
+        print('___MEGqc___: ', 'No stim channels detected, no events found.')
+        pass #go to returning empty dict
+        
+    
     dict_epochs_mg = {
     'mag': epochs_mag,
     'grad': epochs_grad}

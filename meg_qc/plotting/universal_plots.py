@@ -447,13 +447,14 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
 
     else:
         lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        lobe_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#e377c2', '#d62728', '#bcbd22', '#17becf']
         print('___MEGqc___: ' + lobes_color_coding_str)
 
         for key, value in channels_objs.items():
             for ch in value:
                 ch.lobe = 'All channels'
                 #take random color from lobe_colors:
-                ch.lobe_color = random.choice(list(lobe_colors.values()))
+                ch.lobe_color = random.choice(lobe_colors)
 
     #sort channels by name:
     for key, value in channels_objs.items():
