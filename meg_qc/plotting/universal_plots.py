@@ -1683,6 +1683,35 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
+    if what_data=='peaks':
+        hover_tit='PtP Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+        data_prefix = 'PtP epoch_'
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+        data_prefix = 'STD epoch_'
+    else:
+        print('what_data should be either peaks or stds')
+        return []
+
+
+    #Check if df has relevant data for plotting:
+    #find columns with epochs:
+    relevant_columns = [col for col in df.columns if data_prefix in col]
+
+    # Filter rows where 'Type' is the one we need: mag, grad
+    filtered_df = df[df['Type'] == ch_type]
+
+    # Check if all relevant cells are empty
+    all_empty = filtered_df[relevant_columns].isnull().all().all()
+
+    if all_empty:
+        return []
+
+
     # Figure column names:
     # Create a list of columns that start with 'STD epoch_'
     epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
@@ -1694,17 +1723,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     epochs_names = [i for i in range(num_epoch_columns)]
 
 
-    if what_data=='peaks':
-        hover_tit='PtP Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_'+ch_tit
-    else:
-        print('what_data should be either peaks or stds')
-
     x_axis_boxes = 'channels'
     if x_axis_boxes=='channels':
         hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
@@ -1713,6 +1731,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
         hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
     else:
         print('x_axis_boxes should be either channels or epochs')
+        return []
 
 
     fig = go.Figure()
@@ -1721,15 +1740,12 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     #Boxes are groupped by lobe. So first each channel fo lobe 1 is plotted, then each of lobe 2, etc..
     boxes_names = []
 
+
     for index, row in df.iterrows():
         if row['Type'] == ch_type: #plot only mag/grad
-            if what_data == 'stds':
-                data = [row['STD epoch_'+str(n)] for n in epochs_names]
-
-            elif what_data == 'peaks':
-                data = [row['PtP epoch_'+str(n)] for n in epochs_names]
-
             
+            data = [row[data_prefix+str(n)] for n in epochs_names]
+
             boxes_names += [row['Name']]
 
             fig.add_trace(go.Box(y=data, 
@@ -1745,9 +1761,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             line_color=row['Lobe Color'],
             text=epochs_names))
 
-    # Check if the figure has any traces
-    if not fig.data:
-        return []
     
     fig.update_traces(hovertemplate=hovertemplate)
 
@@ -2438,7 +2451,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     if not dot_traces:
         return []
-    
     
     fig = go.Figure(data=all_traces)
         
