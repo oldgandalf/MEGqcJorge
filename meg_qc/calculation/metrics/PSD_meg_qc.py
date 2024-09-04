@@ -220,7 +220,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     brain_bands_df.index = ['absolute_'+m_or_g, 'relative_'+m_or_g]
 
     #add total_ampl as a new column in 'Absolute' raw and None in 'Relative' raw:
-    brain_bands_df['total_ampl'] = [total_ampl[0], 1]
+    brain_bands_df['total_amplitude'] = [total_ampl[0], 1]
 
     waves_pie_df_deriv = [QC_derivative(content=brain_bands_df, name='PSDwaves'+m_or_g.capitalize(), content_type = 'df')]
     

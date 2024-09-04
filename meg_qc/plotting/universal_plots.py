@@ -2185,7 +2185,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         # Extract rows into lists
         amplitudes_abs = df_no_total.loc['absolute_'+m_or_g].tolist()
         amplitudes_relative = df_no_total.loc['relative_'+m_or_g].tolist()
-        #take all values except the total in a list
 
         # Extract column names into a separate list
         bands_names = df_no_total.columns.tolist()
@@ -2202,6 +2201,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
     all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
     relative_unknown=100-(sum(amplitudes_relative))*100
+
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
@@ -2216,7 +2216,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
         #if some of the all_mean_abs_values are zero - they should not be shown in pie chart:
-
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
