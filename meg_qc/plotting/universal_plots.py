@@ -257,56 +257,81 @@ def add_CTF_lobes(channels_objs):
         'Right Occipital': [],
         'Central': [],
         'Reference': [],
-        'EEG/EOG/ECG': []
+        'EEG/EOG/ECG': [],
+        'Extra': []  # Add 'Extra' lobe
     }
 
     # Iterate through the channel names and categorize them
     for key, value in channels_objs.items():
         for ch in value:
+            categorized = False  # Track if the channel is categorized
             # Magnetometers (assuming they start with 'M')
             if ch.name.startswith('MLF'):  # Left Frontal
                 lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRF'):  # Right Frontal
                 lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLT'):  # Left Temporal
                 lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRT'):  # Right Temporal
                 lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLP'):  # Left Parietal
                 lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRP'):  # Right Parietal
                 lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLO'):  # Left Occipital
                 lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MRO'):  # Right Occipital
                 lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MLC') or ch.name.startswith('MRC'):  # Central (Midline)
                 lobes_ctf['Central'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('MZ'):  # Reference Sensors
                 lobes_ctf['Reference'].append(ch.name)
+                categorized = True
             elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
                 lobes_ctf['EEG/EOG/ECG'].append(ch.name)
+                categorized = True
             
             # Gradiometers (assuming they have a different prefix or suffix, such as 'G')
             elif ch.name.startswith('GLF'):  # Left Frontal Gradiometers
                 lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRF'):  # Right Frontal Gradiometers
                 lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLT'):  # Left Temporal Gradiometers
                 lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRT'):  # Right Temporal Gradiometers
                 lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLP'):  # Left Parietal Gradiometers
                 lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRP'):  # Right Parietal Gradiometers
                 lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLO'):  # Left Occipital Gradiometers
                 lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GRO'):  # Right Occipital Gradiometers
                 lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
             elif ch.name.startswith('GLC') or ch.name.startswith('GRC'):  # Central (Midline) Gradiometers
                 lobes_ctf['Central'].append(ch.name)
-
+                categorized = True
+            
+            # If the channel was not categorized, add it to 'Extra'
+            if not categorized:
+                lobes_ctf['Extra'].append(ch.name)
 
     lobe_colors = {
         'Left Frontal': '#1f77b4',
@@ -319,9 +344,11 @@ def add_CTF_lobes(channels_objs):
         'Right Occipital': '#17becf',
         'Central': '#8c564b',
         'Reference': '#7f7f7f',
-        'EEG/EOG/ECG': '#bcbd22'}
+        'EEG/EOG/ECG': '#bcbd22',
+        'Extra': '#d3d3d3'  
+    }
 
-    lobes_color_coding_str='Color coding by lobe is applied as per CTF system.'
+    lobes_color_coding_str = 'Color coding by lobe is applied as per CTF system.'
     for key, value in channels_objs.items():
         for ch in value:
             for lobe in lobes_ctf.keys():
@@ -330,6 +357,7 @@ def add_CTF_lobes(channels_objs):
                     ch.lobe_color = lobe_colors[lobe]
 
     return channels_objs, lobes_color_coding_str
+
 
 def add_Triux_lobes(channels_objs):
 
@@ -341,7 +369,8 @@ def add_Triux_lobes(channels_objs):
             'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
             'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
             'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
-            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133']}
+            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
+            'Extra': []}  # Add 'Extra' lobe
 
     # These were just for Aarons presentation:
     # lobes_treux = {
@@ -366,7 +395,8 @@ def add_Triux_lobes(channels_objs):
         'Left Parietal': '#e377c2',
         'Right Parietal': '#d62728',
         'Left Occipital': '#bcbd22',
-        'Right Occipital': '#17becf'}
+        'Right Occipital': '#17becf',
+        'Extra': '#d3d3d3'}
     
     # These were just for Aarons presentation:
     # lobe_colors = {
@@ -384,10 +414,17 @@ def add_Triux_lobes(channels_objs):
     lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
     for key, value in channels_objs.items():
         for ch in value:
+            categorized = False
             for lobe in lobes_treux.keys():
                 if ch.name in lobes_treux[lobe]:
                     ch.lobe = lobe
                     ch.lobe_color = lobe_colors[lobe]
+                    categorized = True
+                    break
+            # If the channel was not categorized, assign it to 'extra' lobe
+            if not categorized:
+                ch.lobe = 'Extra'
+                ch.lobe_color = lobe_colors[lobe]
 
     return channels_objs, lobes_color_coding_str
 
@@ -447,13 +484,14 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
 
     else:
         lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        lobe_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#e377c2', '#d62728', '#bcbd22', '#17becf']
         print('___MEGqc___: ' + lobes_color_coding_str)
 
         for key, value in channels_objs.items():
             for ch in value:
                 ch.lobe = 'All channels'
                 #take random color from lobe_colors:
-                ch.lobe_color = random.choice(list(lobe_colors.values()))
+                ch.lobe_color = random.choice(lobe_colors)
 
     #sort channels by name:
     for key, value in channels_objs.items():
@@ -1682,6 +1720,35 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
+    if what_data=='peaks':
+        hover_tit='PtP Amplitude'
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_epoch_per_channel_'+ch_tit
+        data_prefix = 'PtP epoch_'
+    elif what_data=='stds':
+        hover_tit='STD'
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_per_channel_'+ch_tit
+        data_prefix = 'STD epoch_'
+    else:
+        print('what_data should be either peaks or stds')
+        return []
+
+
+    #Check if df has relevant data for plotting:
+    #find columns with epochs:
+    relevant_columns = [col for col in df.columns if data_prefix in col]
+
+    # Filter rows where 'Type' is the one we need: mag, grad
+    filtered_df = df[df['Type'] == ch_type]
+
+    # Check if all relevant cells are empty
+    all_empty = filtered_df[relevant_columns].isnull().all().all()
+
+    if all_empty:
+        return []
+
+
     # Figure column names:
     # Create a list of columns that start with 'STD epoch_'
     epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
@@ -1693,17 +1760,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     epochs_names = [i for i in range(num_epoch_columns)]
 
 
-    if what_data=='peaks':
-        hover_tit='PtP Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_'+ch_tit
-    else:
-        print('what_data should be either peaks or stds')
-
     x_axis_boxes = 'channels'
     if x_axis_boxes=='channels':
         hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
@@ -1712,6 +1768,7 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
         hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
     else:
         print('x_axis_boxes should be either channels or epochs')
+        return []
 
 
     fig = go.Figure()
@@ -1720,15 +1777,12 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     #Boxes are groupped by lobe. So first each channel fo lobe 1 is plotted, then each of lobe 2, etc..
     boxes_names = []
 
+
     for index, row in df.iterrows():
         if row['Type'] == ch_type: #plot only mag/grad
-            if what_data == 'stds':
-                data = [row['STD epoch_'+str(n)] for n in epochs_names]
-
-            elif what_data == 'peaks':
-                data = [row['PtP epoch_'+str(n)] for n in epochs_names]
-
             
+            data = [row[data_prefix+str(n)] for n in epochs_names]
+
             boxes_names += [row['Name']]
 
             fig.add_trace(go.Box(y=data, 
@@ -1744,9 +1798,6 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
             line_color=row['Lobe Color'],
             text=epochs_names))
 
-    # Check if the figure has any traces
-    if not fig.data:
-        return []
     
     fig.update_traces(hovertemplate=hovertemplate)
 
@@ -2134,7 +2185,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         # Extract rows into lists
         amplitudes_abs = df_no_total.loc['absolute_'+m_or_g].tolist()
         amplitudes_relative = df_no_total.loc['relative_'+m_or_g].tolist()
-        #take all values except the total in a list
 
         # Extract column names into a separate list
         bands_names = df_no_total.columns.tolist()
@@ -2151,6 +2201,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
     all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
     relative_unknown=100-(sum(amplitudes_relative))*100
+
     if relative_unknown>0:
         all_mean_relative_values.append(relative_unknown)
         all_bands_names.append('other frequencies')
@@ -2165,7 +2216,6 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
         labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
 
         #if some of the all_mean_abs_values are zero - they should not be shown in pie chart:
-
 
     fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
     fig.update_layout(
@@ -2437,7 +2487,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
 
     if not dot_traces:
         return []
-    
     
     fig = go.Figure(data=all_traces)
         
