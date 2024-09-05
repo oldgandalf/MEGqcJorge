@@ -3,7 +3,7 @@ import mne
 import configparser
 import numpy as np
 import pandas as pd
-from meg_qc.plotting.universal_plots import QC_derivative, assign_channels_properties, sort_channel_by_lobe
+from meg_qc.plotting.universal_plots import QC_derivative, assign_channels_properties, sort_channels_by_lobe
 
 
 def get_all_config_params(config_file_name: str):
@@ -489,9 +489,10 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     # display(raw)
 
     #crop the data to calculate faster:
+    tmax_possible = raw.times[-1] 
     tmax=default_settings['crop_tmax']
-    if tmax is None: 
-        tmax = raw.times[-1] 
+    if tmax is None or tmax > tmax_possible: 
+        tmax = tmax_possible 
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
     #When resampling for plotting, cropping or anything else you don't need permanent in raw inside any functions - always do raw_new=raw.copy() not just raw_new=raw. The last command doesn't create a new object, the whole raw will be changed and this will also be passed to other functions even if you don't return the raw.
 
@@ -558,7 +559,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
 
     #Sort channels by lobe - this will be used often for plotting
-    chs_by_lobe = sort_channel_by_lobe(channels_objs)
+    chs_by_lobe = sort_channels_by_lobe(channels_objs)
     print('___MEGqc___: ', 'Channels sorted by lobe.')
 
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
