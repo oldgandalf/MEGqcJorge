@@ -26,7 +26,7 @@ class MEG_channels:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, system: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -41,6 +41,8 @@ class MEG_channels:
             The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
         lobe_color : str
             The color code for plotting with plotly according to the lobe area of the channel.
+        system : str
+            The system of the channel: 'CTF', 'TRIUX', 'OTHER'
         loc : list
             The location of the channel on the helmet.
         time_series : array
@@ -101,6 +103,7 @@ class MEG_channels:
         self.type = type
         self.lobe = lobe
         self.lobe_color = lobe_color
+        self.system = system
         self.loc = loc
         self.time_series = time_series
         self.std_overall = std_overall
@@ -152,8 +155,8 @@ class MEG_channels:
         data_dict = {}
         freqs = self.freq
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score','muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'Muscle', 'Head']):
+        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'system', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score','muscle', 'head'], 
+                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'System', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'Muscle', 'Head']):
             
             
             #adding psds/ecg/eog/etc over time or over freqs for plotting later:
@@ -455,14 +458,14 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
     if 'mag' in raw:
         mag_locs = raw.copy().pick('mag').info['chs']
         for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', ch['loc'][:3])]
+            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', 'OTHER', ch['loc'][:3])]
     else:
         channels_objs['mag'] = []
 
     if 'grad' in raw:
         grad_locs = raw.copy().pick('grad').info['chs']
         for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', ch['loc'][:3])]
+            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', 'OTHER', ch['loc'][:3])]
     else:
         channels_objs['grad'] = []
 
@@ -479,11 +482,21 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
         #for 306 channel data in Elekta/Neuromag Treux system
         channels_objs, lobes_color_coding_str = add_Triux_lobes(channels_objs)
 
+        #assign 'TRIUX' to all channels:
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.system = 'TRIUX'
+
     elif meg_system.upper() == 'CTF':
         channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
 
+        #assign 'CTF' to all channels:
+        for key, value in channels_objs.items():
+            for ch in value:
+                ch.system = 'CTF'
+
     else:
-        lobes_color_coding_str='For MEG system other than MEGIN Triux color coding by lobe is not applied.'
+        lobes_color_coding_str='For MEG systems other than MEGIN Triux or CTF color coding by lobe is not applied.'
         lobe_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#e377c2', '#d62728', '#bcbd22', '#17becf']
         print('___MEGqc___: ' + lobes_color_coding_str)
 
@@ -492,15 +505,16 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
                 ch.lobe = 'All channels'
                 #take random color from lobe_colors:
                 ch.lobe_color = random.choice(lobe_colors)
+                ch.system = 'OTHER'
 
     #sort channels by name:
     for key, value in channels_objs.items():
         channels_objs[key] = sorted(value, key=lambda x: x.name)
 
-
     return channels_objs, lobes_color_coding_str
 
-def sort_channel_by_lobe(channels_objs: dict):
+
+def sort_channels_by_lobe(channels_objs: dict):
 
     """ Sorts channels by lobes.
 
@@ -1402,6 +1416,24 @@ def plot_sensors_3d(chs_by_lobe: dict):
 
     return qc_derivative
 
+def get_meg_system(sensors_df):
+
+    """
+    Get which meg system we work with from the df. Make sure there is only 1 system.
+    
+    """
+    
+    # Get unique values, avoiding NaNs and empty strings
+    system = sensors_df['System'].dropna().unique().tolist()
+    system = [s for s in system if s != '']
+
+    # Check the number of unique values
+    if len(system) == 1:
+        result = system[0]
+    else:
+        result = 'OTHER'
+
+    return result
 
 def plot_sensors_3d_csv(sensors_csv_path: str):
 
@@ -1428,12 +1460,18 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     df = pd.read_csv(sensors_csv_path, sep='\t')
 
-    #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
-
-    #if there are no lobes in df - skip this plot:
-
-    if 'Lobe' not in df.columns:
+    #if there are no lobes in df - skip this plot, it s not the right df:
+    if 'Lobe' not in df.columns or 'System' not in df.columns:
         return []
+
+    system = get_meg_system(df)
+
+    if system.upper() == 'TRIUX':
+        fig_desc = "Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. "
+    else:
+        fig_desc = ""
+
+    #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
     
     unique_lobes = df['Lobe'].unique().tolist()
 
@@ -1443,9 +1481,11 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         for index, row in df.iterrows():
             if row['Lobe'] == lobe:
                 locs = [row[col] for col in df.columns if 'Sensor_location' in col]
-                lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], loc = locs))
+                lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], system = row ['System'], loc = locs))
 
     traces = []
+
+    system = df['System'].unique().tolist()
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
         for lobe in lobes_dict:
@@ -1487,7 +1527,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
     
-    qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ", fig_order=-1)]
+    qc_derivative = [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user=fig_desc, fig_order=-1)]
 
     return qc_derivative 
 
