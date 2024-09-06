@@ -1458,7 +1458,9 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     """
 
-    df = pd.read_csv(sensors_csv_path, sep='\t')
+    df = pd.read_csv(sensors_csv_path, sep='\t', dtype={6: str})
+    #dtype set in case we read here the ECG/EOG channel tsv, not the Sensors tcv.
+    #Below we also check it but checking the presense of Lobe and System in df.
 
     #if there are no lobes in df - skip this plot, it s not the right df:
     if 'Lobe' not in df.columns or 'System' not in df.columns:
@@ -3275,18 +3277,18 @@ def plot_ECG_EOG_channel_csv(f_path):
     if 'ecgchannel' not in base_name.lower() and 'eogchannel' not in base_name.lower():
         return []
 
-    df = pd.read_csv(f_path, sep='\t') 
+    df = pd.read_csv(f_path, sep='\t', dtype={6: str}) 
 
     #name of the first column if it starts with 'ECG' or 'EOG':
     ch_name = df.columns[1]
     ch_data = df[ch_name].values
 
-    if not ch_data:
+    if not ch_data.any():  # Check if all values are falsy (0, False, or empty)
         return []
     
     peaks = df['event_indexes'].dropna()
     peaks = [int(x) for x in peaks]
-    fs = int(df['fs'].dropna())
+    fs = int(df['fs'].dropna().iloc[0])
 
     time = np.arange(len(ch_data))/fs
     fig = go.Figure()
@@ -3534,7 +3536,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
         return []
 
     # Load the data from the .tsv file into a DataFrame
-    df = pd.read_csv(f_path, sep='\t')
+    df = pd.read_csv(f_path, sep='\t', dtype={6: str})
 
     if df['mean_rwave'].empty or df['mean_rwave'].isna().all():
         return []
