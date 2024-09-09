@@ -232,7 +232,8 @@ def get_ds_entities(dataset_path: str):
     derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    entities = dataset.query_entities(scope='derivatives')
+    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+    entities = dataset.query_entities(scope=calculated_derivs_folder)
     #we only get entities of calculated derivatives here, not entire raw ds.
 
     print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
@@ -516,8 +517,8 @@ def make_plots_meg_qc(ds_paths: list):
 
         for sub in chosen_entities['subject']:
 
-            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
-            reports_folder = subject_folder.create_folder(name='reports')
+            reports_folder = derivative.create_folder(name='reports')
+            subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
@@ -643,7 +644,7 @@ def make_plots_meg_qc(ds_paths: list):
                 for entity_val, tsv_paths in vals.items():
 
                     # Now prepare the derivative to be written:
-                    meg_artifact = reports_folder.create_artifact(raw=entity_val) 
+                    meg_artifact = subject_folder.create_artifact(raw=entity_val) 
                     # create artifact, take entities from entities of the previously calculated tsv derivative
 
                     meg_artifact.add_entity('desc', metric) #file name
@@ -664,9 +665,9 @@ def make_plots_meg_qc(ds_paths: list):
 
 # ____________________________
 # RUN IT:
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
