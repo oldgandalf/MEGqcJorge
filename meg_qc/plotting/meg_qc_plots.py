@@ -380,22 +380,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     'Report_MNE': []}
 
 
-    # print('____Number of figs in QC_derivs[STD]: ', len(QC_derivs['STD']))
-
-    # # Filter out empty figures from QC_derivs:
-    # for metric, fig_list in QC_derivs.items():
-    #     if fig_list:
-    #         QC_derivs[metric] = [
-    #             fig_deriv for fig_deriv in fig_list 
-    #             if fig_deriv.content.data and any(
-    #                 (hasattr(trace, 'x') and hasattr(trace, 'y') and len(trace.x) > 0 and len(trace.y) > 0) or
-    #                 (trace.type == 'pie' and hasattr(trace, 'labels') and hasattr(trace, 'values') and len(trace.labels) > 0 and len(trace.values) > 0)
-    #                 for trace in fig_deriv.content.data
-    #             )
-    #         ]
-
-
-    # print('____Number of figs in QC_derivs[STD] NEW: ', len(QC_derivs['STD']))
 
     #Sort all based on fig_order of QC_derivative:
     #(To plot them in correct order in the report)
@@ -426,9 +410,22 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     return report_html_string 
 
 
-
-# Function to create a key from the object excluding the 'desc' attribute
 def create_key_from_obj(obj):
+
+    """
+    Function to create a key from the object excluding the 'desc' attribute
+    
+    Parameters
+    ----------
+    obj : ancpbids object
+        An object from ancpbids.
+    
+    Returns
+    -------
+    tuple
+        A tuple containing the name, extension, and suffix of the object.
+
+    """
     # Remove the 'desc' part from the name
     name_without_desc = re.sub(r'_desc-[^_]+', '', obj.name)
     return (name_without_desc, obj.extension, obj.suffix)
