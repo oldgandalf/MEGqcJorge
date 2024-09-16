@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2023-08-14T21:02:50.837Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="6W7fm8SbtxdM6rtekwqK" version="21.6.8" type="device">
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.8">
   <diagram name="Page-1" id="929967ad-93f9-6ef4-fab6-5d389245f69c">
-    <mxGraphModel dx="2872" dy="4099" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1.5" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
+    <mxGraphModel dx="2554" dy="3874" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1.5" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
       <root>
         <mxCell id="0" style=";html=1;" />
         <mxCell id="1" style=";html=1;" parent="0" />
@@ -138,7 +138,7 @@
         <mxCell id="q_XP9tdPbFsaZTS1878Z-168" value="pinOut 1" style="fontStyle=0;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="q_XP9tdPbFsaZTS1878Z-164" vertex="1">
           <mxGeometry x="240" y="35.00000000000023" width="10" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="zNMVAwUSSOP5G73fzrCB-8" value="Output:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;List of QC derivatives (figs)&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Dict as Simple metric&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Str about EOG contamination" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
+        <mxCell id="zNMVAwUSSOP5G73fzrCB-8" value="Output:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;List of QC derivatives (tsvs)&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Dict as Simple metric&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Str about EOG contamination" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
           <mxGeometry x="-200" y="-64" width="198" height="81" as="geometry" />
         </mxCell>
         <mxCell id="zNMVAwUSSOP5G73fzrCB-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="q_XP9tdPbFsaZTS1878Z-168" target="zNMVAwUSSOP5G73fzrCB-8" edge="1">
