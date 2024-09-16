@@ -1236,7 +1236,20 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
     """
     Calculate the amplitude ratio for each channel.
+
+    1. Calculate the mean peak-to-peak amplitude across all channels:
+
+    First computes the peak-to-peak amplitude (simply difference between the maximum and minimum values) for each channel's smoothed artifact data.
+    The mean of these peak-to-peak amplitudes is then calculated (ptp_all_comp_waves).
     
+    2. Calculate the amplitude ratio for each channel:
+
+    For each channel, calculate the ratio between the channel's peak-to-peak amplitude (minmax_amplitude(ch.artif_data_smoothed)) and 
+    the mean peak-to-peak amplitude across all channels (ptp_all_comp_waves).
+    
+    This ratio is stored as an attribute (amplitude_ratio) in the Avg_artif object for each channel.
+    
+
     Parameters
     ----------
     artif_per_ch : list
@@ -1804,7 +1817,7 @@ def reconstruct_ecg_and_check(raw: mne.io.Raw, n_breaks_bursts_allowed_per_10min
 
 
 
-def check_mean_wave(raw: mne.io.Raw, ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float):
+def check_mean_wave(ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int, params_internal: dict, thresh_lvl_peakfinder: float):
 
     """
     Calculate mean R wave based on either real ECG channel data or on reconstructed data (depends on the method used) 
@@ -1813,8 +1826,6 @@ def check_mean_wave(raw: mne.io.Raw, ecg_data: np.ndarray, ecg_or_eog: str, even
     
     Parameters
     ----------
-    raw : mne.io.Raw
-        Raw data.
     use_method : str
         String with the method chosen for the analysis.
     ecg_data: np.ndarray
@@ -2185,7 +2196,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         simple_metric_ECG = {'description': ecg_str}
         return ecg_derivs, simple_metric_ECG, ecg_str, []
 
-    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(raw, ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
+    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
     
     ecg_str += ecg_str_checked
 
@@ -2364,7 +2375,7 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion on recorded ch (if channel present) or fail.
 
     
-    mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(raw, eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
+    mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
     eog_str += eog_str_checked
 
 
