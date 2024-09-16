@@ -91,7 +91,7 @@ def get_files_list(dataset_path, dataset, sid):
         # TODO: this assumes every .ds directory has a single corresponding .res4 file. 
         # Is it always so?
         # Used because I cant get entities_per_file from .ds folders, ancpbids doesnt support folder query.
-        # But we need entities_per_file to pass into calculation_folder.create_artifact(), 
+        # But we need entities_per_file to pass into subject_folder.create_artifact(), 
         # so that it can add automatically all the entities to the new derivative on base of entities from raw file.
     
         
@@ -214,13 +214,13 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs: #[0:4]: 
+        for sid in list_of_subs: #[0:4]:
     
             print('___MEGqc___: ', 'Dataset: ', dataset_path)
             print('___MEGqc___: ', 'Take SID: ', sid)
             
-            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
-            calculation_folder = subject_folder.create_folder(name='calculation')
+            calculation_folder = derivative.create_folder(name='calculation')
+            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sid)
 
             list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sid)
 
@@ -406,10 +406,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #         #'with'command doesnt work in lambda
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        meg_artifact = calculation_folder.create_artifact(raw=entities_per_file[file_ind]) #shell. empty derivative
+                        meg_artifact = subject_folder.create_artifact(raw=entities_per_file[file_ind]) #shell. empty derivative
 
                         counter +=1
-                        print('___MEGqc___: ', 'counter of calculation_folder.create_artifact', counter)
+                        print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
 
                         meg_artifact.add_entity('desc', deriv.name) #file name
                         meg_artifact.suffix = 'meg'

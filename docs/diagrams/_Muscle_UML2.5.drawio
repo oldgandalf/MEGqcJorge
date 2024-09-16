@@ -1,9 +1,12 @@
-<mxfile host="Electron" modified="2023-08-14T21:10:16.678Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.8 Chrome/114.0.5735.289 Electron/25.5.0 Safari/537.36" etag="qSFlSSzBQjjtF_-iwf9s" version="21.6.8" type="device">
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.8">
   <diagram name="Page-1" id="dtkTwhtDY3SrjnRo8XkO">
-    <mxGraphModel dx="1590" dy="1923" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="954" dy="1527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="59dkZ2dE2vKqbBFLidnJ-1" value="&lt;b&gt;calculate_muscle_NO_threshold()&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;gradientColor=none;fillStyle=hatch;dashed=1;glass=0;shadow=0;horizontal=0;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="410" y="170" width="340" height="520" as="geometry" />
+        </mxCell>
         <mxCell id="lJstjDnfzTnsdC9-dKv9-14" value="&lt;font style=&quot;&quot;&gt;Muscle_meq_qc()&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;" parent="1" vertex="1">
           <mxGeometry x="505" y="-540" width="170" height="40" as="geometry" />
         </mxCell>
@@ -106,7 +109,7 @@
         <mxCell id="VmBpd-jAXGRa_ZSsbWtE-52" value="" style="group;flipH=1;flipV=0;" parent="1" vertex="1" connectable="0">
           <mxGeometry x="490" y="450" width="250" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="VmBpd-jAXGRa_ZSsbWtE-53" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;Plot time and z score&amp;nbsp;artifacts over the&amp;nbsp;whole time series&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;b style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;border-color: var(--border-color);&quot;&gt;plot_muscle_artifacts()&lt;/i&gt;&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="VmBpd-jAXGRa_ZSsbWtE-52" vertex="1">
+        <mxCell id="VmBpd-jAXGRa_ZSsbWtE-53" value="&lt;span style=&quot;border-color: var(--border-color);&quot;&gt;Save muscle interference data to TSV for platting later&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;b style=&quot;border-color: var(--border-color);&quot;&gt;&lt;i style=&quot;border-color: var(--border-color);&quot;&gt;save_muscle_to_csv()&lt;/i&gt;&lt;/b&gt;&lt;br&gt;&lt;/span&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="VmBpd-jAXGRa_ZSsbWtE-52" vertex="1">
           <mxGeometry y="10" width="240" height="80" as="geometry" />
         </mxCell>
         <mxCell id="VmBpd-jAXGRa_ZSsbWtE-54" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="VmBpd-jAXGRa_ZSsbWtE-52" vertex="1">
@@ -115,7 +118,7 @@
         <mxCell id="VmBpd-jAXGRa_ZSsbWtE-55" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="VmBpd-jAXGRa_ZSsbWtE-52" vertex="1">
           <mxGeometry x="105" width="30" height="10" as="geometry" />
         </mxCell>
-        <mxCell id="VmBpd-jAXGRa_ZSsbWtE-59" value="Output:&lt;br&gt;&lt;br&gt;List of QC derivatives (fig inside)&lt;br&gt;Dict as Simple metric&lt;br&gt;Str about artifacts" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
+        <mxCell id="VmBpd-jAXGRa_ZSsbWtE-59" value="Output:&lt;br&gt;&lt;br&gt;List of QC derivatives (tsvs)&lt;br&gt;Dict as Simple metric&lt;br&gt;Str about artifacts" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
           <mxGeometry x="780" y="520" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="VmBpd-jAXGRa_ZSsbWtE-60" value="" style="group" parent="1" vertex="1" connectable="0">

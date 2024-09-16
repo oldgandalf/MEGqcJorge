@@ -2427,7 +2427,6 @@ def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch
 def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
-
     Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
     On base of the data from tsv file
     
@@ -3170,6 +3169,7 @@ def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray):
 
     return head_derivs
 
+
 def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
 
     """
@@ -3255,19 +3255,13 @@ def plot_ECG_EOG_channel_csv(f_path):
     
     Parameters
     ----------
-    ch_data : list or np.ndarray
-        Data of the channel
-    peaks : list or np.ndarray
-        Indices of the peaks in the data
-    ch_name : str
-        Name of the channel
-    fs : int
-        Sampling frequency of the data
+    f_path : str
+        Path to the tsv file with the derivs to plot
         
     Returns
     -------
-    fig : plotly.graph_objects.Figure
-        Plot of the channel data and detected peaks
+    ch_deriv : list
+        List of QC_derivative objects with plotly figures of the ECG/EOG channels
         
     """
 

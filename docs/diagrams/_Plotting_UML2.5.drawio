@@ -1,0 +1,164 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.8">
+  <diagram name="Page-1" id="PUbhOBLwAxsONIC4mjg5">
+    <mxGraphModel dx="3735" dy="2122" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="9iOVFMO985ibKQIA5yUQ-1" value="Loop:&lt;br&gt;[for each subject]" style="shape=umlFrame;whiteSpace=wrap;html=1;width=121;height=40;boundedLbl=1;verticalAlign=middle;align=left;spacingLeft=5;dashed=1;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="-1350" y="130" width="350" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="z92k_c89T4PLz4YoD9Kb-1" target="Dlx8wmVMaPq1w5EYogpk-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-1" value="" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="-1620" y="20" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="z92k_c89T4PLz4YoD9Kb-41" target="z92k_c89T4PLz4YoD9Kb-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-2" value="data directory path" style="html=1;" parent="1" vertex="1">
+          <mxGeometry x="-1630" y="-235" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="z92k_c89T4PLz4YoD9Kb-5" target="z92k_c89T4PLz4YoD9Kb-7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-1171.0000000000002" y="-320" as="sourcePoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-5" value="" style="ellipse;fillColor=strokeColor;" parent="1" vertex="1">
+          <mxGeometry x="-1180" y="-320" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-6" value="" style="group;flipH=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-1295" y="-250" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-7" value="IO interface (ANCP BIDS)&amp;nbsp;&lt;br&gt;creates derivative folder structure for reports,&lt;br&gt;output list of TSVs to be plotted" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="z92k_c89T4PLz4YoD9Kb-6" vertex="1">
+          <mxGeometry x="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-8" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-6" vertex="1">
+          <mxGeometry x="115" y="80" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-9" value="pinOut 1" style="fontStyle=0;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-6" vertex="1">
+          <mxGeometry y="25" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-12" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-1286" y="186" width="450" height="715" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-13" value="&lt;i style=&quot;&quot;&gt;On base of chosen entities find TSVs that need to be plotted and save the to dict divided by QC metrics&lt;br&gt;&lt;b&gt;combine_tsvs_to_dict()&lt;/b&gt;&lt;/i&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="z92k_c89T4PLz4YoD9Kb-12" vertex="1">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-14" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-12" vertex="1">
+          <mxGeometry x="105" y="90" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-15" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-12" vertex="1">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-25" value="Loop:&lt;br&gt;[for each metric]" style="shape=umlFrame;whiteSpace=wrap;html=1;width=121;height=40;boundedLbl=1;verticalAlign=middle;align=left;spacingLeft=5;dashed=1;" vertex="1" parent="z92k_c89T4PLz4YoD9Kb-12">
+          <mxGeometry x="-40" y="180" width="300" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-17" value="" style="group;dashed=1;dashPattern=1 1;" parent="z92k_c89T4PLz4YoD9Kb-12" vertex="1" connectable="0">
+          <mxGeometry y="194" width="450" height="471" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-18" value="&lt;i&gt;Combine TSVs and create report for each metric&lt;br&gt;&lt;b&gt;csv_to_html_report()&lt;/b&gt;&lt;/i&gt;&lt;div&gt;&lt;b&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/b&gt;&lt;div&gt;Function includes&lt;i&gt;:&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;Create figures for each metric &lt;br&gt;(see functions in &lt;/span&gt;&lt;b style=&quot;background-color: initial; font-style: italic;&quot;&gt;universal_plots.py)&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;Create a report with these figures using&lt;/span&gt;&lt;i style=&quot;background-color: initial; font-weight: bold;&quot;&gt;&amp;nbsp;make_joined_report_mne()&lt;/i&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1">
+          <mxGeometry y="34.82" width="230" height="175.18" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-21" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1">
+          <mxGeometry x="103.31999999999998" y="24.61538461538461" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-28" value="" style="group;fontSize=11;flipH=1;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1" connectable="0">
+          <mxGeometry x="-5" y="280.0000000000002" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-29" value="IO interface (ANCP BIDS)&amp;nbsp;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;writes derivatives back into data system&amp;nbsp;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="z92k_c89T4PLz4YoD9Kb-28" vertex="1">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-31" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-28" vertex="1">
+          <mxGeometry x="240" y="35" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-32" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-28" vertex="1">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="z92k_c89T4PLz4YoD9Kb-17" source="z92k_c89T4PLz4YoD9Kb-29" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="115" y="380.0000000000002" as="sourcePoint" />
+            <mxPoint x="115" y="421" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-46" value="Derivatives:&lt;br&gt;&lt;div&gt;HTML reports&lt;/div&gt;" style="html=1;fontSize=11;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1">
+          <mxGeometry x="313" y="305" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-47" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" parent="z92k_c89T4PLz4YoD9Kb-17" source="z92k_c89T4PLz4YoD9Kb-31" target="z92k_c89T4PLz4YoD9Kb-46" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gJO7JIBL_jriJ2bUjoK9-1" value="" style="ellipse;html=1;shape=endState;fillColor=strokeColor;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1">
+          <mxGeometry x="100" y="421" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-19" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="z92k_c89T4PLz4YoD9Kb-17" vertex="1">
+          <mxGeometry x="99.99999999999999" y="209.99743589743582" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" parent="z92k_c89T4PLz4YoD9Kb-17" source="z92k_c89T4PLz4YoD9Kb-19" target="z92k_c89T4PLz4YoD9Kb-32" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-30" value="Loop:&lt;br&gt;[for entities belonging to 1 raw file]" style="shape=umlFrame;whiteSpace=wrap;html=1;width=130;height=56;boundedLbl=1;verticalAlign=middle;align=left;spacingLeft=5;dashed=1;dashPattern=1 1;" vertex="1" parent="z92k_c89T4PLz4YoD9Kb-17">
+          <mxGeometry x="-50" y="-80" width="316" height="323" as="geometry" />
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" parent="z92k_c89T4PLz4YoD9Kb-12" source="z92k_c89T4PLz4YoD9Kb-14" target="z92k_c89T4PLz4YoD9Kb-21" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="118" y="134" />
+              <mxPoint x="118" y="134" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-48" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Plotting MEG QC pipeline&amp;nbsp;&lt;br&gt;&lt;b&gt;&lt;i&gt;make_plots_meg_qc()&amp;nbsp;&lt;/i&gt;&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="-1280" y="-410" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-2" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="-1285" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-3" value="Offer detected entities to the user&amp;nbsp;&lt;br&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;(selection in terminal):&lt;/span&gt;&lt;div&gt;which ones need to be plotted?&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;selector()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-2">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-4" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-2">
+          <mxGeometry x="105" y="90" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-5" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-2">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-10" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="-1285" y="-130" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-11" value="Using ANCP BIDS get entitites for all calculated TSV derivatives: sub, , task, run, etc..&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;get_ds_entities()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-10">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-12" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-10">
+          <mxGeometry x="105" y="90" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-13" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" vertex="1" parent="Dlx8wmVMaPq1w5EYogpk-10">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="z92k_c89T4PLz4YoD9Kb-8" target="Dlx8wmVMaPq1w5EYogpk-13">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-1170" y="-130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="Dlx8wmVMaPq1w5EYogpk-4" target="z92k_c89T4PLz4YoD9Kb-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="z92k_c89T4PLz4YoD9Kb-2" target="z92k_c89T4PLz4YoD9Kb-41">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-1490" y="-210" as="sourcePoint" />
+            <mxPoint x="-1295" y="-210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="z92k_c89T4PLz4YoD9Kb-41" value="passing data &lt;br&gt;directory path&amp;nbsp;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="-1440" y="-230" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-31" value="pinOut 1" style="fontStyle=0;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" vertex="1" parent="1">
+          <mxGeometry x="-1296" y="35" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Dlx8wmVMaPq1w5EYogpk-34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Dlx8wmVMaPq1w5EYogpk-12" target="Dlx8wmVMaPq1w5EYogpk-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

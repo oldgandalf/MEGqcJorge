@@ -232,7 +232,8 @@ def get_ds_entities(dataset_path: str):
     derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    entities = dataset.query_entities(scope='derivatives')
+    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+    entities = dataset.query_entities(scope=calculated_derivs_folder)
     #we only get entities of calculated derivatives here, not entire raw ds.
 
     print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
@@ -379,22 +380,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     'Report_MNE': []}
 
 
-    # print('____Number of figs in QC_derivs[STD]: ', len(QC_derivs['STD']))
-
-    # # Filter out empty figures from QC_derivs:
-    # for metric, fig_list in QC_derivs.items():
-    #     if fig_list:
-    #         QC_derivs[metric] = [
-    #             fig_deriv for fig_deriv in fig_list 
-    #             if fig_deriv.content.data and any(
-    #                 (hasattr(trace, 'x') and hasattr(trace, 'y') and len(trace.x) > 0 and len(trace.y) > 0) or
-    #                 (trace.type == 'pie' and hasattr(trace, 'labels') and hasattr(trace, 'values') and len(trace.labels) > 0 and len(trace.values) > 0)
-    #                 for trace in fig_deriv.content.data
-    #             )
-    #         ]
-
-
-    # print('____Number of figs in QC_derivs[STD] NEW: ', len(QC_derivs['STD']))
 
     #Sort all based on fig_order of QC_derivative:
     #(To plot them in correct order in the report)
@@ -425,9 +410,22 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     return report_html_string 
 
 
-
-# Function to create a key from the object excluding the 'desc' attribute
 def create_key_from_obj(obj):
+
+    """
+    Function to create a key from the object excluding the 'desc' attribute
+    
+    Parameters
+    ----------
+    obj : ancpbids object
+        An object from ancpbids.
+    
+    Returns
+    -------
+    tuple
+        A tuple containing the name, extension, and suffix of the object.
+
+    """
     # Remove the 'desc' part from the name
     name_without_desc = re.sub(r'_desc-[^_]+', '', obj.name)
     return (name_without_desc, obj.extension, obj.suffix)
@@ -516,8 +514,8 @@ def make_plots_meg_qc(ds_paths: list):
 
         for sub in chosen_entities['subject']:
 
-            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sub)
-            reports_folder = subject_folder.create_folder(name='reports')
+            reports_folder = derivative.create_folder(name='reports')
+            subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
             try:
                 report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
@@ -643,7 +641,7 @@ def make_plots_meg_qc(ds_paths: list):
                 for entity_val, tsv_paths in vals.items():
 
                     # Now prepare the derivative to be written:
-                    meg_artifact = reports_folder.create_artifact(raw=entity_val) 
+                    meg_artifact = subject_folder.create_artifact(raw=entity_val) 
                     # create artifact, take entities from entities of the previously calculated tsv derivative
 
                     meg_artifact.add_entity('desc', metric) #file name
@@ -664,9 +662,9 @@ def make_plots_meg_qc(ds_paths: list):
 
 # ____________________________
 # RUN IT:
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/M2_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
