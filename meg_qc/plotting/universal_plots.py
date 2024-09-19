@@ -2954,7 +2954,7 @@ def plot_muscle_csv(f_path: str, m_or_g: str):
     'xanchor': 'center',
     'yanchor': 'top'})
 
-    fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit, 'plotly')]
+    fig_derivs += [QC_derivative(fig, 'muscle_z_scores_over_time_based_on_'+tit, 'plotly', 'Calculation is done using MNE function annotate_muscle_zscore(). It requires a z-score threshold, which can be changed in the settings file. (by defaults 5). Values over this threshold are marked in red.')]
     
     return fig_derivs
 
