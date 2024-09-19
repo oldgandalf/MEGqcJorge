@@ -2211,7 +2211,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
 
     elif noise_or_waves == 'waves' and 'PSDwaves' in base_name:
 
-        fig_tit = "Relative amplitude of each band: " 
+        fig_tit = "Relative area under the amplitude spectrum: " 
         fig_name = 'PSD_Relative_band_amplitude_all_channels_'
 
 
