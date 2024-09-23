@@ -1457,12 +1457,14 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         A list of QC_derivative objects containing the plotly figures with the sensor locations.
 
     """
+    file_name = os.path.basename(sensors_csv_path)
+    if 'ecgchannel' in file_name.lower() or 'eogchannel' in file_name.lower():
+        return []
+    #we will get tsv representing ECG/EOG channel itself landed here. We dont need to plot it with this func.
 
-    df = pd.read_csv(sensors_csv_path, sep='\t', dtype={6: str})
-    #dtype set in case we read here the ECG/EOG channel tsv, not the Sensors tsv.
-    #Below we also check it but checking the presense of Lobe and System in df.
+    df = pd.read_csv(sensors_csv_path, sep='\t')
 
-    #if there are no lobes in df - skip this plot, it s not the right df:
+    #double check: if there are no lobes in df - skip this plot, it s not the right df:
     if 'Lobe' not in df.columns or 'System' not in df.columns:
         return []
 
@@ -1483,7 +1485,6 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         for index, row in df.iterrows():
             if row['Lobe'] == lobe:
                 locs = [float(row[col]) for col in df.columns if 'Sensor_location' in col]
-                #here we convert to float exactly because above we set dtype={6: str}. So we need this col as a str for ECG/EOG, but as a float for Sensors.
                 lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], system = row ['System'], loc = locs))
 
     traces = []
