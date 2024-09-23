@@ -1459,7 +1459,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     """
 
     df = pd.read_csv(sensors_csv_path, sep='\t', dtype={6: str})
-    #dtype set in case we read here the ECG/EOG channel tsv, not the Sensors tcv.
+    #dtype set in case we read here the ECG/EOG channel tsv, not the Sensors tsv.
     #Below we also check it but checking the presense of Lobe and System in df.
 
     #if there are no lobes in df - skip this plot, it s not the right df:
@@ -1482,12 +1482,13 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
         lobes_dict[lobe] = []
         for index, row in df.iterrows():
             if row['Lobe'] == lobe:
-                locs = [row[col] for col in df.columns if 'Sensor_location' in col]
+                locs = [float(row[col]) for col in df.columns if 'Sensor_location' in col]
+                #here we convert to float exactly because above we set dtype={6: str}. So we need this col as a str for ECG/EOG, but as a float for Sensors.
                 lobes_dict[lobe].append(MEG_channels(name = row['Name'], type = row['Type'], lobe = row['Lobe'], lobe_color = row['Lobe Color'], system = row ['System'], loc = locs))
 
     traces = []
 
-    system = df['System'].unique().tolist()
+    #system = df['System'].unique().tolist()
 
     if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
         for lobe in lobes_dict:
