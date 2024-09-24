@@ -14,6 +14,27 @@ from meg_qc.plotting.universal_plots import get_tit_and_unit
 
 # Keep imports in this order! 
 
+def howto_use_plots (metric):
+
+    how_to_dict = {
+        'ECG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
+        'STD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
+        'PSD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
+        'Muscle': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
+        'Head': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
+        'EOG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
+        'PtP': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
+    }
+
+    html_section_str="""
+        <!-- *** Section *** --->
+        <center>
+        <h4>"""+'How to use figures'+"""</h4>
+        """ + how_to_dict[metric]+"""
+        <br></br>
+        </center>"""
+
+    return html_section_str
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
 
@@ -48,19 +69,26 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     elif 'Time series' in section_name:
         text_section_content="""<p>"""+report_strings['TIME_SERIES']+"""</p>"""
     elif 'ECG' in section_name:
-        text_section_content="""<p>"""+report_strings['ECG']+"""</p>"""
+        howto = howto_use_plots('ECG')
+        text_section_content=howto+"""<p>"""+report_strings['ECG']+"""</p>"""
     elif 'EOG' in section_name:
-        text_section_content="""<p>"""+report_strings['EOG']+"""</p>"""
+        howto = howto_use_plots('EOG')
+        text_section_content=howto+"""<p>"""+report_strings['EOG']+"""</p>"""
     elif 'Head' in section_name:
-        text_section_content="""<p>"""+report_strings['HEAD']+"""</p>"""
+        howto = howto_use_plots('Head')
+        text_section_content=howto+"""<p>"""+report_strings['HEAD']+"""</p>"""
     elif 'Muscle' in section_name:
-        text_section_content="""<p>"""+report_strings['MUSCLE']+"""</p>"""
+        howto = howto_use_plots('Muscle')
+        text_section_content=howto+"""<p>"""+report_strings['MUSCLE']+"""</p>"""
     elif 'Standard deviation' in section_name or 'STD' in section_name:
-        text_section_content="""<p>"""+report_strings['STD']+"""</p>"""
+        howto = howto_use_plots('STD')
+        text_section_content=howto+"""<p>"""+report_strings['STD']+"""</p>"""
     elif 'Frequency' in section_name or 'PSD' in section_name:
-        text_section_content="""<p>"""+report_strings['PSD']+"""</p>"""
+        howto = howto_use_plots('PSD')
+        text_section_content=howto+"""<p>"""+report_strings['PSD']+"""</p>"""
     elif 'Peak-to-Peak manual' in section_name or 'PtP_manual' in section_name :
-        text_section_content="""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
+        howto = howto_use_plots('PtP')
+        text_section_content=howto+"""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
     elif 'Peak-to-Peak auto' in section_name or 'PtP_auto' in section_name:
         text_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
     elif derivs_section and not fig_derivs_section:

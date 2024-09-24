@@ -1471,9 +1471,9 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     system = get_meg_system(df)
 
     if system.upper() == 'TRIUX':
-        fig_desc = "Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. <br> Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with 'Ctrl' on the mouse."
+        fig_desc = "Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'."
     else:
-        fig_desc = "Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with 'Ctrl' on the mouse."
+        fig_desc = ""
 
     #to not rewrite the whole func, just turn the df back into dic of MEG_channels:
     
