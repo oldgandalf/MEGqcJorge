@@ -8,7 +8,7 @@ import copy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
 from meg_qc.plotting.universal_html_report import simple_metric_basic
-from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit, plot_df_of_channels_data_as_lines_by_lobe, plot_df_of_channels_data_as_lines_by_lobe_csv
+from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 
 
