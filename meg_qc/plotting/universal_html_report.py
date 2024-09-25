@@ -14,7 +14,22 @@ from meg_qc.plotting.universal_plots import get_tit_and_unit
 
 # Keep imports in this order! 
 
-def howto_use_plots (metric):
+def make_howto_use_plots_section (metric: str):
+
+    """
+    Make HTML section explaining how to use figures.
+
+    Parameters
+    ----------
+    metric: str
+        Metric name like "ECG', "MUSCLE', ...
+
+    Returns
+    -------
+    html_section_str : str
+        The html string of how-to section of the report.
+    
+    """
 
     how_to_dict = {
         'ECG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
@@ -36,12 +51,12 @@ def howto_use_plots (metric):
         """ + how_to_dict[metric]+"""
         <br></br>
         <br></br>
-        <br></br>
         </center>"""
 
     return how_to_section
 
-def make_metric_section(derivs_section: list, section_name: str, report_strings: dict):
+def make_metric_section(fig_derivs_metric: list, section_name: str, report_strings: dict):
+    
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
     Functions does:
@@ -53,8 +68,8 @@ def make_metric_section(derivs_section: list, section_name: str, report_strings:
 
     Parameters
     ----------
-    derivs_section : list
-        A list of QC_derivative objects belonging to 1 section.
+    fig_derivs_metric : list
+        A list of QC_derivative objects belonging to 1 metric and containing figures.
     section_name : str
         The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
     report_strings : dict
@@ -66,8 +81,6 @@ def make_metric_section(derivs_section: list, section_name: str, report_strings:
     html_section_str : str
         The html string of 1 section of the report.
     """
-
-    fig_derivs_section = keep_fig_derivs(derivs_section)
 
     # Define a mapping of section names to report strings and how-to-use plots
     section_mapping = {
@@ -85,17 +98,16 @@ def make_metric_section(derivs_section: list, section_name: str, report_strings:
     }
 
     # Determine the content for the section
-    section_header = section_mapping[section_name][0]
-    section_content = section_mapping[section_name][1]
+    section_header = section_mapping[section_name][0] #header
+    section_content = section_mapping[section_name][1] #intro text
 
-    # Handle the case where there are no figures
-    if derivs_section and not fig_derivs_section:
+    # Add figures to the section intro
+    if fig_derivs_metric:
+        for fig in fig_derivs_metric:
+            section_content += fig.convert_fig_to_html_add_description()
+    else:
         section_content = "<p>This measurement has no figures. Please see csv files.</p>"
 
-    # Add figures to the section
-    if fig_derivs_section:
-        for fig in fig_derivs_section:
-            section_content += fig.convert_fig_to_html_add_description()
 
     metric_section = f"""
         <!-- *** Section *** --->
@@ -108,7 +120,40 @@ def make_metric_section(derivs_section: list, section_name: str, report_strings:
 
     return metric_section
 
-def combine_howto_and_metric(derivs_section: list, metric_name: str, report_strings: dict):
+def make_sensor_figs_section(sensor_fig_derivs: list):
+
+    """
+    Create a section with sensor positions.
+    
+    Parameters
+    ----------
+    sensor_fig_derivs : list
+        A list of QC_derivative objects belonging to 1 section with only sensors positions.
+        Normally should be only 1 figure or none.
+    
+    Returns
+    -------
+    sensor_section : str
+        The html string of 1 section with sensors positions.
+    """
+    
+    sensor_section = ''
+    if sensor_fig_derivs:
+        for fig in sensor_fig_derivs:
+            sensor_section += fig.convert_fig_to_html_add_description()
+
+    sensor_html = """
+        <!-- *** Section *** --->
+        <center>
+        """ + sensor_section + """
+        <br></br>
+        <br></br>
+        </center>
+        """
+
+    return sensor_html
+
+def combine_howto_sensors_and_metric(derivs_section: list, metric_name: str, report_strings: dict):
     
     """
     Create a section (now used as the entire report for 1 metric).
@@ -132,10 +177,13 @@ def combine_howto_and_metric(derivs_section: list, metric_name: str, report_stri
         The html string of 1 section of the report.
     """
 
-    metric_section = make_metric_section(derivs_section, metric_name, report_strings)
-    how_to_section = howto_use_plots(metric_name)
+    sensor_fig_derivs, fig_derivs_metric = keep_fig_derivs(derivs_section)
 
-    combined_section = how_to_section + metric_section
+    how_to_section = make_howto_use_plots_section(metric_name)
+    sensor_section = make_sensor_figs_section(sensor_fig_derivs)
+    metric_section = make_metric_section(fig_derivs_metric, metric_name, report_strings)
+
+    combined_section = how_to_section + sensor_section + metric_section
 
     return combined_section
 
@@ -153,14 +201,22 @@ def keep_fig_derivs(derivs_section:list):
     Returns
     -------
     fig_derivs_section : list
-        A list of QC_derivative objects belonging to 1 section with only figures."""
+        A list of QC_derivative objects belonging to 1 section with only figures.
+    sensor_fig_derivs : list
+        A list of QC_derivative objects belonging to 1 section with only sensors positions.
+        Normally should be only 1 figure or none.
+    """
     
-    fig_derivs_section=[]
+    fig_derivs_metric=[]
+    sensor_fig_derivs = []
     for d in derivs_section:
         if d.content_type == 'plotly' or d.content_type == 'matplotlib':
-            fig_derivs_section.append(d)
+            if 'SENSORS' in d.name.upper():
+                sensor_fig_derivs.append(d)
+            else:
+                fig_derivs_metric.append(d)
 
-    return fig_derivs_section
+    return sensor_fig_derivs, fig_derivs_metric
 
 
 def make_joined_report(sections: dict, report_strings: dict):
@@ -256,7 +312,7 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
         key_upper = key.upper()
         if values and key_upper != 'REPORT' and key_upper != 'Report MNE' and key_upper != 'Simple_metrics':
             #html_section_str = make_metric_section(derivs_section = sections[key_upper], section_name = key, report_strings = report_strings)
-            html_section_str = combine_howto_and_metric(derivs_section = sections[key_upper], metric_name = key_upper, report_strings = report_strings)
+            html_section_str = combine_howto_sensors_and_metric(derivs_section = sections[key_upper], metric_name = key_upper, report_strings = report_strings)
             report.add_html(html_section_str, title=key_upper)
 
     return report
