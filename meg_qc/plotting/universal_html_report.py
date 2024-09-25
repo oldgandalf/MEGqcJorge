@@ -37,7 +37,6 @@ def howto_use_plots (metric):
     return html_section_str
 
 def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
-
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
     Functions does:
@@ -64,49 +63,43 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
     """
 
     fig_derivs_section = keep_fig_derivs(derivs_section)
-    if 'report' in section_name:
-        text_section_content=report_strings['INITIAL_INFO']
-    elif 'Time series' in section_name:
-        text_section_content="""<p>"""+report_strings['TIME_SERIES']+"""</p>"""
-    elif 'ECG' in section_name:
-        howto = howto_use_plots('ECG')
-        text_section_content=howto+"""<p>"""+report_strings['ECG']+"""</p>"""
-    elif 'EOG' in section_name:
-        howto = howto_use_plots('EOG')
-        text_section_content=howto+"""<p>"""+report_strings['EOG']+"""</p>"""
-    elif 'Head' in section_name:
-        howto = howto_use_plots('Head')
-        text_section_content=howto+"""<p>"""+report_strings['HEAD']+"""</p>"""
-    elif 'Muscle' in section_name:
-        howto = howto_use_plots('Muscle')
-        text_section_content=howto+"""<p>"""+report_strings['MUSCLE']+"""</p>"""
-    elif 'Standard deviation' in section_name or 'STD' in section_name:
-        howto = howto_use_plots('STD')
-        text_section_content=howto+"""<p>"""+report_strings['STD']+"""</p>"""
-    elif 'Frequency' in section_name or 'PSD' in section_name:
-        howto = howto_use_plots('PSD')
-        text_section_content=howto+"""<p>"""+report_strings['PSD']+"""</p>"""
-    elif 'Peak-to-Peak manual' in section_name or 'PtP_manual' in section_name :
-        howto = howto_use_plots('PtP')
-        text_section_content=howto+"""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
-    elif 'Peak-to-Peak auto' in section_name or 'PtP_auto' in section_name:
-        text_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
-    elif derivs_section and not fig_derivs_section:
-        text_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
-    elif 'Sensors' in section_name: #TODO: check if all works fine after this change
-        text_section_content="""<p>""""""</p>"""
-    else:
-        text_section_content="""<p>""""""</p>"""
 
+    # Define a mapping of section names to report strings and how-to-use plots
+    section_mapping = {
+        'report': report_strings['INITIAL_INFO'],
+        'Time series': f"<p>{report_strings['TIME_SERIES']}</p>",
+        'ECG': f"{howto_use_plots('ECG')}<p>{report_strings['ECG']}</p>",
+        'EOG': f"{howto_use_plots('EOG')}<p>{report_strings['EOG']}</p>",
+        'Head': f"{howto_use_plots('Head')}<p>{report_strings['HEAD']}</p>",
+        'Muscle': f"{howto_use_plots('Muscle')}<p>{report_strings['MUSCLE']}</p>",
+        'Standard deviation': f"{howto_use_plots('STD')}<p>{report_strings['STD']}</p>",
+        'STD': f"{howto_use_plots('STD')}<p>{report_strings['STD']}</p>",
+        'Frequency': f"{howto_use_plots('PSD')}<p>{report_strings['PSD']}</p>",
+        'PSD': f"{howto_use_plots('PSD')}<p>{report_strings['PSD']}</p>",
+        'Peak-to-Peak manual': f"{howto_use_plots('PtP')}<p>{report_strings['PTP_MANUAL']}</p>",
+        'PtP_manual': f"{howto_use_plots('PtP')}<p>{report_strings['PTP_MANUAL']}</p>",
+        'Peak-to-Peak auto': f"<p>{report_strings['PTP_AUTO']}</p>",
+        'PtP_auto': f"<p>{report_strings['PTP_AUTO']}</p>",
+        'Sensors': "<p></p>"
+    }
+
+    # Determine the content for the section
+    text_section_content = section_mapping.get(section_name, "<p></p>")
+
+    # Handle the case where there are no figures
+    if derivs_section and not fig_derivs_section:
+        text_section_content = "<p>This measurement has no figures. Please see csv files.</p>"
+
+    # Add figures to the section
     if fig_derivs_section:
-        for f in range(0, len(fig_derivs_section)):
-            text_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
+        for fig in fig_derivs_section:
+            text_section_content += fig.convert_fig_to_html_add_description()
 
-    html_section_str="""
+    html_section_str = f"""
         <!-- *** Section *** --->
         <center>
-        <h2>"""+section_name+"""</h2>
-        """ + text_section_content+"""
+        <h2>{section_name}</h2>
+        {text_section_content}
         <br></br>
         <br></br>
         </center>"""
