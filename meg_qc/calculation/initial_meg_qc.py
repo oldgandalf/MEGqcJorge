@@ -326,6 +326,31 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     return dict_epochs_mg
 
+def get_units(raw):
+
+    """
+    UNFINISHED!! TODO
+    For CTF especially so far not clear what are grads, what mags.
+
+    Get what kind of channels present: mags, grads or both.
+    Get units for each channel type.
+    """
+
+    picked_channels = mne.pick_types(raw.info, meg='mag')
+    for ch in picked_channels:
+        ch_name = raw.info['ch_names'][ch]
+        print(f"Channel: {ch_name}")
+        ch_unit_code = raw.info['chs'][ch]['unit']
+        print(str(ch_unit_code))
+        ch_unit_str = str(ch_unit_code)
+        #find str after 'UNIT_' in ch_unit_code:
+        match = re.search(r'UNIT_(\w)', ch_unit_str)
+        if match:
+            unit = match.group(1)
+        else:
+            unit = 'unknown'
+        print(f"Unit: {unit}")
+
 
 def sanity_check(m_or_g_chosen, channels_objs):
     
