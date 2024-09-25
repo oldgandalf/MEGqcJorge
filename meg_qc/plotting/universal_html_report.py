@@ -14,30 +14,49 @@ from meg_qc.plotting.universal_plots import get_tit_and_unit
 
 # Keep imports in this order! 
 
-def howto_use_plots (metric):
+def make_howto_use_plots_section (metric: str):
+
+    """
+    Make HTML section explaining how to use figures.
+
+    Parameters
+    ----------
+    metric: str
+        Metric name like "ECG', "MUSCLE', ...
+
+    Returns
+    -------
+    html_section_str : str
+        The html string of how-to section of the report.
+    
+    """
 
     how_to_dict = {
         'ECG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
         'STD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
         'PSD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
-        'Muscle': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
-        'Head': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
+        'MUSCLE': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
+        'HEAD': 'All figures are interactive. Hover over an element to see more information. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view.',
         'EOG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
-        'PtP': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
+        'PTP_MANUAL': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
     }
 
-    html_section_str="""
+    if metric not in how_to_dict:
+        return ''
+
+    how_to_section="""
         <!-- *** Section *** --->
         <center>
         <h4>"""+'How to use figures'+"""</h4>
         """ + how_to_dict[metric]+"""
         <br></br>
+        <br></br>
         </center>"""
 
-    return html_section_str
+    return how_to_section
 
-def make_html_section(derivs_section: list, section_name: str, report_strings: dict):
-
+def make_metric_section(fig_derivs_metric: list, section_name: str, report_strings: dict):
+    
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
     Functions does:
@@ -49,8 +68,8 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
 
     Parameters
     ----------
-    derivs_section : list
-        A list of QC_derivative objects belonging to 1 section.
+    fig_derivs_metric : list
+        A list of QC_derivative objects belonging to 1 metric and containing figures.
     section_name : str
         The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
     report_strings : dict
@@ -63,55 +82,110 @@ def make_html_section(derivs_section: list, section_name: str, report_strings: d
         The html string of 1 section of the report.
     """
 
-    fig_derivs_section = keep_fig_derivs(derivs_section)
-    if 'report' in section_name:
-        text_section_content=report_strings['INITIAL_INFO']
-    elif 'Time series' in section_name:
-        text_section_content="""<p>"""+report_strings['TIME_SERIES']+"""</p>"""
-    elif 'ECG' in section_name:
-        howto = howto_use_plots('ECG')
-        text_section_content=howto+"""<p>"""+report_strings['ECG']+"""</p>"""
-    elif 'EOG' in section_name:
-        howto = howto_use_plots('EOG')
-        text_section_content=howto+"""<p>"""+report_strings['EOG']+"""</p>"""
-    elif 'Head' in section_name:
-        howto = howto_use_plots('Head')
-        text_section_content=howto+"""<p>"""+report_strings['HEAD']+"""</p>"""
-    elif 'Muscle' in section_name:
-        howto = howto_use_plots('Muscle')
-        text_section_content=howto+"""<p>"""+report_strings['MUSCLE']+"""</p>"""
-    elif 'Standard deviation' in section_name or 'STD' in section_name:
-        howto = howto_use_plots('STD')
-        text_section_content=howto+"""<p>"""+report_strings['STD']+"""</p>"""
-    elif 'Frequency' in section_name or 'PSD' in section_name:
-        howto = howto_use_plots('PSD')
-        text_section_content=howto+"""<p>"""+report_strings['PSD']+"""</p>"""
-    elif 'Peak-to-Peak manual' in section_name or 'PtP_manual' in section_name :
-        howto = howto_use_plots('PtP')
-        text_section_content=howto+"""<p>"""+report_strings['PTP_MANUAL']+"""</p>"""
-    elif 'Peak-to-Peak auto' in section_name or 'PtP_auto' in section_name:
-        text_section_content="""<p>"""+report_strings['PTP_AUTO']+"""</p>"""
-    elif derivs_section and not fig_derivs_section:
-        text_section_content="""<p>This measurement has no figures. Please see csv files.</p>"""
-    elif 'Sensors' in section_name: #TODO: check if all works fine after this change
-        text_section_content="""<p>""""""</p>"""
+    # Define a mapping of section names to report strings and how-to-use plots
+    section_mapping = {
+        'INITIAL_INFO': ['Data info', report_strings['INITIAL_INFO']],
+        'TIME SERIES': ['Interactive time series', f"<p>{report_strings['TIME_SERIES']}</p>"],
+        'ECG': ['ECG: heart beat interference', f"<p>{report_strings['ECG']}</p>"],
+        'EOG': ['EOG: eye movement interference', f"<p>{report_strings['EOG']}</p>"],
+        'HEAD': ['Head movement', f"<p>{report_strings['HEAD']}</p>"],
+        'MUSCLE': ['High frequency (Muscle) artifacts', f"<p>{report_strings['MUSCLE']}</p>"],
+        'STD': ['Standard deviation of the data', f"<p>{report_strings['STD']}</p>"],
+        'PSD': ['Frequency spectrum', f"<p>{report_strings['PSD']}</p>"],
+        'PTP_MANUAL': ['Peak-to-Peak manual', f"<p>{report_strings['PTP_MANUAL']}</p>"],
+        'PTP_AUTO': ['Peak-to-Peak auto from MNE', f"<p>{report_strings['PTP_AUTO']}</p>"],
+        'SENSORS': ['Sensors locations', "<p></p>"]
+    }
+
+    # Determine the content for the section
+    section_header = section_mapping[section_name][0] #header
+    section_content = section_mapping[section_name][1] #intro text
+
+    # Add figures to the section intro
+    if fig_derivs_metric:
+        for fig in fig_derivs_metric:
+            section_content += fig.convert_fig_to_html_add_description()
     else:
-        text_section_content="""<p>""""""</p>"""
+        section_content = "<p>This measurement has no figures. Please see csv files.</p>"
 
-    if fig_derivs_section:
-        for f in range(0, len(fig_derivs_section)):
-            text_section_content += fig_derivs_section[f].convert_fig_to_html_add_description()
 
-    html_section_str="""
+    metric_section = f"""
         <!-- *** Section *** --->
         <center>
-        <h2>"""+section_name+"""</h2>
-        """ + text_section_content+"""
+        <h2>{section_header}</h2>
+        {section_content}
         <br></br>
         <br></br>
         </center>"""
 
-    return html_section_str
+    return metric_section
+
+def make_sensor_figs_section(sensor_fig_derivs: list):
+
+    """
+    Create a section with sensor positions.
+    
+    Parameters
+    ----------
+    sensor_fig_derivs : list
+        A list of QC_derivative objects belonging to 1 section with only sensors positions.
+        Normally should be only 1 figure or none.
+    
+    Returns
+    -------
+    sensor_section : str
+        The html string of 1 section with sensors positions.
+    """
+    
+    sensor_section = ''
+    if sensor_fig_derivs:
+        for fig in sensor_fig_derivs:
+            sensor_section += fig.convert_fig_to_html_add_description()
+
+    sensor_html = """
+        <!-- *** Section *** --->
+        <center>
+        """ + sensor_section + """
+        <br></br>
+        <br></br>
+        </center>
+        """
+
+    return sensor_html
+
+def combine_howto_sensors_and_metric(derivs_section: list, metric_name: str, report_strings: dict):
+    
+    """
+    Create a section (now used as the entire report for 1 metric).
+    On top: how to use figures
+    Then: Metric name and description, notes.
+    Main part: figures with descriptions.
+    
+    Parameters
+    ----------
+    derivs_section : list
+        A list of QC_derivative objects belonging to 1 section.
+    section_name : str
+        The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
+    report_strings : dict
+        A dictionary with strings to be added to the report: general notes + notes about every measurement (when it was not calculated, for example). 
+        This is not a detailed description of the measurement.
+    
+    Returns
+    -------
+    html_section_str : str
+        The html string of 1 section of the report.
+    """
+
+    sensor_fig_derivs, fig_derivs_metric = keep_fig_derivs(derivs_section)
+
+    how_to_section = make_howto_use_plots_section(metric_name)
+    sensor_section = make_sensor_figs_section(sensor_fig_derivs)
+    metric_section = make_metric_section(fig_derivs_metric, metric_name, report_strings)
+
+    combined_section = how_to_section + sensor_section + metric_section
+
+    return combined_section
 
 
 def keep_fig_derivs(derivs_section:list):
@@ -127,14 +201,22 @@ def keep_fig_derivs(derivs_section:list):
     Returns
     -------
     fig_derivs_section : list
-        A list of QC_derivative objects belonging to 1 section with only figures."""
+        A list of QC_derivative objects belonging to 1 section with only figures.
+    sensor_fig_derivs : list
+        A list of QC_derivative objects belonging to 1 section with only sensors positions.
+        Normally should be only 1 figure or none.
+    """
     
-    fig_derivs_section=[]
+    fig_derivs_metric=[]
+    sensor_fig_derivs = []
     for d in derivs_section:
         if d.content_type == 'plotly' or d.content_type == 'matplotlib':
-            fig_derivs_section.append(d)
+            if 'SENSORS' in d.name.upper():
+                sensor_fig_derivs.append(d)
+            else:
+                fig_derivs_metric.append(d)
 
-    return fig_derivs_section
+    return sensor_fig_derivs, fig_derivs_metric
 
 
 def make_joined_report(sections: dict, report_strings: dict):
@@ -177,7 +259,7 @@ def make_joined_report(sections: dict, report_strings: dict):
     main_html_string = ''
     for key in sections:
 
-        html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
+        html_section_str = make_metric_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
         main_html_string += html_section_str
 
 
@@ -227,9 +309,11 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
         # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
 
     for key, values in sections.items():
-        if values and key != 'Report' and key != 'Report MNE' and key != 'Simple_metrics':
-            html_section_str = make_html_section(derivs_section = sections[key], section_name = key, report_strings = report_strings)
-            report.add_html(html_section_str, title=key)
+        key_upper = key.upper()
+        if values and key_upper != 'REPORT' and key_upper != 'Report MNE' and key_upper != 'Simple_metrics':
+            #html_section_str = make_metric_section(derivs_section = sections[key_upper], section_name = key, report_strings = report_strings)
+            html_section_str = combine_howto_sensors_and_metric(derivs_section = sections[key_upper], metric_name = key_upper, report_strings = report_strings)
+            report.add_html(html_section_str, title=key_upper)
 
     return report
 

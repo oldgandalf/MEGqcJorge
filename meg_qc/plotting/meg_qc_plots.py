@@ -366,19 +366,19 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             # head_pos_derivs += head_pos_derivs2
             head_derivs += head_pos_derivs
 
-    QC_derivs={
-    'Time_series': time_series_derivs,
-    'Sensors': sensors_derivs,
-    'STD': std_derivs, 
-    'PSD': psd_derivs, 
-    'PtP_manual': ptp_manual_derivs, 
-    'PtP_auto': pp_auto_derivs, 
-    'ECG': ecg_derivs, 
-    'EOG': eog_derivs,
-    'Head': head_derivs,
-    'Muscle': muscle_derivs,
-    'Report_MNE': []}
-
+    QC_derivs = {
+        'TIME_SERIES': time_series_derivs,
+        'SENSORS': sensors_derivs,
+        'STD': std_derivs,
+        'PSD': psd_derivs,
+        'PTP_MANUAL': ptp_manual_derivs,
+        'PTP_AUTO': pp_auto_derivs,
+        'ECG': ecg_derivs,
+        'EOG': eog_derivs,
+        'HEAD': head_derivs,
+        'MUSCLE': muscle_derivs,
+        'REPORT_MNE': []
+    }
 
 
     #Sort all based on fig_order of QC_derivative:
