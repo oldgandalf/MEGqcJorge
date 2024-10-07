@@ -3,6 +3,7 @@ import ancpbids
 import time
 import json
 import sys
+import mne
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append(os.path.join('.'))
@@ -261,7 +262,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 print('___MEGqc___: ', 'Starting initial processing...')
                 start_time = time.time()
 
-                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
                 
                 # Commented out this, because it would cover the actual error while allowing to continue processing.
                 # I wanna see the actual error. Often it happens while reading raw and says: 
@@ -353,6 +354,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 QC_derivs={
                 'MEG data quality analysis report': [],
+                'Raw info': info_derivs,
                 'Report_strings': report_str_derivs,
                 'Interactive time series': time_series_derivs,
                 'Sensors locations': sensors_derivs,
@@ -431,6 +433,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                             # with open('derivs.json', 'w') as file_wrapper:
                             #     json.dump(metric, file_wrapper, indent=4)
+
+                        elif deriv.content_type == 'info':
+                            meg_artifact.extension = '.fif'
+                            meg_artifact.content = lambda file_path, cont=deriv.content: mne.io.write_info(file_path, cont)
 
                         else:
                             print('___MEGqc___: ', meg_artifact.name)

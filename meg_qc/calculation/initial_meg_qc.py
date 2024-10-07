@@ -482,6 +482,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         Cropped MEG data.
     raw : mne.io.Raw
         MEG data.
+    info_derivs : list
+        List with QC_derivative objects with MNE info object.
     shielding_str : str
         String with information about active shielding.
     epoching_str : str
@@ -509,6 +511,10 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     print('___MEGqc___: ', 'Reading data from file:', file_path)
 
     raw, shielding_str, meg_system = load_data(file_path)
+
+    info = raw.info
+    info_derivs = [QC_derivative(content = info, name = 'raw_info', content_type = 'info')]
+
 
     # from IPython.display import display
     # display(raw)
@@ -614,7 +620,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
