@@ -105,12 +105,12 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
 def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
     
     """
-    Detects noisy ecg or eog channels.
+    Detects noisy ECG or EOG channels.
 
     The channel is noisy when:
 
     1. The distance between the peaks of ECG/EOG signal is too large (events are not frequent enoigh for a human) or too small (events are too frequent for a human).
-    2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period) -corrupted channel or dustructed recording
+    2. There are too many breaks in the data (indicating lack of heartbeats or blinks for a too long period) - corrupted channel or dustructed recording
     3. Peaks are of significantly different amplitudes (indicating that the channel is noisy).
 
     
@@ -157,13 +157,12 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     peaks = []
 
     ch_data = raw.get_data(picks=ecg_ch)[0] #here ch_data will be the RAW DATA
-    # get_data creates list inside of a list becausee expects to create a list for each channel. 
-    # but iteration takes 1 ch at a time. this is why [0]
+    # get_data creates list inside of a list becausee expects to create a list for each channel. this is why [0]
 
     ecg_eval, peaks = check_3_conditions(ch_data, sfreq, ecg_or_eog, n_breaks_bursts_allowed_per_10min, allowed_range_of_peaks_stds, height_multiplier)
     print(f'___MEGqc___: {ecg_ch} satisfied conditions for a good channel: ', ecg_eval)
 
-    #If all values in disct are true:
+    #If all values in dict are true:
     if all(value == True for value in ecg_eval.values()):
         bad_ecg_eog[ecg_ch] = 'good'
     else:
@@ -325,7 +324,7 @@ class Avg_artif:
         """
         Find peaks in the average artifact epoch and decide if the epoch has wave shape: 
         few peaks (different number allowed for ECG and EOG) - wave shape, many or no peaks - not.
-        On non smoothed data!
+        Function for non smoothed data.
         
         Parameters
         ----------
@@ -357,7 +356,7 @@ class Avg_artif:
         """
         Find peaks in the average artifact epoch and decide if the epoch has wave shape: 
         few peaks (different number allowed for ECG and EOG) - wave shape, many or no peaks - not.
-        On smoothed data! If it was not smoothed yet - it will be smoothed inside this function
+        Function for smoothed data. If it was not smoothed yet - it will be smoothed inside this function using gaussian filter.
         
         Parameters
         ----------
@@ -368,7 +367,6 @@ class Avg_artif:
         thresh_lvl_peakfinder : float
             threshold for peakfinder function.
 
-        
         """
 
         if self.artif_data_smoothed is None: #if no smoothed data available yet
