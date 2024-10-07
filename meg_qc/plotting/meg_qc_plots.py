@@ -241,13 +241,15 @@ def get_ds_entities(dataset_path: str):
     return entities
 
 
-def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_settings):
+def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_str_path: str, plot_settings):
 
     """
     Create an HTML report from the CSV files.
 
     Parameters
     ----------
+    raw_info_path : str
+        The path to the raw info object.
     metric : str
         The metric to be plotted.
     tsv_paths : list
@@ -265,9 +267,6 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
     """
 
     m_or_g_chosen = plot_settings['m_or_g'] 
-
-    raw = [] # TODO: if empty - we cant print raw information. 
-    # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
     #TODO: think about it! the order goes by tsv files so it s messed uo cos ecg channels comes seond!
@@ -405,7 +404,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             report_strings = json.load(json_file)
 
 
-    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
+    report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings, [])
 
     return report_html_string 
 
@@ -517,8 +516,9 @@ def make_plots_meg_qc(ds_paths: list):
             reports_folder = derivative.create_folder(name='reports')
             subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
+            calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
             try:
-                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
             except:
                 report_str_path = '' #in case none was created yet
                 print('___MEGqc___: No report strings were created for sub ', sub)
@@ -534,15 +534,15 @@ def make_plots_meg_qc(ds_paths: list):
 
                 # We call query with entities that always must present + entities that might present, might not:
                 # This is how the call would look if we had all entities:
-                # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+                # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
 
                 entities = {
                     'subj': sub,
                     'suffix': 'meg',
-                    'extension': 'tsv',
+                    'extension': 'tsv', #we only collect tsvs here! 
                     'return_type': 'filename',
                     'desc': desc,
-                    'scope': 'derivatives',
+                    'scope': calculated_derivs_folder,
                 }
 
                 if 'session' in chosen_entities and chosen_entities['session']:
@@ -572,7 +572,6 @@ def make_plots_meg_qc(ds_paths: list):
 
                 tsvs_to_plot[metric] = sorted(tsv_path)
 
-
                 #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
                 entities = copy.deepcopy(entities)
                 entities['return_type'] = 'object'
@@ -586,6 +585,8 @@ def make_plots_meg_qc(ds_paths: list):
 
                 entities_per_file[metric] = entities_obj
 
+            #Get path to raw info obj:
+            raw_info_path = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'RawInfo', scope=calculated_derivs_folder)[0]
 
             # 1. Check that we got same entities_per_file and tsvs_to_plot:
             
@@ -648,7 +649,7 @@ def make_plots_meg_qc(ds_paths: list):
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-                    deriv = csv_to_html_report(metric, tsv_paths, report_str_path, plot_settings)
+                    deriv = csv_to_html_report(raw_info_path, metric, tsv_paths, report_str_path, plot_settings)
 
                     #define method how the derivative will be written to file system:
                     meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
@@ -662,13 +663,13 @@ def make_plots_meg_qc(ds_paths: list):
 
 # ____________________________
 # RUN IT:
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds004330'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000247'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds002761'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds004398'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])

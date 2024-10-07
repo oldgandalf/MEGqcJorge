@@ -274,15 +274,15 @@ def make_joined_report(sections: dict, report_strings: dict):
     return html_string
 
 
-def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_settings: dict):
+def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: dict, default_settings: dict):
 
     """
     Create report as html string with all sections and embed the sections into MNE report object.
 
     Parameters
     ----------
-    raw : mne.io.Raw
-        The raw object.
+    raw_info_path : str
+        Path to the raw info file.
     sections : dict
         A dictionary with section names as keys and lists of QC_derivative objects as values.
     report_strings : dict
@@ -301,12 +301,10 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    if raw: #if raw s not empty
-        if default_settings['plot_mne_butterfly'] is True:
-            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
-        else:
-            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
-        # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
+    if raw_info_path: #if info present
+        info_loaded = mne.io.read_info(raw_info_path)
+        info_html = info_loaded._repr_html_()
+        report.add_html(info_html, 'Raw Info')
 
     for key, values in sections.items():
         key_upper = key.upper()

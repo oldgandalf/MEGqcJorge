@@ -513,7 +513,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     raw, shielding_str, meg_system = load_data(file_path)
 
     info = raw.info
-    info_derivs = [QC_derivative(content = info, name = 'raw_info', content_type = 'info')]
+    info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]
 
 
     # from IPython.display import display
