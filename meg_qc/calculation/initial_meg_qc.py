@@ -245,8 +245,8 @@ def get_internal_config_params(config_file_name: str):
         'max_n_peaks_allowed_for_avg': ecg_section.getint('max_n_peaks_allowed_for_avg'),
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
-        'timelimit_min': ecg_section.getfloat('timelimit_min'),
-        'timelimit_max': ecg_section.getfloat('timelimit_max'),
+        'before_t0': ecg_section.getfloat('before_t0'),
+        'after_t0': ecg_section.getfloat('after_t0'),
         'window_size_for_mean_threshold_method': ecg_section.getfloat('window_size_for_mean_threshold_method')})
     
     eog_section = config['EOG']
@@ -255,8 +255,8 @@ def get_internal_config_params(config_file_name: str):
         'max_n_peaks_allowed_for_avg': eog_section.getint('max_n_peaks_allowed_for_avg'),
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
-        'timelimit_min': eog_section.getfloat('timelimit_min'),
-        'timelimit_max': eog_section.getfloat('timelimit_max'),
+        'before_t0': eog_section.getfloat('before_t0'),
+        'after_t0': eog_section.getfloat('after_t0'),
         'window_size_for_mean_threshold_method': eog_section.getfloat('window_size_for_mean_threshold_method')})
     
     return internal_qc_params
