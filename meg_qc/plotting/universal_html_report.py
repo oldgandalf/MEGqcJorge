@@ -304,7 +304,13 @@ def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: di
     if raw_info_path: #if info present
         info_loaded = mne.io.read_info(raw_info_path)
         info_html = info_loaded._repr_html_()
-        report.add_html(info_html, 'Raw Info')
+        # Wrap the HTML content in a centered div
+        centered_info_html = f"""
+        <div style="text-align: center;">
+            {info_html}
+        </div>
+        """
+        report.add_html(centered_info_html, 'Info about the Original raw file (not filtered, not resampled)')
 
     for key, values in sections.items():
         key_upper = key.upper()
