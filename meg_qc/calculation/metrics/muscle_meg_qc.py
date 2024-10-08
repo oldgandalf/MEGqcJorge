@@ -19,7 +19,7 @@
 # the ``min_length_good`` parameter determines the cutoff for whether short
 # spans of "good data" in between muscle artifacts are included in the
 # surrounding "BAD" annotation.
-# 
+
 
 
 import mne
@@ -29,7 +29,7 @@ import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
 from meg_qc.plotting.universal_plots import QC_derivative
 
-def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
+def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chosen):
 
     """
     Find powerline noise in the data.
@@ -50,11 +50,8 @@ def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
     
     """
 
-    method = 'welch'
-    prominence_lvl_pos = 50 #this is a good level for average psd over all channels. Same should be used for PSD module.
-    #TODO: WE CAN PUT THESE 2 ABOVE INTO CONFIG AS WELL.  BUT THEY ACTUALLY SHOULD NOT BE CHANGED BY USER. OR MAKE A SEPARATE CONFIG ONLY ACCED BY DEVELOPERS FOR SETTING DEFAULTS?
-
-
+    method = psd_params_internal['method']
+    prominence_lvl_pos_avg = psd_params_internal['prominence_lvl_pos_avg']
     psd_step_size = psd_params['psd_step_size']
     sfreq=raw.info['sfreq']
     nfft=int(sfreq/psd_step_size)
@@ -66,7 +63,7 @@ def find_powerline_noise_short(raw, psd_params, m_or_g_chosen):
 
         psds, freqs = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=m_or_g, n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         avg_psd=np.mean(psds,axis=0) # average psd over all channels
-        prominence_pos=(max(avg_psd) - min(avg_psd)) / prominence_lvl_pos
+        prominence_pos=(max(avg_psd) - min(avg_psd)) / prominence_lvl_pos_avg
 
         noisy_freqs_indexes, _ = find_peaks(avg_psd, prominence=prominence_pos)
         noisy_freqs [m_or_g] = freqs[noisy_freqs_indexes]
@@ -339,7 +336,7 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
     return df_deriv
 
 
-def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, attach_dummy:bool = True, cut_dummy:bool = True):
+def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -385,7 +382,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, raw_orig: mne.io.Raw, n
     """
 
     if noisy_freqs_global is None: # if PSD was not calculated before, calculate noise frequencies now:
-        noisy_freqs_global = find_powerline_noise_short(raw_orig, psd_params, m_or_g_chosen)
+        noisy_freqs_global = find_powerline_noise_short(raw_orig, psd_params, psd_params_internal, m_or_g_chosen)
         print('Noisy frequencies found in data at (HZ): ', noisy_freqs_global)
     else: # if PSD was calculated before, use the frequencies from the PSD step:
         pass

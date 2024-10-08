@@ -259,6 +259,12 @@ def get_internal_config_params(config_file_name: str):
         'after_t0': eog_section.getfloat('after_t0'),
         'window_size_for_mean_threshold_method': eog_section.getfloat('window_size_for_mean_threshold_method')})
     
+    psd_section = config['PSD']
+    internal_qc_params['PSD'] = dict({
+        'method': psd_section.get('method'),
+        'prominence_lvl_pos_avg': psd_section.getint('prominence_lvl_pos_avg'),
+        'prominence_lvl_pos_channels': psd_section.getint('prominence_lvl_pos_channels')})
+    
     return internal_qc_params
 
 

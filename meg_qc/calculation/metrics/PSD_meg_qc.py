@@ -963,7 +963,7 @@ def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
     return chs_by_lobe
 
 #%%
-def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helper_plots: bool):
+def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helper_plots: bool):
     
     """
     Main psd function. Calculates:
@@ -995,6 +995,8 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     ----------
     psd_params : dict
         dictionary with psd parameters originating from config file
+    psd_params_internal : dict
+        dictionary with internal psd parameters
     channels : dict
         dictionary with channel names for each channel type: 'mag' or/and 'grad'
     chs_by_lobe : dict
@@ -1033,7 +1035,10 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
     noise_ampl_relative_to_all_signal_local={'mag':[], 'grad':[]}
     noisy_freqs_local={'mag':[], 'grad':[]}
 
-    method = 'welch'
+    method = psd_params_internal['method']
+    prominence_lvl_pos_avg = psd_params_internal['prominence_lvl_pos_avg']
+    prominence_lvl_pos_channels = psd_params_internal['prominence_lvl_pos_channels']
+    
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
     chs_by_lobe_psd=copy.deepcopy(chs_by_lobe)
@@ -1052,7 +1057,7 @@ def PSD_meg_qc(psd_params: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne
         bands_pie_df_deriv, dfs_wave_bands_ampl, mean_brain_waves_dict[m_or_g] = get_ampl_of_brain_waves(channels=channels[m_or_g], m_or_g = m_or_g, freqs = freqs[m_or_g], psds = psds[m_or_g], avg_psd=avg_psd)
 
         # #Calculate noise freqs for each channel + on the average psd curve over all channels together:
-        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, helper_plots=helper_plots, cut_noise_from_psd=False, prominence_lvl_pos_avg=50, prominence_lvl_pos_channels=15, simple_or_complex='simple')
+        noise_pie_derivative, noise_ampl_global[m_or_g], noise_ampl_relative_to_all_signal_global[m_or_g], noisy_freqs_global[m_or_g], noise_ampl_local[m_or_g], noise_ampl_relative_to_all_signal_local[m_or_g], noisy_freqs_local[m_or_g] = get_ampl_of_noisy_freqs(channels[m_or_g], freqs[m_or_g], avg_psd, psds[m_or_g], m_or_g, helper_plots=helper_plots, cut_noise_from_psd=False, prominence_lvl_pos_avg=prominence_lvl_pos_avg, prominence_lvl_pos_channels=prominence_lvl_pos_channels, simple_or_complex='simple')
         
         derivs_psd += dfs_wave_bands_ampl +[noise_pie_derivative] + bands_pie_df_deriv
 

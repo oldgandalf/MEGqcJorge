@@ -294,7 +294,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_PSD'] is True:
                     print('___MEGqc___: ', 'Starting PSD...')
                     start_time = time.time()
-                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, helper_plots=False)
+                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], internal_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, helper_plots=False)
                     print('___MEGqc___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_PTP_manual'] is True:
@@ -332,7 +332,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 if all_qc_params['default']['run_Muscle'] is True:
                     print('___MEGqc___: ', 'Starting Muscle artifacts calculation...')
-                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], all_qc_params['PSD'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, attach_dummy = True, cut_dummy = True)
+                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], all_qc_params['PSD'], internal_qc_params['PSD'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, attach_dummy = True, cut_dummy = True)
                     print('___MEGqc___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 
