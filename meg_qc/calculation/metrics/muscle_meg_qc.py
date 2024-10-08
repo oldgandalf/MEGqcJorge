@@ -40,6 +40,8 @@ def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chos
         The raw data.
     psd_params : dict
         The parameters for PSD calculation originally defined in the config file.
+    psd_params_internal : dict
+        The parameters for PSD calculation originally defined in the internal config file. 
     m_or_g_chosen : list
         The channel types chosen for the analysis: 'mag' or 'grad'.
     
@@ -130,8 +132,6 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
         
     """
 
-    #print(noisy_freqs_global, 'noisy_freqs_global')
-
     #Find out if the data contains powerline noise freqs or other noisy in range of muscle artifacts - notch filter them before muscle artifact detection:
 
     # - collect all values in moisy_freqs_global into one list:
@@ -139,7 +139,6 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
     for key in noisy_freqs_global.keys():
         noisy_freqs.extend(np.round(noisy_freqs_global[key], 1))
     
-    #print(noisy_freqs, 'noisy_freqs')
     
     # - detect power line freqs and their harmonics
     powerline=[50, 60]
@@ -177,6 +176,9 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
 
     """
     Attach a dummy start and end to the data to avoid filtering artifacts at the beginning/end of the recording.
+    Dummy data is mirrored data: take beginning of real data, mirror it and attach to the start of the recording.
+    Same for the end of the recording.
+    It will be cut off after filtering.
     
     Parameters
     ----------
@@ -196,24 +198,22 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
     # Attach a dummy start to the data to avoid filtering artifacts at the beginning of the recording:
     raw_dummy_start=raw.copy()
     raw_dummy_start_data = raw_dummy_start.crop(tmin=0, tmax=attach_seconds-1/raw.info['sfreq']).get_data()
-    print('START', raw_dummy_start_data.shape)
     inverted_data_start = np.flip(raw_dummy_start_data, axis=1) # Invert the data
 
     # Attach a dummy end to the data to avoid filtering artifacts at the end of the recording:
     raw_dummy_end=raw.copy()
     raw_dummy_end_data = raw_dummy_end.crop(tmin=raw_dummy_end.times[int(-attach_seconds*raw.info['sfreq']-1/raw.info['sfreq'])], tmax=raw_dummy_end.times[-1]).get_data()
-    print('END', raw_dummy_end_data.shape)
     inverted_data_end = np.flip(raw_dummy_end_data, axis=1) # Invert the data
 
     # Update the raw object with the inverted data
     raw_dummy_start._data = inverted_data_start
     raw_dummy_end._data = inverted_data_end
-    print('Duration of start attached: ', raw_dummy_start.n_times / raw.info['sfreq'])
-    print('Duration of end attached: ', raw_dummy_end.n_times / raw.info['sfreq'])
+    # print('Duration of start attached: ', raw_dummy_start.n_times / raw.info['sfreq'])
+    # print('Duration of end attached: ', raw_dummy_end.n_times / raw.info['sfreq'])
 
     # Concatenate the inverted data with the original data
     raw = mne.concatenate_raws([raw_dummy_start, raw, raw_dummy_end])
-    print('Duration after attaching dummy data: ', raw.n_times / raw.info['sfreq'])
+    # print('Duration after attaching dummy data: ', raw.n_times / raw.info['sfreq'])
 
     return raw
 
@@ -355,6 +355,8 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
         The parameters for muscle artifact detection originally defined in the config file.
     psd_params : dict
         The parameters for PSD calculation originally defined in the config file. This in only needed to calculate powerline noise in case PSD was not calculated before.
+    psd_params_internal : dict
+        The parameters for PSD calculation originally defined in the internal config file. 
     raw_orig : mne.io.Raw
         The raw data.
     noisy_freqs_global : list
@@ -383,7 +385,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
 
     if noisy_freqs_global is None: # if PSD was not calculated before, calculate noise frequencies now:
         noisy_freqs_global = find_powerline_noise_short(raw_orig, psd_params, psd_params_internal, m_or_g_chosen)
-        print('Noisy frequencies found in data at (HZ): ', noisy_freqs_global)
+        print('___MEGqc___: ', 'Noisy frequencies found in data at (HZ): ', noisy_freqs_global)
     else: # if PSD was calculated before, use the frequencies from the PSD step:
         pass
 
