@@ -75,10 +75,10 @@ def add_log_buttons(fig: go.Figure):
     return fig
 
 
-def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list, bands_names: list = None):
+def get_bands_amplitude_per_ch(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list, bands_names: list = None):
 
     """
-    Calculate the area under the curve of frequency bands (e.g. alpha, beta, gamma, delta, ...) for mag or grad.
+    Calculate the area under the curve of frequency bands per channel.
     Adopted from: https://raphaelvallat.com/bandpower.html
     Take mean over all channels (mags/grads).
 
@@ -172,8 +172,8 @@ def get_mean_bands_amplitude(freq_bands: list, freqs: list, psds: np.ndarray or 
 def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, avg_psd: np.ndarray):
 
     """
-    Amplitude of frequencies calculation for all channels.
-    If desired: creating a pie chart of mean amplitude of every band over the entire data.
+    Calculate area under the curve of frequency bands (alpha, beta, gamma, etc) for all channels.
+    get_bands_amplitude_per_ch() is used to calculate the amplitude of each frequency band in each channel.
 
     Parameters
     ----------
@@ -205,7 +205,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     wave_bands=[[0.5, 4], [4, 8], [8, 12], [12, 30], [30, 100]]
     bands_names = ["delta (0.5-4 Hz)", "theta (4-8 Hz)", "alpha (8-12 Hz)", "beta (12-30 Hz)", "gamma (30-100 Hz)"]
 
-    abs_band_ampl_df, relative_band_ampl_df, ampl_by_Nfreq_per_ch_list_df, _ = get_mean_bands_amplitude(wave_bands, freqs, psds, channels, bands_names)
+    abs_band_ampl_df, relative_band_ampl_df, ampl_by_Nfreq_per_ch_list_df, _ = get_bands_amplitude_per_ch(wave_bands, freqs, psds, channels, bands_names)
 
     dfs_with_name = [
         QC_derivative(abs_band_ampl_df,'abs_ampl_'+m_or_g, 'df'),
@@ -213,7 +213,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
         QC_derivative(ampl_by_Nfreq_per_ch_list_df, 'ampl_by_Nfreq_'+m_or_g, 'df')]
 
     # Calculate the mean amplitude of each band over all channels:
-    abs_mean_band_ampl_df, relative_mean_band_ampl_df, _, total_ampl = get_mean_bands_amplitude(wave_bands, freqs, [avg_psd], ['Average PSD'], bands_names)
+    abs_mean_band_ampl_df, relative_mean_band_ampl_df, _, total_ampl = get_bands_amplitude_per_ch(wave_bands, freqs, [avg_psd], ['Average PSD'], bands_names)
     
     # Merge the dataframes and with 'absolute' and 'relative' raw names:
     brain_bands_df = pd.concat([abs_mean_band_ampl_df, relative_mean_band_ampl_df], axis=0)  
@@ -283,11 +283,12 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
 def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
 
     """
-    Cut the noise peaks out of PSD curve. By default, it is not used, but can be turned on.
+    CURRENTLY NOT USED
+    Cut the noise peaks out of PSD curve. 
     If turned on, in the next steps, the area under the curve will be calculated only for the cut out peaks.
-
-    By default, the area under the curve is calculated under the whole peak, uncluding the 'main brain signal' psd area + peak area. 
-    This is done, because in reality we can not define, which part of the 'noisy' frequency is signal and which is noise. 
+    
+    This was one of the earlier approaches, but we cant just cut the noise peaks out of psd.
+    In reality we can not define, which part of the 'noisy' frequency is signal and which is noise. 
     In case later, during preprocessing this noise will be filtered out, it will be done completely: both the peak and the main psd area.
 
     Process:
@@ -395,6 +396,7 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
     
     """
     Plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
+    Used in helper plots for debugging.
     
     Parameters
     ----------
@@ -446,10 +448,10 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     Complex approach: This function is trying to detect the actual start and end of peaks.
 
     1. Bands around the noise frequencies are created based on detected peak_width.
-    2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks pn PSD curve.
+    2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks on PSD curve.
 
     This function is not used by default, becausesuch a complex approach, even though can accurately find start and end of the noise bands, 
-    is not very robust. It can sometimes take too much of the area arouund the noise peak, leading to a large part of the signel folsely counted as noise.
+    is not very robust. It can sometimes take too much of the area around the noise peak, leading to a large part of the signel folsely counted as noise.
     By default, the more simple approach is used. See find_noisy_freq_bands_simple() function.
 
     Parameters
@@ -533,7 +535,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     Simple approach: used by default.
 
     1. Create frequency band around central noise frequency just by adding -x...+x Hz around.
-    2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks pn PSD curve.
+    2. If the found bands overlap, they are cut at the lowest point between 2 neighbouring noise peaks on PSD curve.
 
     Parameters
     ----------
@@ -573,19 +575,20 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
 
     if noisy_freqs_indexes.size==0:
 
-        if helper_plots is True: #visual
+        if helper_plots is True: #visual check
             _, unit = get_tit_and_unit(m_or_g, True)
             fig = plot_one_psd(ch_name, freqs, one_psd, [], [], unit)
             fig.show()
 
         return [], [], [], [], []
 
-    #make frequency bands around the central noise frequency (-1...+1 Hz band around the peak):
+    #make frequency bands around the central noise frequency (for example, -1...+1 Hz band around the peak):
     freq_res = freqs[1] - freqs[0]
     noisy_bands_indexes=[]
     for i, _ in enumerate(noisy_freqs_indexes):
         bend_start_ind = round(noisy_freqs_indexes[i] - band_half_length/freq_res)
-        #need to round the indexes. because freq_res has sometimes many digits after coma, like 0.506686867543 instead of 0.5, so the indexes might be floats.
+        #need to round the indexes. because freq_res has sometimes many digits after coma, 
+        # like 0.506686867543 instead of 0.5, so the indexes might become floats if we dont round.
         if bend_start_ind < 0: #index cant be negative
             bend_start_ind = 0
         bend_end_ind = round(noisy_freqs_indexes[i] + band_half_length/freq_res)
@@ -613,13 +616,11 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     """
     The function finds the number and amplitude of noisy frequencies in PSD function in these steps:
 
-    1. Calculate average psd curve over all channels
-    2. Run peak detection on it -> get number of noise freqs. Create the bands around them. Split blended freqs.
-    3. (Optional) Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
-    4. Calculate area under the curve for each noisy peak (amplitude of the noise)): 
-        - If 3 was done: area is limited to where noise band crosses the fitted curve. - count from there.
+    Calculate area under the curve for each noisy peak (amplitude of the noise)): 
+        - if cut_noise_from_psd is True:: area is limited to where noise band crosses the fitted curve. - count from there.
         - If not (default): area is limited to the whole area under the noise band, including the psd of the signal.
-    5. Calculate what part of the whole psd is the noise (noise amplitude) and what part is the signal (signal amplitude) + plot as pie chart
+
+    Calculate what ration of noise and signal.
 
     
     Parameters
@@ -667,25 +668,27 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
         # band_half_length is set to 1. Means we go 1Hz left and 1 Hz right from the central freq to create a band.
     elif simple_or_complex == 'complex':
         noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_indexes_final, split_indexes = find_noisy_freq_bands_complex(ch_name, freqs, one_psd, helper_plots, m_or_g, prominence_lvl_pos)
+        # complex is currently not used.
     else:
-        print('simple_or_complex should be either "simple" or "complex"')
+        print('___MEGqc___: ','simple_or_complex should be either "simple" or "complex"')
         return
 
-    #3*. Cut the noise peaks at the point they start and baseline them to 0.
+    #*. Cut the noise peaks at the point they start and baseline them to 0.
+    # Fit a curve to the general psd OR cut the noise peaks at the point they start and baseline them to 0. Optional. By default not used
     if cut_noise_from_psd is True:
         psd_noise_final = cut_the_noise_from_psd(noisy_bands_indexes_final, freqs, one_psd, helper_plots, ch_name, noisy_freqs_indexes, unit)
     else:
         psd_noise_final = one_psd
 
 
-    #4. Calculate area under the curve for each noisy peak: 
+    # Calculate area under the curve for each noisy peak: 
     # if cut the noise -> area is limited to where amplitude crosses the fitted curve. - count from there to the peak amplitude.
-    # if dont cut the noise -> area is calculated from 0 to the peak amplitude.
+    # if dont cut the noise -> area is calculated from 0 to the peak amplitude. (WE USE THIS).
     
 
     if noisy_bands_final: #if not empty
 
-        noise_ampl_df, noise_ampl_relative_to_signal_df, _, _ = get_mean_bands_amplitude(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
+        noise_ampl_df, noise_ampl_relative_to_signal_df, _, _ = get_bands_amplitude_per_ch(noisy_bands_final, freqs, [psd_noise_final], [ch_name])
         #convert results to a list:
 
         noise_ampl = noise_ampl_df.iloc[0, :].values.tolist() #take the first and only raw, because there is only one channel calculated by this fucntion
@@ -937,7 +940,7 @@ def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
     """
 
     Assign std or ptp values of each epoch as list to each channel. 
-    This is done for easier plotting when need to plot epochs per channel and also color coded by lobes.
+    This is done for extraction into TSV later and plotting. 
     
     Parameters
     ----------
@@ -1038,7 +1041,7 @@ def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_b
     method = psd_params_internal['method']
     prominence_lvl_pos_avg = psd_params_internal['prominence_lvl_pos_avg']
     prominence_lvl_pos_channels = psd_params_internal['prominence_lvl_pos_channels']
-    
+
     nfft, nperseg = get_nfft_nperseg(raw, psd_params['psd_step_size'])
 
     chs_by_lobe_psd=copy.deepcopy(chs_by_lobe)
