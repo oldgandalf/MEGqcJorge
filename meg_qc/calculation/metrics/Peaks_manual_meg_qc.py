@@ -229,7 +229,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
         metric_global_content[m_or_g]=make_dict_global_std_ptp(ptp_manual_params, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_std_ptp(ptp_manual_params, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content)
+            metric_local_content[m_or_g]=make_dict_local_std_ptp(ptp_manual_params, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, percent_noisy_flat_allowed=ptp_manual_params['allow_percent_noisy_flat_epochs'])
             #deriv_epoch_std[m_or_g][1].content is df with big std(noisy), df_epoch_std[m_or_g][2].content is df with small std(flat)
         else:
             metric_local_content[m_or_g]=None
