@@ -262,14 +262,14 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 print('___MEGqc___: ', 'Starting initial processing...')
                 start_time = time.time()
 
-                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
                 
                 # Commented out this, because it would cover the actual error while allowing to continue processing.
                 # I wanna see the actual error. Often it happens while reading raw and says: 
                 # file '...' does not start with a file id tag
                 
                 # try:
-                #     dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                #     dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
                 # except:
                 #     print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
                 #     #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
@@ -337,8 +337,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 
                 report_strings = {
-                'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
-                'TIME_SERIES': time_series_str,
+                'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str,
                 'STD': std_str,
                 'PSD': psd_str,
                 'PTP_MANUAL': pp_manual_str,
@@ -356,7 +355,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'MEG data quality analysis report': [],
                 'Raw info': info_derivs,
                 'Report_strings': report_str_derivs,
-                'Interactive time series': time_series_derivs,
                 'Sensors locations': sensors_derivs,
                 'Standard deviation of the data': std_derivs, 
                 'Frequency spectrum': psd_derivs, 
