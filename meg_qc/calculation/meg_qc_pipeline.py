@@ -104,12 +104,6 @@ def get_files_list(dataset_path, dataset, sid):
         raise ValueError('No fif or ctf files found in the dataset.')
     
 
-    # check that entities_per_file have exactly same name before extension as 
-    # the last file in every entry of list_of_files before extension:
-    # Update: they might be not EXACTLY the same, apparetntly ancpbids might not place all the entities into the dict (file_name_in_obj).
-    # This is why we need to check that file name fully include what it written in dict as a name to amke sure we work with the same data 
-    # file when open it nd when save the results.
-
     for i in range(len(list_of_files)):
         file_name_in_path = os.path.basename(list_of_files[i]).split('_meg.')[0]
         file_name_in_obj = entities_per_file[i]['name'].split('_meg.')[0]
@@ -352,7 +346,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 
 
                 QC_derivs={
-                'MEG data quality analysis report': [],
                 'Raw info': info_derivs,
                 'Report_strings': report_str_derivs,
                 'Sensors locations': sensors_derivs,
@@ -374,10 +367,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': simple_metrics_eog,
                 'HEAD': simple_metrics_head,
                 'MUSCLE': simple_metrics_muscle}  
-
-
-                # report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
-                # QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
 
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
                 QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
@@ -419,8 +408,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                             meg_artifact.extension = '.tsv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path, sep='\t')
 
-                        elif deriv.content_type == 'report mne':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
 
                         elif deriv.content_type == 'json':
                             meg_artifact.extension = '.json'
@@ -448,16 +435,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         if raw is None:
             print('___MEGqc___: ', 'No data files could be processed.')
-            #return [None]*14
             return
 
-    #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
     # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
-    
-
-    # for_report = {'ch_chosen': m_or_g_chosen}
-    # # save as json:
-    # with open('for_report.json', 'w') as file_wrapper:
-    #     json.dump(for_report, file_wrapper, indent=4)
 
     return 
