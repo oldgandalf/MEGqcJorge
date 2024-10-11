@@ -33,10 +33,10 @@ def get_all_config_params(config_file_name: str):
 
     default_section = config['DEFAULT']
 
-    m_or_g_chosen = default_section['do_for'] 
+    m_or_g_chosen = default_section['ch_types'] 
     m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEGqc___: ', 'No channels to analyze. Check parameter do_for in config file.')
+        print('___MEGqc___: ', 'No channels to analyze. Check parameter ch_types in config file.')
         return None
 
     subjects = default_section['subjects']
@@ -381,14 +381,14 @@ def sanity_check(m_or_g_chosen, channels_objs):
 
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
         m_or_g_chosen = []
-        m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
+        m_or_g_skipped_str='''No channels to analyze. Check parameter ch_types in settings.'''
         raise ValueError(m_or_g_skipped_str)
     if len(channels_objs['mag']) == 0 and 'mag' in m_or_g_chosen:
-        m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
+        m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter ch_types in config file. Analysis will be done only for gradiometers.'''
         print('___MEGqc___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('mag')
     elif len(channels_objs['grad']) == 0 and 'grad' in m_or_g_chosen:
-        m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
+        m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter ch_types in config file. Analysis will be done only for magnetometers.'''
         print('___MEGqc___: ', m_or_g_skipped_str)
         m_or_g_chosen.remove('grad')
     elif len(channels_objs['mag']) == 0 and len(channels_objs['grad']) == 0:
