@@ -39,6 +39,8 @@ def get_all_config_params(config_file_name: str):
         print('___MEGqc___: ', 'No channels to analyze. Check parameter ch_types in config file.')
         return None
 
+    #TODO: save list of mags and grads here and use later everywhere? because for CTF types are messed up.
+
     subjects = default_section['subjects']
     subjects = [sub.strip() for sub in subjects.split(",")]
 
@@ -147,9 +149,6 @@ def get_all_config_params(config_file_name: str):
         'freq_min': freq_min,
         'freq_max': freq_max,
         'psd_step_size': psd_section.getfloat('psd_step_size')})
-
-        # 'n_fft': psd_section.getint('n_fft'),
-        # 'n_per_seg': psd_section.getint('n_per_seg'),
 
 
         ptp_manual_section = config['PTP_manual']
@@ -358,7 +357,7 @@ def get_units(raw):
         print(f"Unit: {unit}")
 
 
-def sanity_check(m_or_g_chosen, channels_objs):
+def check_chosen_ch_types(m_or_g_chosen, channels_objs):
     
     """
     Check if the channels which the user gave in config file to analize actually present in the data set.
@@ -379,28 +378,28 @@ def sanity_check(m_or_g_chosen, channels_objs):
         
     """
 
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        m_or_g_chosen = []
-        m_or_g_skipped_str='''No channels to analyze. Check parameter ch_types in settings.'''
-        raise ValueError(m_or_g_skipped_str)
-    if len(channels_objs['mag']) == 0 and 'mag' in m_or_g_chosen:
-        m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter ch_types in config file. Analysis will be done only for gradiometers.'''
-        print('___MEGqc___: ', m_or_g_skipped_str)
-        m_or_g_chosen.remove('mag')
-    elif len(channels_objs['grad']) == 0 and 'grad' in m_or_g_chosen:
-        m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter ch_types in config file. Analysis will be done only for magnetometers.'''
-        print('___MEGqc___: ', m_or_g_skipped_str)
-        m_or_g_chosen.remove('grad')
-    elif len(channels_objs['mag']) == 0 and len(channels_objs['grad']) == 0:
-        m_or_g_chosen = []
-        m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
-        raise ValueError(m_or_g_skipped_str)
-    else:
-        m_or_g_skipped_str = ''
-    
-    # Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
+    if not any(ch in m_or_g_chosen for ch in ['mag', 'grad']):
+        skipped_str = "No channels to analyze. Check parameter ch_types in config file."
+        raise ValueError(skipped_str)
+
+    skipped_msgs = {
+        'mag': "There are no magnetometers in this data set: check parameter ch_types in config file. Analysis will be done only for gradiometers.",
+        'grad': "There are no gradiometers in this data set: check parameter ch_types in config file. Analysis will be done only for magnetometers."
+    }
+
+    for ch in ['mag', 'grad']:
+        if len(channels_objs[ch]) == 0 and ch in m_or_g_chosen:
+            skipped_str = skipped_msgs[ch]
+            print(f'___MEGqc___: {skipped_str}')
+            m_or_g_chosen.remove(ch)
+
+    if not any(channels_objs[ch] for ch in ['mag', 'grad']):
+        skipped_str = "There are no magnetometers nor gradiometers in this data set. Analysis will not be done."
+        raise ValueError(skipped_str)
+
+    # Now m_or_g_chosen contain only those channel types which are present in the data set and were chosen by the user.
         
-    return m_or_g_chosen, m_or_g_skipped_str
+    return m_or_g_chosen, skipped_str
 
 
 def load_data(file_path):
@@ -593,7 +592,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     channels_objs, lobes_color_coding_str = assign_channels_properties(raw, meg_system)
 
     #Check if there are channels to analyze according to info in config file:
-    m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channels_by_lobe(channels_objs)
