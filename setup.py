@@ -21,7 +21,7 @@ if __name__ == '__main__':
         cmdclass=versioneer.get_cmdclass(),
         setup_requires=SETUP_REQUIRES,
         install_requires=INSTALL_REQUIRES,
-        packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings/*'],
+        packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings'],
         url='https://github.com/AaronReer/MEGqc',
         license='MIT',
         author='ANCP',
