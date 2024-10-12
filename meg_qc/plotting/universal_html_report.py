@@ -85,7 +85,6 @@ def make_metric_section(fig_derivs_metric: list, section_name: str, report_strin
     # Define a mapping of section names to report strings and how-to-use plots
     section_mapping = {
         'INITIAL_INFO': ['Data info', report_strings['INITIAL_INFO']],
-        'TIME SERIES': ['Interactive time series', f"<p>{report_strings['TIME_SERIES']}</p>"],
         'ECG': ['ECG: heart beat interference', f"<p>{report_strings['ECG']}</p>"],
         'EOG': ['EOG: eye movement interference', f"<p>{report_strings['EOG']}</p>"],
         'HEAD': ['Head movement', f"<p>{report_strings['HEAD']}</p>"],

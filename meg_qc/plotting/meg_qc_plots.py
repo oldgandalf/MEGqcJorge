@@ -27,10 +27,10 @@ from meg_qc.plotting.universal_html_report import make_joined_report_mne
 # During plotting step - read the csvs (find using ancpbids), plot them, save them as htmls in the right folders.
 
 
-def modify_entity_name(entities):
+def create_categories_for_selector(entities: dict):
 
     """
-    Modify the names of the entities to be comply with ancpbids.
+    Create categories based on what metrics have already been calculated and detected as ancp bids as entities in MEGqc derivatives folder.
 
     Parameters
     ----------
@@ -39,44 +39,35 @@ def modify_entity_name(entities):
     
     Returns
     -------
-    dict
+    categories : dict
         A dictionary of entities and their subcategories with modified names
     """
 
-    #old_new_categories = {'description': 'METRIC', 'subject': 'SUBJECT', 'session': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+    # Create a copy of entities
+    categories = entities.copy()
 
-    old_new_categories = {'description': 'METRIC'}
-
-    categories_copy = entities.copy()
-
-    for category, subcategories in categories_copy.items():
-        # Convert the set of subcategories to a sorted list
-        sorted_subcategories = sorted(subcategories, key=str)
-        # If the category is in old_new_categories, replace it with the new category
-        if category in old_new_categories: 
-            #This here is to replace the old names with new like desc -> METRIC
-            #Normally we d use it only for the METRIC, but left this way in case the principle will extend to other categories
-            #see old_new_categories above.
-
-            new_category = old_new_categories[category]
-            entities[new_category] = entities.pop(category)
-            # Replace the original set of subcategories with the modified list
-            sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
-            entities[new_category] = sorted_subcategories
-        else: #if we dont want to rename categories
-            sorted_subcategories.insert(0, '_ALL_'+category+'s_')
-            entities[category] = sorted_subcategories
+    # Rename 'description' to 'METRIC' and sort the values
+    categories = {
+        ('METRIC' if k == 'description' else k): sorted(v, key=str)
+        for k, v in categories.items()
+    }
 
     #From METRIC remove whatever is not metric. 
     #Cos METRIC is originally a desc entity which can contain just anything:
-            
-    if 'METRIC' in entities:
-        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
+                
+    if 'METRIC' in categories:
+        valid_metrics = ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']
+        categories['METRIC'] = [x for x in categories['METRIC'] if x.lower() in [metric.lower() for metric in valid_metrics]]
 
-    return entities
+    #add '_ALL_' to the beginning of the list for each category:
+
+    for category, subcategories in categories.items():
+        categories[category] = ['_ALL_'+category+'s_'] + subcategories
+
+    return categories
 
 
-def selector(entities):
+def selector(entities: dict):
 
     """
     Creates a in-terminal visual selector for the user to choose the entities and settings for plotting.
@@ -100,8 +91,8 @@ def selector(entities):
 
     # SELECT ENTITIES and SETTINGS
     # Define the categories and subcategories
-    categories = modify_entity_name(entities)
-    categories['m_or_g'] = ['_ALL_', 'mag', 'grad']
+    categories = create_categories_for_selector(entities)
+    categories['m_or_g'] = ['_ALL_sensors', 'mag', 'grad']
 
     selected = {}
     # Create a list of values with category titles
@@ -131,20 +122,14 @@ def selector(entities):
                     all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
                     selected[key] = all_selected #everything
 
-    #Separate into selected_entities and plot_settings:
-        selected_entities, plot_settings = {}, {}
-        for key, values in selected.items():
-            if key != 'm_or_g':
-                selected_entities[key] = values
-            elif key == 'm_or_g':
-                plot_settings[key] = values
-            else:
-                print('___MEGqc__: wow, weird key in selector()! check it.')
+    # Separate into selected_entities and plot_settings
+    selected_entities = {key: values for key, values in selected.items() if key != 'm_or_g'}
+    plot_settings = {key: values for key, values in selected.items() if key == 'm_or_g'}
 
     return selected_entities, plot_settings
 
 
-def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
+def select_subcategory(subcategories: list, category_title: str, window_title: str = "What would you like to plot? Click to select."):
 
     """
     Create a checkbox list dialog for the user to select subcategories.
@@ -157,7 +142,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
         A list of subcategories, such as: sub, ses, task, run, metric, mag/grad.
     category_title : str
         The title of the category.
-    title : str
+    window_title : str
         The title of the checkbox list dialog, for visual.
 
     Returns
@@ -181,7 +166,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
         # A string that will be displayed as the label of the checkbox.
 
     results = checkboxlist_dialog(
-        title=title,
+        title=window_title,
         text=category_title,
         values=values,
         style=Style.from_dict({
@@ -204,7 +189,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
 def get_ds_entities(dataset_path: str):
 
     """
-    Get the entities of the dataset using ancpbids, only get derivatove entities, not all raw data.
+    Get the entities of the dataset using ancpbids, only get derivative entities, not all raw data.
 
     Parameters
     ----------
@@ -269,7 +254,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
     m_or_g_chosen = plot_settings['m_or_g'] 
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
-    #TODO: think about it! the order goes by tsv files so it s messed uo cos ecg channels comes seond!
+
     
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
@@ -658,7 +643,6 @@ def make_plots_meg_qc(ds_paths: list):
     ancpbids.write_derivative(dataset, derivative) 
 
     return tsvs_to_plot
-
 
 
 # ____________________________
