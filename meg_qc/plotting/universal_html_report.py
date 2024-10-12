@@ -55,6 +55,7 @@ def make_howto_use_plots_section (metric: str):
 
     return how_to_section
 
+
 def make_metric_section(fig_derivs_metric: list, section_name: str, report_strings: dict):
     
     """
@@ -206,14 +207,8 @@ def keep_fig_derivs(derivs_section:list):
         Normally should be only 1 figure or none.
     """
     
-    fig_derivs_metric=[]
-    sensor_fig_derivs = []
-    for d in derivs_section:
-        if d.content_type == 'plotly' or d.content_type == 'matplotlib':
-            if 'SENSORS' in d.name.upper():
-                sensor_fig_derivs.append(d)
-            else:
-                fig_derivs_metric.append(d)
+    fig_derivs_metric = [d for d in derivs_section if d.content_type in {'plotly', 'matplotlib'} and 'SENSORS' not in d.name.upper()]
+    sensor_fig_derivs = [d for d in derivs_section if d.content_type in {'plotly', 'matplotlib'} and 'SENSORS' in d.name.upper()]
 
     return sensor_fig_derivs, fig_derivs_metric
 
@@ -222,6 +217,7 @@ def make_joined_report(sections: dict, report_strings: dict):
 
     """
     Create report as html string with all sections. Currently make_joined_report_mne is used.
+    This one is plain report, without mne fance wrapper.
 
     Parameters
     ----------
