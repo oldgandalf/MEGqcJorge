@@ -145,48 +145,34 @@ class MEG_channels:
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])}, | ecg_corr_coeff {self.ecg_corr_coeff}, eog_corr_coeff {self.eog_corr_coeff}, ecg_amplitude_ratio {self.ecg_amplitude_ratio}, eog_amplitude_ratio {self.eog_amplitude_ratio}, ecg_similarity_score {self.ecg_similarity_score}, eog_similarity_score {self.eog_similarity_score})'
     
+
     def to_df(self):
 
         """
         Returns the object as a pandas DataFrame. To be later exported into a tsv file.
-
         """
-
+        
         data_dict = {}
-        freqs = self.freq
+        attr_to_column = {
+            'name': 'Name', 'type': 'Type', 'lobe': 'Lobe', 'lobe_color': 'Lobe Color', 'system': 'System', 'loc': 'Sensor_location',
+            'time_series': 'Time series', 'std_overall': 'STD all', 'std_epoch': 'STD epoch', 'ptp_overall': 'PtP all', 'ptp_epoch': 'PtP epoch',
+            'psd': 'PSD', 'freq': 'Freq', 'mean_ecg': 'mean_ecg', 'mean_ecg_smoothed': 'smoothed_mean_ecg', 'mean_eog': 'mean_eog',
+            'mean_eog_smoothed': 'smoothed_mean_eog', 'ecg_corr_coeff': 'ecg_corr_coeff', 'ecg_pval': 'ecg_pval', 'ecg_amplitude_ratio': 'ecg_amplitude_ratio',
+            'ecg_similarity_score': 'ecg_similarity_score', 'eog_corr_coeff': 'eog_corr_coeff', 'eog_pval': 'eog_pval', 'eog_amplitude_ratio': 'eog_amplitude_ratio',
+            'eog_similarity_score': 'eog_similarity_score', 'muscle': 'Muscle', 'head': 'Head'
+        }
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'system', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score','muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'System', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'Muscle', 'Head']):
-            
-            
-            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
+        for attr, column_name in attr_to_column.items():
             value = getattr(self, attr)
             if isinstance(value, (list, np.ndarray)):
-
-                
-                if 'psd' == attr:
-                    freqs = getattr(self, 'freq') #??? right
-                    for i, v in enumerate(value):
-                        fr = freqs[i]
-                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
-
-                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
-                    if attr == 'mean_ecg':
-                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'mean_eog':
-                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'head':
-                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'muscle':
-                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
-                    
-                    for i, v in enumerate(value):
-                        t = times[i]
-                        data_dict[f'{column_name}_sec_{t}'] = [v]
-
-                else: #TODO: here maybe change to elif std/ptp?
-                    for i, v in enumerate(value):
-                        data_dict[f'{column_name}_{i}'] = [v]
+                if attr == 'psd':
+                    freqs = getattr(self, 'freq')
+                    data_dict.update({f'{column_name}_Hz_{freqs[i]}': [v] for i, v in enumerate(value)})
+                elif attr in ['mean_ecg', 'mean_eog', 'muscle', 'head']:
+                    times = getattr(self, f'{attr.split("_")[0]}_time')
+                    data_dict.update({f'{column_name}_sec_{times[i]}': [v] for i, v in enumerate(value)})
+                else:
+                    data_dict.update({f'{column_name}_{i}': [v] for i, v in enumerate(value)})
             else:
                 data_dict[column_name] = [value]
 
@@ -635,7 +621,7 @@ class QC_derivative:
 
     """
 
-    def __init__(self, content, name, content_type, description_for_user = '', fig_order = 0):
+    def __init__(self, content, name: str, content_type: str, description_for_user: str = '', fig_order: float = 0):
 
         """
         Constructor method
@@ -715,39 +701,8 @@ class QC_derivative:
         return """<br></br>"""+ figure_report + """<p>"""+self.description_for_user+"""</p>"""
 
 
-    def get_section(self):
 
-        """ 
-        Return a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
-        
-        Returns
-        -------
-        section : str
-            'RMSE', 'PTP_MANUAL', 'PTP_AUTO', 'PSD', 'EOG', 'ECG', 'MUSCLE', 'HEAD'.
-
-        """
-
-        if 'std' in self.name or 'rmse' in self.name or 'STD' in self.name or 'RMSE' in self.name:
-            return 'RMSE'
-        elif 'ptp_manual' in self.name or 'pp_manual' in self.name or 'PTP_manual' in self.name or 'PP_manual'in self.name:
-            return 'PTP_MANUAL'
-        elif 'ptp_auto' in self.name or 'pp_auto' in self.name or 'PTP_auto' in self.name or 'PP_auto' in self.name:
-            return 'PTP_AUTO'
-        elif 'psd' in self.name or 'PSD' in self.name:
-            return 'PSD'
-        elif 'eog' in self.name or 'EOG' in self.name:
-            return 'EOG'
-        elif 'ecg' in self.name or 'ECG' in self.name:
-            return 'ECG'
-        elif 'head' in self.name or 'HEAD' in self.name:
-            return 'HEAD'
-        elif 'muscle' in self.name or 'MUSCLE' in self.name:
-            return 'MUSCLE'
-        else:  
-            warnings.warn("Check description of this QC_derivative instance: " + self.name)
-
-
-def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
+def plot_ch_df_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
@@ -825,7 +780,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
+def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
     Plots data from a data frame as lines, each lobe has own color.
@@ -925,7 +880,7 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
                     legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color))
                 )]
                
-    # sort traces in random order:
+    # sort traces in random order: WHY?
     # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
@@ -988,7 +943,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     #put data in data frame with ch_names as columns:
     df_data=pd.DataFrame(data.T, columns=ch_names)
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
+    fig = plot_ch_df_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
 
     if fig is None:
         return []
@@ -1117,112 +1072,6 @@ def switch_names_on_off(fig: go.Figure):
                                         buttons=buttons)])
 
     return fig
-
-
-def plot_sensors_3d_separated(raw: mne.io.Raw, m_or_g_chosen: str):
-
-    """
-    Plots the 3D locations of the sensors in the raw file.
-    Not used any more. As it plots mag and grad sensors separately and only if both are chosen for analysis. 
-    Also it doesnt care for the lobe areas.
-
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        The raw file to be plotted.
-    m_or_g_chosen : str
-        The type of the channels to be plotted: 'mag' or 'grad'.
-    
-    Returns
-    -------
-    qc_derivative : list
-        A list of QC_derivative objects containing the plotly figures with the sensor locations.
-
-    """
-    qc_derivative = []
-
-    # Check if there are magnetometers and gradiometers in the raw file:
-    if 'mag' in m_or_g_chosen:
-
-        # Extract the sensor locations and names for magnetometers
-        mag_locs = raw.copy().pick('mag').info['chs']
-        mag_pos = [ch['loc'][:3] for ch in mag_locs]
-        mag_names = [ch['ch_name'] for ch in mag_locs]
-
-        if mag_pos:
-            # Create the magnetometer plot with markers only
-
-            mag_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in mag_pos],
-                                                y=[pos[1] for pos in mag_pos],
-                                                z=[pos[2] for pos in mag_pos],
-                                                mode='markers',
-                                                marker=dict(size=5),
-                                                text=mag_names,
-                                                hovertemplate='%{text}')],
-                                                layout=go.Layout(width=800, height=800))
-
-            mag_fig.update_layout(
-                title={
-                'text': 'Magnetometers positions',
-                'y':0.85,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'},
-                hoverlabel=dict(font=dict(size=10)))
-            
-
-            mag_fig = switch_names_on_off(mag_fig)
-
-            qc_derivative += [QC_derivative(content=mag_fig, name='Magnetometers_positions', content_type='plotly')]
-
-    if 'grad' in m_or_g_chosen:
-
-        # Extract the sensor locations and names for gradiometers
-        grad_locs = raw.copy().pick('grad').info['chs']
-        grad_pos = [ch['loc'][:3] for ch in grad_locs]
-        grad_names = [ch['ch_name'] for ch in grad_locs]
-
-        if grad_pos:
-
-            #since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels:
-
-            grad_pos_together = []
-            grad_names_together = []
-
-            for i in range(len(grad_pos)-1):
-                if all(x == y for x, y in zip(grad_pos[i], grad_pos[i+1])):
-                    grad_pos_together += [grad_pos[i]]
-                    grad_names_together += [grad_names[i]+', '+grad_names[i+1]]
-                else:
-                    pass
-
-
-            # Add both sets of gradiometer positions to the plot:
-            grad_fig = go.Figure(data=[go.Scatter3d(x=[pos[0] for pos in grad_pos_together],
-                                                    y=[pos[1] for pos in grad_pos_together],
-                                                    z=[pos[2] for pos in grad_pos_together],
-                                                    mode='markers',
-                                                    marker=dict(size=5),
-                                                    text=grad_names_together,
-                                                    hovertemplate='%{text}')],
-                                                    layout=go.Layout(width=800, height=800))
-
-            grad_fig.update_layout(
-                title={
-                'text': 'Gradiometers positions',
-                'y':0.85,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'},
-                hoverlabel=dict(font=dict(size=10)))
-
-
-            # Add the button to have names show up on hover or always:
-            grad_fig = switch_names_on_off(grad_fig)
-
-            qc_derivative += [QC_derivative(content=grad_fig, name='Gradiometers_positions', content_type='plotly')]
-
-    return qc_derivative
 
 
 def keep_unique_locs(ch_list: list):
@@ -1491,7 +1340,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     #system = df['System'].unique().tolist()
 
-    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
+    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color per each lobe
         for lobe in lobes_dict:
             ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
             traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
@@ -1951,34 +1800,32 @@ def figure_x_axis(df, metric):
     
     """
      
-    if metric.lower() == 'psd':
+    metric_lower = metric.lower()
+
+    if metric_lower == 'psd':
         # Figure out frequencies:
         freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
         freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
         return freqs
-    
-    elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
-        if metric.lower() == 'ecg':
-            prefix = 'mean_ecg_sec_'
-        elif metric.lower() == 'smoothed_ecg':
-            prefix = 'smoothed_mean_ecg_sec_'
-        elif metric.lower() == 'smoothed_eog':
-            prefix = 'smoothed_mean_eog_sec_'
-        elif metric.lower() == 'eog': 
-            prefix = 'mean_eog_sec_'
-        elif metric.lower() == 'muscle':
-            prefix = 'Muscle_sec_'
-        elif metric.lower() == 'head':
-            prefix = 'Head_sec_'
-        
+
+    prefix_map = {
+        'ecg': 'mean_ecg_sec_',
+        'smoothed_ecg': 'smoothed_mean_ecg_sec_',
+        'smoothed_eog': 'smoothed_mean_eog_sec_',
+        'eog': 'mean_eog_sec_',
+        'muscle': 'Muscle_sec_',
+        'head': 'Head_sec_'
+    }
+
+    if metric_lower in prefix_map:
+        prefix = prefix_map[metric_lower]
         time_cols = [column for column in df if column.startswith(prefix)]
         time_vec = np.array([float(x.replace(prefix, '')) for x in time_cols])
-
         return time_vec
-    
-    else:
-        print('Wrong metric! Cant figure out xaxis for plotting.')
-        return None
+
+    print('Wrong metric! Cant figure out xaxis for plotting.')
+
+    return None
 
 
 def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
@@ -2018,7 +1865,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
     for index, row in df.iterrows():
         channels.append(row['Name'])
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
+    fig = plot_ch_df_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
 
     if fig is None:
         return []
@@ -2468,13 +2315,8 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     # Create a list of columns that start with 'STD epoch_'
     epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
 
-    # Get the number of these columns
-    num_epoch_columns = len(epoch_columns)
-
-    # Create a list of numbers from 0 to that length
-    epochs_names = [i for i in range(num_epoch_columns)]
-
-    #TODO: here better use the actual epoch names, not recreate their numeration
+    # Extract the actual epoch names from the column names
+    epochs_names = [int(col.split('_')[-1]) for col in epoch_columns]
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -2555,157 +2397,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
 
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
-
-    return qc_derivative
-
-
-def boxplot_epochs_old(df_mg: pd.DataFrame, ch_type: str, what_data: str):
-
-    """
-    Create representation of calculated data as multiple boxplots: 
-    each box represents 1 channel, each dot is std of 1 epoch in this channel
-    Implemented with plotly: https://plotly.github.io/plotly.py-docs/generated/plotly.graph_objects.Box.html
-    The figure will be saved as an interactive html file.
-
-    Old version, not used.
-
-    Parameters
-    ----------
-    df_mg : pd.DataFrame
-        data frame containing data (stds, peak-to-peak amplitudes, etc) for each epoch, each channel, mags OR grads, not together
-    ch_type : str 
-        title, like "Magnetometers", or "Gradiometers", 
-    what_data : str
-        'peaks' for peak-to-peak amplitudes or 'stds'
-
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
-
-    if what_data=='peaks':
-        hover_tit='Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_'+ch_tit
-
-    #collect all names of original df into a list to use as tick labels:
-    epochs = df_mg.columns.tolist()
-
-    fig = go.Figure()
-
-    for col in df_mg:
-        fig.add_trace(go.Box(y=df_mg[col].values, 
-        name=str(df_mg[col].name), 
-        opacity=0.7, 
-        boxpoints="all", 
-        pointpos=0,
-        marker_size=3,
-        line_width=1,
-        text=df_mg[col].index,
-        ))
-        fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}')
-
-    
-    fig.update_layout(
-        xaxis = dict(
-            tickmode = 'array',
-            tickvals = [v for v in range(0, len(epochs))],
-            ticktext = epochs,
-            rangeslider=dict(visible=True)
-        ),
-        yaxis = dict(
-            showexponent = 'all',
-            exponentformat = 'e'),
-        yaxis_title=y_ax_and_fig_title+' in '+unit,
-        title={
-            'text': y_ax_and_fig_title+' of epochs for '+ch_tit,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-        legend_title="Epochs")
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
-
-    return qc_derivative
-
-
-def boxplot_all_time_OLD(std_data_named: dict, ch_type: str, channels: list, what_data: str):
-
-    """
-    Create representation of calculated std data as a boxplot (box containd magnetometers or gradiomneters, not together): 
-    each dot represents 1 channel: name: std value over whole data of this channel. Too high/low stds are outliers.
-    OLD but still working version, currently not used. Other principal than the current one so left for reference.
-
-    Parameters
-    ----------
-    std_data_named : dict
-        std values for each channel
-    ch_type : str
-        'mag' or 'grad'
-    channels : list
-        list of channel names
-    what_data : str
-        'peaks' for peak-to-peak amplitudes or 'stds'
-
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-    # Put all values in 1 array from the dictionsry:
-    std_data = np.array(list(std_data_named.values()))
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
-
-    if what_data=='peaks':
-        hover_tit='PP_Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_all_data_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_all_data_'+ch_tit
-
-    df = pd.DataFrame (std_data, index=channels, columns=[hover_tit])
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Box(x=df[hover_tit],
-    name="",
-    text=df[hover_tit].index, 
-    opacity=0.7, 
-    boxpoints="all", 
-    pointpos=0,
-    marker_size=5,
-    line_width=1))
-    fig.update_traces(hovertemplate='%{text}<br>'+hover_tit+': %{x: .0f}')
-        
-
-    fig.update_layout(
-        yaxis={'visible': False, 'showticklabels': False},
-        xaxis = dict(
-        showexponent = 'all',
-        exponentformat = 'e'),
-        xaxis_title=y_ax_and_fig_title+" in "+unit,
-        title={
-        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
-        'y':0.85,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top'})
-        
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
 
     return qc_derivative
 
@@ -3462,7 +3153,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             metric = ecg_or_eog+'_smoothed'
         elif smoothed is False:
             metric = ecg_or_eog
-        fig = plot_df_of_channels_data_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
+        fig = plot_ch_df_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
 
         if fig is None:
             return go.Figure()

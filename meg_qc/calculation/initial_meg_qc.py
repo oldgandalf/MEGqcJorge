@@ -33,11 +33,13 @@ def get_all_config_params(config_file_name: str):
 
     default_section = config['DEFAULT']
 
-    m_or_g_chosen = default_section['do_for'] 
+    m_or_g_chosen = default_section['ch_types'] 
     m_or_g_chosen = [chosen.strip() for chosen in m_or_g_chosen.split(",")]
     if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        print('___MEGqc___: ', 'No channels to analyze. Check parameter do_for in config file.')
+        print('___MEGqc___: ', 'No channels to analyze. Check parameter ch_types in config file.')
         return None
+
+    #TODO: save list of mags and grads here and use later everywhere? because for CTF types are messed up.
 
     subjects = default_section['subjects']
     subjects = [sub.strip() for sub in subjects.split(",")]
@@ -148,9 +150,6 @@ def get_all_config_params(config_file_name: str):
         'freq_max': freq_max,
         'psd_step_size': psd_section.getfloat('psd_step_size')})
 
-        # 'n_fft': psd_section.getint('n_fft'),
-        # 'n_per_seg': psd_section.getint('n_per_seg'),
-
 
         ptp_manual_section = config['PTP_manual']
         all_qc_params['PTP_manual'] = dict({
@@ -245,8 +244,8 @@ def get_internal_config_params(config_file_name: str):
         'max_n_peaks_allowed_for_avg': ecg_section.getint('max_n_peaks_allowed_for_avg'),
         'ecg_epoch_tmin': ecg_section.getfloat('ecg_epoch_tmin'),
         'ecg_epoch_tmax': ecg_section.getfloat('ecg_epoch_tmax'),
-        'timelimit_min': ecg_section.getfloat('timelimit_min'),
-        'timelimit_max': ecg_section.getfloat('timelimit_max'),
+        'before_t0': ecg_section.getfloat('before_t0'),
+        'after_t0': ecg_section.getfloat('after_t0'),
         'window_size_for_mean_threshold_method': ecg_section.getfloat('window_size_for_mean_threshold_method')})
     
     eog_section = config['EOG']
@@ -255,9 +254,15 @@ def get_internal_config_params(config_file_name: str):
         'max_n_peaks_allowed_for_avg': eog_section.getint('max_n_peaks_allowed_for_avg'),
         'eog_epoch_tmin': eog_section.getfloat('eog_epoch_tmin'),
         'eog_epoch_tmax': eog_section.getfloat('eog_epoch_tmax'),
-        'timelimit_min': eog_section.getfloat('timelimit_min'),
-        'timelimit_max': eog_section.getfloat('timelimit_max'),
+        'before_t0': eog_section.getfloat('before_t0'),
+        'after_t0': eog_section.getfloat('after_t0'),
         'window_size_for_mean_threshold_method': eog_section.getfloat('window_size_for_mean_threshold_method')})
+    
+    psd_section = config['PSD']
+    internal_qc_params['PSD'] = dict({
+        'method': psd_section.get('method'),
+        'prominence_lvl_pos_avg': psd_section.getint('prominence_lvl_pos_avg'),
+        'prominence_lvl_pos_channels': psd_section.getint('prominence_lvl_pos_channels')})
     
     return internal_qc_params
 
@@ -352,7 +357,7 @@ def get_units(raw):
         print(f"Unit: {unit}")
 
 
-def sanity_check(m_or_g_chosen, channels_objs):
+def check_chosen_ch_types(m_or_g_chosen, channels_objs):
     
     """
     Check if the channels which the user gave in config file to analize actually present in the data set.
@@ -373,28 +378,30 @@ def sanity_check(m_or_g_chosen, channels_objs):
         
     """
 
-    if 'mag' not in m_or_g_chosen and 'grad' not in m_or_g_chosen:
-        m_or_g_chosen = []
-        m_or_g_skipped_str='''No channels to analyze. Check parameter do_for in settings.'''
-        raise ValueError(m_or_g_skipped_str)
-    if len(channels_objs['mag']) == 0 and 'mag' in m_or_g_chosen:
-        m_or_g_skipped_str='''There are no magnetometers in this data set: check parameter do_for in config file. Analysis will be done only for gradiometers.'''
-        print('___MEGqc___: ', m_or_g_skipped_str)
-        m_or_g_chosen.remove('mag')
-    elif len(channels_objs['grad']) == 0 and 'grad' in m_or_g_chosen:
-        m_or_g_skipped_str = '''There are no gradiometers in this data set: check parameter do_for in config file. Analysis will be done only for magnetometers.'''
-        print('___MEGqc___: ', m_or_g_skipped_str)
-        m_or_g_chosen.remove('grad')
-    elif len(channels_objs['mag']) == 0 and len(channels_objs['grad']) == 0:
-        m_or_g_chosen = []
-        m_or_g_skipped_str = '''There are no magnetometers nor gradiometers in this data set. Analysis will not be done.'''
-        raise ValueError(m_or_g_skipped_str)
-    else:
-        m_or_g_skipped_str = ''
+    skipped_str = ''
     
-    # Now m_or_g_chosen will contain only those channel types which are present in the data set and were chosen by the user.
+    if not any(ch in m_or_g_chosen for ch in ['mag', 'grad']):
+        skipped_str = "No channels to analyze. Check parameter ch_types in config file."
+        raise ValueError(skipped_str)
+
+    skipped_msgs = {
+        'mag': "There are no magnetometers in this data set: check parameter ch_types in config file. Analysis will be done only for gradiometers.",
+        'grad': "There are no gradiometers in this data set: check parameter ch_types in config file. Analysis will be done only for magnetometers."
+    }
+
+    for ch in ['mag', 'grad']:
+        if len(channels_objs[ch]) == 0 and ch in m_or_g_chosen:
+            skipped_str = skipped_msgs[ch]
+            print(f'___MEGqc___: {skipped_str}')
+            m_or_g_chosen.remove(ch)
+
+    if not any(channels_objs[ch] for ch in ['mag', 'grad']):
+        skipped_str = "There are no magnetometers nor gradiometers in this data set. Analysis will not be done."
+        raise ValueError(skipped_str)
+
+    # Now m_or_g_chosen contain only those channel types which are present in the data set and were chosen by the user.
         
-    return m_or_g_chosen, m_or_g_skipped_str
+    return m_or_g_chosen, skipped_str
 
 
 def load_data(file_path):
@@ -462,7 +469,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         Dictionary with parameters for filtering.
     epoching_params : dict
         Dictionary with parameters for epoching.
-    data_file : str
+    file_path : str
         Path to the fif file with MEG data.
 
     Returns
@@ -482,24 +489,20 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         Cropped MEG data.
     raw : mne.io.Raw
         MEG data.
+    info_derivs : list
+        List with QC_derivative objects with MNE info object.
     shielding_str : str
         String with information about active shielding.
     epoching_str : str
         String with information about epoching.
     sensors_derivs : list
         List with data frames with sensors info.
-    time_series_derivs : list
-        List with data frames with time series info.
-    time_series_str : str
-        String with information about time series plotting for report.
     m_or_g_chosen : list
         List with channel types to analize: mag, grad.
     m_or_g_skipped_str : str
         String with information about which channel types were skipped.
     lobes_color_coding_str : str
         String with information about color coding for lobes.
-    plot_legend_use_str : str
-        String with information about using the plot legend, where to click to hide/show channels.
     resample_str : str
         String with information about resampling.
     
@@ -510,8 +513,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     raw, shielding_str, meg_system = load_data(file_path)
 
-    # from IPython.display import display
-    # display(raw)
+    info = raw.info
+    info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]
+
 
     #crop the data to calculate faster:
     tmax_possible = raw.times[-1] 
@@ -575,13 +579,11 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
-
-    #Get channels and their properties. Currently not used in pipeline. But this might be a useful dictionary form if later want do add more information about each channels.
-    #In this dict channels are separated by mag/grads. not by lobes.
+    #Assign channels properties:
     channels_objs, lobes_color_coding_str = assign_channels_properties(raw, meg_system)
 
     #Check if there are channels to analyze according to info in config file:
-    m_or_g_chosen, m_or_g_skipped_str = sanity_check(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
 
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channels_by_lobe(channels_objs)
@@ -590,31 +592,12 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
     channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
-
-    #Plot time series:
-    #TODO: we still plot time series here? Decide if we dont need it at all or if we need it in some other form.
-
-    time_series_derivs = []
-    
-    # for m_or_g in m_or_g_chosen:
-    #     if default_settings['plot_interactive_time_series'] is True:
-    #         time_series_derivs += plot_time_series(raw_cropped_filtered, m_or_g, chs_by_lobe[m_or_g])
-    #     if default_settings['plot_interactive_time_series_average'] is True:
-    #         time_series_derivs += plot_time_series_avg(raw_cropped, m_or_g)
-
-    if time_series_derivs:
-        time_series_str="For this visialisation the data is resampled to 100Hz but not filtered. If cropping was chosen in settings the cropped raw is presented here, otherwise - entire duratio."
-    else:
-        time_series_str = 'No time series plot was generated. To generate it, set plot_interactive_time_series or(and) plot_interactive_time_series_average to True in settings.'
-
-    plot_legend_use_str = "<p></p><p>On each interactive plot: <br> - click twice on the legend to hide/show a group of channels;<br> - click one to hide/show individual channels;<br> - hover over the dot/line to see information about channel an metric value.</li></ul></p>"
-
     resample_str = '<p>' + resample_str + '</p>'
 
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, plot_legend_use_str, resample_str
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
