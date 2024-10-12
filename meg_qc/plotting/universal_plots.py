@@ -145,48 +145,34 @@ class MEG_channels:
 
         return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])}, | ecg_corr_coeff {self.ecg_corr_coeff}, eog_corr_coeff {self.eog_corr_coeff}, ecg_amplitude_ratio {self.ecg_amplitude_ratio}, eog_amplitude_ratio {self.eog_amplitude_ratio}, ecg_similarity_score {self.ecg_similarity_score}, eog_similarity_score {self.eog_similarity_score})'
     
+
     def to_df(self):
 
         """
         Returns the object as a pandas DataFrame. To be later exported into a tsv file.
-
         """
-
+        
         data_dict = {}
-        freqs = self.freq
+        attr_to_column = {
+            'name': 'Name', 'type': 'Type', 'lobe': 'Lobe', 'lobe_color': 'Lobe Color', 'system': 'System', 'loc': 'Sensor_location',
+            'time_series': 'Time series', 'std_overall': 'STD all', 'std_epoch': 'STD epoch', 'ptp_overall': 'PtP all', 'ptp_epoch': 'PtP epoch',
+            'psd': 'PSD', 'freq': 'Freq', 'mean_ecg': 'mean_ecg', 'mean_ecg_smoothed': 'smoothed_mean_ecg', 'mean_eog': 'mean_eog',
+            'mean_eog_smoothed': 'smoothed_mean_eog', 'ecg_corr_coeff': 'ecg_corr_coeff', 'ecg_pval': 'ecg_pval', 'ecg_amplitude_ratio': 'ecg_amplitude_ratio',
+            'ecg_similarity_score': 'ecg_similarity_score', 'eog_corr_coeff': 'eog_corr_coeff', 'eog_pval': 'eog_pval', 'eog_amplitude_ratio': 'eog_amplitude_ratio',
+            'eog_similarity_score': 'eog_similarity_score', 'muscle': 'Muscle', 'head': 'Head'
+        }
 
-        for attr, column_name in zip(['name', 'type', 'lobe', 'lobe_color', 'system', 'loc', 'time_series', 'std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'freq', 'mean_ecg', 'mean_ecg_smoothed', 'mean_eog', 'mean_eog_smoothed', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score','muscle', 'head'], 
-                                    ['Name', 'Type', 'Lobe', 'Lobe Color', 'System', 'Sensor_location', 'Time series', 'STD all', 'STD epoch', 'PtP all', 'PtP epoch', 'PSD', 'Freq', 'mean_ecg', 'smoothed_mean_ecg', 'mean_eog', 'smoothed_mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'Muscle', 'Head']):
-            
-            
-            #adding psds/ecg/eog/etc over time or over freqs for plotting later:
+        for attr, column_name in attr_to_column.items():
             value = getattr(self, attr)
             if isinstance(value, (list, np.ndarray)):
-
-                
-                if 'psd' == attr:
-                    freqs = getattr(self, 'freq') #??? right
-                    for i, v in enumerate(value):
-                        fr = freqs[i]
-                        data_dict[f'{column_name}_Hz_{fr}'] = [v]
-
-                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
-                    if attr == 'mean_ecg':
-                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'mean_eog':
-                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'head':
-                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
-                    elif attr == 'muscle':
-                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
-                    
-                    for i, v in enumerate(value):
-                        t = times[i]
-                        data_dict[f'{column_name}_sec_{t}'] = [v]
-
-                else: #TODO: here maybe change to elif std/ptp?
-                    for i, v in enumerate(value):
-                        data_dict[f'{column_name}_{i}'] = [v]
+                if attr == 'psd':
+                    freqs = getattr(self, 'freq')
+                    data_dict.update({f'{column_name}_Hz_{freqs[i]}': [v] for i, v in enumerate(value)})
+                elif attr in ['mean_ecg', 'mean_eog', 'muscle', 'head']:
+                    times = getattr(self, f'{attr.split("_")[0]}_time')
+                    data_dict.update({f'{column_name}_sec_{times[i]}': [v] for i, v in enumerate(value)})
+                else:
+                    data_dict.update({f'{column_name}_{i}': [v] for i, v in enumerate(value)})
             else:
                 data_dict[column_name] = [value]
 
@@ -635,7 +621,7 @@ class QC_derivative:
 
     """
 
-    def __init__(self, content, name, content_type, description_for_user = '', fig_order = 0):
+    def __init__(self, content, name: str, content_type: str, description_for_user: str = '', fig_order: float = 0):
 
         """
         Constructor method
@@ -715,39 +701,8 @@ class QC_derivative:
         return """<br></br>"""+ figure_report + """<p>"""+self.description_for_user+"""</p>"""
 
 
-    def get_section(self):
 
-        """ 
-        Return a section of the report based on the info saved in the name. Normally not used. Use if cant figure out the derivative type.
-        
-        Returns
-        -------
-        section : str
-            'RMSE', 'PTP_MANUAL', 'PTP_AUTO', 'PSD', 'EOG', 'ECG', 'MUSCLE', 'HEAD'.
-
-        """
-
-        if 'std' in self.name or 'rmse' in self.name or 'STD' in self.name or 'RMSE' in self.name:
-            return 'RMSE'
-        elif 'ptp_manual' in self.name or 'pp_manual' in self.name or 'PTP_manual' in self.name or 'PP_manual'in self.name:
-            return 'PTP_MANUAL'
-        elif 'ptp_auto' in self.name or 'pp_auto' in self.name or 'PTP_auto' in self.name or 'PP_auto' in self.name:
-            return 'PTP_AUTO'
-        elif 'psd' in self.name or 'PSD' in self.name:
-            return 'PSD'
-        elif 'eog' in self.name or 'EOG' in self.name:
-            return 'EOG'
-        elif 'ecg' in self.name or 'ECG' in self.name:
-            return 'ECG'
-        elif 'head' in self.name or 'HEAD' in self.name:
-            return 'HEAD'
-        elif 'muscle' in self.name or 'MUSCLE' in self.name:
-            return 'MUSCLE'
-        else:  
-            warnings.warn("Check description of this QC_derivative instance: " + self.name)
-
-
-def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
+def plot_ch_df_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
 
     """
     Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
@@ -825,7 +780,7 @@ def plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.Dat
     return fig
 
 
-def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
+def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
     Plots data from a data frame as lines, each lobe has own color.
@@ -925,7 +880,7 @@ def plot_df_of_channels_data_as_lines_by_lobe_csv(f_path: str, metric: str, x_va
                     legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color))
                 )]
                
-    # sort traces in random order:
+    # sort traces in random order: WHY?
     # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
     # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
     traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
@@ -988,7 +943,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     #put data in data frame with ch_names as columns:
     df_data=pd.DataFrame(data.T, columns=ch_names)
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
+    fig = plot_ch_df_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
 
     if fig is None:
         return []
@@ -2018,7 +1973,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
     for index, row in df.iterrows():
         channels.append(row['Name'])
 
-    fig = plot_df_of_channels_data_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
+    fig = plot_ch_df_as_lines_by_lobe_csv(f_path, 'psd', freqs, m_or_g)
 
     if fig is None:
         return []
@@ -3462,7 +3417,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
             metric = ecg_or_eog+'_smoothed'
         elif smoothed is False:
             metric = ecg_or_eog
-        fig = plot_df_of_channels_data_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
+        fig = plot_ch_df_as_lines_by_lobe_csv(None, metric, t, m_or_g, df)
 
         if fig is None:
             return go.Figure()
