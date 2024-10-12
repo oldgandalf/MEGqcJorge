@@ -2316,7 +2316,7 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
 
     # Extract the actual epoch names from the column names
-    epochs_names = [col.split('_')[-1] for col in epoch_columns]
+    epochs_names = [int(col.split('_')[-1]) for col in epoch_columns]
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
