@@ -1340,7 +1340,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     #system = df['System'].unique().tolist()
 
-    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color pear each lobe
+    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color per each lobe
         for lobe in lobes_dict:
             ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
             traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
@@ -1800,34 +1800,32 @@ def figure_x_axis(df, metric):
     
     """
      
-    if metric.lower() == 'psd':
+    metric_lower = metric.lower()
+
+    if metric_lower == 'psd':
         # Figure out frequencies:
         freq_cols = [column for column in df if column.startswith('PSD_Hz_')]
         freqs = np.array([float(x.replace('PSD_Hz_', '')) for x in freq_cols])
         return freqs
-    
-    elif metric.lower() == 'eog' or metric.lower() == 'ecg' or metric.lower() == 'muscle' or metric.lower() == 'head':
-        if metric.lower() == 'ecg':
-            prefix = 'mean_ecg_sec_'
-        elif metric.lower() == 'smoothed_ecg':
-            prefix = 'smoothed_mean_ecg_sec_'
-        elif metric.lower() == 'smoothed_eog':
-            prefix = 'smoothed_mean_eog_sec_'
-        elif metric.lower() == 'eog': 
-            prefix = 'mean_eog_sec_'
-        elif metric.lower() == 'muscle':
-            prefix = 'Muscle_sec_'
-        elif metric.lower() == 'head':
-            prefix = 'Head_sec_'
-        
+
+    prefix_map = {
+        'ecg': 'mean_ecg_sec_',
+        'smoothed_ecg': 'smoothed_mean_ecg_sec_',
+        'smoothed_eog': 'smoothed_mean_eog_sec_',
+        'eog': 'mean_eog_sec_',
+        'muscle': 'Muscle_sec_',
+        'head': 'Head_sec_'
+    }
+
+    if metric_lower in prefix_map:
+        prefix = prefix_map[metric_lower]
         time_cols = [column for column in df if column.startswith(prefix)]
         time_vec = np.array([float(x.replace(prefix, '')) for x in time_cols])
-
         return time_vec
-    
-    else:
-        print('Wrong metric! Cant figure out xaxis for plotting.')
-        return None
+
+    print('Wrong metric! Cant figure out xaxis for plotting.')
+
+    return None
 
 
 def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
@@ -2317,13 +2315,8 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
     # Create a list of columns that start with 'STD epoch_'
     epoch_columns = [col for col in df.columns if col.startswith('STD epoch_') or col.startswith('PtP epoch_')]
 
-    # Get the number of these columns
-    num_epoch_columns = len(epoch_columns)
-
-    # Create a list of numbers from 0 to that length
-    epochs_names = [i for i in range(num_epoch_columns)]
-
-    #TODO: here better use the actual epoch names, not recreate their numeration
+    # Extract the actual epoch names from the column names
+    epochs_names = [col.split('_')[-1] for col in epoch_columns]
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
