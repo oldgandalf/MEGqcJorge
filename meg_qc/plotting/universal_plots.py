@@ -11,7 +11,9 @@ import random
 import copy
 import os
 from mne.preprocessing import compute_average_dev_head_t
+from meg_qc.calculation.initial_meg_qc import QC_derivative
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
+
 
 # mne.viz.set_browser_backend('matplotlib')
 # matplotlib.use('Agg') 
@@ -417,121 +419,6 @@ def add_Triux_lobes(channels_objs):
 
     return channels_objs, lobes_color_coding_str
 
-def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
-
-    """
-    Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
-
-    Can later try to make this function a method of the MEG_channels class. 
-    At the moment not possible because it needs to know the total number of channels to figure which meg system to use for locations. And MEG_channels class is created for each channel separately.
-
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        Raw data set.
-    meg_system: str
-        CTF, Triux, None...
-
-    Returns
-    -------
-    channels_objs : dict
-        Dictionary with channel names for each channel type: mag, grad. Each channel has assigned lobe area and color for plotting + channel location.
-    lobes_color_coding_str : str
-        A string with information about the color coding of the lobes.
-
-    """
-    channels_objs={'mag': [], 'grad': []}
-    if 'mag' in raw:
-        mag_locs = raw.copy().pick('mag').info['chs']
-        for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', 'OTHER', ch['loc'][:3])]
-    else:
-        channels_objs['mag'] = []
-
-    if 'grad' in raw:
-        grad_locs = raw.copy().pick('grad').info['chs']
-        for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', 'OTHER', ch['loc'][:3])]
-    else:
-        channels_objs['grad'] = []
-
-
-    # for understanding how the locations are obtained. They can be extracted as:
-    # mag_locs = raw.copy().pick('mag').info['chs']
-    # mag_pos = [ch['loc'][:3] for ch in mag_locs]
-    # (XYZ locations are first 3 digit in the ch['loc']  where ch is 1 sensor in raw.info['chs'])
-
-    
-    # Assign lobe labels to the channels:
-
-    if meg_system.upper() == 'TRIUX' and len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: 
-        #for 306 channel data in Elekta/Neuromag Treux system
-        channels_objs, lobes_color_coding_str = add_Triux_lobes(channels_objs)
-
-        #assign 'TRIUX' to all channels:
-        for key, value in channels_objs.items():
-            for ch in value:
-                ch.system = 'TRIUX'
-
-    elif meg_system.upper() == 'CTF':
-        channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
-
-        #assign 'CTF' to all channels:
-        for key, value in channels_objs.items():
-            for ch in value:
-                ch.system = 'CTF'
-
-    else:
-        lobes_color_coding_str='For MEG systems other than MEGIN Triux or CTF color coding by lobe is not applied.'
-        lobe_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#e377c2', '#d62728', '#bcbd22', '#17becf']
-        print('___MEGqc___: ' + lobes_color_coding_str)
-
-        for key, value in channels_objs.items():
-            for ch in value:
-                ch.lobe = 'All channels'
-                #take random color from lobe_colors:
-                ch.lobe_color = random.choice(lobe_colors)
-                ch.system = 'OTHER'
-
-    #sort channels by name:
-    for key, value in channels_objs.items():
-        channels_objs[key] = sorted(value, key=lambda x: x.name)
-
-    return channels_objs, lobes_color_coding_str
-
-
-def sort_channels_by_lobe(channels_objs: dict):
-
-    """ Sorts channels by lobes.
-
-    Parameters
-    ----------
-    channels_objs : dict
-        A dictionary of channel objects.
-    
-    Returns
-    -------
-    chs_by_lobe : dict
-        A dictionary of channels sorted by ch type and lobe.
-
-    """
-    chs_by_lobe = {}
-    for m_or_g in channels_objs:
-
-        #put all channels into separate lists based on their lobes:
-        lobes_names=list(set([ch.lobe for ch in channels_objs[m_or_g]]))
-        
-        lobes_dict = {key: [] for key in lobes_names}
-        #fill the dict with channels:
-        for ch in channels_objs[m_or_g]:
-            lobes_dict[ch.lobe].append(ch) 
-
-        # Sort the dictionary by lobes names (by the second word in the key, if it exists)
-        chs_by_lobe[m_or_g] = dict(sorted(lobes_dict.items(), key=lambda x: x[0].split()[1] if len(x[0].split()) > 1 else ''))
-
-
-    return chs_by_lobe
-
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
@@ -577,108 +464,6 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
         unit='?'
 
     return m_or_g_tit, unit
-
-
-class QC_derivative:
-
-    """ 
-    Derivative of a QC measurement, main content of which is figure, data frame (saved later as csv) or html string.
-
-    Attributes
-    ----------
-    content : figure, pd.DataFrame or str
-        The main content of the derivative.
-    name : str
-        The name of the derivative (used to save in to file system)
-    content_type : str
-        The type of the content: 'plotly', 'matplotlib', 'csv', 'report' or 'mne_report'.
-        Used to choose the right way to save the derivative in main function.
-    description_for_user : str, optional
-        The description of the derivative, by default 'Add measurement description for a user...'
-        Used in the report to describe the derivative.
-    
-
-    """
-
-    def __init__(self, content, name: str, content_type: str, description_for_user: str = '', fig_order: float = 0):
-
-        """
-        Constructor method
-        
-        Parameters
-        ----------
-        content : figure, pd.DataFrame or str
-            The main content of the derivative.
-        name : str
-            The name of the derivative (used to save in to file system)
-        content_type : str
-            The type of the content: 'plotly', 'matplotlib', 'df', 'report' or 'mne_report'.
-            Used to choose the right way to save the derivative in main function.
-        description_for_user : str, optional
-            The description of the derivative, by default 'Add measurement description for a user...'
-            Used in the report to describe the derivative.
-        fig_order : int, optional
-            The order of the figure in the report, by default 0. Used for sorting.
-        
-
-        """
-
-        self.content =  content
-        self.name = name
-        self.content_type = content_type
-        self.description_for_user = description_for_user
-        self.fig_order = fig_order
-
-    def __repr__(self):
-
-        """
-        Returns the string representation of the object.
-        """
-
-        return 'MEG QC derivative: \n content: ' + str(type(self.content)) + '\n name: ' + self.name + '\n type: ' + self.content_type + '\n description for user: ' + self.description_for_user + '\n '
-
-    def convert_fig_to_html(self):
-
-        """
-        Converts figure to html string.
-        
-        Returns
-        -------
-        html : str or None
-            Html string or None if content_type is not 'plotly' or 'matplotlib'.
-
-        """
-
-        if self.content_type == 'plotly':
-            return plotly.io.to_html(self.content, full_html=False)
-        elif self.content_type == 'matplotlib':
-            tmpfile = BytesIO()
-            self.content.savefig(tmpfile, format='png', dpi=130) #writing image into a temporary file
-            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
-            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
-            return html
-            # return mpld3.fig_to_html(self.content)
-        elif not self.content_type:
-            warnings.warn("Empty content_type of this QC_derivative instance")
-        else:
-            return None
-
-    def convert_fig_to_html_add_description(self):
-
-        """
-        Converts figure to html string and adds description.
-
-        Returns
-        -------
-        html : str or None
-            Html string: fig + description or None + description if content_type is not 'plotly' or 'matplotlib'.
-
-        """
-
-        figure_report = self.convert_fig_to_html()
-
-        return """<br></br>"""+ figure_report + """<p>"""+self.description_for_user+"""</p>"""
-
 
 
 def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
@@ -2698,7 +2483,7 @@ def plot_ecg_eog_mne(channels: dict, ecg_epochs: mne.Epochs, m_or_g: str, tmin: 
     # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
 
     #plot average artifact with topomap
-    fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = m_or_g)
+    fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = channels[m_or_g])
     # tmin+tmin/10 and tmax-tmax/10 is done because mne sometimes has a plotting issue, probably connected tosamplig rate: 
     # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
 
