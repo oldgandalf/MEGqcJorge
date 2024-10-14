@@ -3,6 +3,224 @@ import mne
 import configparser
 import numpy as np
 import pandas as pd
+import plotly
+from io import BytesIO
+import base64
+import warnings
+
+class MEG_channel:
+
+    """ 
+    Channel with calculated data, used also for plotting. 
+
+    """
+
+    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, system: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
+
+        """
+        Constructor method
+        
+        Parameters
+        ----------
+        name : str
+            The name of the channel.
+        type : str
+            The type of the channel: 'mag', 'grad'
+        lobe : str
+            The lobe area of the channel: 'left frontal', 'right frontal', 'left temporal', 'right temporal', 'left parietal', 'right parietal', 'left occipital', 'right occipital', 'central', 'subcortical', 'unknown'.
+        lobe_color : str
+            The color code for plotting with plotly according to the lobe area of the channel.
+        system : str
+            The system of the channel: 'CTF', 'TRIUX', 'OTHER'
+        loc : list
+            The location of the channel on the helmet.
+        time_series : array
+            The time series of the channel.
+        std_overall : float
+            The standard deviation of the channel time series.
+        std_epoch : array
+            The standard deviation of the channel time series per epochs.
+        ptp_overall : float
+            The peak-to-peak amplitude of the channel time series.
+        ptp_epoch : array
+            The peak-to-peak amplitude of the channel time series per epochs.
+        psd : array
+            The power spectral density of the channel.
+        freq: array
+            Frequencies for psd.
+        mean_ecg : float
+            The mean ECG artifact of the channel.
+        mean_eog : float
+            The mean EOG artifact of the channel.
+        mean_ecg_smoothed : float
+            The mean ECG artifact of the channel smoothed.
+        mean_eog_smoothed : float
+            The mean EOG artifact of the channel smoothed.
+        ecg_corr_coeff : float
+            The correlation coefficient of the channel with ECG.
+        ecg_pval : float
+            The p-value of the correlation coefficient of the channel with ECG.
+        ecg_amplitude_ratio : float
+            relation of the amplitude of a particular channel to all other channels for ECG contamination.
+        ecg_similarity_score : float
+            similarity score of the mean ecg data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
+        eog_corr_coeff : float
+            The correlation coefficient of the channel with EOG.
+        eog_pval : float
+            The p-value of the correlation coefficient of the channel with EOG.
+        eog_amplitude_ratio : float
+            relation of the amplitude of a particular channel to all other channels for EOG contamination.
+        eog_similarity_score : float
+            similarity score of the mean eog data of this channel to refernce ecg/eog data comprised of both correlation and amplitude like: similarity_score = corr_coef * amplitude_ratio
+        ecg_time : float
+            The time vector of the ECG artifact.
+        eog_time : float
+            The time vector of the EOG artifact.
+        muscle : float
+            The muscle artifact data of the channel.
+        head : float
+            The head movement artifact data of the channel.
+        muscle_time : float
+            The time vector of the muscle artifact.
+        head_time : float
+            The time vector of the head movement artifact.
+        
+
+        """
+
+        self.name = name
+        self.type = type
+        self.lobe = lobe
+        self.lobe_color = lobe_color
+        self.system = system
+        self.loc = loc
+        self.time_series = time_series
+        self.std_overall = std_overall
+        self.std_epoch = std_epoch
+        self.ptp_overall = ptp_overall
+        self.ptp_epoch = ptp_epoch
+        self.psd = psd
+        self.freq = freq
+        self.mean_ecg = mean_ecg
+        self.mean_ecg_smoothed = mean_ecg_smoothed
+        self.mean_eog = mean_eog
+        self.mean_eog_smoothed = mean_eog_smoothed
+        self.ecg_corr_coeff = ecg_corr_coeff
+        self.ecg_pval = ecg_pval
+        self.ecg_amplitude_ratio = ecg_amplitude_ratio
+        self.ecg_similarity_score = ecg_similarity_score
+        self.eog_corr_coeff = eog_corr_coeff
+        self.eog_pval = eog_pval
+        self.eog_amplitude_ratio = eog_amplitude_ratio
+        self.eog_similarity_score = eog_similarity_score
+        self.ecg_time = ecg_time
+        self.eog_time = eog_time
+        self.muscle = muscle
+        self.head = head
+        self.muscle_time = muscle_time
+        self.head_time = head_time
+
+
+    def __repr__(self):
+
+        """
+        Returns the string representation of the object.
+
+        """
+
+        all_metrics = [self.std_overall, self.std_epoch, self.ptp_overall, self.ptp_epoch, self.psd, self.mean_ecg, self.mean_eog, self.ecg_corr_coeff, self.ecg_pval, self.ecg_amplitude_ratio, self.ecg_similarity_score, self.eog_corr_coeff, self.eog_pval, self.eog_amplitude_ratio, self.eog_similarity_score, self.muscle, self.head]
+        all_metrics_names= ['std_overall', 'std_epoch', 'ptp_overall', 'ptp_epoch', 'psd', 'mean_ecg', 'mean_eog', 'ecg_corr_coeff', 'ecg_pval', 'ecg_amplitude_ratio', 'ecg_similarity_score', 'eog_corr_coeff', 'eog_pval', 'eog_amplitude_ratio', 'eog_similarity_score', 'muscle', 'head']
+        non_none_indexes = [i for i, item in enumerate(all_metrics) if item is not None]
+
+        return self.name + f' (type: {self.type}, lobe area: {self.lobe}, color code: {self.lobe_color}, location: {self.loc}, metrics_assigned: {", ".join([all_metrics_names[i] for i in non_none_indexes])}, | ecg_corr_coeff {self.ecg_corr_coeff}, eog_corr_coeff {self.eog_corr_coeff}, ecg_amplitude_ratio {self.ecg_amplitude_ratio}, eog_amplitude_ratio {self.eog_amplitude_ratio}, ecg_similarity_score {self.ecg_similarity_score}, eog_similarity_score {self.eog_similarity_score})'
+    
+
+    def to_df(self):
+
+        """
+        Returns the object as a pandas DataFrame. To be later exported into a tsv file.
+        """
+        
+        data_dict = {}
+        attr_to_column = {
+            'name': 'Name', 'type': 'Type', 'lobe': 'Lobe', 'lobe_color': 'Lobe Color', 'system': 'System', 'loc': 'Sensor_location',
+            'time_series': 'Time series', 'std_overall': 'STD all', 'std_epoch': 'STD epoch', 'ptp_overall': 'PtP all', 'ptp_epoch': 'PtP epoch',
+            'psd': 'PSD', 'freq': 'Freq', 'mean_ecg': 'mean_ecg', 'mean_ecg_smoothed': 'smoothed_mean_ecg', 'mean_eog': 'mean_eog',
+            'mean_eog_smoothed': 'smoothed_mean_eog', 'ecg_corr_coeff': 'ecg_corr_coeff', 'ecg_pval': 'ecg_pval', 'ecg_amplitude_ratio': 'ecg_amplitude_ratio',
+            'ecg_similarity_score': 'ecg_similarity_score', 'eog_corr_coeff': 'eog_corr_coeff', 'eog_pval': 'eog_pval', 'eog_amplitude_ratio': 'eog_amplitude_ratio',
+            'eog_similarity_score': 'eog_similarity_score', 'muscle': 'Muscle', 'head': 'Head'
+        }
+
+        for attr, column_name in attr_to_column.items():
+            value = getattr(self, attr)
+            if isinstance(value, (list, np.ndarray)):
+                if attr.lower() == 'psd':
+                    freqs = getattr(self, 'freq')
+                    data_dict.update({f'{column_name}_Hz_{freqs[i]}': [v] for i, v in enumerate(value)})
+                elif attr.lower() in ['mean_ecg', 'mean_eog', 'muscle', 'head']:
+                    times = getattr(self, f'{attr.split("_")[-1]}_time') #will take part of the string before _time
+                    data_dict.update({f'{column_name}_sec_{times[i]}': [v] for i, v in enumerate(value)})
+                else:
+                    data_dict.update({f'{column_name}_{i}': [v] for i, v in enumerate(value)})
+            else:
+                data_dict[column_name] = [value]
+
+        return pd.DataFrame(data_dict)
+    
+
+    def add_ecg_info(self, Avg_artif_list: list, artif_time_vector: list):
+
+        """
+        Adds ECG artifact info to the channel object.
+
+        Parameters
+        ----------
+        Avg_artif_list : list
+            List of the average artifact objects.
+        artif_time_vector : list
+            Time vector of the artifact.
+
+        """
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_ecg = artif_ch.artif_data
+                self.mean_ecg_smoothed = artif_ch.artif_data_smoothed
+                self.ecg_time = artif_time_vector
+                self.ecg_corr_coeff = artif_ch.corr_coef
+                self.ecg_pval = artif_ch.p_value
+                self.ecg_amplitude_ratio = artif_ch.amplitude_ratio
+                self.ecg_similarity_score = artif_ch.similarity_score
+                
+
+    def add_eog_info(self, Avg_artif_list: list, artif_time_vector: list):
+
+        """
+        Adds EOG artifact info to the channel object.
+
+        Parameters
+        ----------
+        Avg_artif_list : list
+            List of the average artifact objects.
+        artif_time_vector : list
+            Time vector of the artifact.
+
+        """
+
+        for artif_ch in Avg_artif_list:
+            if artif_ch.name == self.name:
+                self.mean_eog = artif_ch.artif_data
+                self.mean_eog_smoothed = artif_ch.artif_data_smoothed
+                self.eog_time = artif_time_vector
+                self.eog_corr_coeff = artif_ch.corr_coef
+                self.eog_pval = artif_ch.p_value
+                self.eog_amplitude_ratio = artif_ch.amplitude_ratio
+                self.eog_similarity_score = artif_ch.similarity_score
+
+                #Attention: here time_vector, corr_coeff, p_val and everything get assigned to ecg or eog, 
+                # but artif_ch doesnt have this separation to ecg/eog. 
+                # Need to just make sure that the function is called in the right place.
+
 
 class QC_derivative:
 
@@ -548,6 +766,191 @@ def load_data(file_path):
     return raw, shielding_str, meg_system
 
 
+def add_CTF_lobes(channels_objs):
+
+    # Initialize dictionary to store channels by lobe and side
+    lobes_ctf = {
+        'Left Frontal': [],
+        'Right Frontal': [],
+        'Left Temporal': [],
+        'Right Temporal': [],
+        'Left Parietal': [],
+        'Right Parietal': [],
+        'Left Occipital': [],
+        'Right Occipital': [],
+        'Central': [],
+        'Reference': [],
+        'EEG/EOG/ECG': [],
+        'Extra': []  # Add 'Extra' lobe
+    }
+
+    # Iterate through the channel names and categorize them
+    for key, value in channels_objs.items():
+        for ch in value:
+            categorized = False  # Track if the channel is categorized
+            # Magnetometers (assuming they start with 'M')
+            if ch.name.startswith('MLF'):  # Left Frontal
+                lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MRF'):  # Right Frontal
+                lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MLT'):  # Left Temporal
+                lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MRT'):  # Right Temporal
+                lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MLP'):  # Left Parietal
+                lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MRP'):  # Right Parietal
+                lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MLO'):  # Left Occipital
+                lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MRO'):  # Right Occipital
+                lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MLC') or ch.name.startswith('MRC'):  # Central (Midline)
+                lobes_ctf['Central'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('MZ'):  # Reference Sensors
+                lobes_ctf['Reference'].append(ch.name)
+                categorized = True
+            elif ch.name in ['Cz', 'Pz', 'ECG', 'VEOG', 'HEOG']:  # EEG/EOG/ECG channels
+                lobes_ctf['EEG/EOG/ECG'].append(ch.name)
+                categorized = True
+            
+            # Gradiometers (assuming they have a different prefix or suffix, such as 'G')
+            elif ch.name.startswith('GLF'):  # Left Frontal Gradiometers
+                lobes_ctf['Left Frontal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GRF'):  # Right Frontal Gradiometers
+                lobes_ctf['Right Frontal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GLT'):  # Left Temporal Gradiometers
+                lobes_ctf['Left Temporal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GRT'):  # Right Temporal Gradiometers
+                lobes_ctf['Right Temporal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GLP'):  # Left Parietal Gradiometers
+                lobes_ctf['Left Parietal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GRP'):  # Right Parietal Gradiometers
+                lobes_ctf['Right Parietal'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GLO'):  # Left Occipital Gradiometers
+                lobes_ctf['Left Occipital'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GRO'):  # Right Occipital Gradiometers
+                lobes_ctf['Right Occipital'].append(ch.name)
+                categorized = True
+            elif ch.name.startswith('GLC') or ch.name.startswith('GRC'):  # Central (Midline) Gradiometers
+                lobes_ctf['Central'].append(ch.name)
+                categorized = True
+            
+            # If the channel was not categorized, add it to 'Extra'
+            if not categorized:
+                lobes_ctf['Extra'].append(ch.name)
+
+    lobe_colors = {
+        'Left Frontal': '#1f77b4',
+        'Right Frontal': '#ff7f0e',
+        'Left Temporal': '#2ca02c',
+        'Right Temporal': '#9467bd',
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf',
+        'Central': '#8c564b',
+        'Reference': '#7f7f7f',
+        'EEG/EOG/ECG': '#bcbd22',
+        'Extra': '#d3d3d3'  
+    }
+
+    lobes_color_coding_str = 'Color coding by lobe is applied as per CTF system.'
+    for key, value in channels_objs.items():
+        for ch in value:
+            for lobe in lobes_ctf.keys():
+                if ch.name in lobes_ctf[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
+
+    return channels_objs, lobes_color_coding_str
+
+
+def add_Triux_lobes(channels_objs):
+
+    lobes_treux = {
+            'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0611', 'MEG0612', 'MEG0613', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+            'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+            'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+            'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+            'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
+            'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
+            'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143'],
+            'Right Occipital': ['MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
+            'Extra': []}  # Add 'Extra' lobe
+
+    # These were just for Aarons presentation:
+    # lobes_treux = {
+    #         'Left Frontal': ['MEG0621', 'MEG0622', 'MEG0623', 'MEG0821', 'MEG0822', 'MEG0823', 'MEG0121', 'MEG0122', 'MEG0123', 'MEG0341', 'MEG0342', 'MEG0343', 'MEG0321', 'MEG0322', 'MEG0323', 'MEG0331',  'MEG0332', 'MEG0333', 'MEG0643', 'MEG0642', 'MEG0641', 'MEG0541', 'MEG0542', 'MEG0543', 'MEG0311', 'MEG0312', 'MEG0313', 'MEG0511', 'MEG0512', 'MEG0513', 'MEG0521', 'MEG0522', 'MEG0523', 'MEG0531', 'MEG0532', 'MEG0533'],
+    #         'Right Frontal': ['MEG0811', 'MEG0812', 'MEG0813', 'MEG0911', 'MEG0912', 'MEG0913', 'MEG0921', 'MEG0922', 'MEG0923', 'MEG0931', 'MEG0932', 'MEG0933', 'MEG0941', 'MEG0942', 'MEG0943', 'MEG1011', 'MEG1012', 'MEG1013', 'MEG1021', 'MEG1022', 'MEG1023', 'MEG1031', 'MEG1032', 'MEG1033', 'MEG1211', 'MEG1212', 'MEG1213', 'MEG1221', 'MEG1222', 'MEG1223', 'MEG1231', 'MEG1232', 'MEG1233', 'MEG1241', 'MEG1242', 'MEG1243', 'MEG1411', 'MEG1412', 'MEG1413'],
+    #         'Left Temporal': ['MEG0111', 'MEG0112', 'MEG0113', 'MEG0131', 'MEG0132', 'MEG0133', 'MEG0141', 'MEG0142', 'MEG0143', 'MEG0211', 'MEG0212', 'MEG0213', 'MEG0221', 'MEG0222', 'MEG0223', 'MEG0231', 'MEG0232', 'MEG0233', 'MEG0241', 'MEG0242', 'MEG0243', 'MEG1511', 'MEG1512', 'MEG1513', 'MEG1521', 'MEG1522', 'MEG1523', 'MEG1531', 'MEG1532', 'MEG1533', 'MEG1541', 'MEG1542', 'MEG1543', 'MEG1611', 'MEG1612', 'MEG1613', 'MEG1621', 'MEG1622', 'MEG1623'],
+    #         'Right Temporal': ['MEG1311', 'MEG1312', 'MEG1313', 'MEG1321', 'MEG1322', 'MEG1323', 'MEG1421', 'MEG1422', 'MEG1423', 'MEG1431', 'MEG1432', 'MEG1433', 'MEG1441', 'MEG1442', 'MEG1443', 'MEG1341', 'MEG1342', 'MEG1343', 'MEG1331', 'MEG1332', 'MEG1333', 'MEG2611', 'MEG2612', 'MEG2613', 'MEG2621', 'MEG2622', 'MEG2623', 'MEG2631', 'MEG2632', 'MEG2633', 'MEG2641', 'MEG2642', 'MEG2643', 'MEG2411', 'MEG2412', 'MEG2413', 'MEG2421', 'MEG2422', 'MEG2423'],
+    #         'Left Parietal': ['MEG0411', 'MEG0412', 'MEG0413', 'MEG0421', 'MEG0422', 'MEG0423', 'MEG0431', 'MEG0432', 'MEG0433', 'MEG0441', 'MEG0442', 'MEG0443', 'MEG0711', 'MEG0712', 'MEG0713', 'MEG0741', 'MEG0742', 'MEG0743', 'MEG1811', 'MEG1812', 'MEG1813', 'MEG1821', 'MEG1822', 'MEG1823', 'MEG1831', 'MEG1832', 'MEG1833', 'MEG1841', 'MEG1842', 'MEG1843', 'MEG0631', 'MEG0632', 'MEG0633', 'MEG1631', 'MEG1632', 'MEG1633', 'MEG2011', 'MEG2012', 'MEG2013'],
+    #         'Right Parietal': ['MEG1041', 'MEG1042', 'MEG1043', 'MEG1111', 'MEG1112', 'MEG1113', 'MEG1121', 'MEG1122', 'MEG1123', 'MEG1131', 'MEG1132', 'MEG1133', 'MEG2233', 'MEG1141', 'MEG1142', 'MEG1143', 'MEG2243', 'MEG0721', 'MEG0722', 'MEG0723', 'MEG0731', 'MEG0732', 'MEG0733', 'MEG2211', 'MEG2212', 'MEG2213', 'MEG2221', 'MEG2222', 'MEG2223', 'MEG2231', 'MEG2232', 'MEG2233', 'MEG2241', 'MEG2242', 'MEG2243', 'MEG2021', 'MEG2022', 'MEG2023', 'MEG2441', 'MEG2442', 'MEG2443'],
+    #         'Left Occipital': ['MEG1641', 'MEG1642', 'MEG1643', 'MEG1711', 'MEG1712', 'MEG1713', 'MEG1721', 'MEG1722', 'MEG1723', 'MEG1731', 'MEG1732', 'MEG1733', 'MEG1741', 'MEG1742', 'MEG1743', 'MEG1911', 'MEG1912', 'MEG1913', 'MEG1921', 'MEG1922', 'MEG1923', 'MEG1931', 'MEG1932', 'MEG1933', 'MEG1941', 'MEG1942', 'MEG1943', 'MEG2041', 'MEG2042', 'MEG2043', 'MEG2111', 'MEG2112', 'MEG2113', 'MEG2141', 'MEG2142', 'MEG2143', 'MEG2031', 'MEG2032', 'MEG2033', 'MEG2121', 'MEG2122', 'MEG2123', 'MEG2311', 'MEG2312', 'MEG2313', 'MEG2321', 'MEG2322', 'MEG2323', 'MEG2331', 'MEG2332', 'MEG2333', 'MEG2341', 'MEG2342', 'MEG2343', 'MEG2511', 'MEG2512', 'MEG2513', 'MEG2521', 'MEG2522', 'MEG2523', 'MEG2531', 'MEG2532', 'MEG2533', 'MEG2541', 'MEG2542', 'MEG2543', 'MEG2431', 'MEG2432', 'MEG2433', 'MEG2131', 'MEG2132', 'MEG2133'],
+    #         'Right Occipital': ['MEG0611', 'MEG0612', 'MEG0613']}
+
+    # #Now add to lobes_treux also the name of each channel with space in the middle:
+    for lobe in lobes_treux.keys():
+        lobes_treux[lobe] += [channel[:-4]+' '+channel[-4:] for channel in lobes_treux[lobe]]
+
+    lobe_colors = {
+        'Left Frontal': '#1f77b4',
+        'Right Frontal': '#ff7f0e',
+        'Left Temporal': '#2ca02c',
+        'Right Temporal': '#9467bd',
+        'Left Parietal': '#e377c2',
+        'Right Parietal': '#d62728',
+        'Left Occipital': '#bcbd22',
+        'Right Occipital': '#17becf',
+        'Extra': '#d3d3d3'}
+    
+    # These were just for Aarons presentation:
+    # lobe_colors = {
+    #     'Left Frontal': '#2ca02c',
+    #     'Right Frontal': '#2ca02c',
+    #     'Left Temporal': '#2ca02c',
+    #     'Right Temporal': '#2ca02c',
+    #     'Left Parietal': '#2ca02c',
+    #     'Right Parietal': '#2ca02c',
+    #     'Left Occipital': '#2ca02c',
+    #     'Right Occipital': '#d62728'}
+    
+    
+    #loop over all values in the dictionary:
+    lobes_color_coding_str='Color coding by lobe is applied as per Treux system. Separation by lobes based on Y. Hu et al. "Partial Least Square Aided Beamforming Algorithm in Magnetoencephalography Source Imaging", 2018. '
+    for key, value in channels_objs.items():
+        for ch in value:
+            categorized = False
+            for lobe in lobes_treux.keys():
+                if ch.name in lobes_treux[lobe]:
+                    ch.lobe = lobe
+                    ch.lobe_color = lobe_colors[lobe]
+                    categorized = True
+                    break
+            # If the channel was not categorized, assign it to 'extra' lobe
+            if not categorized:
+                ch.lobe = 'Extra'
+                ch.lobe_color = lobe_colors[lobe]
+
+    return channels_objs, lobes_color_coding_str
+
 def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
 
     """
@@ -575,14 +978,14 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
     if 'mag' in raw:
         mag_locs = raw.copy().pick('mag').info['chs']
         for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channels(ch['ch_name'], 'mag', 'unknown lobe', 'blue', 'OTHER', ch['loc'][:3])]
+            channels_objs['mag'] += [MEG_channel(ch['ch_name'], 'mag', 'unknown lobe', 'blue', 'OTHER', ch['loc'][:3])]
     else:
         channels_objs['mag'] = []
 
     if 'grad' in raw:
         grad_locs = raw.copy().pick('grad').info['chs']
         for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channels(ch['ch_name'], 'grad', 'unknown lobe', 'red', 'OTHER', ch['loc'][:3])]
+            channels_objs['grad'] += [MEG_channel(ch['ch_name'], 'grad', 'unknown lobe', 'red', 'OTHER', ch['loc'][:3])]
     else:
         channels_objs['grad'] = []
 
@@ -662,6 +1065,7 @@ def sort_channels_by_lobe(channels_objs: dict):
 
 
     return chs_by_lobe
+
 
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, file_path: str):
