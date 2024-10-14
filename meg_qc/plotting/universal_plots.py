@@ -121,7 +121,6 @@ def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, 
         if row['Type'] == m_or_g: #plot only mag/grad
             ch_data = []
             for col in df.columns:
-                print(col)
                 if col_prefix in col:
 
                     #ch_data = row[col] #or maybe 
