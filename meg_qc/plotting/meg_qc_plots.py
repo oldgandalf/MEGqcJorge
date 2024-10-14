@@ -345,7 +345,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             
         elif 'HEAD' in metric.upper():
                 
-            head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path)
+            head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
             # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
             # head_pos_derivs += head_pos_derivs2
             head_derivs += head_pos_derivs

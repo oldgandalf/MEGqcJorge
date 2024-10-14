@@ -533,27 +533,6 @@ def sort_channels_by_lobe(channels_objs: dict):
     return chs_by_lobe
 
 
-def check_num_channels_correct(chs_by_lobe: dict, note: str):
-
-    """ 
-    Print total number of channels in all lobes for 1 ch type (must be 102 mag and 204 grad in Elekta/Neuromag)
-    
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        A dictionary of channels sorted by ch type and lobe.
-    note : str
-        A note to print with the total number of channels.
-    
-    
-    """
-    for m_or_g in ['mag', 'grad']:
-        total_number = sum([len(chs_by_lobe[m_or_g][key]) for key in chs_by_lobe[m_or_g].keys()])
-        print("_______"+note+"_______total number in " + m_or_g, total_number)
-        print("_______"+note+"_______must be 102 mag and 204 grad in Elekta/Neuromag")
-
-    return 
-
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
     """
@@ -702,84 +681,6 @@ class QC_derivative:
 
 
 
-def plot_ch_df_as_lines_by_lobe(chs_by_lobe: dict, df_data: pd.DataFrame, x_values: list):
-
-    """
-    Plots data from a data frame as lines, each lobe has own color as set in chs_by_lobe.
-
-    Currntly not used.
-
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        Dictionary with lobes as keys and lists of channels as values.
-    df_data : pd.DataFrame
-        Data frame with data to plot.
-    x_values : list
-        List of x values for the plot.
-    
-    Returns
-    -------
-    fig : plotly.graph_objects.Figure
-        Plotly figure.
-
-    """
-
-    fig = go.Figure()
-    traces_lobes=[]
-    traces_chs=[]
-    for lobe, ch_list in chs_by_lobe.items():
-        
-        #Add lobe as a category to the plot
-        
-        for ch_obj in ch_list:
-            if ch_obj.name in df_data.columns:
-                ch_data=df_data[ch_obj.name].values
-                color = ch_obj.lobe_color 
-                # normally color must be same for all channels in lobe, so we could assign it before the loop as the color of the first channel,
-                # but here it is done explicitly for every channel so that if there is any color error in chs_by_lobe, it will be visible
-
-                traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=ch_obj.name, legendgroup=ch_obj.lobe, legendgrouptitle=dict(text=lobe.upper(), font=dict(color=color)))]
-                #legendgrouptitle is group tile on the plot. legendgroup is not visible on the plot - it s used for sorting the legend items in update_layout() below.
-
-    # sort traces in random order:
-    # When you plot traves right away in the order of the lobes, all the traces of one color lay on top of each other and yu can't see them all.
-    # This is why they are not plotted in the loop. So we sort them in random order, so that traces of different colors are mixed.
-    traces = traces_lobes + sorted(traces_chs, key=lambda x: random.random())
-
-    downsampling_factor = 1  # replace with your desired downsampling factor
-    # Create a new list for the downsampled traces
-    traces_downsampled = []
-
-    # Go through each trace
-    for trace in traces:
-        # Downsample the x and y values of the trace
-        x_downsampled = trace['x'][::downsampling_factor]
-        y_downsampled = trace['y'][::downsampling_factor]
-
-        # Create a new trace with the downsampled values
-        trace_downsampled = go.Scatter(x=x_downsampled, y=y_downsampled, line=trace['line'], name=trace['name'], legendgroup=trace['legendgroup'], legendgrouptitle=trace['legendgrouptitle'])
-
-        # Add the downsampled trace to the list
-        traces_downsampled.append(trace_downsampled)
-
-
-    # Now first add these traces to the figure and only after that update the layout to make sure that the legend is grouped by lobe.
-    fig = go.Figure(data=traces_downsampled)
-
-    fig.update_layout(legend_traceorder='grouped', legend_tracegroupgap=12, legend_groupclick='toggleitem')
-    #You can make it so when you click on lobe title or any channel in lobe you activate/hide all related channels if u set legend_groupclick='togglegroup'.
-    #But then you cant see individual channels, it turn on/off the whole group. There is no option to tun group off by clicking on group title. Grup title and group items behave the same.
-
-    #to see the legend: there is really nothing to sort here. The legend is sorted by default by the order of the traces in the figure. The onl way is to group the traces by lobe.
-    #print(fig['layout'])
-
-    #https://plotly.com/python/reference/?_ga=2.140286640.2070772584.1683497503-1784993506.1683497503#layout-legend-traceorder
-    
-
-    return fig
-
-
 def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
     """
@@ -908,6 +809,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
 
     """
     Plots time series of the chosen channels.
+    NOT USED NOW cos it requires raw as input, and we dotnt plot time series in report. But maybe we ll decided to add it?
 
     Parameters
     ----------
@@ -943,7 +845,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     #put data in data frame with ch_names as columns:
     df_data=pd.DataFrame(data.T, columns=ch_names)
 
-    fig = plot_ch_df_as_lines_by_lobe(chs_by_lobe, df_data, raw_resampled.times)
+    fig = plot_ch_df_as_lines_by_lobe_csv() #add inputs
 
     if fig is None:
         return []
@@ -979,6 +881,7 @@ def plot_time_series_avg(raw: mne.io.Raw, m_or_g: str):
 
     """
     Plots time series of the chosen channels.
+    NOT USED NOW cos it requires raw as input, and we dotnt plot time series in report. But maybe we ll decided to add it?
 
     Parameters
     ----------
@@ -1180,90 +1083,6 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
 
     return trace
 
-
-def plot_sensors_3d(chs_by_lobe: dict):
-
-    """
-    Plots the 3D locations of the sensors in the raw file. Plot both mags and grads (if both present) in 1 figure. 
-    Can turn mags/grads visialisation on and off.
-    Separete channels into brain areas by color coding.
-
-
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        A dictionary of channels by ch type and lobe.
-    
-    Returns
-    -------
-    qc_derivative : list
-        A list of QC_derivative objects containing the plotly figures with the sensor locations.
-
-    """
-
-    chs_by_lobe_copy = copy.deepcopy(chs_by_lobe)
-    #otherwise we will change the original dict here and keep it messed up for the next function
-
-    qc_derivative = []
-
-    # Put all channels into a simplier dictiary: separatin by lobe byt not by ch type any more as we plot all chs in 1 fig here:
-    lobes_dict = {}
-    for ch_type in chs_by_lobe_copy:
-        for lobe in chs_by_lobe_copy[ch_type]:
-            if lobe not in lobes_dict:
-                lobes_dict[lobe] = chs_by_lobe_copy[ch_type][lobe]
-            else:
-                lobes_dict[lobe] += chs_by_lobe_copy[ch_type][lobe]
-
-    traces = []
-
-    if len(lobes_dict)>1: #if there are lobes - we use color coding: one clor pear each lobe
-        for lobe in lobes_dict:
-            ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
-            traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
-            #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
-            # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
-
-    else: #if there are no lobes - we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
-        ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
-        for i, _ in enumerate(ch_locs):
-            traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
-
-    print(lobes_dict)
-
-    if not traces:
-        return []
-
-    fig = go.Figure(data=traces)
-
-    fig.update_layout(
-        width=900, height=900,
-        title={
-        'text': 'Sensors positions',
-        'y':0.85,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top'})
-    
-    fig.update_layout(
-        scene = dict(
-        xaxis = dict(visible=False),
-        yaxis = dict(visible=False),
-        zaxis =dict(visible=False)
-        )
-    )
-
-    #check_num_channels_correct(chs_by_lobe, 'END_PLOT') #check we didnt change the original dict
-
-
-    # Add the button to have names show up on hover or always:
-    fig = switch_names_on_off(fig)
-
-    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
-
-    qc_derivative += [QC_derivative(content=fig, name='Sensors_positions', content_type='plotly', description_for_user="Magnetometers names end with '1' like 'MEG0111'. Gradiometers names end with '2' and '3' like 'MEG0112', 'MEG0113'. ")]
-
-    return qc_derivative
 
 def get_meg_system(sensors_df):
 
@@ -1474,110 +1293,6 @@ def boxplot_epochs(df_mg: pd.DataFrame, ch_type: str, what_data: str, x_axis_box
             'xanchor': 'center',
             'yanchor': 'top'},
         legend_title=legend_title)
-        
-
-    fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
-
-    return fig_deriv
-
-
-def boxplot_epoched_xaxis_channels(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str):
-
-    """
-    Creates representation of calculated data as multiple boxplots. Used in STD and PtP_manual measurements. 
-    Color tagged channels by lobes. 
-    One box is one channel, boxes are on x axis. Epoch are inside as dots. Y axis shows the STD/PtP value.
-    
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        Dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
-    ch_type : str
-        Type of the channel: 'mag', 'grad'
-    what_data : str
-        Type of the data: 'peaks' or 'stds'
-
-    Returns
-    -------
-    fig_deriv : QC_derivative 
-        derivative containing plotly figure
-    
-    """
-
-    epochs_names = df_std_ptp.columns.tolist()
-    
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
-
-    if what_data=='peaks':
-        hover_tit='PtP Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_'+ch_tit
-    else:
-        print('what_data should be either peaks or stds')
-
-    x_axis_boxes = 'channels'
-    if x_axis_boxes=='channels':
-        hovertemplate='Epoch: %{text}<br>'+hover_tit+': %{y: .2e}'
-    elif x_axis_boxes=='epochs':
-        #legend_title = 'Epochs'
-        hovertemplate='%{text}<br>'+hover_tit+': %{y: .2e}'
-    else:
-        print('x_axis_boxes should be either channels or epochs')
-
-
-    fig = go.Figure()
-
-    #Here each trace is 1 box representing 1 channel. Epochs inside the box are automatically plotted given argument boxpoints="all":
-    #Boxes are groupped by lobe. So first each channel fo lobe 1 is plotted, then each of lobe 2, etc..
-    boxes_names = []
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch in ch_list:
-            if what_data == 'stds':
-                data = ch.std_epoch
-            elif what_data == 'peaks':
-                data = ch.ptp_epoch
-            
-            boxes_names += [ch.name]
-
-            fig.add_trace(go.Box(y=data, 
-            name=ch.name, 
-            opacity=0.7, 
-            boxpoints="all", 
-            pointpos=0,
-            marker_color=ch.lobe_color,
-            marker_size=3,
-            legendgroup=ch.lobe, 
-            legendgrouptitle=dict(text=lobe.upper()),
-            line_width=0.8,
-            line_color=ch.lobe_color,
-            text=epochs_names))
-
-    fig.update_traces(hovertemplate=hovertemplate)
-
-    fig.update_layout(
-        xaxis = dict(
-            tickmode = 'array',
-            tickvals = [v for v in range(0, len(boxes_names))],
-            ticktext = boxes_names,
-            rangeslider=dict(visible=True)),
-        yaxis = dict(
-            showexponent = 'all',
-            exponentformat = 'e'),
-        yaxis_title=y_ax_and_fig_title+' in '+unit,
-        title={
-            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},)
-        #legend_title=legend_title)
         
 
     fig_deriv = QC_derivative(content=fig, name=fig_name, content_type='plotly')
@@ -1897,72 +1612,6 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
 
 
 
-def plot_pie_chart_freq(amplitudes_relative: list, amplitudes_abs: list, total_amplitude: float, m_or_g: str, bands_names: list, fig_tit: str, fig_name: str):
-    
-    """
-    OLD VERSION, no csv 
-
-    Plot pie chart representation of relative amplitude of each frequency band over the entire 
-    times series of mags or grads, not separated by individual channels.
-
-    Parameters
-    ----------
-    freq_amplitudes_relative : list
-        list of relative amplitudes of each frequency band
-    freq_amplitudes_absolute : list
-        list of absolute amplitudes of each frequency band 
-    total_freq_ampl : float
-        total amplitude of all frequency bands. It might be diffrent from simple sum of mean_abs_values. In this case 'unknown' band will be added in this fucntion
-    m_or_g : str
-        'mag' or 'grad'
-    bands_names : list
-        list of names of frequency bands
-    fig_tit : str
-        extra title to be added to the plot
-    fig_name : str
-        name of the figure to be saved
-    
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-    all_bands_names=bands_names.copy() 
-    #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
-    #To keep them in original state outside the function, they are copied here.
-    all_mean_abs_values=amplitudes_abs.copy()
-    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
-
-    #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
-    all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
-    relative_unknown=100-(sum(amplitudes_relative))*100
-    if relative_unknown>0:
-        all_mean_relative_values.append(relative_unknown)
-        all_bands_names.append('other frequencies')
-        all_mean_abs_values.append(total_amplitude - sum(amplitudes_abs))
-
-    labels=[None]*len(all_bands_names)
-    for n, name in enumerate(all_bands_names):
-        labels[n]=name + ': ' + str("%.2e" % all_mean_abs_values[n]) + ' ' + unit # "%.2e" % removes too many digits after coma
-
-    fig = go.Figure(data=[go.Pie(labels=labels, values=all_mean_relative_values)])
-    fig.update_layout(
-    title={
-    'text': fig_tit + ch_type_tit,
-    'y':0.85,
-    'x':0.5,
-    'xanchor': 'center',
-    'yanchor': 'top'})
-
-
-    fig_name=fig_name+ch_type_tit
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
-
-    return qc_derivative
-
-
 def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: float, noise_ampl_relative_to_signal: list):
 
     """
@@ -2161,118 +1810,6 @@ def assign_epoched_std_ptp_to_channels(what_data, chs_by_lobe, df_std_ptp):
     return chs_by_lobe
 
 
-def boxplot_epoched_xaxis_epochs(chs_by_lobe: dict, df_std_ptp: pd.DataFrame, ch_type: str, what_data: str):
-
-    """
-    Represent std of epochs for each channel as box plots, where each box on x axis is 1 epoch. Dots inside the box are channels.
-    
-    Process: 
-    Each box need to be plotted as a separate trace first.
-    Each channels inside each box has to be plottted as separate trace to allow diffrenet color coding
-    
-    For each box_representing_epoch:
-        box trace
-        For each color coded lobe:
-            For each dot_representing_channel in lobe:
-                dot trace
-
-    Add all traces to plotly figure
-
-
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
-    df_std_ptp : pd.DataFrame
-        Data Frame containing std or ptp value for each chnnel and each epoch
-    ch_type : str
-        'mag' or 'grad'
-    what_data : str
-        'peaks' for peak-to-peak amplitudes or 'stds'
-
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-
-    epochs_names = df_std_ptp.columns.tolist()
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
-
-    if what_data=='peaks':
-        hover_tit='PtP Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_epoch_per_channel_2_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_per_channel_2_'+ch_tit
-    else:
-        print('what_data should be either peaks or stds')
-
-
-    boxwidth=0.5 #the area around which the data dots are scattered depends on the width of the box.
-
-    # For this plot have to separately create a box (no data points plotted) as 1 trace
-    # Then separately create for each cannel (dot) a separate trace. It s the only way to make them all different lobe colors.
-    # Additionally, the dots are scattered along the x axis inside each box, this is done for visualisation only, x position does not hold information.
-    
-    # Put all data dots in a list of traces groupped by lobe:
-    
-    dot_traces = []
-    box_traces = []
-
-    for ep_number, ep_name in enumerate(epochs_names):
-        dots_in_1_box=[]
-        for lobe,  ch_list in chs_by_lobe.items():
-            for ch in ch_list:
-                if what_data == 'stds':
-                    data = ch.std_epoch[ep_number]
-                elif what_data == 'peaks':
-                    data = ch.ptp_epoch[ep_number]
-                dots_in_1_box += [data]
-
-                x = ep_number + random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
-                #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
-                
-                dot_traces += [go.Scatter(x=[x], y=[data], mode='markers', marker=dict(size=4, color=ch.lobe_color), opacity=0.8, name=ch.name, text=str(ep_name), legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()), hovertemplate='Epoch: '+str(ep_name)+'<br>'+hover_tit+': %{y: .2e}')]
-
-        # create box plot trace
-        box_traces += [go.Box(x0=ep_number, y=dots_in_1_box, orientation='v', name=ep_name, line_width=1.8, opacity=0.8, boxpoints=False, width=boxwidth, showlegend=False)]
-    
-    #Collect all traces and add them to the figure:
-
-    all_traces = box_traces+dot_traces
-    fig = go.Figure(data=all_traces)
-        
-    #more settings:
-    fig.update_layout(
-        xaxis = dict(
-            tickmode = 'array',
-            tickvals = [v for v in range(0, len(epochs_names))],
-            ticktext = epochs_names,
-            rangeslider=dict(visible=True)
-        ),
-        xaxis_title='Experimental epochs',
-        yaxis = dict(
-            showexponent = 'all',
-            exponentformat = 'e'),
-        yaxis_title=y_ax_and_fig_title+' in '+unit,
-        title={
-            'text': y_ax_and_fig_title+' over epochs for '+ch_tit,
-            'y':0.85,
-            'x':0.5,
-            'xanchor': 'center',
-            'yanchor': 'top'},
-        legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
-
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly')
-
-    return qc_derivative
-
-
 def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     """
@@ -2397,101 +1934,6 @@ def boxplot_epoched_xaxis_epochs_csv(std_csv_path: str, ch_type: str, what_data:
         legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
 
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
-
-    return qc_derivative
-
-
-def boxplot_all_time(chs_by_lobe: dict, ch_type: str, what_data: str):
-
-    """
-    Create representation of calculated std data as a boxplot over the whoe time series, not epoched.
-    (box contains magnetometers or gradiomneters, not together): 
-    each dot represents 1 channel (std value over whole data of this channel). Too high/low stds are outliers.
-
-    Old version.
-
-    Parameters
-    ----------
-    chs_by_lobe : dict
-        dictionary with channel objects sorted by lobe.
-    ch_type : str
-        'mag' or 'grad'
-    what_data : str
-        'peaks' for peak-to-peak amplitudes or 'stds'
-
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-
-    """
-
-    ch_tit, unit = get_tit_and_unit(ch_type)
-
-    if what_data=='peaks':
-        hover_tit='PP_Amplitude'
-        y_ax_and_fig_title='Peak-to-peak amplitude'
-        fig_name='PP_manual_all_data_'+ch_tit
-    elif what_data=='stds':
-        hover_tit='STD'
-        y_ax_and_fig_title='Standard deviation'
-        fig_name='STD_epoch_all_data_'+ch_tit
-    else:
-        raise ValueError('what_data must be set to "stds" or "peaks"')
-
-    boxwidth=0.4 #the area around which the data dots are scattered depends on the width of the box.
-
-    # For this plot have to separately create a box (no data points plotted) as 1 trace
-    # Then separately create for each cannel (dot) a separate trace. It s the only way to make them all different lobe colors.
-    # Additionally, the dots are scattered along the y axis, this is done for visualisation only, y position does not hold information.
-    
-    # Put all data dots in a list of traces groupped by lobe:
-    values_all=[]
-    traces = []
-
-    for lobe,  ch_list in chs_by_lobe.items():
-        for ch in ch_list:
-            if what_data == 'stds':
-                data = ch.std_overall
-            elif what_data == 'peaks':
-                data = ch.ptp_overall
-            values_all += [data]
-
-            y = random.uniform(-0.2*boxwidth, 0.2*boxwidth) 
-            #here create random y values for data dots, they dont have a meaning, just used so that dots are scattered around the box plot and not in 1 line.
-            
-            traces += [go.Scatter(x=[data], y=[y], mode='markers', marker=dict(size=5, color=ch.lobe_color), name=ch.name, legendgroup=ch.lobe, legendgrouptitle=dict(text=lobe.upper()))]
-
-
-    # create box plot trace
-    box_trace = go.Box(x=values_all, y0=0, orientation='h', name='box', line_width=1, opacity=0.7, boxpoints=False, width=boxwidth, showlegend=False)
-    
-    #Colllect all traces and add them to the figure:
-    all_traces = [box_trace]+traces
-    fig = go.Figure(data=all_traces)
-
-    #Add hover text to the dots, remove too many digits after coma.
-    fig.update_traces(hovertemplate=hover_tit+': %{x: .2e}')
-        
-    #more settings:
-    fig.update_layout(
-        yaxis_range=[-0.5,0.5],
-        yaxis={'visible': False, 'showticklabels': False},
-        xaxis = dict(
-        showexponent = 'all',
-        exponentformat = 'e'),
-        xaxis_title=y_ax_and_fig_title+" in "+unit,
-        title={
-        'text': y_ax_and_fig_title+' of the data for '+ch_tit+' over the entire time series',
-        'y':0.85,
-        'x':0.5,
-        'xanchor': 'center',
-        'yanchor': 'top'},
-        legend_groupclick='togglegroup') #this setting allowes to select the whole group when clicking on 1 element of the group. But then you can not select only 1 element.
-    
-
-    description_for_user = 'Positions of points on the Y axis do not hold information, made for visialisation only.'
-    qc_derivative = QC_derivative(content=fig, name=fig_name, content_type='plotly', description_for_user = description_for_user)
 
     return qc_derivative
 
@@ -2677,98 +2119,8 @@ def plot_muscle_annotations_mne(raw: mne.io.Raw, m_or_g: str, annot_muscle: mne.
     
     return fig_derivs
 
-
-def make_head_pos_plot_old(raw: mne.io.Raw, head_pos: np.ndarray):
-
-    """ 
-    Plot positions and rotations of the head.
     
-    Parameters
-    ----------
-    raw : mne.io.Raw
-        Raw data.
-    head_pos : np.ndarray
-        Head positions and rotations.
-        
-    Returns
-    -------
-    head_derivs : list 
-        List of QC_derivative objects containing figures with head positions and rotations.
-    head_pos_baselined : np.ndarray
-        Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
-    """
-
-    head_derivs = []
-
-    original_head_dev_t = mne.transforms.invert_transform(
-        raw.info['dev_head_t'])
-    average_head_dev_t = mne.transforms.invert_transform(
-        compute_average_dev_head_t(raw, head_pos))
-
-
-    matplotlib.use('Agg') #this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
-
-    #plot using MNE:
-    fig1 = mne.viz.plot_head_positions(head_pos, mode='traces')
-    #fig1 = mne.viz.plot_head_positions(head_pos_degrees)
-    for ax, val, val_ori in zip(fig1.axes[::2], average_head_dev_t['trans'][:3, 3],
-                        original_head_dev_t['trans'][:3, 3]):
-        ax.axhline(1000*val, color='r')
-        ax.axhline(1000*val_ori, color='g')
-        #print('___MEGqc___: ', 'val', val, 'val_ori', val_ori)
-    # The green horizontal lines represent the original head position, whereas the
-    # Red lines are the new head position averaged over all the time points.
-
-
-    head_derivs += [QC_derivative(fig1, 'Head_position_rotation_average_mne', 'matplotlib', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
-
-
-    #plot head_pos using PLOTLY:
-
-    # First, for each head position subtract the first point from all the other points to make it always deviate from 0:
-    head_pos_baselined=head_pos.copy()
-    #head_pos_baselined=head_pos_degrees.copy()
-    for i, pos in enumerate(head_pos_baselined.T[1:7]):
-        pos -= pos[0]
-        head_pos_baselined.T[i]=pos
-
-    t = head_pos.T[0]
-
-    average_head_pos=average_head_dev_t['trans'][:3, 3]
-    original_head_pos=original_head_dev_t['trans'][:3, 3]
-
-    fig1p = make_subplots(rows=3, cols=2, subplot_titles=("Position (mm)", "Rotation (quat)"))
-
-    # head_pos ndarray of shape (n_pos, 10): [t, q1, q2, q3, x, y, z, gof, err, v]
-    # https://mne.tools/stable/generated/mne.chpi.compute_head_pos.html
-    indexes=[4, 5, 6, 1, 2,3]
-    names=['x', 'y', 'z', 'q1', 'q2', 'q3']
-    for counter in [0, 1, 2]:
-        position=1000*-head_pos.T[indexes][counter]
-        #position=1000*-head_pos_baselined.T[indexes][counter]
-        name_pos=names[counter]
-        fig1p.add_trace(go.Scatter(x=t, y=position, mode='lines', name=name_pos), row=counter+1, col=1)
-        fig1p.update_yaxes(title_text=name_pos, row=counter+1, col=1)
-        #print('name', name_pos, 'position', position)
-        rotation=head_pos.T[indexes][counter+3]
-        #rotation=head_pos_baselined.T[indexes][counter+3]
-        name_rot=names[counter+3]
-        fig1p.add_trace(go.Scatter(x=t, y=rotation, mode='lines', name=name_rot), row=counter+1, col=2)
-        fig1p.update_yaxes(title_text=name_rot, row=counter+1, col=2)
-        #print('name', name_rot, 'rotation', rotation)
-
-        # fig1p.add_hline(y=1000*average_head_pos[counter], line_dash="dash", line_color="red", row=counter+1, col=1)
-        # fig1p.add_hline(y=1000*original_head_pos[counter], line_dash="dash", line_color="green", row=counter+1, col=1)
-
-    fig1p.update_xaxes(title_text='Time (s)', row=3, col=1)
-    fig1p.update_xaxes(title_text='Time (s)', row=3, col=2)
-
-    head_derivs += [QC_derivative(fig1p, 'Head_position_rotation_average_plotly', 'plotly', description_for_user = 'The green horizontal lines - original head position. Red lines - the new head position averaged over all the time points.')]
-
-    return head_derivs, head_pos_baselined
-
-    
-def make_head_pos_plot_csv(f_path: str):
+def plot_head_pos_csv(f_path: str):
 
     """ 
     Plot positions and rotations of the head. On base of data from tsv file.
@@ -2831,7 +2183,6 @@ def make_head_pos_plot_csv(f_path: str):
 def make_head_pos_plot_mne(raw: mne.io.Raw, head_pos: np.ndarray):
 
     """
-
     Currently not used if we wanna plot solely from csv. 
     This function requires also raw as input and cant be only from csv.
 
@@ -2895,51 +2246,6 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
     return head_derivs
 
 #__________ECG/EOG__________#
-
-def plot_ECG_EOG_channel(ch_data: np.ndarray or list, peaks: np.ndarray or list, ch_name: str, fs: float):
-
-    """
-    Plot the ECG channel data and detected peaks
-    
-    Parameters
-    ----------
-    ch_data : list or np.ndarray
-        Data of the channel
-    peaks : list or np.ndarray
-        Indices of the peaks in the data
-    ch_name : str
-        Name of the channel
-    fs : int
-        Sampling frequency of the data
-        
-    Returns
-    -------
-    fig : plotly.graph_objects.Figure
-        Plot of the channel data and detected peaks
-        
-    """
-
-    time = np.arange(len(ch_data))/fs
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=ch_data, mode='lines', name=ch_name,
-        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
-    fig.add_trace(go.Scatter(x=time[peaks], y=ch_data[peaks], mode='markers', name='peaks',
-        hovertemplate='Time: %{x} s<br>Amplitude: %{y} V<br>'))
-    fig.update_layout(xaxis_title='time, s', 
-                yaxis = dict(
-                showexponent = 'all',
-                exponentformat = 'e'),
-                yaxis_title='Amplitude, V',
-                title={
-                'text': ch_name,
-                'y':0.85,
-                'x':0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'})
-
-
-    return fig
-
 
 def plot_ECG_EOG_channel_csv(f_path):
 
