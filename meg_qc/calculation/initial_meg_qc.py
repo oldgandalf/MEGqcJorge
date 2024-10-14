@@ -157,11 +157,28 @@ class MEG_channel:
                 if attr.lower() == 'psd':
                     freqs = getattr(self, 'freq')
                     data_dict.update({f'{column_name}_Hz_{freqs[i]}': [v] for i, v in enumerate(value)})
-                elif attr.lower() in ['mean_ecg', 'mean_eog', 'muscle', 'head']:
-                    times = getattr(self, f'{attr.split("_")[-1]}_time') #will take part of the string before _time
-                    data_dict.update({f'{column_name}_sec_{times[i]}': [v] for i, v in enumerate(value)})
-                else:
-                    data_dict.update({f'{column_name}_{i}': [v] for i, v in enumerate(value)})
+                # elif attr.lower() in ['mean_ecg', 'mean_eog', 'muscle', 'head']:
+                #     times = getattr(self, f'{attr.split("_")[-1]}_time') #will take part of the string before _time
+                #     data_dict.update({f'{column_name}_sec_{times[i]}': [v] for i, v in enumerate(value)})
+
+                elif 'mean_ecg' in attr or 'mean_eog' in attr or 'muscle' == attr or 'head' == attr:
+                    if attr == 'mean_ecg':
+                        times = getattr(self, 'ecg_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'mean_eog':
+                        times = getattr(self, 'eog_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'head':
+                        times = getattr(self, 'head_time') #attr can be 'mean_ecg', etc
+                    elif attr == 'muscle':
+                        times = getattr(self, 'muscle_time') #attr can be 'mean_ecg', etc
+                    
+                    for i, v in enumerate(value):
+                        t = times[i]
+                        data_dict[f'{column_name}_sec_{t}'] = [v]
+
+                else: #TODO: here maybe change to elif std/ptp?
+                    for i, v in enumerate(value):
+                        data_dict[f'{column_name}_{i}'] = [v]
+
             else:
                 data_dict[column_name] = [value]
 
