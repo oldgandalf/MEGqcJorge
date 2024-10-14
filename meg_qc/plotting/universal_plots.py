@@ -1,12 +1,8 @@
-import plotly
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import base64
-from io import BytesIO
 import numpy as np
 import pandas as pd
 import mne
-import warnings
 import random
 import copy
 import os
