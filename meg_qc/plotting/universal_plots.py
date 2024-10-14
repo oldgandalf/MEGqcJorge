@@ -121,6 +121,7 @@ def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, 
         if row['Type'] == m_or_g: #plot only mag/grad
             ch_data = []
             for col in df.columns:
+                print(col)
                 if col_prefix in col:
 
                     #ch_data = row[col] #or maybe 
@@ -132,6 +133,7 @@ def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, 
             color = row['Lobe Color']
 
             #traces_chs += [go.Scatter(x=x_values, y=ch_data, line=dict(color=color), name=row['Name'] , legendgroup=row['Lobe'] , legendgrouptitle=dict(text=row['Lobe'].upper(), font=dict(color=color)))]
+
 
             if add_scores:
 
@@ -1831,7 +1833,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
     return mean_ecg_eog_ch_deriv
 
 
-def plot_artif_per_ch_correlated_lobes_csv(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool):
+def plot_artif_per_ch_3_groups(f_path: str, m_or_g: str, ecg_or_eog: str, flip_data: bool):
 
     """
     This is the final function.
