@@ -829,7 +829,7 @@ def plot_time_series(raw: mne.io.Raw, m_or_g: str, chs_by_lobe: dict):
     qc_derivative = []
     tit, unit = get_tit_and_unit(m_or_g)
 
-    picked_channels = mne.pick_types(raw.info, meg=m_or_g)
+    picked_channels = mne.pick(raw.info, meg=m_or_g)
 
     # Downsample data
     raw_resampled = raw.copy().resample(100, npad='auto') 
@@ -2794,3 +2794,51 @@ def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarr
     fig_derivs = []
 
     return fig_derivs
+
+
+def plot_ecg_eog_mne(channels: dict, ecg_epochs: mne.Epochs, m_or_g: str, tmin: float, tmax: float):
+
+    """
+    Plot ECG/EOG artifact with topomap and average over epochs (MNE plots based on matplotlib)
+
+    NOT USED NOW
+
+    Parameters
+    ----------
+    channels : dict
+        Dictionary  with ch names divided by mag/grad
+    ecg_epochs : mne.Epochs
+        ECG/EOG epochs.
+    m_or_g : str
+        String 'mag' or 'grad' depending on the channel type.
+    tmin : float
+        Start time of the epoch.
+    tmax : float
+        End time of the epoch.
+    
+    Returns
+    -------
+    mne_ecg_derivs : list
+        List of QC_derivative objects with MNE plots.
+    
+    
+    """
+
+    mne_ecg_derivs = []
+    fig_ecg = ecg_epochs.plot_image(combine='mean', picks = channels[m_or_g])[0] #plot averageg over ecg epochs artifact
+    # [0] is to plot only 1 figure. the function by default is trying to plot both mag and grad, but here we want 
+    # to do them saparetely depending on what was chosen for analysis
+    mne_ecg_derivs += [QC_derivative(fig_ecg, 'mean_ECG_epoch_'+m_or_g, 'matplotlib')]
+
+    #averaging the ECG epochs together:
+    avg_ecg_epochs = ecg_epochs.average() #.apply_baseline((-0.5, -0.2))
+    # about baseline see here: https://mne.tools/stable/auto_tutorials/preprocessing/10_preprocessing_overview.html#sphx-glr-auto-tutorials-preprocessing-10-preprocessing-overview-py
+
+    #plot average artifact with topomap
+    fig_ecg_sensors = avg_ecg_epochs.plot_joint(times=[tmin-tmin/100, tmin/2, 0, tmax/2, tmax-tmax/100], picks = m_or_g)
+    # tmin+tmin/10 and tmax-tmax/10 is done because mne sometimes has a plotting issue, probably connected tosamplig rate: 
+    # for example tmin is  set to -0.05 to 0.02, but it  can only plot between -0.0496 and 0.02.
+
+    mne_ecg_derivs += [QC_derivative(fig_ecg_sensors, 'ECG_field_pattern_sensors_'+m_or_g, 'matplotlib')]
+
+    return mne_ecg_derivs
