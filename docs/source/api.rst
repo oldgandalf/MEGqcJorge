@@ -24,7 +24,8 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
    settings_ini
    settings_internal_ini
-   main
+   objects
+   meg_qc_pipeline
    initial_processing
    std
    psd
@@ -33,8 +34,9 @@ https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
    ecg_eog 
    muscle
    head 
-   universal_plots 
-   html_report
+   meg_qc_plots
+   universal_plots
+   universal_html_report
    
    
 

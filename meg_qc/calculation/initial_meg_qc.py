@@ -3,7 +3,7 @@ import mne
 import configparser
 import numpy as np
 import pandas as pd
-from meg_qc.calculation.channels import QC_derivative, MEG_channel
+from meg_qc.calculation.objects import QC_derivative, MEG_channel
 
 
 def get_all_config_params(config_file_name: str):
