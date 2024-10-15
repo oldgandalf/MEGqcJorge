@@ -7,7 +7,7 @@ import random
 import copy
 import os
 from mne.preprocessing import compute_average_dev_head_t
-from meg_qc.calculation.initial_meg_qc import QC_derivative, MEG_channel
+from meg_qc.calculation.channels import QC_derivative, MEG_channel
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
 
 
