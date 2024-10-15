@@ -314,7 +314,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
             for m_or_g in m_or_g_chosen:
-                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False)
+                ecg_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'ECG', flip_data=False)
                 #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
         elif 'EOG' in metric.upper():
@@ -326,7 +326,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
                 
             for m_or_g in m_or_g_chosen:
-                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
+                eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
                 #eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
             
@@ -345,7 +345,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             
         elif 'HEAD' in metric.upper():
                 
-            head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path)
+            head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
             # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
             # head_pos_derivs += head_pos_derivs2
             head_derivs += head_pos_derivs
