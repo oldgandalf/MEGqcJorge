@@ -148,12 +148,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         print('___DS path:', dataset_path)
 
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
-        except:
-            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
+        dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
+
 
         #create derivatives folder first:
         derivatives_path = os.path.join(dataset_path, 'derivatives')
@@ -186,18 +183,20 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         #return
 
-
-        # list_of_subs = list(entities["sub"])
-        if all_qc_params['default']['subjects'][0] != 'all':
-            list_of_subs = all_qc_params['default']['subjects']
-        elif all_qc_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()['subject']))
-            print('___MEGqc___: ', 'list_of_subs', list_of_subs)
-            if not list_of_subs:
-                print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
+        try:
+            if all_qc_params['default']['subjects'][0] != 'all':
+                list_of_subs = all_qc_params['default']['subjects']
+            elif all_qc_params['default']['subjects'][0] == 'all':
+                list_of_subs = sorted(list(dataset.query_entities()['subject']))
+                print('___MEGqc___: ', 'list_of_subs', list_of_subs)
+                if not list_of_subs:
+                    print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
+                    return
+            else:
+                print('___MEGqc___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
                 return
-        else:
-            print('___MEGqc___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
+        except:
+            print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to data set. The ds has to be BIDS-conform.')
             return
 
         avg_ecg=[]
