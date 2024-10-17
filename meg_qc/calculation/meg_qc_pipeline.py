@@ -61,6 +61,12 @@ def get_files_list(dataset_path, dataset, sid):
     has_ctf = False
 
     for root, dirs, files in os.walk(dataset_path):
+
+        # Exclude the 'derivatives' folder. 
+        # Because we will later save ds info as derivative with extension .fif
+        # so if we work on this ds again it might see a ctf ds as fif.
+        dirs[:] = [d for d in dirs if d != 'derivatives']
+
         # Check for .fif files
         if any(file.endswith('.fif') for file in files):
             has_fif = True
