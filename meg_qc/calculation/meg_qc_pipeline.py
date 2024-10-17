@@ -146,7 +146,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     for dataset_path in ds_paths: #run over several data sets
 
-        print('___DS path:', dataset_path)
+        print('___MEGqc___: ', 'DS path:', dataset_path)
 
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
@@ -192,9 +192,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if not list_of_subs:
                     print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
                     return
-            else:
-                print('___MEGqc___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
-                return
         except:
             print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
             return
@@ -202,21 +199,22 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         avg_ecg=[]
         avg_eog=[]
 
-        print('___MEGqc___: ', 'TOTAL subs', len(list_of_subs))
-
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
 
         for sid in list_of_subs: #[0:4]:
     
-            print('___MEGqc___: ', 'Dataset: ', dataset_path)
             print('___MEGqc___: ', 'Take SID: ', sid)
             
             calculation_folder = derivative.create_folder(name='calculation')
             subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sid)
 
             list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sid)
+
+            if not list_of_files:
+                print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
+                return
 
             print('___MEGqc___: ', 'list_of_files', list_of_files)
             print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
