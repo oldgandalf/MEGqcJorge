@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import random
 import copy
+import warnings
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 
 
@@ -428,7 +429,9 @@ def change_ch_type_CTF(raw, channels):
     """
 
     for ch_name in channels['mag']:
-        raw.set_channel_types({ch_name: 'grad'})
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            raw.set_channel_types({ch_name: 'grad'})
         channels['grad'].append(ch_name)
 
     print('___MEGqc___: Types of channels changed from mag to grad for CTF data.')
