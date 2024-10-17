@@ -185,13 +185,9 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         try:
             if all_qc_params['default']['subjects'][0] != 'all':
-                list_of_subs = all_qc_params['default']['subjects']
+                sub_list = all_qc_params['default']['subjects']
             elif all_qc_params['default']['subjects'][0] == 'all':
-                list_of_subs = sorted(list(dataset.query_entities()['subject']))
-                print('___MEGqc___: ', 'list_of_subs', list_of_subs)
-                if not list_of_subs:
-                    print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
-                    return
+                sub_list = sorted(list(dataset.query_entities()['subject']))
         except:
             print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
             return
@@ -203,14 +199,14 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs: #[0:4]:
+        for sub in sub_list: #[0:4]:
     
-            print('___MEGqc___: ', 'Take SID: ', sid)
+            print('___MEGqc___: ', 'Take SUB: ', sub)
             
             calculation_folder = derivative.create_folder(name='calculation')
-            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sid)
+            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
-            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sid)
+            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sub)
 
             if not list_of_files:
                 print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
