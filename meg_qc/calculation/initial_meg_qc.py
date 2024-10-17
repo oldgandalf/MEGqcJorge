@@ -907,8 +907,11 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if meg_system == 'CTF': #ONLY FOR CTF we do this!
         channels = change_ch_type_CTF(raw, channels)
 
+    #Turn channel names into objects:
+    channels_objs = {key: [MEG_channel(name=ch_name, type=key) for ch_name in value] for key, value in channels.items()}
+
     #Assign channels properties:
-    channels_objs, lobes_color_coding_str = assign_channels_properties(channels, meg_system)
+    channels_objs, lobes_color_coding_str = assign_channels_properties(channels_objs, meg_system)
 
     #Check if there are channels to analyze according to info in config file:
     m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)

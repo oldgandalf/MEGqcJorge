@@ -12,7 +12,7 @@ class MEG_channel:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, system: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str = None, lobe_color: str = None, system: str = None, loc: list = None, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
