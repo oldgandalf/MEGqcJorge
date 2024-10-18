@@ -218,10 +218,14 @@ def get_ds_entities(dataset_path: str):
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
     calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-    entities = dataset.query_entities(scope=calculated_derivs_folder)
-    #we only get entities of calculated derivatives here, not entire raw ds.
 
-    print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
+    try: 
+        entities = dataset.query_entities(scope=calculated_derivs_folder)
+        print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
+        #we only get entities of calculated derivatives here, not entire raw ds.
+    except:
+        calculated_derivs_folder_full_path = os.path.join(dataset_path, calculated_derivs_folder)
+        raise FileNotFoundError(f'___MEGqc___: No calculated derivatives found in: {calculated_derivs_folder_full_path}')
     
     return entities
 
@@ -647,13 +651,13 @@ def make_plots_meg_qc(ds_paths: list):
 
 # ____________________________
 # RUN IT:
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])
