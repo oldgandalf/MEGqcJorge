@@ -575,7 +575,21 @@ def make_plots_meg_qc(ds_paths: list):
                 entities_per_file[metric] = entities_obj
 
             #Get path to raw info obj:
-            raw_info_path = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'RawInfo', scope=calculated_derivs_folder)[0]
+
+            raw_info_path = dataset.query(
+                suffix='meg',
+                extension='.fif',
+                return_type='filename',
+                subj=sub,
+                ses=chosen_entities.get('session'),
+                task=chosen_entities['task'],
+                run=chosen_entities.get('run'),
+                desc='RawInfo',
+                scope=calculated_derivs_folder
+                )[0]
+                #using get here, cos if some entities dont exist, it will return None, 
+                #this will not couse an error in query, but will be ignored.
+
 
             # 1. Check that we got same entities_per_file and tsvs_to_plot:
             
