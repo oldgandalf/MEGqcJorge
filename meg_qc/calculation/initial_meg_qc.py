@@ -484,6 +484,35 @@ def load_data(file_path):
     
     return raw, shielding_str, meg_system
 
+def add_3d_ch_locations(raw, channels_objs):
+
+    """
+    Add channel locations to the MEG channels objects.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        MEG data.
+    channels_objs : dict
+        Dictionary with MEG channels.
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with MEG channels with added locations.
+
+    """
+
+    # Create a dictionary to store the channel locations
+    ch_locs = {ch['ch_name']: ch['loc'][:3] for ch in raw.info['chs']}
+    #why [:3]?  to Get only the x, y, z coordinates (first 3 values), theer are also rotations, etc storred in loc.
+
+    # Iterate through the channel names and add the locations
+    for key, value in channels_objs.items():
+        for ch in value:
+            ch.loc = ch_locs[ch.name]
+
+    return channels_objs
 
 def add_CTF_lobes(channels_objs):
 
@@ -508,6 +537,7 @@ def add_CTF_lobes(channels_objs):
         for ch in value:
             categorized = False  # Track if the channel is categorized
             # Magnetometers (assuming they start with 'M')
+            #Even though they all have to be grads for CTF!!!
             if ch.name.startswith('MLF'):  # Left Frontal
                 lobes_ctf['Left Frontal'].append(ch.name)
                 categorized = True
@@ -915,6 +945,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Assign channels properties:
     channels_objs, lobes_color_coding_str = assign_channels_properties(channels_objs, meg_system)
+
+    #Add channel locations:
+    channels_objs = add_3d_ch_locations(raw, channels_objs)
 
     #Check if there are channels to analyze according to info in config file:
     m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)

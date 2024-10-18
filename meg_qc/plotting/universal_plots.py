@@ -309,7 +309,10 @@ def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int,
     
     
     """
-
+    if not d3_locs:
+        print('__MEGqc__: No sensors locations to plot!')
+        return None
+    
     trace = go.Scatter3d(
     x=[loc[0] for loc in d3_locs],
     y=[loc[1] for loc in d3_locs],
