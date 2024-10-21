@@ -61,6 +61,14 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
 
     return m_or_g_tit, unit
 
+def plot_stim_csv():
+
+    """
+    Plot stimulus channels
+
+    """
+
+    description = 'If the data was cropped for this calculation, the stimulus data is also cropped.'
 
 def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 

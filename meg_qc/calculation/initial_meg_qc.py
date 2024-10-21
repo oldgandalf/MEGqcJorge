@@ -269,6 +269,38 @@ def get_internal_config_params(config_file_name: str):
     
     return internal_qc_params
 
+def stim_data_to_df(raw: mne.io.Raw):
+
+    """
+    Extract stimulus data from MEG data and put it into a pandas DataFrame.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        MEG data.
+    
+    Returns
+    -------
+    stim_deriv : list
+        List with QC_derivative object with stimulus data.
+    
+    """
+
+    stim_channels = mne.pick_types(raw.info, stim=True)
+    stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
+
+    # Extract data for stimulus channels
+    stim_data, times = raw[stim_channels, :]
+
+    # Create a DataFrame with the stimulus data
+    stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
+    stim_df['time'] = times
+
+    #save df as QC_derivative object
+    stim_deriv = [QC_derivative(stim_df, 'stimulus', 'df')]
+
+    return stim_deriv
+
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
@@ -870,7 +902,6 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     info = raw.info
     info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]
 
-
     #crop the data to calculate faster:
     tmax_possible = raw.times[-1] 
     tmax=default_settings['crop_tmax']
@@ -879,6 +910,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
     #When resampling for plotting, cropping or anything else you don't need permanent in raw inside any functions - always do raw_new=raw.copy() not just raw_new=raw. The last command doesn't create a new object, the whole raw will be changed and this will also be passed to other functions even if you don't return the raw.
 
+    stim_deriv = stim_data_to_df(raw_cropped)
 
     #Data filtering:
     raw_cropped_filtered = raw_cropped.copy()
@@ -961,7 +993,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):
