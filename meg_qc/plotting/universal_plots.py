@@ -1345,7 +1345,7 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
     return qc_derivative
 
 
-def plot_muscle_csv(f_path: str, m_or_g: str):
+def plot_muscle_csv(f_path: str):
 
     """
     Plot the muscle events with the z-scores and the threshold.
@@ -1355,8 +1355,6 @@ def plot_muscle_csv(f_path: str, m_or_g: str):
     ----------
     f_path: str
         Path to tsv file with data.
-    m_or_g : str
-        The channel type used for muscle detection: 'mag' or 'grad'.
     
         
     Returns
@@ -1365,11 +1363,13 @@ def plot_muscle_csv(f_path: str, m_or_g: str):
         A list of QC_derivative objects with plotly figures for muscle events.
 
     """
-    print('___MEGqc___: ', 'f_path', f_path, 'm_or_g', m_or_g)
+
     df = pd.read_csv(f_path, sep='\t')  
 
     if df['scores_muscle'].empty or df['scores_muscle'].isna().all():
         return []
+    
+    m_or_g = df['ch_type'][0]
 
     fig_derivs = []
 

@@ -284,7 +284,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
         muscle_times = raw.times[peak_locs_pos]
         high_scores_muscle=scores_muscle[peak_locs_pos]
 
-        df_deriv = save_muscle_to_csv('Muscle', raw, scores_muscle, muscle_times, high_scores_muscle)
+        df_deriv = save_muscle_to_csv('Muscle', raw, scores_muscle, muscle_times, high_scores_muscle, m_or_g_decided[0])
 
         # collect all details for simple metric:
         z_score_details['muscle_event_times'] = muscle_times.tolist()
@@ -298,7 +298,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
     return simple_metric, scores_muscle, df_deriv
 
 
-def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np.ndarray, high_scores_muscle_times: np.ndarray, high_scores_muscle: np.ndarray):
+def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np.ndarray, high_scores_muscle_times: np.ndarray, high_scores_muscle: np.ndarray, m_or_g: str):
 
     """
     Save muscle artifacts to a CSV file.
@@ -315,6 +315,8 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
         The times of the high muscle scores.
     high_scores_muscle : np.ndarray
         The high muscle scores.
+    m_or_g : str
+        The channel type chosen for the analysis: 'mag' or 'grad'.
     
     Returns
     -------
@@ -324,9 +326,10 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
     """
 
     data_times = raw.times
-    data = [data_times, scores_muscle, high_scores_muscle_times, high_scores_muscle]
+    m_or_g_combined = ' '.join(m_or_g)
+    data = [data_times, scores_muscle, high_scores_muscle_times, high_scores_muscle, [m_or_g]]
 
-    ind = ['data_times', 'scores_muscle', 'high_scores_muscle_times', 'high_scores_muscle']
+    ind = ['data_times', 'scores_muscle', 'high_scores_muscle_times', 'high_scores_muscle', 'ch_type']
 
     df = pd.DataFrame(data=data, index=ind, columns=[c for c in range(len(data_times))])
     df=df.transpose()

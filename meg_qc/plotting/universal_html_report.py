@@ -310,8 +310,6 @@ def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: di
         report.add_html(centered_info_html, 'Info about the Original raw file (not filtered, not resampled)')
 
     for key, values in sections.items():
-        print('___MEGqc___: ', 'key', key)
-        print('___MEGqc___: ', 'values', values)
         key_upper = key.upper()
         if values and key_upper != 'REPORT' and key_upper != 'Report MNE' and key_upper != 'Simple_metrics':
             #html_section_str = make_metric_section(derivs_section = sections[key_upper], section_name = key, report_strings = report_strings)

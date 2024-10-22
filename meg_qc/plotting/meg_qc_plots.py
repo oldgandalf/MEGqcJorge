@@ -342,15 +342,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             
         elif 'MUSCLE' in metric.upper():
 
-            if 'mag' in m_or_g_chosen:
-                m_or_g_decided=['mag']
-            elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
-                m_or_g_decided=['grad']
-            else:
-                print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
-
-
-            muscle_derivs +=  plot_muscle_csv(tsv_path, m_or_g_decided[0])
+            muscle_derivs +=  plot_muscle_csv(tsv_path)
 
             
         elif 'HEAD' in metric.upper():
