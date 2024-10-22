@@ -32,6 +32,7 @@ def make_howto_use_plots_section (metric: str):
     """
 
     how_to_dict = {
+        'STIMULUS': 'All figures are interactive. Hover over an element to see more information.',
         'ECG': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
         'STD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area. <br> Figure with multiple bars can be enlarged by using the scrolling element on the bottom.',
         'PSD': 'All figures are interactive. Hover over an element to see more information. <br> Sensors positions plot: Click and drag the figure to turn it. Enlarge the figure by running two fingers on the touchpad, or scrolling with "Ctrl" on the mouse. <br> Click and select a part of the figure to enlarge it. Click "Home" button on the righ upper side to return to the original view. <br> With one click on the name in a legend on the right side you can select/deselect an element. <br> With a double click you can select/deselect a whole group of elements related to one lobe area.',
@@ -94,7 +95,8 @@ def make_metric_section(fig_derivs_metric: list, section_name: str, report_strin
         'PSD': ['Frequency spectrum', f"<p>{report_strings['PSD']}</p>"],
         'PTP_MANUAL': ['Peak-to-Peak manual', f"<p>{report_strings['PTP_MANUAL']}</p>"],
         'PTP_AUTO': ['Peak-to-Peak auto from MNE', f"<p>{report_strings['PTP_AUTO']}</p>"],
-        'SENSORS': ['Sensors locations', "<p></p>"]
+        'SENSORS': ['Sensors locations', "<p></p>"],
+        'STIMULUS': ['Stimulus channels', "<p></p>"],
     }
 
     # Determine the content for the section
@@ -308,6 +310,8 @@ def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: di
         report.add_html(centered_info_html, 'Info about the Original raw file (not filtered, not resampled)')
 
     for key, values in sections.items():
+        print('___MEGqc___: ', 'key', key)
+        print('___MEGqc___: ', 'values', values)
         key_upper = key.upper()
         if values and key_upper != 'REPORT' and key_upper != 'Report MNE' and key_upper != 'Simple_metrics':
             #html_section_str = make_metric_section(derivs_section = sections[key_upper], section_name = key, report_strings = report_strings)

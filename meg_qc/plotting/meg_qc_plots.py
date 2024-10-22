@@ -259,8 +259,14 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
+    stim_derivs = []
     
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
+
+        #get the final file name of tsv path:
+        basename = os.path.basename(tsv_path)
+        if 'desc-stimulus' in basename:
+            stim_derivs = plot_stim_csv(tsv_path) 
 
         if 'STD' in metric.upper():
 
@@ -356,6 +362,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
 
     QC_derivs = {
         'TIME_SERIES': time_series_derivs,
+        'STIMULUS': stim_derivs,
         'SENSORS': sensors_derivs,
         'STD': std_derivs,
         'PSD': psd_derivs,
@@ -493,6 +500,9 @@ def make_plots_meg_qc(ds_paths: list):
         chosen_entities, plot_settings = selector(entities)
         if not chosen_entities:
             return
+        
+        #Add stimulus to chosen entities:
+        chosen_entities['METRIC'].append('stimulus')
 
         # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         # uncomment for debugging, so no need to start selector every time

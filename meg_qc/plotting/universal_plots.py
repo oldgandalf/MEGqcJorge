@@ -83,6 +83,11 @@ def plot_stim_csv(f_path: str):
 
     df = pd.read_csv(f_path, sep='\t') 
 
+    # Check if the first column is just indexes and remove it if necessary
+    if df.columns[0] == df.index.name or df.iloc[:, 0].equals(pd.Series(df.index)):
+        df = df.drop(df.columns[0], axis=1)
+
+
     # Extract the 'time' column for the x-axis
     time = df['time']
 
