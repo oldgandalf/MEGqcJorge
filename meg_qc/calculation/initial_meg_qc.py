@@ -460,15 +460,20 @@ def change_ch_type_CTF(raw, channels):
 
     """
 
-    for ch_name in channels['mag']:
+    # Create a copy of the channels['mag'] list to iterate over
+    mag_channels_copy = channels['mag'][:]
+
+    for ch_name in mag_channels_copy:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             raw.set_channel_types({ch_name: 'grad'})
         channels['grad'].append(ch_name)
+        # Remove from mag list
+        channels['mag'].remove(ch_name)
 
     print('___MEGqc___: Types of channels changed from mag to grad for CTF data.')
 
-    return channels
+    return channels, raw
 
 
 def load_data(file_path):
@@ -899,6 +904,29 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     raw, shielding_str, meg_system = load_data(file_path)
 
+    # Working with channels:
+    channels = choose_channels(raw)
+
+    if meg_system == 'CTF': #ONLY FOR CTF we do this! Return raw with changed channel types.
+        channels, raw = change_ch_type_CTF(raw, channels)
+
+    #Turn channel names into objects:
+    channels_objs = {key: [MEG_channel(name=ch_name, type=key) for ch_name in value] for key, value in channels.items()}
+
+    #Assign channels properties:
+    channels_objs, lobes_color_coding_str = assign_channels_properties(channels_objs, meg_system)
+
+    #Add channel locations:
+    channels_objs = add_3d_ch_locations(raw, channels_objs)
+
+    #Check if there are channels to analyze according to info in config file:
+    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+
+    #Sort channels by lobe - this will be used often for plotting
+    chs_by_lobe = sort_channels_by_lobe(channels_objs)
+    print('___MEGqc___: ', 'Channels sorted by lobe.')
+
+
     info = raw.info
     info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]
 
@@ -965,28 +993,6 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
-
-    # Working with channels:
-    channels = choose_channels(raw)
-
-    if meg_system == 'CTF': #ONLY FOR CTF we do this!
-        channels = change_ch_type_CTF(raw, channels)
-
-    #Turn channel names into objects:
-    channels_objs = {key: [MEG_channel(name=ch_name, type=key) for ch_name in value] for key, value in channels.items()}
-
-    #Assign channels properties:
-    channels_objs, lobes_color_coding_str = assign_channels_properties(channels_objs, meg_system)
-
-    #Add channel locations:
-    channels_objs = add_3d_ch_locations(raw, channels_objs)
-
-    #Check if there are channels to analyze according to info in config file:
-    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
-
-    #Sort channels by lobe - this will be used often for plotting
-    chs_by_lobe = sort_channels_by_lobe(channels_objs)
-    print('___MEGqc___: ', 'Channels sorted by lobe.')
 
     resample_str = '<p>' + resample_str + '</p>'
 

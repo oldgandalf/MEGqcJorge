@@ -224,7 +224,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
     """
     Calculate muscle artifacts without thresholding by user.
 
-    We still kinda have to use threshold_muscle here, even if we do not want to use it:
+    We still have to use threshold_muscle here, even if we do not want to use it:
     annotate_muscle_zscore() requires threshold_muscle so define a minimal one here: 5 z-score.
 
     Parameters
