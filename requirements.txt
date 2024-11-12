@@ -1,7 +1,4 @@
-#Brotli==1.1.0
-#certifi==2023.11.17
-#docopt==0.6.2
-#MarkupSafe==2.1.4
-#mutagen==1.47.0
-#numpy==1.26.3
-#six==1.16.0
+ancpbids==0.2.4
+mne==1.8.0
+pandas==2.2.3
+plotly==5.24.1
