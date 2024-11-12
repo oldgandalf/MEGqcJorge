@@ -1,7 +1,8 @@
-
 import mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
+# This module is not used in the final version of the pipeline. 
+# We use the manual one. But this one is left in case we still want to bring it back.
 
 def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float):
     
@@ -51,7 +52,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
 def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_g_chosen: list):
     
     """
-    Function calculates peak-to-peak amplitude annotations for every channel separately.
+    Calculates peak-to-peak amplitude annotations for every channel using MNE built-in approach.
     
     Parameters
     ----------

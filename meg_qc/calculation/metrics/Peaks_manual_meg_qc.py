@@ -1,7 +1,3 @@
-# peak to peak detection from scratch (not mne version)
-# MNE has own peak to peak detection in annotate_amplitude, but it used different settings and the process 
-# of calculation there is not yet clear. We may use their way or may keep this one.
-
 import numpy as np
 import pandas as pd
 import mne
@@ -11,6 +7,8 @@ from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.calculation.metrics.STD_meg_qc import make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 import copy
+
+#The manual PtP version. 
 
 def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
 
@@ -42,7 +40,6 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
     amplitude : np.ndarray
         Array of all detected peak pairs for this chunck of data.
 
-
     """
 
     if len(pos_peak_locs)<1 or len(neg_peak_locs)<1:
@@ -63,22 +60,19 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
             pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[closest_negative_peak_index]])
             pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[closest_negative_peak_index]])
         
-        # print("||:", neg_peak_ind)
-        # if neg_peak_ind[0].size != 0:
-        #     print("||: A")
-        #     #find the negative peak  which is located at a half of pair_dist from positive peak -> they will for a pair
-        #     pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[neg_peak_ind[0][0]]])
-        #     pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[neg_peak_ind[0][0]]])
 
     # if no positive+negative pairs were fould (no corresponding peaks at given distamce to each other) -> 
-    # peak amplitude will be given as 0 (THINK MAYBE GIVE SOMETHING DIFFERENT INSTEAD? 
-    # FOR EXAMPLE JUST AMPLITIDU OF MOST POSITIVE AND MOST NEGATIVE VALUE OVER ALL GIVEN TIME?
-    # HOWEVER THIS WILL NOT CORRESPOND TO PEAK TO PEAK IDEA).
+    # - give the difference between min and max value of the data + a note that no pairs were found
 
     if len(pairs_magnitudes)==0:
-        return 0, None
+        pairs_magnitudes.append([max(pos_peak_magnitudes), min(neg_peak_magnitudes)])
+        print('___MEGqc___: ', 'No pairs found with the given distance between peaks. The amplitude is calculated as the difference between the max and min value of the entire data. \nConsider changing the distance between peaks in the config file.')
 
     amplitude=np.zeros(len(pairs_magnitudes),)
+    #print('___MEGqc___: ', 'Number of peaks pairs used for for PtP calculation: ', len(pairs_magnitudes))
+    #TODO: think of: sometimes we get only a few pairs, like 1-2-3, this is not enough for an accurate estimation of the mean amplitude.
+    # Set minimum of pairs or another approach?
+    
     for i, pair in enumerate(pairs_magnitudes):
         amplitude[i]=pair[0]-pair[1]
 
@@ -119,20 +113,12 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
         thresh=(max(one_ch_data) - min(one_ch_data)) / ptp_thresh_lvl 
         #can also change the whole thresh to a single number setting
 
-        #pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=1, thresh=thresh, verbose=False) #positive peaks
-        #neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(one_ch_data, extrema=-1, thresh=thresh, verbose=False) #negative peaks
-        #Found error in mne.preprocessing.peak_finder()! It gives error if there are no peaks detected. So changed to scipy.signal.find_peaks() for now
-
+        #mne.preprocessing.peak_finder() gives error if there are no peaks detected. We use scipy.signal.find_peaks() instead here:
         pos_peak_locs, _ = find_peaks(one_ch_data, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
         pos_peak_magnitudes = one_ch_data[pos_peak_locs]
 
         neg_peak_locs, _ = find_peaks(-one_ch_data, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
         neg_peak_magnitudes = one_ch_data[neg_peak_locs]
-
-        # print('POS mne', pos_peak_locs, pos_peak_magnitudes)
-        # print('POS scipy', pos_peak_locs2, pos_peak_magnitudes2)
-        # print('NEG mne ', neg_peak_locs, neg_peak_magnitudes)
-        # print('NEG scipy ', neg_peak_locs2, neg_peak_magnitudes2)
 
         pp_ampl, _ = neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
         peak_ampl_channels.append(pp_ampl)
@@ -143,7 +129,6 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
         peak_ampl_channels_named[ch] = peak_ampl_channels[i]
         
     return peak_ampl_channels_named
-
 
 
 def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
@@ -183,9 +168,6 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
             thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
             #can also change the whole thresh to a single number setting
 
-            #pos_peak_locs, pos_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=1, thresh=thresh, verbose=False) #positive peaks
-            #neg_peak_locs, neg_peak_magnitudes = mne.preprocessing.peak_finder(data_ch_epoch, extrema=-1, thresh=thresh, verbose=False) #negative peaks
-            #Found error in mne.preprocessing.peak_finder()! It gives error if there are no peaks detected. So changed to scipy.signal.find_peaks() for now
 
             pos_peak_locs, _ = find_peaks(data_ch_epoch, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
             pos_peak_magnitudes = data_ch_epoch[pos_peak_locs]
@@ -247,7 +229,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
         metric_global_content[m_or_g]=make_dict_global_std_ptp(ptp_manual_params, big_ptp_with_value_all_data[m_or_g], small_ptp_with_value_all_data[m_or_g], channels[m_or_g], 'ptp')
         
         if metric_local is True:
-            metric_local_content[m_or_g]=make_dict_local_std_ptp(ptp_manual_params, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content)
+            metric_local_content[m_or_g]=make_dict_local_std_ptp(ptp_manual_params, deriv_epoch_ptp[m_or_g][1].content, deriv_epoch_ptp[m_or_g][2].content, percent_noisy_flat_allowed=ptp_manual_params['allow_percent_noisy_flat_epochs'])
             #deriv_epoch_std[m_or_g][1].content is df with big std(noisy), df_epoch_std[m_or_g][2].content is df with small std(flat)
         else:
             metric_local_content[m_or_g]=None
@@ -267,6 +249,8 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
     - PtP of data for each channel  in each epoch.
     - Epochs with big PtP (noisy) and small PtP (flat).
 
+    PtP is calculated as the average amplitude between the positive and negative peaks,
+    which are located at a certain distance from each other. The distance is set by the user in config file.
 
     Parameters:
     -----------
@@ -346,8 +330,7 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
     derivs_ptp += derivs_list + df_deriv
 
     #each deriv saved into a separate list and only at the end put together because this way they keep the right order: 
-    #first everything about mags, then everything about grads. - in this ordr they ll be added to repot. 
-    #Report funcion doesnt have sorting inside 1 measurement. It only separates derivs by measurement.
-
+    #first everything about mags, then everything about grads. - in this order they ll be added to repot. 
+    # TODO: Can use fig_order parameter of QC_derivative to adjust figure order in the report, if got nothing better to do XD.
 
     return derivs_ptp, simple_metric_ptp_manual, pp_manual_str

@@ -15,15 +15,15 @@ They have been experimentally found and should not be changed by a user.
 All below parameters are for the mean_threshold method:
 
 - **max_n_peaks_allowed_for_ch** (int) - this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
-- **timelimit_min=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
-- **timelimit_max=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
+- **before_t0=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
+- **after_t0=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
 - **window_size_for_mean_threshold_method** (float) - this value will be taken before and after the t0_actual in detect_channels_above_norm(). It defines the time window in which the peak of artifact on the channel has to present to be counted as artifact peak and compared t the threshold. Unit: seconds. Default: 0.02 seconds.
 
 
 For the 3 time windows above:
 
 - ecg_epoch_tmin & ecg_epoch_tmax: simply how large the time window around ECG event we want to see. 
-- timelimit_min & timelimit_max : used to detect the average over all artifact (based on all channels). It is used to corret for imperfect even detection by mne.
+- before_t0 & after_t0 : used to detect the average over all artifact (based on all channels). It is used to corret for imperfect even detection by mne.
 - window_size_for_mean_threshold_method: after the average is detected and new time0 is set as the peak of that average - the second time window defines where (relative to t0) the peak of every individual channel can be located to be compared to the threshold (threshold is average overall magntude*multiplier).
 
 
@@ -37,15 +37,20 @@ For the 3 time windows above:
 All below parameters are for the mean_threshold method:
 
 - **max_n_peaks_allowed_for_ch** (int) - this is for an individual ch, it can be more noisy, therefore more peaks are allowed. It also depends on the length of chosen window
-- **timelimit_min=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
-- **timelimit_max=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
+- **before_t0=-0.02** (float) - time in seconds before the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: -0.02 seconds.
+- **after_t0=0.012** (float) - time in seconds after the event. These define time window where the peak of ECG of EOG wave is typically located relative to the event found by MNE. MNE event is usually not accurate. Unit: seconds. Default: 0.012 seconds.
 - **window_size_for_mean_threshold_method** (float) - this value will be taken before and after the t0_actual in detect_channels_above_norm(). It defines the time window in which the peak of artifact on the channel has to present to be counted as artifact peak and compared t the threshold. Unit: seconds. Default: 0.02 seconds.
 
 
 For the 3 time windows above:
 
 - eog_epoch_tmin & eog_epoch_tmax: simply how large the time window around ECG event we want to see. 
-- timelimit_min & timelimit_max : used to detect the average over all artifact (based on all channels). It is used to corret for imperfect even detection by mne.
+- before_t0 & after_t0 : used to detect the average over all artifact (based on all channels). It is used to corret for imperfect even detection by mne.
 - window_size_for_mean_threshold_method: after the average is detected and new time0 is set as the peak of that average - the second time window defines where (relative to t0) the peak of every individual channel can be located to be compared to the threshold (threshold is average overall magntude*multiplier).
 
 
+[PSD]
+-----
+- **method** (str) - method used to calculate PSD. Default: welch. Possible values: welch, multi_taper.
+- **prominence_lvl_pos_avg** (int) - prominence level of peak detection in the average PSD. Default: 50.
+- **prominence_lvl_pos_channels** (int) - prominence level of peak detection in the PSD of individual channels. Default: 15.

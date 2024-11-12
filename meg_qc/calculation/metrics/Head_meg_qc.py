@@ -39,7 +39,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
     xyz_coords=np.array([[x, y, z] for x, y, z in zip(head_pos_transposed[4], head_pos_transposed[5], head_pos_transposed[6])])
     q1q2q3_coords=np.array([[q1, q2, q3] for q1, q2, q3 in zip(head_pos_transposed[1], head_pos_transposed[2], head_pos_transposed[3])])
 
-    #Translate rotations into degrees: (360/2pi)*value 
+    #Translate rotations into degrees: (360/2pi)*value . Not sure if the formila is correct.
     #q1q2q3_coords=360/(2*np.pi)*q1q2q3_coords
 
     # Calculate the maximum movement in 3 directions:
@@ -184,7 +184,7 @@ def get_head_positions(raw: mne.io.Raw):
         #print('___MEGqc___: ', 'chpi_locs:', chpi_locs)
 
     except:
-        print('___MEGqc___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
+        print('___MEGqc___: ', 'Neuromag approach to compute Head positions failed. Trying CTF approach...')
         try:
             #for CTF use:
             chpi_locs = mne.chpi.extract_chpi_locs_ctf(raw)
@@ -258,6 +258,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw):
     for q in range(1,4):
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
+    #Currently we dont use these.
 
     head_derivs = head_pos_to_csv('Head', head_pos)
 

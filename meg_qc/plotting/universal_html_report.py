@@ -55,6 +55,7 @@ def make_howto_use_plots_section (metric: str):
 
     return how_to_section
 
+
 def make_metric_section(fig_derivs_metric: list, section_name: str, report_strings: dict):
     
     """
@@ -85,7 +86,6 @@ def make_metric_section(fig_derivs_metric: list, section_name: str, report_strin
     # Define a mapping of section names to report strings and how-to-use plots
     section_mapping = {
         'INITIAL_INFO': ['Data info', report_strings['INITIAL_INFO']],
-        'TIME SERIES': ['Interactive time series', f"<p>{report_strings['TIME_SERIES']}</p>"],
         'ECG': ['ECG: heart beat interference', f"<p>{report_strings['ECG']}</p>"],
         'EOG': ['EOG: eye movement interference', f"<p>{report_strings['EOG']}</p>"],
         'HEAD': ['Head movement', f"<p>{report_strings['HEAD']}</p>"],
@@ -207,14 +207,8 @@ def keep_fig_derivs(derivs_section:list):
         Normally should be only 1 figure or none.
     """
     
-    fig_derivs_metric=[]
-    sensor_fig_derivs = []
-    for d in derivs_section:
-        if d.content_type == 'plotly' or d.content_type == 'matplotlib':
-            if 'SENSORS' in d.name.upper():
-                sensor_fig_derivs.append(d)
-            else:
-                fig_derivs_metric.append(d)
+    fig_derivs_metric = [d for d in derivs_section if d.content_type in {'plotly', 'matplotlib'} and 'SENSORS' not in d.name.upper()]
+    sensor_fig_derivs = [d for d in derivs_section if d.content_type in {'plotly', 'matplotlib'} and 'SENSORS' in d.name.upper()]
 
     return sensor_fig_derivs, fig_derivs_metric
 
@@ -223,6 +217,7 @@ def make_joined_report(sections: dict, report_strings: dict):
 
     """
     Create report as html string with all sections. Currently make_joined_report_mne is used.
+    This one is plain report, without mne fance wrapper.
 
     Parameters
     ----------
@@ -274,15 +269,15 @@ def make_joined_report(sections: dict, report_strings: dict):
     return html_string
 
 
-def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_settings: dict):
+def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: dict, default_settings: dict):
 
     """
     Create report as html string with all sections and embed the sections into MNE report object.
 
     Parameters
     ----------
-    raw : mne.io.Raw
-        The raw object.
+    raw_info_path : str
+        Path to the raw info file.
     sections : dict
         A dictionary with section names as keys and lists of QC_derivative objects as values.
     report_strings : dict
@@ -301,12 +296,16 @@ def make_joined_report_mne(raw, sections:dict, report_strings: dict, default_set
 
     report = mne.Report(title=' MEG QC Report')
     # This method also accepts a path, e.g., raw=raw_path
-    if raw: #if raw s not empty
-        if default_settings['plot_mne_butterfly'] is True:
-            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=True)  
-        else:
-            report.add_raw(raw=raw, title='Raw info from MNE', psd=False, butterfly=False)
-        # omit PSD plot. Butterfly sets the mne plot of butterfly time series, stim channel, etc...
+    if raw_info_path: #if info present
+        info_loaded = mne.io.read_info(raw_info_path)
+        info_html = info_loaded._repr_html_()
+        # Wrap the HTML content in a centered div
+        centered_info_html = f"""
+        <div style="text-align: center;">
+            {info_html}
+        </div>
+        """
+        report.add_html(centered_info_html, 'Info about the Original raw file (not filtered, not resampled)')
 
     for key, values in sections.items():
         key_upper = key.upper()

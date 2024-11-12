@@ -27,10 +27,10 @@ from meg_qc.plotting.universal_html_report import make_joined_report_mne
 # During plotting step - read the csvs (find using ancpbids), plot them, save them as htmls in the right folders.
 
 
-def modify_entity_name(entities):
+def create_categories_for_selector(entities: dict):
 
     """
-    Modify the names of the entities to be comply with ancpbids.
+    Create categories based on what metrics have already been calculated and detected as ancp bids as entities in MEGqc derivatives folder.
 
     Parameters
     ----------
@@ -39,44 +39,35 @@ def modify_entity_name(entities):
     
     Returns
     -------
-    dict
+    categories : dict
         A dictionary of entities and their subcategories with modified names
     """
 
-    #old_new_categories = {'description': 'METRIC', 'subject': 'SUBJECT', 'session': 'SESSION', 'task': 'TASK', 'run': 'RUN'}
+    # Create a copy of entities
+    categories = entities.copy()
 
-    old_new_categories = {'description': 'METRIC'}
-
-    categories_copy = entities.copy()
-
-    for category, subcategories in categories_copy.items():
-        # Convert the set of subcategories to a sorted list
-        sorted_subcategories = sorted(subcategories, key=str)
-        # If the category is in old_new_categories, replace it with the new category
-        if category in old_new_categories: 
-            #This here is to replace the old names with new like desc -> METRIC
-            #Normally we d use it only for the METRIC, but left this way in case the principle will extend to other categories
-            #see old_new_categories above.
-
-            new_category = old_new_categories[category]
-            entities[new_category] = entities.pop(category)
-            # Replace the original set of subcategories with the modified list
-            sorted_subcategories.insert(0, '_ALL_'+new_category+'S_')
-            entities[new_category] = sorted_subcategories
-        else: #if we dont want to rename categories
-            sorted_subcategories.insert(0, '_ALL_'+category+'s_')
-            entities[category] = sorted_subcategories
+    # Rename 'description' to 'METRIC' and sort the values
+    categories = {
+        ('METRIC' if k == 'description' else k): sorted(v, key=str)
+        for k, v in categories.items()
+    }
 
     #From METRIC remove whatever is not metric. 
     #Cos METRIC is originally a desc entity which can contain just anything:
-            
-    if 'METRIC' in entities:
-        entities['METRIC'] = [x for x in entities['METRIC'] if x in ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']]
+                
+    if 'METRIC' in categories:
+        valid_metrics = ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']
+        categories['METRIC'] = [x for x in categories['METRIC'] if x.lower() in [metric.lower() for metric in valid_metrics]]
 
-    return entities
+    #add '_ALL_' to the beginning of the list for each category:
+
+    for category, subcategories in categories.items():
+        categories[category] = ['_ALL_'+category+'s_'] + subcategories
+
+    return categories
 
 
-def selector(entities):
+def selector(entities: dict):
 
     """
     Creates a in-terminal visual selector for the user to choose the entities and settings for plotting.
@@ -100,8 +91,8 @@ def selector(entities):
 
     # SELECT ENTITIES and SETTINGS
     # Define the categories and subcategories
-    categories = modify_entity_name(entities)
-    categories['m_or_g'] = ['_ALL_', 'mag', 'grad']
+    categories = create_categories_for_selector(entities)
+    categories['m_or_g'] = ['_ALL_sensors', 'mag', 'grad']
 
     selected = {}
     # Create a list of values with category titles
@@ -131,20 +122,14 @@ def selector(entities):
                     all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
                     selected[key] = all_selected #everything
 
-    #Separate into selected_entities and plot_settings:
-        selected_entities, plot_settings = {}, {}
-        for key, values in selected.items():
-            if key != 'm_or_g':
-                selected_entities[key] = values
-            elif key == 'm_or_g':
-                plot_settings[key] = values
-            else:
-                print('___MEGqc__: wow, weird key in selector()! check it.')
+    # Separate into selected_entities and plot_settings
+    selected_entities = {key: values for key, values in selected.items() if key != 'm_or_g'}
+    plot_settings = {key: values for key, values in selected.items() if key == 'm_or_g'}
 
     return selected_entities, plot_settings
 
 
-def select_subcategory(subcategories, category_title, title="What would you like to plot? Click to select."):
+def select_subcategory(subcategories: list, category_title: str, window_title: str = "What would you like to plot? Click to select."):
 
     """
     Create a checkbox list dialog for the user to select subcategories.
@@ -157,7 +142,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
         A list of subcategories, such as: sub, ses, task, run, metric, mag/grad.
     category_title : str
         The title of the category.
-    title : str
+    window_title : str
         The title of the checkbox list dialog, for visual.
 
     Returns
@@ -181,7 +166,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
         # A string that will be displayed as the label of the checkbox.
 
     results = checkboxlist_dialog(
-        title=title,
+        title=window_title,
         text=category_title,
         values=values,
         style=Style.from_dict({
@@ -204,7 +189,7 @@ def select_subcategory(subcategories, category_title, title="What would you like
 def get_ds_entities(dataset_path: str):
 
     """
-    Get the entities of the dataset using ancpbids, only get derivatove entities, not all raw data.
+    Get the entities of the dataset using ancpbids, only get derivative entities, not all raw data.
 
     Parameters
     ----------
@@ -241,13 +226,15 @@ def get_ds_entities(dataset_path: str):
     return entities
 
 
-def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_settings):
+def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_str_path: str, plot_settings):
 
     """
     Create an HTML report from the CSV files.
 
     Parameters
     ----------
+    raw_info_path : str
+        The path to the raw info object.
     metric : str
         The metric to be plotted.
     tsv_paths : list
@@ -266,11 +253,8 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
 
     m_or_g_chosen = plot_settings['m_or_g'] 
 
-    raw = [] # TODO: if empty - we cant print raw information. 
-    # Or we need to save info from it somewhere separately and export as csv/jspn and then read back in.
-
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
-    #TODO: think about it! the order goes by tsv files so it s messed uo cos ecg channels comes seond!
+
     
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
@@ -330,7 +314,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
             for m_or_g in m_or_g_chosen:
-                ecg_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'ECG', flip_data=False)
+                ecg_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'ECG', flip_data=False)
                 #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
         elif 'EOG' in metric.upper():
@@ -342,7 +326,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
                 
             for m_or_g in m_or_g_chosen:
-                eog_derivs += plot_artif_per_ch_correlated_lobes_csv(tsv_path, m_or_g, 'EOG', flip_data=False)
+                eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
                 #eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
             
@@ -361,7 +345,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             
         elif 'HEAD' in metric.upper():
                 
-            head_pos_derivs, _ = make_head_pos_plot_csv(tsv_path)
+            head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
             # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
             # head_pos_derivs += head_pos_derivs2
             head_derivs += head_pos_derivs
@@ -405,7 +389,7 @@ def csv_to_html_report(metric: str, tsv_paths: list, report_str_path: str, plot_
             report_strings = json.load(json_file)
 
 
-    report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, [])
+    report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings, [])
 
     return report_html_string 
 
@@ -517,8 +501,9 @@ def make_plots_meg_qc(ds_paths: list):
             reports_folder = derivative.create_folder(name='reports')
             subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
+            calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
             try:
-                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope='derivatives')))[0]
+                report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
             except:
                 report_str_path = '' #in case none was created yet
                 print('___MEGqc___: No report strings were created for sub ', sub)
@@ -534,15 +519,15 @@ def make_plots_meg_qc(ds_paths: list):
 
                 # We call query with entities that always must present + entities that might present, might not:
                 # This is how the call would look if we had all entities:
-                # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope='derivatives')))
+                # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
 
                 entities = {
                     'subj': sub,
                     'suffix': 'meg',
-                    'extension': 'tsv',
+                    'extension': 'tsv', #we only collect tsvs here! 
                     'return_type': 'filename',
                     'desc': desc,
-                    'scope': 'derivatives',
+                    'scope': calculated_derivs_folder,
                 }
 
                 if 'session' in chosen_entities and chosen_entities['session']:
@@ -572,7 +557,6 @@ def make_plots_meg_qc(ds_paths: list):
 
                 tsvs_to_plot[metric] = sorted(tsv_path)
 
-
                 #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
                 entities = copy.deepcopy(entities)
                 entities['return_type'] = 'object'
@@ -586,6 +570,8 @@ def make_plots_meg_qc(ds_paths: list):
 
                 entities_per_file[metric] = entities_obj
 
+            #Get path to raw info obj:
+            raw_info_path = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'RawInfo', scope=calculated_derivs_folder)[0]
 
             # 1. Check that we got same entities_per_file and tsvs_to_plot:
             
@@ -648,7 +634,7 @@ def make_plots_meg_qc(ds_paths: list):
                     meg_artifact.suffix = 'meg'
                     meg_artifact.extension = '.html'
 
-                    deriv = csv_to_html_report(metric, tsv_paths, report_str_path, plot_settings)
+                    deriv = csv_to_html_report(raw_info_path, metric, tsv_paths, report_str_path, plot_settings)
 
                     #define method how the derivative will be written to file system:
                     meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
@@ -659,16 +645,15 @@ def make_plots_meg_qc(ds_paths: list):
     return tsvs_to_plot
 
 
-
 # ____________________________
 # RUN IT:
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds003483'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds000117'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/openneuro/ds004330'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000247'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds002761'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds004398'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])

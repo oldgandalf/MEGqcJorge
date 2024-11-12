@@ -1,5 +1,5 @@
 alabaster==0.7.13
-ancpbids @ git+https://github.com/ANCPLabOldenburg/ancp-bids@32ba77d75dfa26a89a5fcdf1144b75f100e4f933
+ancpbids==0.2.4
 anyio==3.7.0
 appdirs==1.4.4
 appnope==0.1.3
@@ -86,12 +86,6 @@ pycparser==2.21
 pydra==0.22
 Pygments==2.15.1
 pyparsing==3.0.9
-PyQt5==5.15.9
-PyQt5-Qt5==5.15.2
-PyQt5-sip==12.12.1
-PyQt6==6.5.1
-PyQt6-Qt6==6.5.1
-PyQt6-sip==13.5.1
 pyrsistent==0.19.3
 python-dateutil==2.8.2
 python-json-logger==2.0.7
