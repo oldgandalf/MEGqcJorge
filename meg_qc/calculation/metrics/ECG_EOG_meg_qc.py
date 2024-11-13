@@ -7,12 +7,13 @@ from scipy.signal import find_peaks
 import copy
 from scipy.ndimage import gaussian_filter
 from scipy.stats import pearsonr
+from typing import List, Union
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 
 
-def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
+def check_3_conditions(ch_data: Union[List, np.ndarray], fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
 
     """
     Check if the ECG/EOG channel is not corrupted using 3 conditions:
@@ -22,7 +23,7 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
 
     Parameters
     ----------
-    ch_data : list or np.ndarray
+    ch_data : List or np.ndarray
         Data of the channel to check
     fs : int
         Sampling frequency of the data
@@ -42,7 +43,7 @@ def check_3_conditions(ch_data: list or np.ndarray, fs: int, ecg_or_eog: str, n_
         - similar_ampl: True if peaks have similar amplitudes, False otherwise
         - no_breaks: True if there are no breaks longer than normal max distance between peaks of hear beats, False otherwise
         - no_bursts: True if there are no bursts: too short intervals between peaks, False otherwise
-    peaks : list
+    peaks : List
         List of peaks locations
 
     """
@@ -139,9 +140,9 @@ def detect_noisy_ecg(raw: mne.io.Raw, ecg_ch: str,  ecg_or_eog: str, n_breaks_bu
     -------
     bad_ecg_eog : dict
         Dictionary with channel names as keys and 'good' or 'bad' as values.
-    ch_data : list
+    ch_data : List
         Data of the ECG channel recorded.
-    peaks : list
+    peaks : List
         List of peaks locations.
     ecg_eval_str : str
         String indicating if the channel is good or bad according to 3 conditions:
@@ -232,7 +233,7 @@ class Avg_artif:
     ----------
     name : str
         name of the channel
-    artif_data : list
+    artif_data : List
         list of floats, average ecg epoch for a particular channel
     peak_loc : int
         locations of peaks inside the artifact epoch
@@ -246,7 +247,7 @@ class Avg_artif:
         location of the main peak inside the artifact epoch
     main_peak_magnitude : float
         magnitude of the main peak inside the artifact epoch
-    artif_data_smoothed : list
+    artif_data_smoothed : List
         list of floats, average ecg epoch for a particular channel, smoothed usig Gaussian filter
     peak_loc_smoothed : int
         locations of peaks inside the artifact epoch calculated on smoothed data
@@ -283,7 +284,7 @@ class Avg_artif:
 
     """
 
-    def __init__(self, name: str, artif_data:list, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: list or None = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, amplitude_ratio: float = None, similarity_score: float = None, lobe: str = None, color: str = None):
+    def __init__(self, name: str, artif_data: List, peak_loc=None, peak_magnitude=None, wave_shape:bool=None, artif_over_threshold:bool=None, main_peak_loc: int=None, main_peak_magnitude: float=None, artif_data_smoothed: Union[List, None] = None, peak_loc_smoothed=None, peak_magnitude_smoothed=None, wave_shape_smoothed:bool=None, artif_over_threshold_smoothed:bool=None, main_peak_loc_smoothed: int=None, main_peak_magnitude_smoothed: float=None, corr_coef: float = None, p_value: float = None, amplitude_ratio: float = None, similarity_score: float = None, lobe: str = None, color: str = None):
         """Constructor"""
         
         self.name =  name
@@ -396,7 +397,7 @@ class Avg_artif:
 
         Parameters
         ----------
-        t : list
+        t : List
             time vector
         before_t0 : float
             before time limit for the peak
@@ -442,7 +443,7 @@ class Avg_artif:
         
         Parameters
         ----------
-        t : list
+        t : List
             time vector
         before_t0 : float
             before time limit for the peak
@@ -559,7 +560,7 @@ class Avg_artif:
         ----------
         artif_threshold_lvl : float
             threshold level
-        t : list
+        t : List
             time vector
         before_t0 : float
             minimum time limit for the peak
@@ -597,7 +598,7 @@ class Avg_artif:
         ----------
         artif_threshold_lvl : float
             threshold level
-        t : list
+        t : List
             time vector
         before_t0 : float
             minimum time limit for the peak
@@ -625,7 +626,7 @@ class Avg_artif:
         return self.artif_over_threshold_smoothed
 
 
-def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, mean_magnitude_peak: float, t: np.ndarray, t0_actual: float, window_size_for_mean_threshold_method: float, mean_magnitude_peak_smoothed: float = None, t0_actual_smoothed: float = None):
+def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: List, mean_magnitude_peak: float, t: np.ndarray, t0_actual: float, window_size_for_mean_threshold_method: float, mean_magnitude_peak_smoothed: float = None, t0_actual_smoothed: float = None):
 
     """
     Find the channels which got average artifact amplitude higher than the average over all channels*norm_lvl.
@@ -634,7 +635,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
     ----------
     norm_lvl : float
         The norm level is the scaling factor for the threshold. The mean artifact amplitude over all channels is multiplied by the norm_lvl to get the threshold.
-    list_mean_artif_epochs : list
+    list_mean_artif_epochs : List
         List of MeanArtifactEpoch objects, each hold the information about mean artifact for one channel.
     mean_magnitude_peak : float
         The magnitude the mean artifact amplitude over all channels.
@@ -652,15 +653,15 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
 
     Returns
     -------
-    affected_orig : list
+    affected_orig : List
         List of channels which got average artifact amplitude higher than the average over all channels*norm_lvl.
-    not_affected_orig : list
+    not_affected_orig : List
         List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl.
     artif_threshold_lvl : float
         The threshold level for the artifact amplitude.
-    affected_smoothed : list
+    affected_smoothed : List
         List of channels which got average artifact amplitude higher than the average over all channels*norm_lvl for SMOOTHED data.
-    not_affected_smoothed : list 
+    not_affected_smoothed : List 
         List of channels which got average artifact amplitude lower than the average over all channels*norm_lvl for SMOOTHED data.
     artif_threshold_lvl_smoothed : float
         The threshold level for the artifact amplitude for SMOOTHED data.
@@ -704,7 +705,7 @@ def detect_channels_above_norm(norm_lvl: float, list_mean_artif_epochs: list, me
     return affected_orig, not_affected_orig, artif_threshold_lvl, affected_smoothed, not_affected_smoothed, artifact_lvl_smoothed
 
 
-def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq: int, params_internal: dict):
+def flip_channels(artif_per_ch_nonflipped: List, tmin: float, tmax: float, sfreq: int, params_internal: dict):
 
     """
     Flip the channels if the peak of the artifact is negative and located close to the estimated t0.
@@ -724,7 +725,7 @@ def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq
     
     Parameters
     ----------
-    avg_artif_nonflipped : list
+    avg_artif_nonflipped : List
         List of Avg_artif objects with not flipped data.
     tmin : float
         time in sec before the peak of the artifact (negative number).
@@ -738,7 +739,7 @@ def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq
 
     Returns
     -------
-    artifacts_flipped : list
+    artifacts_flipped : List
         The list of the ecg epochs.
     artif_time_vector : np.ndarray
         The time vector for the ecg epoch (for plotting further).
@@ -772,7 +773,7 @@ def flip_channels(artif_per_ch_nonflipped: list, tmin: float, tmax: float, sfreq
     return artifacts_flipped, artif_time_vector
 
 
-def estimate_t0(artif_per_ch_nonflipped: list, t: np.ndarray, params_internal: dict):
+def estimate_t0(artif_per_ch_nonflipped: List, t: np.ndarray, params_internal: dict):
     
     """ 
     Estimate t0 for the artifact. MNE has it s own estimation of t0, but it is often not accurate.
@@ -851,7 +852,7 @@ def estimate_t0(artif_per_ch_nonflipped: list, t: np.ndarray, params_internal: d
 
 
 
-def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, chs_by_lobe: dict, thresh_lvl_peakfinder: float, tmin: float, tmax: float, params_internal: dict, gaussian_sigma: int):
+def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: List, chs_by_lobe: dict, thresh_lvl_peakfinder: float, tmin: float, tmax: float, params_internal: dict, gaussian_sigma: int):
 
     """
     Find channels that are affected by ECG or EOG events.
@@ -862,7 +863,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     ----------
     artif_epochs : mne.Epochs
         ECG epochs.
-    channels : list
+    channels : List
         List of channels to use.
     chs_by_lobe : dict
         dictionary with channel objects sorted by lobe
@@ -880,7 +881,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
         
     Returns 
     -------
-    all_artifs_nonflipped : list
+    all_artifs_nonflipped : List
         List of channels with Avg_artif objects, data in these is not flipped yet.
         
     """
@@ -916,7 +917,7 @@ def calculate_artifacts_on_channels(artif_epochs: mne.Epochs, channels: list, ch
     return all_artifs_nonflipped
 
 
-def find_mean_rwave_blink(ch_data: np.ndarray or list, event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int):
+def find_mean_rwave_blink(ch_data: Union[List, np.ndarray], event_indexes: np.ndarray, tmin: float, tmax: float, sfreq: int):
 
     """
     Calculate mean R wave on the data of either original ECG channel or reconstructed ECG channel.
@@ -965,20 +966,20 @@ def find_mean_rwave_blink(ch_data: np.ndarray or list, event_indexes: np.ndarray
     return mean_rwave
 
 
-def assign_lobe_to_artifacts(artif_per_ch, chs_by_lobe):
+def assign_lobe_to_artifacts(artif_per_ch: List, chs_by_lobe: dict):
 
     """ Loop over all channels in artif_per_ch and assign lobe and lobe color to each channel for plotting purposes.
 
     Parameters
     ----------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects.
     chs_by_lobe : dict
         Dictionary of channels grouped by lobe with color codes.
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects, now with assigned lobe and color for plotting. 
 
     """
@@ -1056,7 +1057,7 @@ def align_artif_data(ch_wave, mean_rwave):
     return best_aligned_ch_wave, best_time_shift, best_correlation
 
 
-def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
+def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: List):
 
     """
     Calculate correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
@@ -1069,12 +1070,12 @@ def find_affected_by_correlation(mean_rwave: np.ndarray, artif_per_ch: list):
     ----------
     mean_rwave : np.ndarray
         Mean R wave (1 dimentional).
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects.
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects, now with assigned correlation coefficient and p-value.
     
     """
@@ -1130,7 +1131,7 @@ def minmax_amplitude(wave):
     return np.max(wave) - np.min(wave)
 
 
-def find_affected_by_amplitude_ratio(artif_per_ch: list):
+def find_affected_by_amplitude_ratio(artif_per_ch: List):
 
     """
     Calculate the amplitude ratio for each channel.
@@ -1150,12 +1151,12 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
 
     Parameters
     ----------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects.
         
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects, now with assigned amplitude ratio.
         
     """
@@ -1182,19 +1183,19 @@ def find_affected_by_amplitude_ratio(artif_per_ch: list):
     return artif_per_ch
 
 
-def find_affected_by_similarity_score(artif_per_ch: list):
+def find_affected_by_similarity_score(artif_per_ch: List):
 
     """
     Combine the two metrics like: similarity_score = correlation * amplitude_ratio
 
     Parameters
     ----------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects.
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of channels with Avg_artif objects, now with assigned similarity score.
 
     """
@@ -1215,18 +1216,18 @@ def split_correlated_artifacts_into_3_groups(artif_per_ch):
 
     Parameters
     ----------
-    artif_per_ch : list
+    artif_per_ch : List
         List of objects of class Avg_artif
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of objects of class Avg_artif, ranked by correlation coefficient
-    most_correlated : list
+    most_correlated : List
         List of objects of class Avg_artif that are the most correlated with mean_rwave
-    least_correlated : list
+    least_correlated : List
         List of objects of class Avg_artif that are the least correlated with mean_rwave
-    middle_correlated : list
+    middle_correlated : List
         List of objects of class Avg_artif that are in the middle of the correlation with mean_rwave
     corr_val_of_last_least_correlated : float
         Correlation value of the last channel in the list of the least correlated channels
@@ -1259,7 +1260,7 @@ def split_correlated_artifacts_into_3_groups(artif_per_ch):
     return most_correlated, middle_correlated, least_correlated, corr_val_of_last_most_correlated, corr_val_of_last_middle_correlated, corr_val_of_last_least_correlated
 
 
-def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal: dict, thresh_lvl_peakfinder: float, m_or_g: str, norm_lvl: float, flip_data: bool, gaussian_sigma: float, artif_time_vector: np.ndarray):
+def find_affected_over_mean(artif_per_ch: List, ecg_or_eog: str, params_internal: dict, thresh_lvl_peakfinder: float, m_or_g: str, norm_lvl: float, flip_data: bool, gaussian_sigma: float, artif_time_vector: np.ndarray):
     
     """
     1. Calculate average ECG epoch on the epochs from all channels. Check if average has a wave shape. 
@@ -1284,7 +1285,7 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal
 
     Parameters
     ----------
-    artif_per_ch : list 
+    artif_per_ch : List 
         list of Avg_artif objects
     ecg_or_eog : str
         'ECG' or 'EOG'
@@ -1307,9 +1308,9 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal
 
     Returns
     -------
-    affected_channels: list
+    affected_channels: List
         list of affected channels
-    affected_derivs: list
+    affected_derivs: List
         list of QC_derivative objects with figures for affected and not affected channels (smoothed and not soothed versions)
     bad_avg_str : str
         string about the average artifact: if it was not considered to be a wave shape
@@ -1383,14 +1384,14 @@ def find_affected_over_mean(artif_per_ch: list, ecg_or_eog: str, params_internal
 
 
 #%%
-def make_dict_global_ECG_EOG(channels_ranked: list, use_method: str):
+def make_dict_global_ECG_EOG(channels_ranked: List, use_method: str):
     """
     Make a dictionary for the global part of simple metrics for ECG/EOG artifacts.
     For ECG/EOG no local metrics are calculated, so global is the only one.
     
     Parameters
     ----------
-    channels_ranked : list
+    channels_ranked : List
         List of all affected channels
     use_method : str
         Method used for detection of ECG/EOG artifacts: correlation_recorded, correlation_reconstructed or mean_threshold.
@@ -1421,7 +1422,7 @@ def make_dict_global_ECG_EOG(channels_ranked: list, use_method: str):
     return metric_global_content
 
 
-def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_or_eog: str, avg_artif_str: dict, use_method: str):
+def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: List, ecg_or_eog: str, avg_artif_str: dict, use_method: str):
     
     """
     Make simple metric for ECG/EOG artifacts as a dictionary, which will further be converted into json file.
@@ -1430,7 +1431,7 @@ def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: list, ecg_o
     ----------
     channels_ranked : dict
         Dictionary with lists of channels.
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         List of channel types chosen for the analysis. 
     ecg_or_eog : str
         String 'ecg' or 'eog' depending on the artifact type.
@@ -1496,7 +1497,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
         String with the method chosen for the analysis.
     ecg_str : str
         String with info about the ECG channel presense.
-    noisy_ch_derivs : list
+    noisy_ch_derivs : List
         List of QC_derivative objects with plot of the ECG channel
     ecg_data:
         ECG channel data.
@@ -1771,7 +1772,7 @@ def check_mean_wave(ecg_data: np.ndarray, ecg_or_eog: str, event_indexes: np.nda
 
 # ___________ Functions for alignment of ECG with meg channels:
 
-def find_t0_mean(ch_data: np.ndarray or list):
+def find_t0_mean(ch_data: Union[List, np.ndarray]):
 
     """
     Find all t0 options for the mean ECG wave.
@@ -1783,7 +1784,7 @@ def find_t0_mean(ch_data: np.ndarray or list):
     
     Returns
     -------
-    potential_t0: list
+    potential_t0: List
         List with all potential t0 options for the mean ECG wave.
         Will be used to get all possible option for shifting the ECG wave to align it with the MEG channels.
     """
@@ -1860,7 +1861,7 @@ def find_t0_highest(ch_data: np.ndarray):
     return t0
 
 
-def find_t0_channels(artif_per_ch: list, tmin: float, tmax: float):
+def find_t0_channels(artif_per_ch: List, tmin: float, tmax: float):
 
     """ 
     Run peak detection on all channels and find the 10 channels with the highest peaks.
@@ -1871,7 +1872,7 @@ def find_t0_channels(artif_per_ch: list, tmin: float, tmax: float):
 
     Parameters
     ----------
-    artif_per_ch : list
+    artif_per_ch : List
         List of Avg_artif objects, one for each channel.
     tmin : float
         Start time of epoch.
@@ -1961,7 +1962,7 @@ def shift_mean_wave(mean_rwave: np.ndarray, ind_t0_channels: int, ind_t0_mean: i
     return mean_rwave_shifted
 
 
-def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tmax: float):
+def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: List, tmin: float, tmax: float):
 
     """ Aligns the mean ECG wave with the ECG artifacts found on meg channels.
     1) The average highest point of 10 most prominent meg channels is used as refernce.
@@ -1976,7 +1977,7 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     ----------
     mean_rwave : np.array
         The mean ECG wave (resulting from recorded or recosntructed ECG signal).
-    artif_per_ch : list
+    artif_per_ch : List
         List of Avg_artif objects, each of which contains the ECG artifact from one MEG channel.
     tmin : float
         The start time of the ECG artifact, set in config
@@ -1985,7 +1986,7 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
     
     Returns
     -------
-    mean_rwave_shifted_variations : list
+    mean_rwave_shifted_variations : List
         List of arrays. Every array is a variation of he mean ECG wave shifted 
         to align with the ECG artifacts found on meg channels.
     
@@ -2021,7 +2022,7 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: list, tmin: float, tm
 
 
 #%%
-def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: list, chs_by_lobe_orig: dict, m_or_g_chosen: list):
+def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: List, chs_by_lobe_orig: dict, m_or_g_chosen: List):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -2038,18 +2039,18 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         Dictionary with listds of channels for each channel type (mag and grad).
     chs_by_lobe : dict
         Dictionary with lists of channels by lobe.
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         List of channel types chosen for the analysis.
         
     Returns
     -------
-    ecg_derivs : list
+    ecg_derivs : List
         List of all derivatives (plotly figures) as QC_derivative instances
     simple_metric_ECG : dict
         Dictionary with simple metrics for ECG artifacts to be exported into json file.
     ecg_str : str
         String with information about ECG channel used in the final report.
-    avg_objects_ecg : list
+    avg_objects_ecg : List
         List of Avg_artif objects, each of which contains the ECG artifact from one MEG channel.
         
 
@@ -2190,7 +2191,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe_orig: dict, m_or_g_chosen: list):
+def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe_orig: dict, m_or_g_chosen: List):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -2207,18 +2208,18 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         Dictionary with listds of channels for each channel type (mag and grad).
     chs_by_lobe : dict
         Dictionary with lists of channels separated by lobe.
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         List of channel types chosen for the analysis.
         
     Returns
     -------
-    eog_derivs : list
+    eog_derivs : List
         List of all derivatives (plotly figures) as QC_derivative instances
     simple_metric_EOG : dict
         Dictionary with simple metrics for ECG artifacts to be exported into json file.
     eog_str : str
         String with information about EOG channel used in the final report.
-    avg_objects_eog : list
+    avg_objects_eog : List
         List of Avg_artif objects, each of which contains the EOG artifact from one MEG channel.
     
     """

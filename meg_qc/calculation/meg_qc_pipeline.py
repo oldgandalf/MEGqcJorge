@@ -61,6 +61,12 @@ def get_files_list(dataset_path, dataset, sid):
     has_ctf = False
 
     for root, dirs, files in os.walk(dataset_path):
+
+        # Exclude the 'derivatives' folder. 
+        # Because we will later save ds info as derivative with extension .fif
+        # so if we work on this ds again it might see a ctf ds as fif.
+        dirs[:] = [d for d in dirs if d != 'derivatives']
+
         # Check for .fif files
         if any(file.endswith('.fif') for file in files):
             has_fif = True
@@ -146,14 +152,11 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     for dataset_path in ds_paths: #run over several data sets
 
-        print('___DS path:', dataset_path)
+        print('___MEGqc___: ', 'DS path:', dataset_path)
 
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
-        except:
-            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
+        dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
+
 
         #create derivatives folder first:
         derivatives_path = os.path.join(dataset_path, 'derivatives')
@@ -186,38 +189,34 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         #return
 
-
-        # list_of_subs = list(entities["sub"])
-        if all_qc_params['default']['subjects'][0] != 'all':
-            list_of_subs = all_qc_params['default']['subjects']
-        elif all_qc_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()['subject']))
-            print('___MEGqc___: ', 'list_of_subs', list_of_subs)
-            if not list_of_subs:
-                print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
-                return
-        else:
-            print('___MEGqc___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
+        try:
+            if all_qc_params['default']['subjects'][0] != 'all':
+                sub_list = all_qc_params['default']['subjects']
+            elif all_qc_params['default']['subjects'][0] == 'all':
+                sub_list = sorted(list(dataset.query_entities()['subject']))
+        except:
+            print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
             return
 
         avg_ecg=[]
         avg_eog=[]
 
-        print('___MEGqc___: ', 'TOTAL subs', len(list_of_subs))
-
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs: #[0:4]:
+        for sub in sub_list: #[0:4]:
     
-            print('___MEGqc___: ', 'Dataset: ', dataset_path)
-            print('___MEGqc___: ', 'Take SID: ', sid)
+            print('___MEGqc___: ', 'Take SUB: ', sub)
             
             calculation_folder = derivative.create_folder(name='calculation')
-            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sid)
+            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
-            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sid)
+            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sub)
+
+            if not list_of_files:
+                print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
+                return
 
             print('___MEGqc___: ', 'list_of_files', list_of_files)
             print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
@@ -256,7 +255,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 print('___MEGqc___: ', 'Starting initial processing...')
                 start_time = time.time()
 
-                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
                 
                 # Commented out this, because it would cover the actual error while allowing to continue processing.
                 # I wanna see the actual error. Often it happens while reading raw and says: 
@@ -347,6 +346,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 QC_derivs={
                 'Raw info': info_derivs,
+                'Stimulus channels': stim_deriv,
                 'Report_strings': report_str_derivs,
                 'Sensors locations': sensors_derivs,
                 'Standard deviation of the data': std_derivs, 

@@ -3,6 +3,10 @@ import mne
 import configparser
 import numpy as np
 import pandas as pd
+import random
+import copy
+import warnings
+from typing import List
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 
 
@@ -266,6 +270,38 @@ def get_internal_config_params(config_file_name: str):
     
     return internal_qc_params
 
+def stim_data_to_df(raw: mne.io.Raw):
+
+    """
+    Extract stimulus data from MEG data and put it into a pandas DataFrame.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        MEG data.
+    
+    Returns
+    -------
+    stim_deriv : list
+        List with QC_derivative object with stimulus data.
+    
+    """
+
+    stim_channels = mne.pick_types(raw.info, stim=True)
+    stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
+
+    # Extract data for stimulus channels
+    stim_data, times = raw[stim_channels, :]
+
+    # Create a DataFrame with the stimulus data
+    stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
+    stim_df['time'] = times
+
+    #save df as QC_derivative object
+    stim_deriv = [QC_derivative(stim_df, 'stimulus', 'df')]
+
+    return stim_deriv
+
 
 def Epoch_meg(epoching_params, data: mne.io.Raw):
 
@@ -277,7 +313,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     epoching_params : dict
         Dictionary with parameters for epoching.
     data : mne.io.Raw
-        MEG data to be epoch.
+        MEG data to be epoched.
         
     Returns
     -------
@@ -331,33 +367,9 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
     return dict_epochs_mg
 
-def get_units(raw):
-
-    """
-    UNFINISHED!! TODO
-    For CTF especially so far not clear what are grads, what mags.
-
-    Get what kind of channels present: mags, grads or both.
-    Get units for each channel type.
-    """
-
-    picked_channels = mne.pick_types(raw.info, meg='mag')
-    for ch in picked_channels:
-        ch_name = raw.info['ch_names'][ch]
-        print(f"Channel: {ch_name}")
-        ch_unit_code = raw.info['chs'][ch]['unit']
-        print(str(ch_unit_code))
-        ch_unit_str = str(ch_unit_code)
-        #find str after 'UNIT_' in ch_unit_code:
-        match = re.search(r'UNIT_(\w)', ch_unit_str)
-        if match:
-            unit = match.group(1)
-        else:
-            unit = 'unknown'
-        print(f"Unit: {unit}")
 
 
-def check_chosen_ch_types(m_or_g_chosen, channels_objs):
+def check_chosen_ch_types(m_or_g_chosen: List, channels_objs: dict):
     
     """
     Check if the channels which the user gave in config file to analize actually present in the data set.
@@ -402,6 +414,67 @@ def check_chosen_ch_types(m_or_g_chosen, channels_objs):
     # Now m_or_g_chosen contain only those channel types which are present in the data set and were chosen by the user.
         
     return m_or_g_chosen, skipped_str
+
+def choose_channels(raw: mne.io.Raw):
+
+    """
+    Separate channels by 'mag' and 'grad'.
+    Done this way, because pick() or pick_types() sometimes gets wrong results, especialy for CTF data.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        MEG data
+
+    Returns
+    -------
+    channels : dict
+        dict with ch names separated by mag and grad
+
+    """
+
+    channels={'mag': [], 'grad': []}
+
+    # Loop over all channel indexes
+    for ch_idx, ch_name in enumerate(raw.info['ch_names']):
+        ch_type = mne.channel_type(raw.info, ch_idx)
+        if ch_type in channels:
+            channels[ch_type].append(ch_name)
+
+    return channels
+
+
+def change_ch_type_CTF(raw, channels):
+
+    """
+    For CTF data channels types and units need to be chnaged from mag to grad.
+    
+    Parameters
+    ----------
+    channels : dict
+        dict with ch names separated by mag and grad
+
+    Returns
+    -------
+    channels : dict
+        dict with ch names separated by mag and grad UPDATED
+
+    """
+
+    # Create a copy of the channels['mag'] list to iterate over
+    mag_channels_copy = channels['mag'][:]
+
+    for ch_name in mag_channels_copy:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            raw.set_channel_types({ch_name: 'grad'})
+        channels['grad'].append(ch_name)
+        # Remove from mag list
+        channels['mag'].remove(ch_name)
+
+    print('___MEGqc___: Types of channels changed from mag to grad for CTF data.')
+
+    return channels, raw
 
 
 def load_data(file_path):
@@ -449,6 +522,35 @@ def load_data(file_path):
     
     return raw, shielding_str, meg_system
 
+def add_3d_ch_locations(raw, channels_objs):
+
+    """
+    Add channel locations to the MEG channels objects.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        MEG data.
+    channels_objs : dict
+        Dictionary with MEG channels.
+
+    Returns
+    -------
+    channels_objs : dict
+        Dictionary with MEG channels with added locations.
+
+    """
+
+    # Create a dictionary to store the channel locations
+    ch_locs = {ch['ch_name']: ch['loc'][:3] for ch in raw.info['chs']}
+    #why [:3]?  to Get only the x, y, z coordinates (first 3 values), theer are also rotations, etc storred in loc.
+
+    # Iterate through the channel names and add the locations
+    for key, value in channels_objs.items():
+        for ch in value:
+            ch.loc = ch_locs[ch.name]
+
+    return channels_objs
 
 def add_CTF_lobes(channels_objs):
 
@@ -473,6 +575,7 @@ def add_CTF_lobes(channels_objs):
         for ch in value:
             categorized = False  # Track if the channel is categorized
             # Magnetometers (assuming they start with 'M')
+            #Even though they all have to be grads for CTF!!!
             if ch.name.startswith('MLF'):  # Left Frontal
                 lobes_ctf['Left Frontal'].append(ch.name)
                 categorized = True
@@ -635,7 +738,7 @@ def add_Triux_lobes(channels_objs):
 
     return channels_objs, lobes_color_coding_str
 
-def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
+def assign_channels_properties(channels_short: dict, meg_system: str):
 
     """
     Assign lobe area to each channel according to the lobe area dictionary + the color for plotting + channel location.
@@ -645,8 +748,8 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
 
     Parameters
     ----------
-    raw : mne.io.Raw
-        Raw data set.
+    channels : dict
+        dict with channels names like: {'mag': [...], 'grad': [...]}
     meg_system: str
         CTF, Triux, None...
 
@@ -658,21 +761,8 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
         A string with information about the color coding of the lobes.
 
     """
-    channels_objs={'mag': [], 'grad': []}
-    if 'mag' in raw:
-        mag_locs = raw.copy().pick('mag').info['chs']
-        for ch in mag_locs:
-            channels_objs['mag'] += [MEG_channel(ch['ch_name'], 'mag', 'unknown lobe', 'blue', 'OTHER', ch['loc'][:3])]
-    else:
-        channels_objs['mag'] = []
-
-    if 'grad' in raw:
-        grad_locs = raw.copy().pick('grad').info['chs']
-        for ch in grad_locs:
-            channels_objs['grad'] += [MEG_channel(ch['ch_name'], 'grad', 'unknown lobe', 'red', 'OTHER', ch['loc'][:3])]
-    else:
-        channels_objs['grad'] = []
-
+    
+    channels_full = copy.deepcopy(channels_short)
 
     # for understanding how the locations are obtained. They can be extracted as:
     # mag_locs = raw.copy().pick('mag').info['chs']
@@ -682,20 +772,20 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
     
     # Assign lobe labels to the channels:
 
-    if meg_system.upper() == 'TRIUX' and len(channels_objs['mag']) == 102 and len(channels_objs['grad']) == 204: 
+    if meg_system.upper() == 'TRIUX' and len(channels_full['mag']) == 102 and len(channels_full['grad']) == 204: 
         #for 306 channel data in Elekta/Neuromag Treux system
-        channels_objs, lobes_color_coding_str = add_Triux_lobes(channels_objs)
+        channels_full, lobes_color_coding_str = add_Triux_lobes(channels_full)
 
         #assign 'TRIUX' to all channels:
-        for key, value in channels_objs.items():
+        for key, value in channels_full.items():
             for ch in value:
                 ch.system = 'TRIUX'
 
     elif meg_system.upper() == 'CTF':
-        channels_objs, lobes_color_coding_str = add_CTF_lobes(channels_objs)
+        channels_full, lobes_color_coding_str = add_CTF_lobes(channels_full)
 
         #assign 'CTF' to all channels:
-        for key, value in channels_objs.items():
+        for key, value in channels_full.items():
             for ch in value:
                 ch.system = 'CTF'
 
@@ -704,7 +794,7 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
         lobe_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#e377c2', '#d62728', '#bcbd22', '#17becf']
         print('___MEGqc___: ' + lobes_color_coding_str)
 
-        for key, value in channels_objs.items():
+        for key, value in channels_full.items():
             for ch in value:
                 ch.lobe = 'All channels'
                 #take random color from lobe_colors:
@@ -712,10 +802,10 @@ def assign_channels_properties(raw: mne.io.Raw, meg_system: str):
                 ch.system = 'OTHER'
 
     #sort channels by name:
-    for key, value in channels_objs.items():
-        channels_objs[key] = sorted(value, key=lambda x: x.name)
+    for key, value in channels_full.items():
+        channels_full[key] = sorted(value, key=lambda x: x.name)
 
-    return channels_objs, lobes_color_coding_str
+    return channels_full, lobes_color_coding_str
 
 
 def sort_channels_by_lobe(channels_objs: dict):
@@ -815,9 +905,31 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     raw, shielding_str, meg_system = load_data(file_path)
 
+    # Working with channels:
+    channels = choose_channels(raw)
+
+    if meg_system == 'CTF': #ONLY FOR CTF we do this! Return raw with changed channel types.
+        channels, raw = change_ch_type_CTF(raw, channels)
+
+    #Turn channel names into objects:
+    channels_objs = {key: [MEG_channel(name=ch_name, type=key) for ch_name in value] for key, value in channels.items()}
+
+    #Assign channels properties:
+    channels_objs, lobes_color_coding_str = assign_channels_properties(channels_objs, meg_system)
+
+    #Add channel locations:
+    channels_objs = add_3d_ch_locations(raw, channels_objs)
+
+    #Check if there are channels to analyze according to info in config file:
+    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
+
+    #Sort channels by lobe - this will be used often for plotting
+    chs_by_lobe = sort_channels_by_lobe(channels_objs)
+    print('___MEGqc___: ', 'Channels sorted by lobe.')
+
+
     info = raw.info
     info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]
-
 
     #crop the data to calculate faster:
     tmax_possible = raw.times[-1] 
@@ -827,6 +939,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     raw_cropped = raw.copy().crop(tmin=default_settings['crop_tmin'], tmax=tmax)
     #When resampling for plotting, cropping or anything else you don't need permanent in raw inside any functions - always do raw_new=raw.copy() not just raw_new=raw. The last command doesn't create a new object, the whole raw will be changed and this will also be passed to other functions even if you don't return the raw.
 
+    stim_deriv = stim_data_to_df(raw_cropped)
 
     #Data filtering:
     raw_cropped_filtered = raw_cropped.copy()
@@ -881,25 +994,13 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''
 
-    #Assign channels properties:
-    channels_objs, lobes_color_coding_str = assign_channels_properties(raw, meg_system)
-
-    #Check if there are channels to analyze according to info in config file:
-    m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
-
-    #Sort channels by lobe - this will be used often for plotting
-    chs_by_lobe = sort_channels_by_lobe(channels_objs)
-    print('___MEGqc___: ', 'Channels sorted by lobe.')
-
-    #Get channels names - these will be used all over the pipeline. Holds only names of channels that are to be analyzed:
-    channels={'mag': [ch.name for ch in channels_objs['mag']], 'grad': [ch.name for ch in channels_objs['grad']]}
 
     resample_str = '<p>' + resample_str + '</p>'
 
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):

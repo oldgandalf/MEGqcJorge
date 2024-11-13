@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 from scipy.integrate import simpson
 from scipy.signal import find_peaks, peak_widths
 import copy
-import re
+import re   
+from typing import List, Union
 
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
@@ -75,7 +76,7 @@ def add_log_buttons(fig: go.Figure):
     return fig
 
 
-def get_bands_amplitude_per_ch(freq_bands: list, freqs: list, psds: np.ndarray or list, channels: list, bands_names: list = None):
+def get_bands_amplitude_per_ch(freq_bands: List, freqs: List, psds: Union[List, np.ndarray], channels: List, bands_names: List = None):
 
     """
     Calculate the area under the curve of frequency bands per channel.
@@ -85,17 +86,17 @@ def get_bands_amplitude_per_ch(freq_bands: list, freqs: list, psds: np.ndarray o
     
     Parameters
     ----------
-    freq_bands : list
+    freq_bands : List
         list of lists of frequencies. Expects list of lists: [[f_low, f_high], [f_low, f_high], ...]
-    freqs : list
+    freqs : List
         list of frequencies.
     psds : np.ndarray or list
         numpy array (or list) of power spectrum dencities. Expects array of arrays: channels*psds. (or list of lists)
         Will not work properly if 1 dimentional array given. In this case do: np.array([your_1d_array])
-    channels : list
+    channels : List
         list of channel names. Expects list of strings: ['MEG 0111', 'MEG 0112', ...] 
         If only one channel is given, it should be a list of one string: ['Average]
-    bands_names : list, optional
+    bands_names : List, optional
         list of names of the bands. If None, the names will be generated automatically, by default None
         Important! these names are in the same order as in freq_bands. 
 
@@ -110,7 +111,7 @@ def get_bands_amplitude_per_ch(freq_bands: list, freqs: list, psds: np.ndarray o
     ampl_by_Nfreq_per_ch_list_df : pd.DataFrame
         Dataframe of amplitudes of each frequency band divided by the number of frequencies in the band.
         (This is done to compare with RMSE later. But not used any more).
-    total_signal_amplitude : list
+    total_signal_amplitude : List
         list of total signal amplitude for each channel.
 
 
@@ -169,7 +170,7 @@ def get_bands_amplitude_per_ch(freq_bands: list, freqs: list, psds: np.ndarray o
     
 # In[53]:
 
-def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, avg_psd: np.ndarray):
+def get_ampl_of_brain_waves(channels: List, m_or_g: str, freqs: np.ndarray, psds: np.ndarray, avg_psd: np.ndarray):
 
     """
     Calculate area under the curve of frequency bands (alpha, beta, gamma, etc) for all channels.
@@ -177,7 +178,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
 
     Parameters
     ----------
-    channels : list
+    channels : List
         list of channel names
     m_or_g : str
         'mag' or 'grad' - to choose which channels to calculate amplitude for.
@@ -193,7 +194,7 @@ def get_ampl_of_brain_waves(channels: list, m_or_g: str, freqs: np.ndarray, psds
     waves_pie_df_deriv : QC_derivative object or empty list
         If plotflag is True, returns one QC_derivative object with data for pie plot.
         If plotflag is False, returns empty list.
-    dfs_with_name : list
+    dfs_with_name : List
         list of dataframes with amplitude of each frequency band in each channel
         (dfs: absolute amplitude, relative amplitude, amplitude divided by number of frequencies in the band)
     mean_brain_waves_dict : dict
@@ -241,19 +242,19 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
     
     Parameters
     ----------
-    noisy_bands_indexes : list[list]
+    noisy_bands_indexes : List[list]
         list of lists with indexes of noisy bands. Indexes! not frequency bands themselves. Index is defined by fequency/freq_resolution.
-    one_psd : list
+    one_psd : List
         vector if psd values for 1 channel (or 1 average over all channels)
-    noisy_freqs_indexes : list
+    noisy_freqs_indexes : List
         list of indexes of noisy frequencies. Indexes! not frequencies themselves. Index is defined by fequency/freq_resolution.
 
     Returns
     -------
-    noisy_bands_final_indexes : list[list]
+    noisy_bands_final_indexes : List[list]
         list of lists with indexes of noisy bands After the split.
         Indexes! not frequency bands themselves. Index is defined by fequency/freq_resolution.
-    split_indexes : list
+    split_indexes : List
         list of indexes at which the bands were split (used later for plotting only).
     
     """
@@ -280,7 +281,7 @@ def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_
     return noisy_bands_final_indexes, split_indexes
 
 
-def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd: list, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: list =[], unit: str =''):
+def cut_the_noise_from_psd(noisy_bands_indexes: List[dict], freqs: List, one_psd: List, helper_plots: bool, ch_name: str ='', noisy_freqs_indexes: List =[], unit: str =''):
 
     """
     CURRENTLY NOT USED
@@ -301,17 +302,17 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd
 
     Parameters
     ----------
-    noisy_bands_indexes : list[list]
+    noisy_bands_indexes : List[list]
         list of lists with indexes of noisy bands. Indexes! Not frequency bands themselves. Index is defined by fequency/freq_resolution.
-    freqs : list
+    freqs : List
         vector of frequencies
-    one_psd : list
+    one_psd : List
         vector if psd values for 1 channel (or 1 average over all channels)
     helper_plots : bool
         if True, helper plots will be produced
     ch_name : str, optional
         channel name, by default '', used for plot display
-    noisy_freqs_indexes : list, optional
+    noisy_freqs_indexes : List, optional
         list of indexes of noisy frequencies. Indexes! not frequencies themselves. Index is defined by fequency/freq_resolution., 
         by default [] because we might have no noisy frequencies at all. Used for plot display.
     unit : str, optional
@@ -319,7 +320,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd
 
     Returns
     -------
-    psd_only_peaks_baselined : list
+    psd_only_peaks_baselined : List
         vector of psd values for 1 channel (or 1 average over all channels) with the noise peaks cut out and baselined to 0 level.
         Later used to calculate area under the curve for the noise peaks only.
     
@@ -392,7 +393,7 @@ def cut_the_noise_from_psd(noisy_bands_indexes: list[dict], freqs: list, one_psd
     return psd_only_peaks_baselined
 
 
-def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, noisy_freq_bands_indexes: list[list], unit: str):
+def plot_one_psd(ch_name: str, freqs: List, one_psd: List, peak_indexes: List, noisy_freq_bands_indexes: List[list], unit: str):
     
     """
     Plot PSD for one channels or for the average over multiple channels with noise peaks and split points using plotly.
@@ -402,13 +403,13 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
     ----------
     ch_name : str
         channel name like 'MEG1234' or just 'Average'
-    freqs : list
+    freqs : List
         list of frequencies
-    one_psd : list
+    one_psd : List
         list of psd values for one channels or for the average over multiple channels
-    peak_indexes : list
+    peak_indexes : List
         list of indexes of the noise peaks in the psd
-    noisy_freq_bands_indexes : list[list]
+    noisy_freq_bands_indexes : List[list]
         list of lists of indexes of the noisy frequency bands in the psd. Indexes! Not frequency bands themselves. Index is defined by fequency/freq_resolution.
     unit : str
         unit of the psd values. For example 'T/Hz'
@@ -441,7 +442,7 @@ def plot_one_psd(ch_name: str, freqs: list, one_psd: list, peak_indexes: list, n
     return fig
 
 
-def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int):
+def find_noisy_freq_bands_complex(ch_name: str, freqs: List, one_psd: List, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int):
 
     """
     Detect the frequency band around the noise peaks.
@@ -458,9 +459,9 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     ----------
     ch_name : str
         channel name like 'MEG1234' or just 'Average'. For plotting purposes only.
-    freqs : list
+    freqs : List
         list of frequencies
-    one_psd : list
+    one_psd : List
         list of psd values for one channels or for the average over multiple channels
     helper_plots : bool
         if True, helper plots will be shown
@@ -472,15 +473,15 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
 
     Returns
     -------
-    noisy_freqs : list
+    noisy_freqs : List
         list of noisy frequencies
-    noisy_freqs_indexes : list
+    noisy_freqs_indexes : List
         list of indexes of noisy frequencies in the psd
-    noisy_bands_final : list[list]
+    noisy_bands_final : List[list]
         list of lists of noisy frequency bands. Each list contains 2 values: start and end of the band.
-    noisy_bands_final_indexes : list[list]
+    noisy_bands_final_indexes : List[list]
         list of lists of indexes of noisy frequency bands. Each list contains 2 values: start and end of the band.
-    split_indexes : list
+    split_indexes : List
         list of indexes of the split points in the psd
     
     """
@@ -528,7 +529,7 @@ def find_noisy_freq_bands_complex(ch_name: str, freqs: list, one_psd: list, help
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, split_indexes
 
 
-def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_half_length: float):
+def find_noisy_freq_bands_simple(ch_name: str, freqs: List, one_psd: List, helper_plots: bool, m_or_g: str, prominence_lvl_pos: int, band_half_length: float):
     
     """
     Form a frequency band around the noise peaks.
@@ -541,9 +542,9 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     ----------
     ch_name : str
         channel name like 'MEG1234' or just 'Average'. For plotting purposes only.
-    freqs : list
+    freqs : List
         list of frequencies
-    one_psd : list
+    one_psd : List
         list of psd values for one channels or for the average over multiple channels
     helper_plots : bool
         if True, helper plots will be shown
@@ -556,15 +557,15 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
 
     Returns
     -------
-    noisy_freqs : list
+    noisy_freqs : List
         list of noisy frequencies
-    noisy_freqs_indexes : list
+    noisy_freqs_indexes : List
         list of indexes of noisy frequencies in the psd
-    noisy_bands_final : list[list]
+    noisy_bands_final : List[list]
         list of lists of noisy frequency bands. Each list contains 2 values: start and end of the band.
-    noisy_bands_final_indexes : list[list]
+    noisy_bands_final_indexes : List[list]
         list of lists of indexes of noisy frequency bands. Each list contains 2 values: start and end of the band.
-    split_indexes : list
+    split_indexes : List
         list of indexes of the split points in the psd
     
     """
@@ -611,7 +612,7 @@ def find_noisy_freq_bands_simple(ch_name: str, freqs: list, one_psd: list, helpe
     return noisy_freqs, noisy_freqs_indexes, noisy_bands_final, noisy_bands_final_indexes, split_indexes
 
 
-def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list, helper_plots: bool, m_or_g: str, cut_noise_from_psd: bool, prominence_lvl_pos: int, simple_or_complex: str = 'simple'):
+def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: List, one_psd: List, helper_plots: bool, m_or_g: str, cut_noise_from_psd: bool, prominence_lvl_pos: int, simple_or_complex: str = 'simple'):
 
     """
     The function finds the number and amplitude of noisy frequencies in PSD function in these steps:
@@ -627,9 +628,9 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
     ----------
     ch_name : str
         name of the channel or 'average'
-    freqs : list
+    freqs : List
         list of frequencies
-    one_psd : list
+    one_psd : List
         list of psd values for one channel or average psd
     helper_plots : bool
         if True, plot the helper plots (will show the noise bands, how they are split and how the peaks are cut from the psd if this is activated).
@@ -645,13 +646,13 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
     Returns
     -------
-    noise_pie_derivative : list
+    noise_pie_derivative : List
         list with QC_derivative object containing the pie chart with the noise amplitude and signal amplitude
-    noise_ampl : list
+    noise_ampl : List
         list of noise amplitudes for each noisy frequency band
-    noise_ampl_relative_to_signal : list
+    noise_ampl_relative_to_signal : List
         list of noise amplitudes relative to the signal amplitude for each noisy frequency band
-    noisy_freqs : list
+    noisy_freqs : List
         list of noisy frequencies
     
     
@@ -721,20 +722,20 @@ def find_number_and_ampl_of_noise_freqs(ch_name: str, freqs: list, one_psd: list
 
 
 
-def get_ampl_of_noisy_freqs(channels: list, freqs: list, avg_psd: list, psds: list, m_or_g: str, helper_plots: bool = False, cut_noise_from_psd: bool = False, prominence_lvl_pos_avg: int = 50, prominence_lvl_pos_channels: int = 15, simple_or_complex: str = 'simple'):
+def get_ampl_of_noisy_freqs(channels: List, freqs: List, avg_psd: List, psds: List, m_or_g: str, helper_plots: bool = False, cut_noise_from_psd: bool = False, prominence_lvl_pos_avg: int = 50, prominence_lvl_pos_channels: int = 15, simple_or_complex: str = 'simple'):
 
     """
     Find noisy frequencies, their absolute and relative amplitude for averages over all channel (mag or grad) PSD and for each separate channel.
 
     Parameters
     ----------
-    channels : list
+    channels : List
         list of channel names
-    freqs : list
+    freqs : List
         list of frequencies
-    avg_psd : list
+    avg_psd : List
         list of average PSD values over all channels
-    psds : list
+    psds : List
         list of PSD values for each channel
     m_or_g : str
         'mag' or 'grad'
@@ -784,7 +785,7 @@ def get_ampl_of_noisy_freqs(channels: list, freqs: list, avg_psd: list, psds: li
     return noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local_all_ch, noise_ampl_relative_to_all_signal_local_all_ch, noisy_freqs_local_all_ch
 
 
-def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, noise_ampl_global: list, noise_ampl_relative_to_all_signal_global: list):
+def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: List, noise_ampl_global: List, noise_ampl_relative_to_all_signal_global: List):
 
     """
     Create a dictionary for the global part of psd simple metrics. Global: overall part of noise in the signal (all channels averaged).
@@ -793,11 +794,11 @@ def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, 
     ----------
     mean_brain_waves_dict : dict
         dictionary with the mean brain waves (alpha, beta, etc) metrics in the form: {wave band name: {mean realtive value, mean absolute value}, ...}
-    noisy_freqs_global : list
+    noisy_freqs_global : List
         list of noisy frequencies
-    noise_ampl_global : list
+    noise_ampl_global : List
         list of noise amplitudes for each noisy frequency band
-    noise_ampl_relative_to_all_signal_global : list
+    noise_ampl_relative_to_all_signal_global : List
         list of noise amplitudes relative to the total signal amplitude for each noisy frequency band
     
     Returns
@@ -820,7 +821,7 @@ def make_dict_global_psd(mean_brain_waves_dict: dict, noisy_freqs_global: list, 
     return dict_global
 
 
-def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_ampl_relative_to_all_signal_local: dict, channels: list):
+def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_ampl_relative_to_all_signal_local: dict, channels: List):
 
     """
     Create a dictionary for the local part of psd simple metrics. Local: part of noise in the signal for each channel separately.
@@ -875,7 +876,7 @@ def make_simple_metric_psd(mean_brain_waves_dict: dict, noise_ampl_global:dict, 
         dictionary with noise amplitudes relative to the total signal amplitude for each noisy frequency band for each channel
     noisy_freqs_local : dict
         dictionary with noisy frequencies for each channel
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         list with chosen channel types: 'mag' or/and 'grad'
 
     Returns
@@ -935,7 +936,7 @@ def get_nfft_nperseg(raw: mne.io.Raw, psd_step_size: float):
     return nfft, nperseg
 
 
-def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
+def assign_psds_to_channels(chs_by_lobe: dict, freqs: List, psds: List):
 
     """
 
@@ -946,9 +947,9 @@ def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
     ----------
     chs_by_lobe : dict
         dictionary with channel objects sorted by ch type and lobe
-    freqs : list
+    freqs : List
         list of frequencies
-    psds : list
+    psds : List
         list of psd values for each channel
 
     Returns
@@ -966,7 +967,7 @@ def assign_psds_to_channels(chs_by_lobe: dict, freqs: list, psds: list):
     return chs_by_lobe
 
 #%%
-def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: list, helper_plots: bool):
+def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: List, helper_plots: bool):
     
     """
     Main psd function. Calculates:
@@ -1006,14 +1007,14 @@ def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_b
         dictionary with channel objects sorted by ch type and lobe
     raw_orig : mne.io.Raw
         raw data
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         list with chosen channel types: 'mag' or/and 'grad'
     helper_plots : bool
         if True, plots with noisy freq bands for average PSD + for 3 different channels will be created (but not added to report).
 
     Returns
     -------
-    derivs_psd : list
+    derivs_psd : List
         list with the psd derivatives as QC_derivative objects (figures)
     simple_metric : dict
         dictionary with the psd simple metrics

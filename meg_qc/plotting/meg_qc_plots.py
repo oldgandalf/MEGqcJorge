@@ -6,6 +6,7 @@ from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 from collections import defaultdict
 import re
+from typing import List
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -129,7 +130,7 @@ def selector(entities: dict):
     return selected_entities, plot_settings
 
 
-def select_subcategory(subcategories: list, category_title: str, window_title: str = "What would you like to plot? Click to select."):
+def select_subcategory(subcategories: List, category_title: str, window_title: str = "What would you like to plot? Click to select."):
 
     """
     Create a checkbox list dialog for the user to select subcategories.
@@ -138,7 +139,7 @@ def select_subcategory(subcategories: list, category_title: str, window_title: s
 
     Parameters
     ----------
-    subcategories : list
+    subcategories : List
         A list of subcategories, such as: sub, ses, task, run, metric, mag/grad.
     category_title : str
         The title of the category.
@@ -147,7 +148,7 @@ def select_subcategory(subcategories: list, category_title: str, window_title: s
 
     Returns
     -------
-    results : list
+    results : List
         A list of selected subcategories.
     quit_selector : bool
         A boolean indicating whether the user clicked Cancel.
@@ -218,15 +219,19 @@ def get_ds_entities(dataset_path: str):
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
     calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-    entities = dataset.query_entities(scope=calculated_derivs_folder)
-    #we only get entities of calculated derivatives here, not entire raw ds.
 
-    print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
+    try: 
+        entities = dataset.query_entities(scope=calculated_derivs_folder)
+        print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
+        #we only get entities of calculated derivatives here, not entire raw ds.
+    except:
+        calculated_derivs_folder_full_path = os.path.join(dataset_path, calculated_derivs_folder)
+        raise FileNotFoundError(f'___MEGqc___: No calculated derivatives found in: {calculated_derivs_folder_full_path}')
     
     return entities
 
 
-def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_str_path: str, plot_settings):
+def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_str_path: str, plot_settings):
 
     """
     Create an HTML report from the CSV files.
@@ -237,7 +242,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
         The path to the raw info object.
     metric : str
         The metric to be plotted.
-    tsv_paths : list
+    tsv_paths : List
         A list of paths to the CSV files.
     report_str_path : str
         The path to the JSON file containing the report strings.
@@ -255,8 +260,14 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
+    stim_derivs = []
     
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
+
+        #get the final file name of tsv path:
+        basename = os.path.basename(tsv_path)
+        if 'desc-stimulus' in basename:
+            stim_derivs = plot_stim_csv(tsv_path) 
 
         if 'STD' in metric.upper():
 
@@ -332,15 +343,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
             
         elif 'MUSCLE' in metric.upper():
 
-            if 'mag' in m_or_g_chosen:
-                m_or_g_decided=['mag']
-            elif 'grad' in m_or_g_chosen and 'mag' not in m_or_g_chosen:
-                m_or_g_decided=['grad']
-            else:
-                print('___MEGqc___: ', 'No magnetometers or gradiometers found in data. Artifact detection skipped.')
-
-
-            muscle_derivs +=  plot_muscle_csv(tsv_path, m_or_g_decided[0])
+            muscle_derivs +=  plot_muscle_csv(tsv_path)
 
             
         elif 'HEAD' in metric.upper():
@@ -352,6 +355,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
 
     QC_derivs = {
         'TIME_SERIES': time_series_derivs,
+        'STIMULUS': stim_derivs,
         'SENSORS': sensors_derivs,
         'STD': std_derivs,
         'PSD': psd_derivs,
@@ -455,14 +459,14 @@ def combine_tsvs_dict(tsvs_by_metric: dict):
 
     return combined_tsvs_by_metric
 
-def make_plots_meg_qc(ds_paths: list):
+def make_plots_meg_qc(ds_paths: List):
 
     """
     Create plots for the MEG QC pipeline.
 
     Parameters
     ----------
-    ds_paths : list
+    ds_paths : List
         A list of paths to the datasets.
     
     Returns
@@ -489,6 +493,9 @@ def make_plots_meg_qc(ds_paths: list):
         chosen_entities, plot_settings = selector(entities)
         if not chosen_entities:
             return
+        
+        #Add stimulus to chosen entities:
+        chosen_entities['METRIC'].append('stimulus')
 
         # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
         # uncomment for debugging, so no need to start selector every time
@@ -571,7 +578,21 @@ def make_plots_meg_qc(ds_paths: list):
                 entities_per_file[metric] = entities_obj
 
             #Get path to raw info obj:
-            raw_info_path = dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'RawInfo', scope=calculated_derivs_folder)[0]
+
+            raw_info_path = dataset.query(
+                suffix='meg',
+                extension='.fif',
+                return_type='filename',
+                subj=sub,
+                ses=chosen_entities.get('session'),
+                task=chosen_entities['task'],
+                run=chosen_entities.get('run'),
+                desc='RawInfo',
+                scope=calculated_derivs_folder
+                )[0]
+                #using get here, cos if some entities dont exist, it will return None, 
+                #this will not couse an error in query, but will be ignored.
+
 
             # 1. Check that we got same entities_per_file and tsvs_to_plot:
             
