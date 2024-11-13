@@ -6,6 +6,7 @@ from prompt_toolkit.shortcuts import checkboxlist_dialog
 from prompt_toolkit.styles import Style
 from collections import defaultdict
 import re
+from typing import List
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -129,7 +130,7 @@ def selector(entities: dict):
     return selected_entities, plot_settings
 
 
-def select_subcategory(subcategories: list, category_title: str, window_title: str = "What would you like to plot? Click to select."):
+def select_subcategory(subcategories: List, category_title: str, window_title: str = "What would you like to plot? Click to select."):
 
     """
     Create a checkbox list dialog for the user to select subcategories.
@@ -138,7 +139,7 @@ def select_subcategory(subcategories: list, category_title: str, window_title: s
 
     Parameters
     ----------
-    subcategories : list
+    subcategories : List
         A list of subcategories, such as: sub, ses, task, run, metric, mag/grad.
     category_title : str
         The title of the category.
@@ -147,7 +148,7 @@ def select_subcategory(subcategories: list, category_title: str, window_title: s
 
     Returns
     -------
-    results : list
+    results : List
         A list of selected subcategories.
     quit_selector : bool
         A boolean indicating whether the user clicked Cancel.
@@ -230,7 +231,7 @@ def get_ds_entities(dataset_path: str):
     return entities
 
 
-def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_str_path: str, plot_settings):
+def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_str_path: str, plot_settings):
 
     """
     Create an HTML report from the CSV files.
@@ -241,7 +242,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: list, report_
         The path to the raw info object.
     metric : str
         The metric to be plotted.
-    tsv_paths : list
+    tsv_paths : List
         A list of paths to the CSV files.
     report_str_path : str
         The path to the JSON file containing the report strings.
@@ -458,14 +459,14 @@ def combine_tsvs_dict(tsvs_by_metric: dict):
 
     return combined_tsvs_by_metric
 
-def make_plots_meg_qc(ds_paths: list):
+def make_plots_meg_qc(ds_paths: List):
 
     """
     Create plots for the MEG QC pipeline.
 
     Parameters
     ----------
-    ds_paths : list
+    ds_paths : List
         A list of paths to the datasets.
     
     Returns
@@ -667,13 +668,13 @@ def make_plots_meg_qc(ds_paths: list):
 
 # ____________________________
 # RUN IT:
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
 
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])

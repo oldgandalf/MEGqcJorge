@@ -2,12 +2,13 @@ import numpy as np
 import pandas as pd
 import mne
 import copy
+from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
 
 
-def get_std_all_data(data: mne.io.Raw, channels: list):
+def get_std_all_data(data: mne.io.Raw, channels: List):
 
     """
     Calculate std for each channel - for the entire time duration.
@@ -16,7 +17,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
     ----------
     data : mne.io.Raw
         raw data 
-    channels : list 
+    channels : List 
         list of channel names
 
     Returns
@@ -35,7 +36,7 @@ def get_std_all_data(data: mne.io.Raw, channels: list):
     return std_channels_named
 
 
-def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: list, std_multiplier: float):
+def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: List, std_multiplier: float):
 
     """
     Function calculates peak-to-peak amplitude or STDs over the entire data set for each channel.
@@ -52,7 +53,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: li
     ----------
     ptp_or_std_channels_named : dict
         peak-to-peak amplitude or std for each channel
-    channels : list
+    channels : List
         list of channel names
     std_multiplier : float
         multipliar for std, used to define thresholds for noisy and flat channels
@@ -95,7 +96,7 @@ def get_big_small_std_ptp_all_data(ptp_or_std_channels_named: dict, channels: li
     return noisy_channels, flat_channels
 
 #%%
-def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
+def get_std_epochs(channels: List, epochs_mg: mne.Epochs):
 
     """ 
     Calculate std for multiple epochs for a list of channels.
@@ -103,7 +104,7 @@ def get_std_epochs(channels: list, epochs_mg: mne.Epochs):
 
     Parameters
     ----------
-    channels : list
+    channels : List
         list of channel names
     epochs_mg : mne.Epochs
         epochs data as mne.Epochs object
@@ -238,7 +239,7 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
 #%% All about simple metric jsons:
 
-def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: list[dict], small_std_with_value_all_data: list[dict], channels: list[str], std_or_ptp: str):
+def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], std_or_ptp: str):
 
 
     """Make a dictionary with global metric content for std or ptp metric.
@@ -248,11 +249,11 @@ def make_dict_global_std_ptp(std_ptp_params: dict, big_std_with_value_all_data: 
     ----------
     std_ptp_params : dict
         dictionary with parameters for std or ptp metric
-    big_std_with_value_all_data : list
+    big_std_with_value_all_data : List
         list of dictionaries (channel_name: value) for channels with big std or ptp
-    small_std_with_value_all_data : list
+    small_std_with_value_all_data : List
         list of dictionaries (channel_name: value) for channels with small std or ptp
-    channels : list
+    channels : List
         list of channel names
     std_or_ptp : str
         'std' or 'ptp': use STD or Peak-to-peak metric
@@ -329,7 +330,7 @@ def make_dict_local_std_ptp(std_ptp_params: dict, noisy_epochs_df: pd.DataFrame,
 
 
 
-def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list[dict], small_std_with_value_all_data: list[dict], channels: list[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: list[dict]):
+def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[dict], small_std_with_value_all_data: List[dict], channels: List[str], deriv_epoch_std: dict, metric_local_present: bool, m_or_g_chosen: List[dict]):
 
     """
     Make simple metric for STD.
@@ -338,11 +339,11 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list[
     ----------
     std_params : dict
         dictionary with parameters for std metric, originally from config file
-    big_std_with_value_all_data : list
+    big_std_with_value_all_data : List
         list of dictionaries (channel_name: value) for channels with big std
-    small_std_with_value_all_data : list
+    small_std_with_value_all_data : List
         list of dictionaries (channel_name: value) for channels with small std
-    channels : list
+    channels : List
         list of channel names
     deriv_epoch_std : dict
         dictionary with QC_derivative objects containing data frames. 
@@ -351,7 +352,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list[
         2: contains True/False values for flat channels in each epoch.
     metric_local_present : bool
         True if local metric was calculated (epochs present). False if not calculated (epochs were not detected).
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         list of strings with channel types chosen by user: ['mag', 'grad'] or ['mag'] or ['grad']
 
     Returns
@@ -386,7 +387,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: list[
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: List):
 
     """
     Main STD function. Calculates:
@@ -407,12 +408,12 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         dictionary with epochs for each channel type: dict_epochs_mg['mag'] or dict_epochs_mg['grad']
     data : mne.io.Raw
         raw data
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         list of strings with channel types chosen by user: ['mag', 'grad'] or ['mag'] or ['grad']
 
     Returns
     -------
-    derivs_std : list
+    derivs_std : List
         list of QC_derivative objects containing data frames and figures for std metric.
     simple_metric_std : dict
         dictionary with simple metric for std/ptp.

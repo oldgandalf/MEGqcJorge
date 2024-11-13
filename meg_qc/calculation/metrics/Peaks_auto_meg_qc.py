@@ -1,10 +1,11 @@
 import mne
+from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
 
 # This module is not used in the final version of the pipeline. 
 # We use the manual one. But this one is left in case we still want to bring it back.
 
-def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: list, bad_percent:  int, min_duration: float):
+def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, channels: List, bad_percent:  int, min_duration: float):
     
     """
     Create peak-to-peak amplitude annotations for every channel separately
@@ -17,7 +18,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
         Peak value.
     flat : float
         Flat value.
-    channels : list
+    channels : List
         list of channel names.
     bad_percent : int
         Percent of bad data allowed to still cound channels as good.
@@ -28,7 +29,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
     -------
     df_ptp_amlitude_annot : pd.DataFrame
         Dataframe with peak-to-peak amplitude annotations.
-    bad_channels : list
+    bad_channels : List
         list of bad channels.
     """
     
@@ -49,7 +50,7 @@ def get_amplitude_annots_per_channel(raw: mne.io.Raw, peak: float, flat: float, 
     return df_ptp_amlitude_annot, bad_channels
 
 
-def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_g_chosen: list):
+def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_g_chosen: List):
     
     """
     Calculates peak-to-peak amplitude annotations for every channel using MNE built-in approach.
@@ -58,18 +59,18 @@ def PP_auto_meg_qc(ptp_auto_params: dict, channels:list, data: mne.io.Raw, m_or_
     ----------
     ptp_auto_params : dict
         Dictionary with parameters for peak-to-peak amplitude annotations.
-    channels : list
+    channels : List
         list of channels.
     data : mne.io.Raw
         Raw data.
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         list of channels types.
         
     Returns
     -------
-    deriv_ptp_auto : list
+    deriv_ptp_auto : List
         list of QC_derivative objects containing dataframes with peak-to-peak amplitude annotations.
-    bad_channels : list
+    bad_channels : List
         list of bad channels.
     pp_auto_str : str
         string with notes about PtP auto for report

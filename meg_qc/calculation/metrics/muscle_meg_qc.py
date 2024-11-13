@@ -27,6 +27,7 @@ import pandas as pd
 from scipy.signal import find_peaks
 import numpy as np
 from mne.preprocessing import annotate_muscle_zscore
+from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
 
 def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chosen, channels):
@@ -42,7 +43,7 @@ def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chos
         The parameters for PSD calculation originally defined in the config file.
     psd_params_internal : dict
         The parameters for PSD calculation originally defined in the internal config file. 
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         The channel types chosen for the analysis: 'mag' or 'grad'.
     
     Returns
@@ -108,7 +109,7 @@ def make_simple_metric_muscle(m_or_g_decided: str, z_scores_dict: dict, muscle_s
     return simple_metric
 
 
-def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: list = [110, 140]):
+def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: dict, muscle_freqs: List = [110, 140]):
 
     """
     Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
@@ -122,7 +123,7 @@ def filter_noise_before_muscle_detection(raw: mne.io.Raw, noisy_freqs_global: di
         The raw data.
     noisy_freqs_global : dict
         The noisy frequencies found in PSD artifact detection function.
-    muscle_freqs : list
+    muscle_freqs : List
         The frequencies of muscle artifacts, usually 110 and 140 Hz.
         
     Returns
@@ -231,13 +232,13 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
     ----------
     raw : mne.io.Raw
         The raw data.
-    m_or_g_decided : list
+    m_or_g_decided : List
         The channel types chosen for the analysis: 'mag' or 'grad'.
     muscle_params : dict
         The parameters for muscle artifact detection originally defined in the config file.
     threshold_muscle : float
         The z-score threshold for muscle detection.
-    muscle_freqs : list
+    muscle_freqs : List
         The frequencies of muscle artifacts, usually 110 and 140 Hz.
     cut_dummy : bool
         Whether to cut the dummy data after filtering. Dummy data is attached to the start and end of the recording to avoid filtering artifacts. Default is True.
@@ -254,7 +255,7 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
         A simple metric dict for muscle events.
     scores_muscle : np.ndarray
         The muscle scores.
-    df_deriv : list
+    df_deriv : List
         A list of QC_derivative objects for muscle events containing figures.
     
     """
@@ -320,7 +321,7 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
     
     Returns
     -------
-    df_deriv : list
+    df_deriv : List
         A list of QC_derivative objects for muscle events containing figures.
     
     """
@@ -364,9 +365,9 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
         Dictionary with channels names separated by mag/grad
     raw_orig : mne.io.Raw
         The raw data.
-    noisy_freqs_global : list
+    noisy_freqs_global : List
         The powerline frequencies found in the data by previously running PSD_meg_qc.
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         The channel types chosen for the analysis: 'mag' or 'grad'.
     attach_dummy : bool
         Whether to attach dummy data to the start and end of the recording to avoid filtering artifacts. Default is True.
@@ -375,7 +376,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
 
     Returns
     -------
-    muscle_derivs : list
+    muscle_derivs : List
         A list of QC_derivative objects for muscle events containing figures.
     simple_metric : dict
         A simple metric dict for muscle events.

@@ -1,6 +1,7 @@
 import mne
 import os
 import sys
+from typing import List
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -57,7 +58,7 @@ def make_howto_use_plots_section (metric: str):
     return how_to_section
 
 
-def make_metric_section(fig_derivs_metric: list, section_name: str, report_strings: dict):
+def make_metric_section(fig_derivs_metric: List, section_name: str, report_strings: dict):
     
     """
     Create 1 section of html report. 1 section describes 1 metric like "ECG" or "EOG", "Head position" or "Muscle"...
@@ -70,7 +71,7 @@ def make_metric_section(fig_derivs_metric: list, section_name: str, report_strin
 
     Parameters
     ----------
-    fig_derivs_metric : list
+    fig_derivs_metric : List
         A list of QC_derivative objects belonging to 1 metric and containing figures.
     section_name : str
         The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
@@ -122,14 +123,14 @@ def make_metric_section(fig_derivs_metric: list, section_name: str, report_strin
 
     return metric_section
 
-def make_sensor_figs_section(sensor_fig_derivs: list):
+def make_sensor_figs_section(sensor_fig_derivs: List):
 
     """
     Create a section with sensor positions.
     
     Parameters
     ----------
-    sensor_fig_derivs : list
+    sensor_fig_derivs : List
         A list of QC_derivative objects belonging to 1 section with only sensors positions.
         Normally should be only 1 figure or none.
     
@@ -155,7 +156,7 @@ def make_sensor_figs_section(sensor_fig_derivs: list):
 
     return sensor_html
 
-def combine_howto_sensors_and_metric(derivs_section: list, metric_name: str, report_strings: dict):
+def combine_howto_sensors_and_metric(derivs_section: List, metric_name: str, report_strings: dict):
     
     """
     Create a section (now used as the entire report for 1 metric).
@@ -165,7 +166,7 @@ def combine_howto_sensors_and_metric(derivs_section: list, metric_name: str, rep
     
     Parameters
     ----------
-    derivs_section : list
+    derivs_section : List
         A list of QC_derivative objects belonging to 1 section.
     section_name : str
         The name of the section like "ECG" or "EOG", "Head position" or "Muscle"...
@@ -197,14 +198,14 @@ def keep_fig_derivs(derivs_section:list):
     
     Parameters
     ----------
-    derivs_section : list
+    derivs_section : List
         A list of QC_derivative objects belonging to 1 section.
         
     Returns
     -------
-    fig_derivs_section : list
+    fig_derivs_section : List
         A list of QC_derivative objects belonging to 1 section with only figures.
-    sensor_fig_derivs : list
+    sensor_fig_derivs : List
         A list of QC_derivative objects belonging to 1 section with only sensors positions.
         Normally should be only 1 figure or none.
     """

@@ -6,6 +6,7 @@ import pandas as pd
 import random
 import copy
 import warnings
+from typing import List
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 
 
@@ -368,7 +369,7 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
 
 
 
-def check_chosen_ch_types(m_or_g_chosen, channels_objs):
+def check_chosen_ch_types(m_or_g_chosen: List, channels_objs: dict):
     
     """
     Check if the channels which the user gave in config file to analize actually present in the data set.

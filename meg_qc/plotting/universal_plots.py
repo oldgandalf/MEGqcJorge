@@ -6,6 +6,7 @@ import mne
 import random
 import copy
 import os
+from typing import List
 from mne.preprocessing import compute_average_dev_head_t
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
@@ -127,7 +128,7 @@ def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, 
         Path to the csv file with the data to plot.
     metric : str
         The metric of the data to plot: 'psd', 'ecg', 'eog', 'smoothed_ecg', 'smoothed_eog'.
-    x_values : list
+    x_values : List
         List of x values for the plot.
     m_or_g : str
         'mag' or 'grad'.
@@ -275,25 +276,25 @@ def switch_names_on_off(fig: go.Figure):
     return fig
 
 
-def keep_unique_locs(ch_list: list):
+def keep_unique_locs(ch_list: List):
 
     """
     Combines channel names that have the same location and returns the unique locations and combined channel names for 3D plotting.
 
     Parameters
     ----------
-    ch_list : list
+    ch_list : List
         A list of channel objects.
 
     Returns
     -------
-    new_locations : list
+    new_locations : List
         A list of unique locations.
-    new_names : list
+    new_names : List
         A list of combined channel names.
-    new_colors : list
+    new_colors : List
         A list of colors for each unique location.
-    new_lobes : list
+    new_lobes : List
         A list of lobes for each unique location.
 
     """
@@ -334,15 +335,15 @@ def keep_unique_locs(ch_list: list):
     return new_locations, new_names, new_colors, new_lobes 
 
 
-def make_3d_sensors_trace(d3_locs: list, names: list, color: str, textsize: int, legend_category: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
+def make_3d_sensors_trace(d3_locs: List, names: List, color: str, textsize: int, legend_category: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
 
     """ Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels.
 
     Parameters
     ----------
-    d3_locs : list
+    d3_locs : List
         A list of 3D locations of the sensors.
-    names : list
+    names : List
         A list of names of the sensors.
     color : str
         A color of the sensors.
@@ -422,7 +423,7 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
     
     Returns
     -------
-    qc_derivative : list
+    qc_derivative : List
         A list of QC_derivative objects containing the plotly figures with the sensor locations.
 
     """
@@ -913,7 +914,7 @@ def Plot_psd_csv(m_or_g:str, f_path: str, method: str):
 
 
 
-def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: float, noise_ampl_relative_to_signal: list):
+def edit_legend_pie_SNR(noisy_freqs: List, noise_ampl: List, total_amplitude: float, noise_ampl_relative_to_signal: List):
 
     """
     Edit the legend for pie chart of signal to noise ratio.
@@ -921,13 +922,13 @@ def edit_legend_pie_SNR(noisy_freqs: list, noise_ampl: list, total_amplitude: fl
     Parameters
     __________
 
-    noisy_freqs: list
+    noisy_freqs: List
         list of noisy frequencies
-    noise_ampl: list
+    noise_ampl: List
         list of their amplitudes
     total_amplitude: float
         Total amplitude of all frequencies
-    noise_ampl_relative_to_signal: list
+    noise_ampl_relative_to_signal: List
         list of relative (to entire signal) values of noise freq's amplitude
 
     Returns
@@ -1359,7 +1360,7 @@ def plot_muscle_csv(f_path: str):
         
     Returns
     -------
-    fig_derivs : list
+    fig_derivs : List
         A list of QC_derivative objects with plotly figures for muscle events.
 
     """
@@ -1433,7 +1434,7 @@ def plot_head_pos_csv(f_path: str):
         
     Returns
     -------
-    head_derivs : list 
+    head_derivs : List 
         List of QC_derivative objects containing figures with head positions and rotations.
     head_pos_baselined : np.ndarray
         Head positions and rotations starting from 0 instead of the mne detected starting point. Can be used for plotting.
@@ -1530,7 +1531,7 @@ def make_head_annots_plot(raw: mne.io.Raw, head_pos: np.ndarray):
         
     Returns
     -------
-    head_derivs : list
+    head_derivs : List
         List of QC derivatives with annotated figures.
         
     """
@@ -1560,7 +1561,7 @@ def plot_ECG_EOG_channel_csv(f_path):
         
     Returns
     -------
-    ch_deriv : list
+    ch_deriv : List
         List of QC_derivative objects with plotly figures of the ECG/EOG channels
         
     """
@@ -1677,13 +1678,13 @@ def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: st
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of objects of class Avg_artif, ranked by correlation coefficient
-    most_correlated : list
+    most_correlated : List
         List of objects of class Avg_artif that are the most correlated with mean_rwave
-    least_correlated : list
+    least_correlated : List
         List of objects of class Avg_artif that are the least correlated with mean_rwave
-    middle_correlated : list
+    middle_correlated : List
         List of objects of class Avg_artif that are in the middle of the correlation with mean_rwave
     corr_val_of_last_least_correlated : float
         Correlation value of the last channel in the list of the least correlated channels
@@ -1818,7 +1819,7 @@ def plot_mean_rwave_csv(f_path: str, ecg_or_eog: str):
 
     Returns
     -------
-    fig_derivs : list
+    fig_derivs : List
         list with one QC_derivative object, which contains the plot.
 
 
@@ -1909,9 +1910,9 @@ def plot_artif_per_ch_3_groups(f_path: str, m_or_g: str, ecg_or_eog: str, flip_d
 
     Returns
     -------
-    artif_per_ch : list
+    artif_per_ch : List
         List of objects of class Avg_artif
-    affected_derivs : list
+    affected_derivs : List
         List of objects of class QC_derivative (plots)
     
 
@@ -1993,7 +1994,7 @@ def plot_correlation_csv(f_path: str, ecg_or_eog: str, m_or_g: str):
 
     Returns
     -------
-    corr_derivs : list
+    corr_derivs : List
         List with 1 QC_derivative instance: Figure with correlation coefficient and p-value between mean R wave and each channel in artif_per_ch.
     
     """
@@ -2077,7 +2078,7 @@ def plot_mean_rwave_shifted(mean_rwave_shifted: np.ndarray, mean_rwave: np.ndarr
 
     Returns
     -------
-    fig_derivs : list
+    fig_derivs : List
         list with one QC_derivative object, which contains the plot. (in case want to input intot he report)
     
     """
@@ -2119,7 +2120,7 @@ def plot_ecg_eog_mne(channels: dict, ecg_epochs: mne.Epochs, m_or_g: str, tmin: 
     
     Returns
     -------
-    mne_ecg_derivs : list
+    mne_ecg_derivs : List
         List of QC_derivative objects with MNE plots.
     
     
