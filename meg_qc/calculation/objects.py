@@ -4,6 +4,7 @@ import base64
 import warnings
 import numpy as np
 import pandas as pd
+from typing import List, Union
 
 class MEG_channel:
 
@@ -12,7 +13,7 @@ class MEG_channel:
 
     """
 
-    def __init__(self, name: str, type: str, lobe: str, lobe_color: str, system: str, loc: list, time_series: list or np.ndarray = None, std_overall: float = None, std_epoch: list or np.ndarray = None, ptp_overall: float = None, ptp_epoch: list or np.ndarray = None, psd: list or np.ndarray = None, freq: list or np.ndarray = None, mean_ecg: list or np.ndarray = None, mean_ecg_smoothed: list or np.ndarray = None, mean_eog: list or np.ndarray = None, mean_eog_smoothed: list or np.ndarray = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
+    def __init__(self, name: str, type: str, lobe: str = None, lobe_color: str = None, system: str = None, loc: List = None, time_series: Union[List, np.ndarray] = None, std_overall: float = None, std_epoch: Union[List, np.ndarray] = None, ptp_overall: float = None, ptp_epoch: Union[List, np.ndarray] = None, psd: Union[List, np.ndarray] = None, freq: Union[List, np.ndarray] = None, mean_ecg: Union[List, np.ndarray] = None, mean_ecg_smoothed: Union[List, np.ndarray] = None, mean_eog: Union[List, np.ndarray] = None, mean_eog_smoothed: Union[List, np.ndarray] = None, ecg_time = None, eog_time = None, ecg_corr_coeff = None, ecg_pval = None, ecg_amplitude_ratio = None, ecg_similarity_score = None, eog_corr_coeff = None, eog_pval = None, eog_amplitude_ratio = None, eog_similarity_score = None, muscle = None, head = None, muscle_time = None, head_time = None):
 
         """
         Constructor method
@@ -29,7 +30,7 @@ class MEG_channel:
             The color code for plotting with plotly according to the lobe area of the channel.
         system : str
             The system of the channel: 'CTF', 'TRIUX', 'OTHER'
-        loc : list
+        loc : List
             The location of the channel on the helmet.
         time_series : array
             The time series of the channel.
@@ -182,16 +183,16 @@ class MEG_channel:
         return pd.DataFrame(data_dict)
     
 
-    def add_ecg_info(self, Avg_artif_list: list, artif_time_vector: list):
+    def add_ecg_info(self, Avg_artif_list: List, artif_time_vector: List):
 
         """
         Adds ECG artifact info to the channel object.
 
         Parameters
         ----------
-        Avg_artif_list : list
+        Avg_artif_list : List
             List of the average artifact objects.
-        artif_time_vector : list
+        artif_time_vector : List
             Time vector of the artifact.
 
         """
@@ -207,16 +208,16 @@ class MEG_channel:
                 self.ecg_similarity_score = artif_ch.similarity_score
                 
 
-    def add_eog_info(self, Avg_artif_list: list, artif_time_vector: list):
+    def add_eog_info(self, Avg_artif_list: List, artif_time_vector: List):
 
         """
         Adds EOG artifact info to the channel object.
 
         Parameters
         ----------
-        Avg_artif_list : list
+        Avg_artif_list : List
             List of the average artifact objects.
-        artif_time_vector : list
+        artif_time_vector : List
             Time vector of the artifact.
 
         """

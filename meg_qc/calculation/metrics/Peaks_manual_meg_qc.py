@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import mne
+from typing import List
 from scipy.signal import find_peaks
 from meg_qc.plotting.universal_plots import assign_epoched_std_ptp_to_channels
 from meg_qc.plotting.universal_html_report import simple_metric_basic
@@ -79,7 +80,7 @@ def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs
     return np.mean(amplitude), amplitude
 
 
-def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
+def get_ptp_all_data(data: mne.io.Raw, channels: List, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
     """ 
     Calculate peak-to-peak amplitude for all channels over whole data (not epoched).
@@ -88,7 +89,7 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
     -----------
     data : mne.io.Raw
         Raw data
-    channels : list
+    channels : List
         List of channel names to be used for peak-to-peak amplitude calculation
     sfreq : int
         Sampling frequency of data. Attention to which data is used! original or resampled.
@@ -131,14 +132,14 @@ def get_ptp_all_data(data: mne.io.Raw, channels: list, sfreq: int, ptp_thresh_lv
     return peak_ampl_channels_named
 
 
-def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
+def get_ptp_epochs(channels: List, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
 
     """  
     Calculate peak-to-peak amplitude for every epoch and every channel (mag or grad).
 
     Parameters:
     -----------
-    channels : list
+    channels : List
         List of channel names to be used for peak-to-peak amplitude calculation
     epochs_mg : mne.Epochs
         Epochs data
@@ -184,7 +185,7 @@ def get_ptp_epochs(channels: list, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh
 
 
 
-def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data: dict, small_ptp_with_value_all_data: dict, channels: dict, deriv_epoch_ptp: dict, metric_local: bool, m_or_g_chosen: list):
+def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_all_data: dict, small_ptp_with_value_all_data: dict, channels: dict, deriv_epoch_ptp: dict, metric_local: bool, m_or_g_chosen: List):
 
     """ 
     Create a simple metric for peak-to-peak amplitude. 
@@ -205,7 +206,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
         Dict (mag, grad) with peak-to-peak amplitude for each epoch for each channel
     metric_local : bool
         If True, the local metric was calculated and will be added to the simple metric
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         'mag' or 'grad' or both, chosen by user in config file
 
     Returns:
@@ -239,7 +240,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     return simple_metric
 
 
-def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: list):
+def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: List):
 
     """
     Main Peak to peak amplitude function. Calculates:
@@ -264,12 +265,12 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
         Dict (mag, grad) with epochs for each channel. Should be the same for both channels. Used only to check if epochs are present.
     data : mne.io.Raw
         Raw data
-    m_or_g_chosen : list
+    m_or_g_chosen : List
         'mag' or 'grad' or both, chosen by user in config file.
 
     Returns:
     --------
-    derivs_ptp : list
+    derivs_ptp : List
         List with QC_deriv objects for peak-to-peak amplitude (figures and csv files)
     simple_metric_ptp_manual : dict
         Simple metric for peak-to-peak amplitude

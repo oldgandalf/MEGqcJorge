@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import mne
 import time
+from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
 
 def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
@@ -20,9 +21,9 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
         Standard deviation of the movement of the head over time: X, Y, Z coordinates are calculated using Pythagorean theorem to get 1 float value.
     std_head_rotations : float
         Standard deviation of the rotation of the head over time: Q1, Q2, Q3 coordinates are calculated using Pythagorean theorem to get 1 float value.
-    max_movement_xyz : list
+    max_movement_xyz : List
         Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
-    max_rotation_q : list
+    max_rotation_q : List
         Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
     df_head_pos : pandas dataframe
         Head positions as pandas dataframe just for visualization and check.
@@ -72,7 +73,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
     return std_head_pos, std_head_rotations, [max_movement_x, max_movement_y, max_movement_z], [max_rotation_q1, max_rotation_q2, max_rotation_q3], df_head_pos
 
 
-def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: list, max_rotation_q: list):
+def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: List, max_rotation_q: List):
 
     """
     Make simple metric for head positions.
@@ -83,9 +84,9 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
         Standard deviation of the movement of the head over time.
     std_head_rotations : float
         Standard deviation of the rotation of the head over time.
-    max_movement_xyz : list
+    max_movement_xyz : List
         Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
-    max_rotation_q : list
+    max_rotation_q : List
         Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
         
     Returns
@@ -228,7 +229,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw):
         
     Returns
     -------
-    head_derivs : list
+    head_derivs : List
         List of QC derivatives with figures.
     simple_metrics_head : dict
         Dictionary with simple metrics for head movement.
