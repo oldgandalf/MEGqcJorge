@@ -63,59 +63,6 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     return m_or_g_tit, unit
 
 
-def plot_stim_csv_old(f_path: str):
-
-    """
-    Plot stimulus channels.
-
-    Parameters
-    ----------
-    f_path : str
-        Path to the tsv file with PSD data.
-
-    Returns
-    -------
-    QC_derivative
-        QC_derivative object with plotly figure as content
-     
-
-    """
-
-
-    df = pd.read_csv(f_path, sep='\t') 
-
-    # Check if the first column is just indexes and remove it if necessary
-    if df.columns[0] == df.index.name or df.iloc[:, 0].equals(pd.Series(df.index)):
-        df = df.drop(df.columns[0], axis=1)
-
-
-    # Extract the 'time' column for the x-axis
-    time = df['time']
-
-    # Create subplots
-    fig = make_subplots(rows=len(df.columns) - 1, cols=1, shared_xaxes=True, vertical_spacing=0.02)
-
-    # Loop over each column (excluding 'time') and add it to the subplots
-    for i, col in enumerate(df.columns):
-        if col != 'time':
-            fig.add_trace(go.Scatter(x=time, y=df[col], mode='lines', name=col), row=i+1, col=1)
-            fig.update_yaxes(title_text=col, row=i+1, col=1)
-
-    # Update layout
-    fig.update_layout(
-        height=300 * (len(df.columns) - 1),  # Adjust height based on the number of subplots
-        title='Stimulus Data',
-        xaxis_title='Time (s)',
-        showlegend=False
-    )
-
-
-    desc = 'If the data was cropped for this calculation, the stimulus data is also cropped.'
-    qc_derivative = [QC_derivative(content=fig, name='Stimulus', content_type='plotly', description_for_user=desc)]
-
-    return qc_derivative
-    
-
 def plot_stim_csv(f_path: str) -> List[QC_derivative]:
     """
     Plot stimulus channels.
