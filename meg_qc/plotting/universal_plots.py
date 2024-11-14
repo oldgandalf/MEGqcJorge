@@ -63,7 +63,7 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     return m_or_g_tit, unit
 
 
-def plot_stim_csv(f_path: str):
+def plot_stim_csv_old(f_path: str):
 
     """
     Plot stimulus channels.
@@ -115,6 +115,52 @@ def plot_stim_csv(f_path: str):
 
     return qc_derivative
     
+
+def plot_stim_csv(f_path: str) -> List[QC_derivative]:
+    """
+    Plot stimulus channels.
+
+    Parameters
+    ----------
+    f_path : str
+        Path to the tsv file with PSD data.
+
+    Returns
+    -------
+    List[QC_derivative]
+        List of QC_derivative objects with plotly figures as content
+    """
+
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Check if the first column is just indexes and remove it if necessary
+    if df.columns[0] == df.index.name or df.iloc[:, 0].equals(pd.Series(df.index)):
+        df = df.drop(df.columns[0], axis=1)
+
+    # Extract the 'time' column for the x-axis
+    time = df['time']
+
+    qc_derivatives = []
+
+    # Loop over each column (excluding 'time') and create a separate figure for each
+    for i, col in enumerate(df.columns):
+        if col != 'time':
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=time, y=df[col], mode='lines', name=col))
+            fig.update_layout(
+                title=col,
+                title_x=0.5,  # Center the title
+                xaxis_title='Time (s)',
+                yaxis_title=col,
+                showlegend=False
+            )
+
+            # Apply description only to the last figure
+            qc_derivative = QC_derivative(content=fig, name=f'Stimulus - {col}', content_type='plotly')
+            qc_derivatives.append(qc_derivative)
+
+    return qc_derivatives
+
 
 def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 

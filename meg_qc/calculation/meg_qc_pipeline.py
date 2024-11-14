@@ -362,7 +362,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'ECG': ecg_str,
                 'EOG': eog_str,
                 'HEAD': head_str,
-                'MUSCLE': muscle_str}
+                'MUSCLE': muscle_str,
+                'STIMULUS': 'If the data was cropped for this calculation, the stimulus data is also cropped.'}
 
                 # Save report strings as json to read it back in when plotting:
                 report_str_derivs=[QC_derivative(report_strings, 'ReportStrings', 'json')]
