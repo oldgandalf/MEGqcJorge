@@ -63,7 +63,7 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     return m_or_g_tit, unit
 
 
-def plot_stim_csv_1(f_path: str) -> List[QC_derivative]:
+def plot_stim_csv_simple(f_path: str) -> List[QC_derivative]:
     """
     Plot stimulus channels.
 
@@ -109,7 +109,7 @@ def plot_stim_csv_1(f_path: str) -> List[QC_derivative]:
     return qc_derivatives
 
 
-def plot_stim_csv(f_path: str) -> List[QC_derivative]:
+def plot_stim_csv_colored_leveled(f_path: str) -> List[QC_derivative]:
     """
     Plot stimulus channels.
 
@@ -181,6 +181,103 @@ def plot_stim_csv(f_path: str) -> List[QC_derivative]:
                     title_x=0.5,  # Center the title
                     xaxis_title='Time (s)',
                     yaxis_title='Stimulus ID',
+                    showlegend=False
+                )
+
+            # Apply description only to the last figure
+            qc_derivative = QC_derivative(content=fig, name=f'Stimulus - {col}', content_type='plotly')
+            qc_derivatives.append(qc_derivative)
+
+    return qc_derivatives
+
+
+def plot_stim_csv(f_path: str) -> List[QC_derivative]:
+    """
+    Plot stimulus channels.
+
+    Parameters
+    ----------
+    f_path : str
+        Path to the tsv file with PSD data.
+
+    Returns
+    -------
+    List[QC_derivative]
+        List of QC_derivative objects with plotly figures as content
+    """
+
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Check if the first column is just indexes and remove it if necessary
+    if df.columns[0] == df.index.name or df.iloc[:, 0].equals(pd.Series(df.index)):
+        df = df.drop(df.columns[0], axis=1)
+
+    # Extract the 'time' column for the x-axis
+    time = df['time']
+
+    qc_derivatives = []
+
+    # Define a set of bright and appealing colors
+    colors = [
+        'rgba(255, 99, 71, 1)', 'rgba(135, 206, 250, 1)', 'rgba(255, 215, 0, 1)',
+        'rgba(0, 128, 0, 1)', 'rgba(148, 0, 211, 1)', 'rgba(255, 140, 0, 1)',
+        'rgba(255, 20, 147, 1)', 'rgba(0, 191, 255, 1)', 'rgba(255, 69, 0, 1)',
+        'rgba(50, 205, 50, 1)', 'rgba(138, 43, 226, 1)', 'rgba(255, 105, 180, 1)',
+        'rgba(0, 255, 255, 1)', 'rgba(255, 0, 0, 1)', 'rgba(0, 255, 0, 1)',
+        'rgba(75, 0, 130, 1)', 'rgba(255, 165, 0, 1)', 'rgba(255, 0, 255, 1)',
+        'rgba(0, 0, 255, 1)', 'rgba(0, 128, 128, 1)', 'rgba(255, 99, 71, 1)',
+        'rgba(135, 206, 250, 1)', 'rgba(255, 215, 0, 1)', 'rgba(0, 128, 0, 1)',
+        'rgba(148, 0, 211, 1)', 'rgba(255, 140, 0, 1)', 'rgba(255, 20, 147, 1)',
+        'rgba(0, 191, 255, 1)', 'rgba(255, 69, 0, 1)', 'rgba(50, 205, 50, 1)'
+    ]
+
+    # Loop over each column (excluding 'time') and create a separate figure for each
+    for i, col in enumerate(df.columns):
+        if col != 'time':
+            y_data = df[col]
+
+            # Check if there are repeating values and exclude 0 values
+            unique_values = y_data[y_data > 0].unique()
+            if 1 < len(unique_values) <= 30:
+                fig = go.Figure()
+
+                # Transform y values to 0 (no stimulus) and 1 (all other stimulus IDs)
+                transformed_y = y_data.apply(lambda y: 0 if y == 0 else 1)
+
+                # Plot the entire line first
+                fig.add_trace(go.Scatter(
+                    x=time, y=transformed_y, mode='lines', name=col,
+                    line=dict(color='grey'),  # Default color for the entire line
+                    hoverinfo='text',
+                    text=[f'Value-{y}, time-{t}s' for y, t in zip(y_data, time)]
+                ))
+
+                # Group repeated values and assign colors
+                group_ids = {value: idx for idx, value in enumerate(unique_values)}
+                for value, group_id in group_ids.items():
+                    indices = y_data == value
+                    fig.add_trace(go.Scatter(
+                        x=time[indices], y=transformed_y[indices], mode='markers', name=f'ID-{int(value)}',
+                        marker=dict(color=colors[group_id % len(colors)]),
+                        hoverinfo='text',
+                        text=[f'ID-{int(value)}, time-{t}s' for t in time[indices]]
+                    ))
+
+                fig.update_layout(
+                    title=col,
+                    title_x=0.5,  # Center the title
+                    xaxis_title='Time (s)',
+                    showlegend=True,
+                    legend=dict(title='Stim IDs', x=1, y=1)
+                )
+            else:
+                # Create the figure as originally
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=time, y=y_data, mode='lines', name=col))
+                fig.update_layout(
+                    title=col,
+                    title_x=0.5,  # Center the title
+                    xaxis_title='Time (s)',
                     showlegend=False
                 )
 
