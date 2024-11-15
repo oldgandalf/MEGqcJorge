@@ -63,7 +63,7 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
     return m_or_g_tit, unit
 
 
-def plot_stim_csv(f_path: str) -> List[QC_derivative]:
+def plot_stim_csv_1(f_path: str) -> List[QC_derivative]:
     """
     Plot stimulus channels.
 
@@ -108,6 +108,79 @@ def plot_stim_csv(f_path: str) -> List[QC_derivative]:
 
     return qc_derivatives
 
+
+def plot_stim_csv(f_path: str) -> List[QC_derivative]:
+    """
+    Plot stimulus channels.
+
+    Parameters
+    ----------
+    f_path : str
+        Path to the tsv file with PSD data.
+
+    Returns
+    -------
+    List[QC_derivative]
+        List of QC_derivative objects with plotly figures as content
+    """
+
+    df = pd.read_csv(f_path, sep='\t')
+
+    # Check if the first column is just indexes and remove it if necessary
+    if df.columns[0] == df.index.name or df.iloc[:, 0].equals(pd.Series(df.index)):
+        df = df.drop(df.columns[0], axis=1)
+
+    # Extract the 'time' column for the x-axis
+    time = df['time']
+
+    qc_derivatives = []
+
+    # Loop over each column (excluding 'time') and create a separate figure for each
+    for i, col in enumerate(df.columns):
+        if col != 'time':
+            y_data = df[col]
+
+            # Check if there are repeating values
+            unique_values = y_data.unique()
+            if len(unique_values) < len(y_data):
+                fig = go.Figure()
+
+                # Group repeated values and assign colors
+                group_ids = {value: idx for idx, value in enumerate(unique_values)}
+                for value, group_id in group_ids.items():
+                    indices = y_data == value
+                    fig.add_trace(go.Scatter(
+                        x=time[indices], y=y_data[indices], mode='lines', name=f'ID-{int(value)}',
+                        line=dict(color=f'rgba({group_id * 50 % 255}, {group_id * 100 % 255}, {group_id * 150 % 255}, 1)'),
+                        hoverinfo='text',
+                        text=[f'ID-{int(value)}, time-{t}s' for t in time[indices]]
+                    ))
+
+                fig.update_layout(
+                    title=col,
+                    title_x=0.5,  # Center the title
+                    xaxis_title='Time (s)',
+                    yaxis_title=col,
+                    showlegend=True,
+                    legend=dict(title='Groups', x=1, y=1)
+                )
+            else:
+                # Create the figure as originally
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=time, y=y_data, mode='lines', name=col))
+                fig.update_layout(
+                    title=col,
+                    title_x=0.5,  # Center the title
+                    xaxis_title='Time (s)',
+                    yaxis_title=col,
+                    showlegend=False
+                )
+
+            # Apply description only to the last figure
+            qc_derivative = QC_derivative(content=fig, name=f'Stimulus - {col}', content_type='plotly')
+            qc_derivatives.append(qc_derivative)
+
+    return qc_derivatives
 
 def plot_ch_df_as_lines_by_lobe_csv(f_path: str, metric: str, x_values, m_or_g, df=None):
 
