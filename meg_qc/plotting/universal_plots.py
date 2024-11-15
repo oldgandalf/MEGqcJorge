@@ -140,18 +140,26 @@ def plot_stim_csv(f_path: str) -> List[QC_derivative]:
         if col != 'time':
             y_data = df[col]
 
-            # Check if there are repeating values
-            unique_values = y_data.unique()
-            if len(unique_values) < len(y_data):
+            # Check if there are repeating values and exclude 0 values
+            unique_values = y_data[y_data > 0].unique()
+            if 1 < len(unique_values) <= 30:
                 fig = go.Figure()
+
+                # Plot the entire line first
+                fig.add_trace(go.Scatter(
+                    x=time, y=y_data, mode='lines', name=col,
+                    line=dict(color='grey'),  # Default color for the entire line
+                    hoverinfo='text',
+                    text=[f'Value-{y}, time-{t}s' for y, t in zip(y_data, time)]
+                ))
 
                 # Group repeated values and assign colors
                 group_ids = {value: idx for idx, value in enumerate(unique_values)}
                 for value, group_id in group_ids.items():
                     indices = y_data == value
                     fig.add_trace(go.Scatter(
-                        x=time[indices], y=y_data[indices], mode='lines', name=f'ID-{int(value)}',
-                        line=dict(color=f'rgba({group_id * 50 % 255}, {group_id * 100 % 255}, {group_id * 150 % 255}, 1)'),
+                        x=time[indices], y=y_data[indices], mode='markers', name=f'ID-{int(value)}',
+                        marker=dict(color=f'rgba({group_id * 50 % 255}, {group_id * 100 % 255}, {group_id * 150 % 255}, 1)'),
                         hoverinfo='text',
                         text=[f'ID-{int(value)}, time-{t}s' for t in time[indices]]
                     ))
@@ -160,7 +168,7 @@ def plot_stim_csv(f_path: str) -> List[QC_derivative]:
                     title=col,
                     title_x=0.5,  # Center the title
                     xaxis_title='Time (s)',
-                    yaxis_title=col,
+                    yaxis_title='Stimulus ID',
                     showlegend=True,
                     legend=dict(title='Groups', x=1, y=1)
                 )
@@ -172,7 +180,7 @@ def plot_stim_csv(f_path: str) -> List[QC_derivative]:
                     title=col,
                     title_x=0.5,  # Center the title
                     xaxis_title='Time (s)',
-                    yaxis_title=col,
+                    yaxis_title='Stimulus ID',
                     showlegend=False
                 )
 
