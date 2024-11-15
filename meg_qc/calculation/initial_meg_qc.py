@@ -10,7 +10,7 @@ from typing import List
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 
 
-def get_all_config_params(config_file_name: str):
+def get_all_config_params(config_file_path: str):
 
     """
     Parse all the parameters from config and put into a python dictionary 
@@ -20,8 +20,8 @@ def get_all_config_params(config_file_name: str):
 
     Parameters
     ----------
-    config_file_name: str
-        The name of the config file.
+    config_file_path: str
+        The path to the config file.
 
     Returns
     -------
@@ -33,7 +33,7 @@ def get_all_config_params(config_file_name: str):
     all_qc_params = {}
 
     config = configparser.ConfigParser()
-    config.read(config_file_name)
+    config.read(config_file_path)
 
     default_section = config['DEFAULT']
 

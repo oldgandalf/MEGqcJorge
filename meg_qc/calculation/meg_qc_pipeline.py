@@ -4,6 +4,7 @@ import time
 import json
 import sys
 import mne
+import shutil
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append(os.path.join('.'))
@@ -121,6 +122,27 @@ def get_files_list(dataset_path, dataset, sid):
 
     return list_of_files, entities_per_file
     
+def save_config(derivative, config_file_path: str, f_name_to_save: str):
+
+    """
+    Save the config file used for this run as a derivative.
+
+    Parameters
+    ----------
+    derivative : ancpbids.Derivative
+        Derivative object to save the config file.
+    config_file_path : str
+        Path to the config file used for this ds conversion
+    f_name_to_save : str
+        Name of the config file to save.
+    
+    """
+
+    config_artifact = derivative.create_artifact(raw=f_name_to_save)
+    config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
+    config_artifact.add_entity('desc', f_name_to_save) #file name
+    config_artifact.suffix = 'meg'
+    config_artifact.extension = '.ini'
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
@@ -166,6 +188,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
+        # Save config file used for this run as a derivative:
+        save_config(derivative, config_file_path, 'used_settings')
 
         # print('_____BIDS data info___')
         # print(schema)
@@ -338,7 +362,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'ECG': ecg_str,
                 'EOG': eog_str,
                 'HEAD': head_str,
-                'MUSCLE': muscle_str}
+                'MUSCLE': muscle_str,
+                'STIMULUS': 'If the data was cropped for this calculation, the stimulus data is also cropped.'}
 
                 # Save report strings as json to read it back in when plotting:
                 report_str_derivs=[QC_derivative(report_strings, 'ReportStrings', 'json')]
