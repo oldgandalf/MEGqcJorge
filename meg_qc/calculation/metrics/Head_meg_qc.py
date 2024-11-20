@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import mne
 import time
+from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
 
 def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
@@ -20,9 +21,9 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
         Standard deviation of the movement of the head over time: X, Y, Z coordinates are calculated using Pythagorean theorem to get 1 float value.
     std_head_rotations : float
         Standard deviation of the rotation of the head over time: Q1, Q2, Q3 coordinates are calculated using Pythagorean theorem to get 1 float value.
-    max_movement_xyz : list
+    max_movement_xyz : List
         Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
-    max_rotation_q : list
+    max_rotation_q : List
         Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
     df_head_pos : pandas dataframe
         Head positions as pandas dataframe just for visualization and check.
@@ -39,7 +40,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
     xyz_coords=np.array([[x, y, z] for x, y, z in zip(head_pos_transposed[4], head_pos_transposed[5], head_pos_transposed[6])])
     q1q2q3_coords=np.array([[q1, q2, q3] for q1, q2, q3 in zip(head_pos_transposed[1], head_pos_transposed[2], head_pos_transposed[3])])
 
-    #Translate rotations into degrees: (360/2pi)*value 
+    #Translate rotations into degrees: (360/2pi)*value . Not sure if the formila is correct.
     #q1q2q3_coords=360/(2*np.pi)*q1q2q3_coords
 
     # Calculate the maximum movement in 3 directions:
@@ -72,7 +73,7 @@ def compute_head_pos_std_and_max_rotation_movement(head_pos: np.ndarray):
     return std_head_pos, std_head_rotations, [max_movement_x, max_movement_y, max_movement_z], [max_rotation_q1, max_rotation_q2, max_rotation_q3], df_head_pos
 
 
-def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: list, max_rotation_q: list):
+def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_movement_xyz: List, max_rotation_q: List):
 
     """
     Make simple metric for head positions.
@@ -83,9 +84,9 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
         Standard deviation of the movement of the head over time.
     std_head_rotations : float
         Standard deviation of the rotation of the head over time.
-    max_movement_xyz : list
+    max_movement_xyz : List
         Maximum movement amplitude in 3 directions: X, Y, Z coordinates.
-    max_rotation_q : list
+    max_rotation_q : List
         Maximum rotation amplitude in 3 directions: Q1, Q2, Q3 coordinates.
         
     Returns
@@ -113,6 +114,23 @@ def make_simple_metric_head(std_head_pos: float, std_head_rotations: float, max_
     return simple_metric
 
 def head_pos_to_csv(file_name_prefix, head_pos):
+
+    """
+    Save head positions to csv file for future visualization.
+
+    Parameters
+    ----------
+    file_name_prefix : str
+        Prefix for the file name. Example: 'Head'.
+    head_pos : np.ndarray
+        Head positions as numpy array calculated by MNE. The shape of the array should be (n_timepoints, 10).
+    
+    Returns 
+    -------
+    df_deriv : QC_derivative
+        QC derivative with head positions.
+    """
+
 
     names = ['t', 'q1', 'q2', 'q3', 'x', 'y', 'z', 'gof', 'err', 'v']
     df = pd.DataFrame(data=head_pos, columns=names)
@@ -167,7 +185,7 @@ def get_head_positions(raw: mne.io.Raw):
         #print('___MEGqc___: ', 'chpi_locs:', chpi_locs)
 
     except:
-        print('___MEGqc___: ', 'Neuromag appriach to compute Head positions failed. Trying CTF approach...')
+        print('___MEGqc___: ', 'Neuromag approach to compute Head positions failed. Trying CTF approach...')
         try:
             #for CTF use:
             chpi_locs = mne.chpi.extract_chpi_locs_ctf(raw)
@@ -211,12 +229,16 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw):
         
     Returns
     -------
-    head_derivs : list
+    head_derivs : List
         List of QC derivatives with figures.
     simple_metrics_head : dict
         Dictionary with simple metrics for head movement.
     head_str : str
         String with information about head positions if they were not calculated, otherwise empty. For report
+    df_head_pos : pandas dataframe
+        Head positions as pandas dataframe just for visualization and check.
+    head_pos : np.ndarray
+        Head positions and rotations calculated by MNE.
 
     """
 
@@ -237,6 +259,7 @@ def HEAD_movement_meg_qc(raw: mne.io.Raw):
     for q in range(1,4):
         head_pos_degrees[q]=360/(2*np.pi)*head_pos_degrees[q]
     head_pos_degrees=head_pos_degrees.transpose()
+    #Currently we dont use these.
 
     head_derivs = head_pos_to_csv('Head', head_pos)
 

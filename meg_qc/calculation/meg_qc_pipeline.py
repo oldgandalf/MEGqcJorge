@@ -3,23 +3,25 @@ import ancpbids
 import time
 import json
 import sys
+import mne
+import shutil
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
-sys.path.append('./')
-sys.path.append('./meg_qc/calculation/')
+sys.path.append(os.path.join('.'))
+sys.path.append(os.path.join('.', 'meg_qc', 'calculation'))
 
 # relative path for `make html` (docs)
-sys.path.append('../meg_qc/calculation/')
+sys.path.append(os.path.join('..', 'meg_qc', 'calculation'))
 
 # relative path for `make html` (docs) run from https://readthedocs.org/
-# every time rst file is nested insd of another, need to add one more path level here:
-sys.path.append('../../meg_qc/calculation/')
-sys.path.append('../../../meg_qc/calculation/')
-sys.path.append('../../../../meg_qc/calculation/')
+# every time rst file is nested inside of another, need to add one more path level here:
+sys.path.append(os.path.join('..', '..', 'meg_qc', 'calculation'))
+sys.path.append(os.path.join('..', '..', '..', 'meg_qc', 'calculation'))
+sys.path.append(os.path.join('..', '..', '..', '..', 'meg_qc', 'calculation'))
 
 
 from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
-from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
+# from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
 from meg_qc.calculation.metrics.STD_meg_qc import STD_meg_qc
@@ -30,16 +32,127 @@ from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
+def ctf_workaround(dataset, sid):
+
+    artifacts = dataset.query(suffix="meg", return_type="object", subj=sid, scope='raw')
+    # convert to folders of found files
+    folders = map(lambda a: a.get_parent().get_absolute_path(), artifacts)
+    # remove duplicates
+    folders = set(folders)
+    # convert to liust before filtering
+    folders = list(folders)
+
+    # filter for folders which end with ".ds" (including os specific path separator)
+    # folders = list(filter(lambda f: f.endswith(f"{os.sep}.ds"), folders))
+
+    # Filter for folders which end with ".ds"
+    filtered_folders = [f for f in folders if f.endswith('.ds')]
+
+    return sorted(filtered_folders)
+
+
+def get_files_list(dataset_path, dataset, sid):
+
+    """
+    Different ways for fif, ctf, etc...
+    Using ancpbids to get the list of files for each subject in ds.
+    """
+
+    has_fif = False
+    has_ctf = False
+
+    for root, dirs, files in os.walk(dataset_path):
+
+        # Exclude the 'derivatives' folder. 
+        # Because we will later save ds info as derivative with extension .fif
+        # so if we work on this ds again it might see a ctf ds as fif.
+        dirs[:] = [d for d in dirs if d != 'derivatives']
+
+        # Check for .fif files
+        if any(file.endswith('.fif') for file in files):
+            has_fif = True
+        
+        # Check for folders ending with .ds
+        if any(dir.endswith('.ds') for dir in dirs):
+            has_ctf = True
+
+        # If both are found, no need to continue walking
+        if has_fif and has_ctf:
+            raise ValueError('Both fif and ctf files found in the dataset. Can not define how to read the ds.')
+
+
+    if has_fif:
+        list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid, scope='raw')))
+        
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif', scope='raw')
+        # sort list_of_sub_jsons by name key to get same order as list_of_files
+        entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
+
+        print('___MEGqc___: ', 'entities_per_file', entities_per_file)
+        print('___MEGqc___: ', 'list_of_files', list_of_files)
+
+    elif has_ctf:
+        list_of_files = ctf_workaround(dataset, sid)
+        entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4', scope='raw')
+
+        # entities_per_file is a list of Artifact objects of ancpbids created from raw files. (fif for fif files and res4 for ctf files)
+        # TODO: this assumes every .ds directory has a single corresponding .res4 file. 
+        # Is it always so?
+        # Used because I cant get entities_per_file from .ds folders, ancpbids doesnt support folder query.
+        # But we need entities_per_file to pass into subject_folder.create_artifact(), 
+        # so that it can add automatically all the entities to the new derivative on base of entities from raw file.
+    
+        
+        # sort list_of_sub_jsons by name key to get same order as list_of_files
+        entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
+
+    else:
+        list_of_files = []
+        raise ValueError('No fif or ctf files found in the dataset.')
+    
+
+    for i in range(len(list_of_files)):
+        file_name_in_path = os.path.basename(list_of_files[i]).split('_meg.')[0]
+        file_name_in_obj = entities_per_file[i]['name'].split('_meg.')[0]
+
+        if file_name_in_obj not in file_name_in_path:
+            raise ValueError('Different names in list_of_files and entities_per_file')
+
+    # we can also check that final file of path in list of files is same as name in jsons
+
+    return list_of_files, entities_per_file
+    
+def save_config(derivative, config_file_path: str, f_name_to_save: str):
+
+    """
+    Save the config file used for this run as a derivative.
+
+    Parameters
+    ----------
+    derivative : ancpbids.Derivative
+        Derivative object to save the config file.
+    config_file_path : str
+        Path to the config file used for this ds conversion
+    f_name_to_save : str
+        Name of the config file to save.
+    
+    """
+
+    config_artifact = derivative.create_artifact(raw=f_name_to_save)
+    config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
+    config_artifact.add_entity('desc', f_name_to_save) #file name
+    config_artifact.suffix = 'meg'
+    config_artifact.extension = '.ini'
 
 def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     """ 
     Main function of MEG QC:
     
-    * Parse parameters from config
+    * Parse parameters from config: user config + internal config
     * Get the data .fif file for each subject using ancpbids
     * Run initial processing (filtering, epoching, resampling)
-    * Run whole QC analysis for every subject, every fif
+    * Run whole QC analysis for every subject, every fif (only chosen metrics from config)
     * Save derivatives (csvs, html reports) into the file system using ancpbids.
     
     Parameters
@@ -48,11 +161,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         Path the config file with all the parameters for the QC analysis and data directory path.
     internal_config_file_path : str
         Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
-        
-    Returns
-    -------
-        raw : mne.io.Raw
-            The raw MEG data.
 
     """
 
@@ -64,25 +172,24 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
     ds_paths = all_qc_params['default']['dataset_path']
 
-
     for dataset_path in ds_paths: #run over several data sets
 
-        print(dataset_path)
+        print('___MEGqc___: ', 'DS path:', dataset_path)
 
-        try:
-            dataset = ancpbids.load_dataset(dataset_path)
-            schema = dataset.get_schema()
-        except:
-            print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-            return
+        dataset = ancpbids.load_dataset(dataset_path)
+        schema = dataset.get_schema()
+
 
         #create derivatives folder first:
-        if os.path.isdir(dataset_path+'/derivatives')==False: 
-                os.mkdir(dataset_path+'/derivatives')
+        derivatives_path = os.path.join(dataset_path, 'derivatives')
+        if not os.path.isdir(derivatives_path):
+            os.mkdir(derivatives_path)
 
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
+        # Save config file used for this run as a derivative:
+        save_config(derivative, config_file_path, 'used_settings')
 
         # print('_____BIDS data info___')
         # print(schema)
@@ -106,39 +213,38 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         #return
 
-
-        # list_of_subs = list(entities["sub"])
-        if all_qc_params['default']['subjects'][0] != 'all':
-            list_of_subs = all_qc_params['default']['subjects']
-        elif all_qc_params['default']['subjects'][0] == 'all':
-            list_of_subs = sorted(list(dataset.query_entities()['subject']))
-            print('___MEGqc___: ', 'list_of_subs', list_of_subs)
-            if not list_of_subs:
-                print('___MEGqc___: ', 'No subjects found by ANCP BIDS. Check your data set and directory path in config.')
-                return
-        else:
-            print('___MEGqc___: ', 'Something went wrong with the subjects list. Check parameter "subjects" in config file or simply set it to "all".')
+        try:
+            if all_qc_params['default']['subjects'][0] != 'all':
+                sub_list = all_qc_params['default']['subjects']
+            elif all_qc_params['default']['subjects'][0] == 'all':
+                sub_list = sorted(list(dataset.query_entities()['subject']))
+        except:
+            print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
             return
 
         avg_ecg=[]
         avg_eog=[]
 
-        print('___MEGqc___: ', 'TOTAL subs', len(list_of_subs))
-        print('___MEGqc___: ', 'EMPTY room?', sorted(list_of_subs)[0], sorted(list_of_subs)[-1])
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
 
-        for sid in list_of_subs: #[0:4]: 
+        for sub in sub_list: #[0:4]:
     
-            print('___MEGqc___: ', 'Dataset: ', dataset_path)
-            print('___MEGqc___: ', 'Take SID: ', sid)
+            print('___MEGqc___: ', 'Take SUB: ', sub)
             
-            subject_folder = derivative.create_folder(type_=schema.Subject, name='sub-'+sid)
+            calculation_folder = derivative.create_folder(name='calculation')
+            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
-            list_of_fifs = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid)))
-            print('___MEGqc___: ', 'list_of_fifs', list_of_fifs)
-            print('___MEGqc___: ', 'TOTAL fifs: ', len(list_of_fifs))
+            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sub)
+
+            if not list_of_files:
+                print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
+                return
+
+            print('___MEGqc___: ', 'list_of_files', list_of_files)
+            print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
+            print('___MEGqc___: ', 'entities_per_file', entities_per_file)
 
 
             # GET all derivs!
@@ -149,16 +255,18 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             # print('___MEGqc___: ', 'entities', entities)
 
 
-            list_of_sub_jsons = dataset.query(sub=sid, suffix='meg', extension='.fif')
+            #TODO; check here that order is really the same as in list_of_fifs
+            #same as list_of_fifs, but return type is not filename, but dict
 
-            print('___MEGqc___: ', 'list_of_sub_jsons', list_of_sub_jsons)
-
-            #list_of_fifs = list_of_fifs[0:1] #DELETE THIS LINE WHEN DONE TESTING
 
             counter = 0
 
-            for fif_ind, data_file in enumerate(list_of_fifs): 
-                print('___MEGqc___: ', 'Take fif: ', data_file)
+            #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
+
+
+            for file_ind, data_file in enumerate(list_of_files[0:1]): #run over several data files
+
+                print('___MEGqc___: ', 'Take data: ', data_file)
 
                 if 'acq-crosstalk' in data_file:
                     print('___MEGqc___: ', 'Skipping crosstalk file ', data_file)
@@ -171,12 +279,18 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 print('___MEGqc___: ', 'Starting initial processing...')
                 start_time = time.time()
 
-                try:
-                    dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, time_series_derivs, time_series_str, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, clicking_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], data_file=data_file)
-                except:
-                    print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
-                    #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
-                    continue
+                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                
+                # Commented out this, because it would cover the actual error while allowing to continue processing.
+                # I wanna see the actual error. Often it happens while reading raw and says: 
+                # file '...' does not start with a file id tag
+                
+                # try:
+                #     dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
+                # except:
+                #     print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
+                #     #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
+                #     continue
                 
                 print('___MEGqc___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
 
@@ -186,9 +300,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 noisy_freqs_global = None #if we run PSD, this will be properly defined. It is used as an input for Muscle and is supposed to represent powerline noise.
                 std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs = [],[],[],[],[], [],  [], []
                 simple_metrics_psd, simple_metrics_std, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-                df_head_pos, head_pos = [], []
-                scores_muscle_all1, scores_muscle_all2, scores_muscle_all3 = [], [], []
-                raw1, raw2, raw3 = [], [], []
+
 
                 if all_qc_params['default']['run_STD'] is True:
                     print('___MEGqc___: ', 'Starting STD...')
@@ -199,7 +311,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 if all_qc_params['default']['run_PSD'] is True:
                     print('___MEGqc___: ', 'Starting PSD...')
                     start_time = time.time()
-                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, helper_plots=False)
+                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], internal_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, helper_plots=False)
                     print('___MEGqc___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_PTP_manual'] is True:
@@ -232,18 +344,17 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                 if all_qc_params['default']['run_Head'] is True:
                     print('___MEGqc___: ', 'Starting Head movement calculation...')
-                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped, plot_annotations=False)
+                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped)
                     print('___MEGqc___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 if all_qc_params['default']['run_Muscle'] is True:
                     print('___MEGqc___: ', 'Starting Muscle artifacts calculation...')
-                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], all_qc_params['PSD'], raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, attach_dummy = True, cut_dummy = True)
+                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], all_qc_params['PSD'], internal_qc_params['PSD'], channels, raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, attach_dummy = True, cut_dummy = True)
                     print('___MEGqc___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
 
                 
                 report_strings = {
-                'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str+clicking_str,
-                'TIME_SERIES': time_series_str,
+                'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str,
                 'STD': std_str,
                 'PSD': psd_str,
                 'PTP_MANUAL': pp_manual_str,
@@ -251,16 +362,17 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'ECG': ecg_str,
                 'EOG': eog_str,
                 'HEAD': head_str,
-                'MUSCLE': muscle_str}
+                'MUSCLE': muscle_str,
+                'STIMULUS': 'If the data was cropped for this calculation, the stimulus data is also cropped.'}
 
                 # Save report strings as json to read it back in when plotting:
                 report_str_derivs=[QC_derivative(report_strings, 'ReportStrings', 'json')]
                 
 
                 QC_derivs={
-                'MEG data quality analysis report': [],
+                'Raw info': info_derivs,
+                'Stimulus channels': stim_deriv,
                 'Report_strings': report_str_derivs,
-                'Interactive time series': time_series_derivs,
                 'Sensors locations': sensors_derivs,
                 'Standard deviation of the data': std_derivs, 
                 'Frequency spectrum': psd_derivs, 
@@ -280,10 +392,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 'EOG': simple_metrics_eog,
                 'HEAD': simple_metrics_head,
                 'MUSCLE': simple_metrics_muscle}  
-
-
-                # report_html_string = make_joined_report_mne(raw, QC_derivs, report_strings, default_settings=all_qc_params['default'])
-                # QC_derivs['Report_MNE']= [QC_derivative(report_html_string, 'REPORT', 'report mne')]
 
                 #Collect all simple metrics into a dictionary and add to QC_derivs:
                 QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
@@ -312,7 +420,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                         #         #'with'command doesnt work in lambda
                         #     meg_artifact.content = html_writer # function pointer instead of lambda
 
-                        meg_artifact = subject_folder.create_artifact(raw=list_of_sub_jsons[fif_ind]) #shell. empty derivative
+                        meg_artifact = subject_folder.create_artifact(raw=entities_per_file[file_ind]) #shell. empty derivative
 
                         counter +=1
                         print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
@@ -325,8 +433,6 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                             meg_artifact.extension = '.tsv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path, sep='\t')
 
-                        elif deriv.content_type == 'report mne':
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.save(file_path, overwrite=True, open_browser=False)
 
                         elif deriv.content_type == 'json':
                             meg_artifact.extension = '.json'
@@ -337,6 +443,10 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
                             # with open('derivs.json', 'w') as file_wrapper:
                             #     json.dump(metric, file_wrapper, indent=4)
+
+                        elif deriv.content_type == 'info':
+                            meg_artifact.extension = '.fif'
+                            meg_artifact.content = lambda file_path, cont=deriv.content: mne.io.write_info(file_path, cont)
 
                         else:
                             print('___MEGqc___: ', meg_artifact.name)
@@ -350,16 +460,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
 
         if raw is None:
             print('___MEGqc___: ', 'No data files could be processed.')
-            #return [None]*14
             return
 
-    #for now will return raw, etc for the very last data set and fif file. In final version shoud not return anything
     # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
-    
-
-    # for_report = {'ch_chosen': m_or_g_chosen}
-    # # save as json:
-    # with open('for_report.json', 'w') as file_wrapper:
-    #     json.dump(for_report, file_wrapper, indent=4)
 
     return 

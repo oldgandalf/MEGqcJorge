@@ -1,0 +1,386 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.8 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.8">
+  <diagram name="Page-1" id="929967ad-93f9-6ef4-fab6-5d389245f69c">
+    <mxGraphModel dx="4380" dy="5223" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1.5" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style=";html=1;" />
+        <mxCell id="1" style=";html=1;" parent="0" />
+        <mxCell id="1672d66443f91eb5-23" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;&lt;br&gt;&lt;i&gt;ECG_meg_qc()&lt;/i&gt;&lt;br&gt;&lt;/font&gt;" style="text;strokeColor=none;fillColor=none;html=1;fontSize=28;fontStyle=1;verticalAlign=middle;align=center;" parent="1" vertex="1">
+          <mxGeometry x="-1190" y="-2580" width="1110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="qlgW9oU40mQZMEhXMN03-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="q_XP9tdPbFsaZTS1878Z-1" target="q_XP9tdPbFsaZTS1878Z-9" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-900" y="-2359" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-1" value="Input:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Raw data,&lt;br&gt;Config parameters" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-960" y="-2459" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="q_XP9tdPbFsaZTS1878Z-2" target="q_XP9tdPbFsaZTS1878Z-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-2" value="" style="ellipse;fillColor=strokeColor;" parent="1" vertex="1">
+          <mxGeometry x="-650" y="-2499" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-7" value="" style="group;flipV=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-765" y="-2404" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-8" value="Pick ECG channels&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;mne.pick_types(ecg=True)&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="q_XP9tdPbFsaZTS1878Z-7" vertex="1">
+          <mxGeometry x="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-9" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="q_XP9tdPbFsaZTS1878Z-7" vertex="1">
+          <mxGeometry y="25" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-10" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="q_XP9tdPbFsaZTS1878Z-7" vertex="1">
+          <mxGeometry x="115" y="80" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="zNMVAwUSSOP5G73fzrCB-7" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-420" y="-870" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-164" value="" style="group" parent="zNMVAwUSSOP5G73fzrCB-7" vertex="1" connectable="0">
+          <mxGeometry x="10" width="250" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-165" value="" style="group" parent="q_XP9tdPbFsaZTS1878Z-164" vertex="1" connectable="0">
+          <mxGeometry width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-166" value="&lt;p style=&quot;border-color: var(--border-color);&quot;&gt;Save info about the level of ECG&amp;nbsp;contamination (still only CORRELATION here! not similarity) &lt;br&gt;for each channel i&lt;span style=&quot;background-color: initial;&quot;&gt;n a dictionary&lt;/span&gt;&lt;/p&gt;&lt;i&gt;&lt;b&gt;make_simple_metric_ecg()&lt;/b&gt;&lt;/i&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="q_XP9tdPbFsaZTS1878Z-165" vertex="1">
+          <mxGeometry y="10" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-78" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="q_XP9tdPbFsaZTS1878Z-165" vertex="1">
+          <mxGeometry x="102" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="q_XP9tdPbFsaZTS1878Z-168" value="pinOut 1" style="fontStyle=0;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="q_XP9tdPbFsaZTS1878Z-164" vertex="1">
+          <mxGeometry x="240" y="40.00000000000023" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="zNMVAwUSSOP5G73fzrCB-8" value="Output:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;List of QC derivatives (tsvs)&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Dict as Simple metric&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Str about ECG contamination" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
+          <mxGeometry x="-120" y="-532.25" width="198" height="81" as="geometry" />
+        </mxCell>
+        <mxCell id="Nbf0Tub4fTZDGGXtQ6uE-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;fontColor=#000000;" parent="1" source="jzh1gqENJoQ-7TW8aTZ5-6" target="zNMVAwUSSOP5G73fzrCB-8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-32" y="-531.75" />
+              <mxPoint x="-32" y="-531.75" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jzh1gqENJoQ-7TW8aTZ5-6" value="2" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-61" y="-591.75" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-86" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.594;entryY=-0.011;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="zNMVAwUSSOP5G73fzrCB-8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-4" y="-561.75" as="sourcePoint" />
+            <mxPoint x="-2.0720000000001164" y="-530.7780000000002" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jzh1gqENJoQ-7TW8aTZ5-7" value="3" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-16" y="-591.75" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="huTJLk3M8OtfZe6XO08h-6" target="ua0UwOFp4txvmiH0tm5q-26" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-28" value="False" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ua0UwOFp4txvmiH0tm5q-27" vertex="1" connectable="0">
+          <mxGeometry x="-0.2923" y="1" relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="huTJLk3M8OtfZe6XO08h-6" target="ua0UwOFp4txvmiH0tm5q-36" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-39" value="True" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ua0UwOFp4txvmiH0tm5q-38" vertex="1" connectable="0">
+          <mxGeometry x="-0.0744" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="huTJLk3M8OtfZe6XO08h-6" value="Mean R wave is good?" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="-705.4999999999999" y="-1940" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Nbf0Tub4fTZDGGXtQ6uE-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.144;entryY=0.027;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=Helvetica;fontColor=#000000;" parent="1" source="Nbf0Tub4fTZDGGXtQ6uE-26" target="zNMVAwUSSOP5G73fzrCB-8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-91" y="-532.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Nbf0Tub4fTZDGGXtQ6uE-26" value="1" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-107" y="-591.75" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-1" value="" style="group;flipV=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-764" y="-2290" width="250" height="101" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-2" value="Choose the method of finding affected channels based on the presense and quality of ECG channel:&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;get_ECG_data_choose_method()&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-1" vertex="1">
+          <mxGeometry x="9.8" width="240.2" height="89.78" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-4" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-1" vertex="1">
+          <mxGeometry x="112.7" y="89.77777777777777" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-5" value="&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;Options:&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Channel present and good: correlation with ECG channel&lt;/span&gt;&lt;/div&gt;&lt;span style=&quot;&quot;&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Channel present and bad: correlation with reconstructed&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Channel missing: correlation with reconstructed channel&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Use mean ECG signal as threshold (currrently not used)&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-281" y="-2279" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="q_XP9tdPbFsaZTS1878Z-10" target="ua0UwOFp4txvmiH0tm5q-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-8" value="" style="group;flipV=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-762" y="-2154" width="243" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-9" value="&lt;div style=&quot;line-height: 18px;&quot;&gt;&lt;p style=&quot;&quot;&gt;Calculate&lt;b&gt; mean Rwave&lt;/b&gt; based on either real ECG channel data or on reconstructed data (depends on the method used)&lt;br&gt;     and check if it has an R wave shape.&lt;/p&gt;&lt;p style=&quot;&quot;&gt;&lt;b&gt;&lt;i&gt;check_mean_wave()&lt;/i&gt;&lt;/b&gt;&lt;/p&gt;&lt;p style=&quot;&quot;&gt;Save mean Rwave data to tsv&lt;b&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/b&gt;&lt;/p&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-8" vertex="1">
+          <mxGeometry x="9.72" width="233.28" height="128.8888888888889" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-10" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-8" vertex="1">
+          <mxGeometry x="111.78" y="128.8888888888889" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-4" target="ua0UwOFp4txvmiH0tm5q-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-20" value="1" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-476" y="-2109" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" target="ua0UwOFp4txvmiH0tm5q-20" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-510" y="-2094" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-92" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-26" target="ua0UwOFp4txvmiH0tm5q-91" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-26" value="" style="shape=sumEllipse;perimeter=ellipsePerimeter;html=1;backgroundOutline=1;" parent="1" vertex="1">
+          <mxGeometry x="-468" y="-1915" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-29" value="Options:&amp;nbsp;&lt;br&gt;- &quot;correlation&quot; (Correalation with ECG channel):&amp;nbsp;&lt;br&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;calculate mean&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;of recorded ECG&lt;/span&gt;&lt;br&gt;- &quot;correlation_reconstructed&quot; (Correlation with reconstructed channel):&lt;br&gt;&lt;blockquote style=&quot;margin: 0 0 0 40px; border: none; padding: 0px;&quot;&gt;1) reconstruct ECG channel on a base of magnetometers&lt;br&gt;2) calculate mean of the reconstructed channel&lt;/blockquote&gt;&amp;nbsp;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-270" y="-2149" width="390" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-35" value="" style="group;flipV=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-755" y="-1800" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-36" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Create ECG epochs for all channels based on the recorded or reconstructed ECG channel&lt;br&gt;&lt;br&gt;&lt;/font&gt;&lt;div style=&quot;line-height: 18px;&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;&lt;b&gt;&lt;i&gt;mne.preprocessing.create_ecg_epochs()&lt;/i&gt;&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-35" vertex="1">
+          <mxGeometry width="240.00000000000003" height="88.89" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-37" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-35" vertex="1">
+          <mxGeometry x="105.39999999999999" y="88.88888888888889" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-40" value="" style="group;direction=west;flipH=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-754" y="-1660" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-41" value="&lt;b&gt;&lt;i&gt;Optional:&lt;/i&gt;&lt;/b&gt;&lt;div&gt;Visualise ECG signal on channels using MNE&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;plot_ecg_eog_mne&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-40" vertex="1">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-42" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-40" vertex="1">
+          <mxGeometry x="240" y="35" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-43" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-40" vertex="1">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-44" value="2*" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-468" y="-1625" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ua0UwOFp4txvmiH0tm5q-37" target="ua0UwOFp4txvmiH0tm5q-43" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-46" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ua0UwOFp4txvmiH0tm5q-42" target="ua0UwOFp4txvmiH0tm5q-44" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-47" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-755" y="-1520" width="235" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-48" value="- Calculate mean ECG signal for every channel,&lt;br&gt;- Calculate &lt;b&gt;&lt;i&gt;smoothed&lt;/i&gt;&lt;/b&gt; mean ECG signal for every channel using Gaussian kernel,&lt;br&gt;- Assign lobe color code to each channel for&amp;nbsp; plotting&lt;br&gt;&lt;br&gt;&lt;b&gt;&lt;i&gt;calculate_artifacts_on_channels&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-47" vertex="1">
+          <mxGeometry y="13" width="235" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-49" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-47" vertex="1">
+          <mxGeometry x="102.8125" y="133.00000000000003" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-50" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-47" vertex="1">
+          <mxGeometry x="102.8125" y="2.5" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-51" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.584;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-37" target="ua0UwOFp4txvmiH0tm5q-50" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-610" y="-1540" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="-642" y="-1680" />
+              <mxPoint x="-800" y="-1680" />
+              <mxPoint x="-800" y="-1540" />
+              <mxPoint x="-635" y="-1540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.436;entryY=-0.014;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-4" target="as0LFwTi1HrOVpfDGF1d-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-650.02" y="-2189.0022222222224" as="sourcePoint" />
+            <mxPoint x="-1046" y="-2110" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="-644" y="-2180" />
+              <mxPoint x="-917" y="-2180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-57" value="" style="group" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-750" y="-1200" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-59" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-57" vertex="1">
+          <mxGeometry x="105" y="254" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-60" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-57" vertex="1">
+          <mxGeometry x="105" y="124" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-1" value="" style="group" parent="ua0UwOFp4txvmiH0tm5q-57" vertex="1" connectable="0">
+          <mxGeometry y="-10" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-2" value="Align the mean epoch of ECG channel in time with the mean epochs of ECG artifacts found on channels.&lt;br&gt;&lt;br&gt;&lt;b&gt;align_mean_rwave&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="Vyd6QX7pljOJEs3M_v04-1" vertex="1">
+          <mxGeometry y="11" width="240" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-3" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="Vyd6QX7pljOJEs3M_v04-1" vertex="1">
+          <mxGeometry x="105" y="99" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-4" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="Vyd6QX7pljOJEs3M_v04-1" vertex="1">
+          <mxGeometry x="105" y="0.6666666666666665" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="ua0UwOFp4txvmiH0tm5q-57" source="Vyd6QX7pljOJEs3M_v04-3" target="ua0UwOFp4txvmiH0tm5q-60" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-61" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;strokeColor=default;jumpStyle=arc;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-4" target="Vyd6QX7pljOJEs3M_v04-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-308" y="-1310" as="targetPoint" />
+            <mxPoint x="-615.5" y="-2350" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="-629" y="-2180" />
+              <mxPoint x="-312" y="-2180" />
+              <mxPoint x="-312" y="-1230" />
+              <mxPoint x="-622" y="-1230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-62" value="Methods:&lt;br&gt;correlation &amp;amp;&lt;br&gt;correlation_reconstructed" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="ua0UwOFp4txvmiH0tm5q-61" vertex="1" connectable="0">
+          <mxGeometry x="0.2229" y="1" relative="1" as="geometry">
+            <mxPoint x="-99" y="-656" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-63" value="" style="group;flipH=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-750" y="-541.25" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-64" value="Save &lt;b&gt;similarity score&lt;/b&gt; for every channel &lt;br&gt;to tsv for plotting later&lt;div&gt;&lt;br&gt;&lt;i&gt;&lt;b&gt;ch_dict_to_csv&lt;/b&gt;&lt;/i&gt;&lt;b&gt;&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;&lt;/div&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="ua0UwOFp4txvmiH0tm5q-63" vertex="1">
+          <mxGeometry y="10" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-65" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-63" vertex="1">
+          <mxGeometry x="240" y="35" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-66" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="ua0UwOFp4txvmiH0tm5q-63" vertex="1">
+          <mxGeometry x="105" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-67" value="3" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-450" y="-506.25" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-68" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-65" target="ua0UwOFp4txvmiH0tm5q-67" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-81" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.608;entryY=-0.085;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-59" target="ua0UwOFp4txvmiH0tm5q-78" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-324.28" y="-876.02" as="sourcePoint" />
+            <mxPoint x="-598" y="-240" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="-622" y="-900" />
+              <mxPoint x="-290" y="-900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-91" value="Output:&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;List of QC derivatives (fig)&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Empty dictionary as Simple metric&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;Str about no ECG contamination detected" style="html=1;dashed=0;fontFamily=Helvetica;fontSize=12;fontColor=rgb(0, 0, 0);align=center;strokeColor=rgb(0, 0, 0);fillColor=rgb(255, 255, 255);" parent="1" vertex="1">
+          <mxGeometry x="-120" y="-1941" width="230" height="81" as="geometry" />
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-99" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-49" target="Vyd6QX7pljOJEs3M_v04-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-637" y="-1377" />
+            </Array>
+            <mxPoint x="-330" y="-1310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-100" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;jumpStyle=arc;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-10" target="Vyd6QX7pljOJEs3M_v04-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-629" y="-2015" />
+              <mxPoint x="-629" y="-1970" />
+              <mxPoint x="-320" y="-1970" />
+              <mxPoint x="-320" y="-1250" />
+              <mxPoint x="-630" y="-1250" />
+            </Array>
+            <mxPoint x="-320" y="-1310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="TA8RBadlavMFpg_JwYuW-1" value="pinIn 2" style="fontStyle=0;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;spacingLeft=2;fontFamily=Helvetica;fontSize=12;flipH=0;resizable=0;container=0;noLabel=1;" parent="1" vertex="1">
+          <mxGeometry x="-519" y="-2109" width="10" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="TA8RBadlavMFpg_JwYuW-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="ua0UwOFp4txvmiH0tm5q-10" target="huTJLk3M8OtfZe6XO08h-6" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-635" y="-2015" />
+              <mxPoint x="-635" y="-1980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ua0UwOFp4txvmiH0tm5q-58" value="Use Pearson &lt;b&gt;correlation&lt;/b&gt; of &lt;b&gt;mean Rwave&lt;/b&gt; with the artifact data of each channel to find correlation coefficient for each channel. Higher correlation -&amp;gt; channel is more affected by ECG signal&lt;br&gt;&lt;br&gt;&lt;b&gt;find_affected_by_correlation&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="1" vertex="1">
+          <mxGeometry x="-750" y="-1066" width="240" height="119.99999999999999" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-9" value="For all possible ECG alignment variations:" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;recursiveResize=0;container=1;collapsible=0;width=160;dashed=1;" parent="1" vertex="1">
+          <mxGeometry x="-810" y="-1260" width="350" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="Vyd6QX7pljOJEs3M_v04-10" value="Alignment is performed multiple times (ca. 2-4) &lt;br&gt;and correlation is calculated every time. &lt;br&gt;The final alignment is the one resulting &lt;br&gt;in the highest correlation." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="-460" y="-1136" width="270" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-1" value="&lt;div&gt;Calculate the &lt;b&gt;ratio&lt;/b&gt; between the channel&#39;s min-max &lt;b&gt;amplitude&lt;/b&gt; and min-max&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;amplitude across all channels&lt;/span&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;br&gt;&lt;b&gt;find_affected_by_amplitude_ratio&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="1" vertex="1">
+          <mxGeometry x="-750" y="-868.75" width="240" height="119.99999999999999" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-2" value="&lt;p style=&quot;line-height: 18px; white-space: pre;&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot; face=&quot;Helvetica&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;Calculate the &lt;b&gt;similarity score&lt;/b&gt; &lt;br&gt;&lt;/font&gt;&lt;/font&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;for every channel as:&lt;/span&gt;&lt;/p&gt;&lt;p style=&quot;line-height: 18px; white-space: pre;&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot; face=&quot;Helvetica&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;correlation * amplitude_ratio&lt;/font&gt;&lt;/font&gt;&lt;/p&gt;&lt;b&gt;find_affected_by_similarity score&lt;i&gt;&lt;font face=&quot;Courier New&quot;&gt;()&lt;/font&gt;&lt;/i&gt;&lt;/b&gt;" style="html=1;align=center;verticalAlign=middle;rounded=1;absoluteArcSize=1;arcSize=25;dashed=0;fontFamily=Helvetica;fontSize=12;whiteSpace=wrap;container=0;noLabel=0;imageAlign=center;" parent="1" vertex="1">
+          <mxGeometry x="-750" y="-701.25" width="240" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-6" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="1" vertex="1">
+          <mxGeometry x="-645" y="-711.25" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-7" value="pinIn 1" style="fontStyle=0;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="1" vertex="1">
+          <mxGeometry x="-645" y="-878.75" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OXGmV8qcUwpymEB2DDmN-8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-630" y="-711.25" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-8" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="1" vertex="1">
+          <mxGeometry x="-645" y="-748.75" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="OXGmV8qcUwpymEB2DDmN-10" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-630" y="-541.25" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-10" value="pinOut 2" style="fontStyle=0;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacingLeft=2;fontFamily=Helvetica;fontSize=12;resizable=0;container=0;noLabel=1;" parent="1" vertex="1">
+          <mxGeometry x="-645" y="-581.25" width="30" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="OXGmV8qcUwpymEB2DDmN-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="ua0UwOFp4txvmiH0tm5q-59" target="OXGmV8qcUwpymEB2DDmN-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-3" value="Method: &lt;br&gt;threshold_mean&lt;br&gt;(currently not used)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="-1179.9950471516788" y="-2108.9983966672457" as="geometry">
+            <mxPoint x="351" y="-78" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-4" value="" style="shape=sumEllipse;perimeter=ellipsePerimeter;html=1;backgroundOutline=1;" parent="1" vertex="1">
+          <mxGeometry x="-930" y="-2090" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-5" value="4" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-120" y="-830" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="q_XP9tdPbFsaZTS1878Z-168" target="as0LFwTi1HrOVpfDGF1d-5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.827;entryY=-0.007;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="as0LFwTi1HrOVpfDGF1d-7" target="zNMVAwUSSOP5G73fzrCB-8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="44" y="-550.5" />
+              <mxPoint x="44" y="-550.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="as0LFwTi1HrOVpfDGF1d-7" value="4" style="ellipse;html=1;" parent="1" vertex="1">
+          <mxGeometry x="29" y="-591.75" width="30" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

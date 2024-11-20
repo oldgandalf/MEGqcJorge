@@ -1,0 +1,4 @@
+include meg_qc/settings/settings.ini
+include meg_qc/settings/settings_internal.ini
+
+
