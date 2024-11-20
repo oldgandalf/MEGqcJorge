@@ -138,6 +138,12 @@ def save_config(derivative, config_file_path: str, f_name_to_save: str):
     
     """
 
+    #get current time stamp for config file
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+    f_name_to_save = f_name_to_save + '_' + timestamp
+
     config_artifact = derivative.create_artifact(raw=f_name_to_save)
     config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
     config_artifact.add_entity('desc', f_name_to_save) #file name

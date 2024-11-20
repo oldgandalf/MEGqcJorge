@@ -235,7 +235,7 @@ def get_ampl_of_brain_waves(channels: List, m_or_g: str, freqs: np.ndarray, psds
     return waves_pie_df_deriv, dfs_with_name, mean_brain_waves_dict
 
 
-def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:list[list], one_psd:list[dict], noisy_freqs_indexes:list[dict]):
+def split_blended_freqs_at_the_lowest_point(noisy_bands_indexes:List[List], one_psd:List[dict], noisy_freqs_indexes:List[dict]):
 
     """
     If there are 2 bands that are blended together, split them at the lowest point between 2 central noise frequencies.
