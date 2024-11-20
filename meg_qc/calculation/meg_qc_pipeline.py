@@ -187,11 +187,11 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
     """
 
     #has to be a list, even if there is just one path:
-    if isinstance(dataset_path, str):
-        dataset_path = [dataset_path]
+    if isinstance(ds_paths, str):
+        ds_paths = [ds_paths]
     
     #make sure all directories in the list exist:
-    for ds_path in dataset_path:
+    for ds_path in ds_paths:
         if not os.path.isdir(ds_path):
             raise ValueError(f'Given path to the dataset does not exist. Path: {ds_path}')
         
