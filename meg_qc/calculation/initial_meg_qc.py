@@ -57,12 +57,6 @@ def get_all_config_params(config_file_path: str):
     run_Head = default_section.getboolean('Head')
     run_Muscle = default_section.getboolean('Muscle')
 
-    ds_paths = default_section['data_directory']
-    ds_paths = [path.strip() for path in ds_paths.split(",")]
-    if len(ds_paths) < 1:
-        print('___MEGqc___: ', 'No datasets to analyze. Check parameter data_directory in config file. Data path can not contain spaces! You can replace them with underscores or remove completely.')
-        return None
-
     tmin = default_section['data_crop_tmin']
     tmax = default_section['data_crop_tmax']
     try:
@@ -86,7 +80,6 @@ def get_all_config_params(config_file_path: str):
             'run_EOG': run_EOG,
             'run_Head': run_Head,
             'run_Muscle': run_Muscle,
-            'dataset_path': ds_paths,
             'plot_mne_butterfly': default_section.getboolean('plot_mne_butterfly'),
             'plot_interactive_time_series': default_section.getboolean('plot_interactive_time_series'),
             'plot_interactive_time_series_average': default_section.getboolean('plot_interactive_time_series_average'),

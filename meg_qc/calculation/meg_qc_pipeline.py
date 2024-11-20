@@ -1,10 +1,12 @@
 import os
 import ancpbids
+from ancpbids.query import query_entities
 import time
 import json
 import sys
 import mne
 import shutil
+from typing import List, Union
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append(os.path.join('.'))
@@ -51,15 +53,33 @@ def ctf_workaround(dataset, sid):
     return sorted(filtered_folders)
 
 
-def get_files_list(dataset_path, dataset, sid):
+def get_files_list(sid: str, dataset_path: str, dataset):
 
     """
     Different ways for fif, ctf, etc...
     Using ancpbids to get the list of files for each subject in ds.
+
+    Parameters
+    ----------
+    sid : str
+        Subject ID to get the files for.
+    dataset_path : str
+        Path to the BIDS-conform data set to run the QC on.
+    dataset : ancpbids.Dataset
+        Dataset object to work with.
+    
+
+    Returns
+    -------
+    list_of_files : list
+        List of paths to the .fif files for each subject.
+    entities_per_file : list
+        List of entities for each file in list_of_files.
     """
 
     has_fif = False
     has_ctf = False
+
 
     for root, dirs, files in os.walk(dataset_path):
 
@@ -150,7 +170,34 @@ def save_config(derivative, config_file_path: str, f_name_to_save: str):
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
 
-def make_derivative_meg_qc(config_file_path,internal_config_file_path):
+def check_ds_paths(ds_paths: Union[List[str], str]):
+
+    """
+    Check if the given paths to the data sets exist.
+    
+    Parameters
+    ----------
+    ds_paths : list or str
+        List of paths to the BIDS-conform data sets to run the QC on.
+        
+    Returns
+    -------
+    ds_paths : list
+        List of paths to the BIDS-conform data sets to run the QC on.
+    """
+
+    #has to be a list, even if there is just one path:
+    if isinstance(ds_paths, str):
+        ds_paths = [ds_paths]
+    
+    #make sure all directories in the list exist:
+    for ds_path in ds_paths:
+        if not os.path.isdir(ds_path):
+            raise ValueError(f'Given path to the dataset does not exist. Path: {ds_path}')
+        
+    return ds_paths
+
+def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str]):
 
     """ 
     Main function of MEG QC:
@@ -167,7 +214,8 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         Path the config file with all the parameters for the QC analysis and data directory path.
     internal_config_file_path : str
         Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
-
+    ds_paths : list or str
+        List of paths to the BIDS-conform data sets to run the QC on. Has to be list even if there is just one path.
     """
 
     all_qc_params = get_all_config_params(config_file_path)
@@ -176,7 +224,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
     if all_qc_params is None:
         return
 
-    ds_paths = all_qc_params['default']['dataset_path']
+    ds_paths = check_ds_paths(ds_paths)
 
     for dataset_path in ds_paths: #run over several data sets
 
@@ -213,9 +261,13 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
         # print('___MEGqc___: ', dataset.code)
         # print('___MEGqc___: ', dataset.name)
 
-        # entities = dataset.query_entities()
+        #entities = dataset.query_entities(dataset_path)
+        # entities = query_entities(dataset)
         # print('___MEGqc___: ', 'entities', entities)
         # print('______')
+
+        # sub_list = sorted(list(dataset.query()['subject']))
+        # print(sub_list)
 
         #return
 
@@ -224,8 +276,12 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
                 sub_list = all_qc_params['default']['subjects']
             elif all_qc_params['default']['subjects'][0] == 'all':
                 sub_list = sorted(list(dataset.query_entities()['subject']))
-        except:
+                #This here gives ANCPbids error now, smth changed in query_entities
+
+        except Exception as e:  # Show exception if no subjects are found
+            print(f"Error: {e}")
             print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
+            
             return
 
         avg_ecg=[]
@@ -242,7 +298,7 @@ def make_derivative_meg_qc(config_file_path,internal_config_file_path):
             calculation_folder = derivative.create_folder(name='calculation')
             subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
-            list_of_files, entities_per_file = get_files_list(dataset_path, dataset, sub)
+            list_of_files, entities_per_file = get_files_list(sub, dataset_path, dataset)
 
             if not list_of_files:
                 print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
