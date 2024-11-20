@@ -224,9 +224,6 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
     if all_qc_params is None:
         return
 
-    #ds_paths = all_qc_params['default']['dataset_path']
-    #Before, we were getting these from config file. Now it s an input parameter.
-
     ds_paths = check_ds_paths(ds_paths)
 
     for dataset_path in ds_paths: #run over several data sets
