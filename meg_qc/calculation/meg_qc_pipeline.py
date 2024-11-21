@@ -160,13 +160,16 @@ def save_config(derivative, config_file_path: str, f_name_to_save: str):
 
     #get current time stamp for config file
 
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    timestamp = time.strftime("Date%Y%m%dTime%H%M%S")
 
-    f_name_to_save = f_name_to_save + '_' + timestamp
+    f_name_to_save = f_name_to_save + str(timestamp)
+    print('___MEGqc___: ', 'f_name_to_save', f_name_to_save)
 
     config_artifact = derivative.create_artifact(raw=f_name_to_save)
     config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
     config_artifact.add_entity('desc', f_name_to_save) #file name
+    # config_artifact.add_entity('subject', 'config')
+    # config_artifact.add_entity('task', 'config')
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
 
@@ -242,8 +245,10 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-        # Save config file used for this run as a derivative:
-        save_config(derivative, config_file_path, 'used_settings')
+
+        # entities = dataset.query_entities(dataset_path)
+        entities = query_entities(dataset, scope='raw')
+        print('___MEGqc___: ', 'entities', entities)
 
         # print('_____BIDS data info___')
         # print(schema)
@@ -261,10 +266,14 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         # print('___MEGqc___: ', dataset.code)
         # print('___MEGqc___: ', dataset.name)
 
-        #entities = dataset.query_entities(dataset_path)
+        # print('______')
+
+        # Save config file used for this run as a derivative:
+        save_config(derivative, config_file_path, 'UsedSettings')
+
         # entities = query_entities(dataset)
         # print('___MEGqc___: ', 'entities', entities)
-        # print('______')
+
 
         # sub_list = sorted(list(dataset.query()['subject']))
         # print(sub_list)
@@ -275,8 +284,10 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
             if all_qc_params['default']['subjects'][0] != 'all':
                 sub_list = all_qc_params['default']['subjects']
             elif all_qc_params['default']['subjects'][0] == 'all':
-                sub_list = sorted(list(dataset.query_entities()['subject']))
+                sub_list = sorted(list(dataset.query_entities(scope='raw')['subject']))
                 #This here gives ANCPbids error now, smth changed in query_entities
+
+            print('___MEGqc___: ', 'sub_list', sub_list)
 
         except Exception as e:  # Show exception if no subjects are found
             print(f"Error: {e}")
