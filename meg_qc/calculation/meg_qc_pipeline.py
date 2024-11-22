@@ -142,7 +142,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     return list_of_files, entities_per_file
     
-def save_config(derivative, config_file_path: str, f_name_to_save: str):
+def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str):
 
     """
     Save the config file used for this run as a derivative.
@@ -163,13 +163,13 @@ def save_config(derivative, config_file_path: str, f_name_to_save: str):
     timestamp = time.strftime("Date%Y%m%dTime%H%M%S")
 
     f_name_to_save = f_name_to_save + str(timestamp)
-    print('___MEGqc___: ', 'f_name_to_save', f_name_to_save)
+    print('___MEGqc___: ', 'f_name_to_save config', f_name_to_save)
 
-    config_artifact = derivative.create_artifact(raw=f_name_to_save)
+    config_folder = derivative.create_folder(name='config')
+    config_artifact = config_folder.create_artifact()
+
     config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
     config_artifact.add_entity('desc', f_name_to_save) #file name
-    # config_artifact.add_entity('subject', 'config')
-    # config_artifact.add_entity('task', 'config')
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
 
@@ -247,8 +247,7 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
 
 
         # entities = dataset.query_entities(dataset_path)
-        entities = query_entities(dataset, scope='raw')
-        print('___MEGqc___: ', 'entities', entities)
+        #entities = query_entities(dataset, scope='raw')
 
         # print('_____BIDS data info___')
         # print(schema)
@@ -269,7 +268,7 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         # print('______')
 
         # Save config file used for this run as a derivative:
-        save_config(derivative, config_file_path, 'UsedSettings')
+        # create_config_artifact(derivative, config_file_path, 'UsedSettings')
 
         # entities = query_entities(dataset)
         # print('___MEGqc___: ', 'entities', entities)
@@ -527,7 +526,6 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
                             meg_artifact.extension = '.txt'
                         # problem with lambda explained:
                         # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
-
 
         ancpbids.write_derivative(dataset, derivative) 
 
