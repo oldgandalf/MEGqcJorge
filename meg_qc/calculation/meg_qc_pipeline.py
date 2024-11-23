@@ -142,7 +142,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     return list_of_files, entities_per_file
     
-def save_config(derivative, config_file_path: str, f_name_to_save: str):
+def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str):
 
     """
     Save the config file used for this run as a derivative.
@@ -163,13 +163,12 @@ def save_config(derivative, config_file_path: str, f_name_to_save: str):
     timestamp = time.strftime("Date%Y%m%dTime%H%M%S")
 
     f_name_to_save = f_name_to_save + str(timestamp)
-    print('___MEGqc___: ', 'f_name_to_save', f_name_to_save)
 
-    config_artifact = derivative.create_artifact(raw=f_name_to_save)
+    config_folder = derivative.create_folder(name='config')
+    config_artifact = config_folder.create_artifact()
+
     config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
     config_artifact.add_entity('desc', f_name_to_save) #file name
-    # config_artifact.add_entity('subject', 'config')
-    # config_artifact.add_entity('task', 'config')
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
 
@@ -199,6 +198,64 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
             raise ValueError(f'Given path to the dataset does not exist. Path: {ds_path}')
         
     return ds_paths
+
+def check_config_saved(dataset):
+
+    """
+    Check if there is already config file used for this ds:
+    If yes - ask the user if he wants to usi it again. If not - use default one.
+
+    Parameters
+    ----------
+    dataset : ancpbids.Dataset
+        Dataset object to work with.
+
+    Returns
+    -------
+    config_file_path : str
+        Path to the config file used for this ds conversion.
+    """
+
+    # if os.path.isfile(os.path.join(derivatives_path, 'config', 'UsedSettings.ini')):
+    #     print('___MEGqc___: ', 'There is already a config file used for this data set. Do you want to use it again?')
+    #     #ask user if he wants to use the same config file again
+
+    entities = query_entities(dataset, scope='derivatives')
+
+    #print('___MEGqc___: ', 'entities', entities)
+
+    # search if there is already a derivative with 'UsedSettings' in the name
+    # if yes - ask the user if he wants to use it again. If not - use default one.
+    used_settings_entity_list = []
+    for key, entity_set in entities.items():
+        if key == 'description':
+            for ent in entity_set:
+                if 'usedsettings' in ent.lower():
+                    used_settings_entity_list.append(ent)
+
+    used_setting_file_list = []
+    for used_settings_entity in used_settings_entity_list:
+        
+        used_setting_file_list += sorted(list(dataset.query(suffix='meg', extension='.ini', desc = used_settings_entity, return_type='filename', scope='derivatives')))
+
+    new_config_file_path = None
+
+    # Ask the user if he wants to use any of existing config files:
+    if used_setting_file_list:
+        print('___MEGqc___: ', 'There are already config files used for this data set. Do you want to use any of them again?')
+        print('___MEGqc___: ', 'List of the config files previously used for this data set:')
+        for i, file in enumerate(used_setting_file_list):
+            print('___MEGqc___: ', i, file)
+
+        user_input = input('___MEGqc___: Enter the number of the config file you want to use, or press Enter to use the default one: ')
+        if user_input:
+            new_config_file_path = used_setting_file_list[int(user_input)]
+        else:
+            print('___MEGqc___: ', 'You chose to use the default config file.')
+            
+
+    return new_config_file_path
+
 
 def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str]):
 
@@ -245,10 +302,14 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         derivative = dataset.create_derivative(name="Meg_QC")
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
+        # Check if there is already config file used for this ds:
+        new_config_file_path = check_config_saved(dataset)
+        if new_config_file_path:
+            config_file_path = new_config_file_path
+        print('___MEGqc___: ', 'Using config file: ', config_file_path)
 
-        # entities = dataset.query_entities(dataset_path)
-        entities = query_entities(dataset, scope='raw')
-        print('___MEGqc___: ', 'entities', entities)
+        #entities = dataset.query_entities(dataset_path)
+        #entities = query_entities(dataset, scope='raw')
 
         # print('_____BIDS data info___')
         # print(schema)
@@ -268,8 +329,8 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
 
         # print('______')
 
-        # Save config file used for this run as a derivative:
-        save_config(derivative, config_file_path, 'UsedSettings')
+        #Save config file used for this run as a derivative:
+        create_config_artifact(derivative, config_file_path, 'UsedSettings')
 
         # entities = query_entities(dataset)
         # print('___MEGqc___: ', 'entities', entities)
@@ -527,7 +588,6 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
                             meg_artifact.extension = '.txt'
                         # problem with lambda explained:
                         # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
-
 
         ancpbids.write_derivative(dataset, derivative) 
 
