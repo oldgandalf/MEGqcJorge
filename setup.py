@@ -27,7 +27,7 @@ if __name__ == '__main__':
             'console_scripts':[
                 'hello-world = meg_qc.run_megqc:hello_world'
             ]  
-        }
+        },
         license='MIT',
         author='ANCP',
         author_email='aaron.reer@uol.de')
