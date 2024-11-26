@@ -25,7 +25,7 @@ if __name__ == '__main__':
         url='https://github.com/AaronReer/MEGqc',
         entry_points={
             'console_scripts':[
-                'hello-world = meg_qc.test:hello_world'
+                'hello-world = meg_qc.test:run_megqc'
             ]  
         },
         license='MIT',
