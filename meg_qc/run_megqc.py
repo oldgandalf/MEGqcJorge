@@ -7,6 +7,13 @@ import argparse
 #dataset_path_parser.add_argument("inputdata", type=str)
 def hello_world():
     print("Hello World")
+
+
+def main():
+    dataset_path_parser = argparse.ArgumentParser(description= "parser for BIDS dataset path")
+    dataset_path_parser.add_argument("--inputdata", type=str, required=True, help="path to the root of your BIDS MEG dataset")
+    args=dataset_path_parser.parse_args()
+
 #args = dataset_path_parser.parse_args()
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())

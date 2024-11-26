@@ -23,6 +23,11 @@ if __name__ == '__main__':
         install_requires=INSTALL_REQUIRES,
         packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings'],
         url='https://github.com/AaronReer/MEGqc',
+        entry_points={
+            'console_scripts':[
+                'hello-world = meg_qc.run_megqc:hello_world'
+            ]  
+        }
         license='MIT',
         author='ANCP',
         author_email='aaron.reer@uol.de')
