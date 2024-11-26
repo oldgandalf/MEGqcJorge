@@ -142,7 +142,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     return list_of_files, entities_per_file
     
-def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str):
+def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str, all_taken_raw_files: List[str]):
 
     """
     Save the config file used for this run as a derivative.
@@ -155,6 +155,8 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
         Path to the config file used for this ds conversion
     f_name_to_save : str
         Name of the config file to save.
+    all_taken_raw_files : list
+        List of all the raw files processed in this run, for this ds.
     
     """
 
@@ -171,6 +173,20 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
     config_artifact.add_entity('desc', f_name_to_save) #file name
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
+
+    #Create a seconf json file with config name as key and all taken raw files as value
+    # and prepare it to be save as derivative
+
+    config_json = {f_name_to_save: all_taken_raw_files}
+
+    config_json_artifact = config_folder.create_artifact()
+    config_json_artifact.content = lambda file_path, cont = config_json: json.dump(cont, open(file_path, 'w'), indent=4)
+    config_json_artifact.add_entity('desc', f_name_to_save) #file name
+    config_json_artifact.suffix = 'meg'
+    config_json_artifact.extension = '.json'
+
+    return
+
 
 def check_ds_paths(ds_paths: Union[List[str], str]):
 
@@ -329,9 +345,6 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
 
         # print('______')
 
-        #Save config file used for this run as a derivative:
-        create_config_artifact(derivative, config_file_path, 'UsedSettings')
-
         # entities = query_entities(dataset)
         # print('___MEGqc___: ', 'entities', entities)
 
@@ -362,6 +375,8 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
+
+        all_taken_raw_files = []
 
         for sub in sub_list: #[0:4]:
     
@@ -588,6 +603,11 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
                             meg_artifact.extension = '.txt'
                         # problem with lambda explained:
                         # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
+
+        all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
+
+        #Save config file used for this run as a derivative:
+        create_config_artifact(derivative, config_file_path, 'UsedSettings', all_taken_raw_files)
 
         ancpbids.write_derivative(dataset, derivative) 
 
