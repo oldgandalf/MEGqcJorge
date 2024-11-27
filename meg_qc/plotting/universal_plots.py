@@ -905,6 +905,37 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
     return fig_deriv
 
 
+def plot_topomap_std(channels_objs):
+
+    # mne.viz.plot_topomap(data, pos, *, ch_type='mag', sensors=True, names=None)
+    
+    # pos: array, shape (n_channels, 2) | instance of Info
+
+    pos = np.array([ch.loc[0:2] for ch in channels_objs['mag']])
+    #need only 2d coordinates for topomap
+
+    names = [ch.name for ch in channels_objs['mag']]
+
+    # data: array, shape (n_chan,) The data values to plot.
+    data =  np.array([random.uniform(0, 1) for i in range(len(channels_objs['mag']))])
+
+    #mask: darray of bool, shape (n_channels,) | None
+    #all channels: 
+    mask = np.array([True for i in range(len(channels_objs['mag']))])
+
+    mask_params=dict(marker='o', markerfacecolor='k', markeredgecolor='k',
+        linewidth=0, markersize=5)
+
+    print('___MEGqc___: ', 'Plotting topomap...')
+    # print('pos', pos)
+    # print('names', names)
+    # print('data', data)
+
+    mne.viz.plot_topomap(data, pos, ch_type='mag', names=names, size=6, mask = mask, mask_params=mask_params)
+
+
+# ______________________PSD__________________________
+
 def add_log_buttons(fig: go.Figure):
 
     """
