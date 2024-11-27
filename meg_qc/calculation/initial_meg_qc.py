@@ -515,6 +515,35 @@ def load_data(file_path):
     
     return raw, shielding_str, meg_system
 
+def plot_topomap_mne(channels_objs):
+
+    # mne.viz.plot_topomap(data, pos, *, ch_type='mag', sensors=True, names=None)
+    
+    # pos: array, shape (n_channels, 2) | instance of Info
+
+    pos = np.array([ch.loc[0:2] for ch in channels_objs['mag']])
+    #need only 2d coordinates for topomap
+
+    names = [ch.name for ch in channels_objs['mag']]
+
+    # data: array, shape (n_chan,) The data values to plot.
+    data =  np.array([random.uniform(0, 1) for i in range(len(channels_objs['mag']))])
+
+    #mask: darray of bool, shape (n_channels,) | None
+    #all channels: 
+    mask = np.array([True for i in range(len(channels_objs['mag']))])
+
+    mask_params=dict(marker='o', markerfacecolor='k', markeredgecolor='k',
+        linewidth=0, markersize=5)
+
+    print('___MEGqc___: ', 'Plotting topomap...')
+    # print('pos', pos)
+    # print('names', names)
+    # print('data', data)
+
+    mne.viz.plot_topomap(data, pos, ch_type='mag', names=names, size=6, mask = mask, mask_params=mask_params)
+
+
 def add_3d_ch_locations(raw, channels_objs):
 
     """
@@ -912,6 +941,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     #Add channel locations:
     channels_objs = add_3d_ch_locations(raw, channels_objs)
+
+    #plot topomap of the channels:
+    plot_topomap_mne(channels_objs)
 
     #Check if there are channels to analyze according to info in config file:
     m_or_g_chosen, m_or_g_skipped_str = check_chosen_ch_types(m_or_g_chosen=default_settings['m_or_g_chosen'], channels_objs=channels_objs)
