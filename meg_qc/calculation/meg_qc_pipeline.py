@@ -413,7 +413,7 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
             #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
 
 
-            for file_ind, data_file in enumerate(list_of_files[0:1]): #run over several data files
+            for file_ind, data_file in enumerate(list_of_files): #run over several data files
 
                 print('___MEGqc___: ', 'Take data: ', data_file)
 
