@@ -11,8 +11,9 @@ def hello_world():
 
 
 def run_megqc():
-    dataset_path_parser = argparse.ArgumentParser(description= "parser for BIDS dataset path")
+    dataset_path_parser = argparse.ArgumentParser(description= "parser for MEGqc: --inputdata(mandatory) path/to/your/BIDSds --config path/to/config  if None default parameters are used)")
     dataset_path_parser.add_argument("--inputdata", type=str, required=True, help="path to the root of your BIDS MEG dataset")
+    dataset_path_parser.add_argument("--config", type=str, required=False, help="path to config file")
     args=dataset_path_parser.parse_args()
 
     path_to_megqc_installation= os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
@@ -24,7 +25,18 @@ def run_megqc():
     data_directory = args.inputdata
     print(data_directory)
 
-    config_file_path = path_to_megqc_installation + '/settings/settings.ini' 
+    if args.config == None:
+        config_file_path = path_to_megqc_installation + '/settings/settings.ini' 
+    else:
+        config_file_path = args.config
+
+    
     internal_config_file_path=path_to_megqc_installation + '/settings/settings_internal.ini'
 
     make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory)
+
+def get_config():
+
+    path_to_megqc_installation= os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
+
+
