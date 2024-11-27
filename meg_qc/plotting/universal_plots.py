@@ -967,19 +967,17 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
     fig, ax = plt.subplots(figsize=(8, 6))  # Create a Matplotlib figure and axes
 
     mne.viz.plot_topomap(
-    data, pos, ch_type='mag', names=names, size=6, mask=mask,
-    mask_params=mask_params, show=False, axes=ax, sphere=(0., 0., 0., 0.1)  # Adjust radius as needed
+    data, pos, ch_type=ch_type, names=names, size=6, mask=mask,
+    mask_params=mask_params, show=False, axes=ax, sphere=(0., 0., 0., 0.1)  
     )
 
     # It will give warning; 'invalid value encountered in divide'
-    # This is most likely because for grads sensort positions are the same, 
+    # This is most likely because for grads positions are the same, 
     # so the division by 0 occurs. But this is normal. 
     # Can add some jitter to posoitions if this bothers a lot.
 
-    # Add figure title
-    ax.set_title(f'{y_ax_and_fig_title} Topomap for {ch_tit}')
 
-    fig.show()
+    ax.set_title(f'{y_ax_and_fig_title} Topomap for {ch_tit}')
 
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='matplotlib')]
                  

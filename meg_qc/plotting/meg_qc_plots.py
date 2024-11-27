@@ -299,7 +299,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
                 fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
                 fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
 
-                ptp_manual_derivs += fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
+                ptp_manual_derivs += fig_topomap + fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
 
         elif 'PSD' in metric.upper():
 
