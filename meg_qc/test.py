@@ -55,6 +55,10 @@ def run_megqc():
 
 def get_config():
     import shutil
+    dataset_path_parser = argparse.ArgumentParser(description= "parser for MEGqc get_config: --target_directory(mandatory) path/to/directory/you/want/the/config/to/be/stored)")
+    dataset_path_parser.add_argument("--target_directory", type=str, required=True, help="path to the root of your BIDS MEG dataset")
+    args=dataset_path_parser.parse_args()
+    data_directory = args.inputdata
 
     path_to_megqc_installation= os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
     config_file_path =path_to_megqc_installation +'/settings/settings.ini'
