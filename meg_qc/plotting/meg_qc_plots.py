@@ -278,11 +278,12 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
         
             for m_or_g in m_or_g_chosen:
 
+                fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
                 fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds')
                 fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds')
                 fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds')
 
-                std_derivs += fig_all_time + fig_std_epoch0 + fig_std_epoch1
+                std_derivs += fig_topomap + fig_all_time + fig_std_epoch0 + fig_std_epoch1
 
         if 'PTP' in metric.upper():
 
@@ -293,11 +294,12 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
         
             for m_or_g in m_or_g_chosen:
 
+                fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
                 fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
                 fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
                 fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
 
-                ptp_manual_derivs += fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
+                ptp_manual_derivs += fig_topomap + fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
 
         elif 'PSD' in metric.upper():
 

@@ -515,6 +515,7 @@ def load_data(file_path):
     
     return raw, shielding_str, meg_system
 
+
 def add_3d_ch_locations(raw, channels_objs):
 
     """
@@ -919,7 +920,6 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Sort channels by lobe - this will be used often for plotting
     chs_by_lobe = sort_channels_by_lobe(channels_objs)
     print('___MEGqc___: ', 'Channels sorted by lobe.')
-
 
     info = raw.info
     info_derivs = [QC_derivative(content = info, name = 'RawInfo', content_type = 'info', fig_order=-1)]

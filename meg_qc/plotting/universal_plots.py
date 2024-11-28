@@ -7,6 +7,7 @@ import random
 import copy
 import os
 from typing import List
+import matplotlib.pyplot as plt
 from mne.preprocessing import compute_average_dev_head_t
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
@@ -904,6 +905,86 @@ def boxplot_epoched_xaxis_channels_csv(std_csv_path: str, ch_type: str, what_dat
 
     return fig_deriv
 
+
+def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
+
+    """
+    
+    Plot STD using mne.viz.plot_topomap(data, pos, *, ch_type='mag', sensors=True, names=None) 
+    
+    For every channel we take STD/PtP value and plot as topomap
+    """
+
+    #First, convert scv back into dict with MEG_channel objects:
+
+    df = pd.read_csv(std_csv_path, sep='\t')  
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    if what_data=='peaks':
+        y_ax_and_fig_title='Peak-to-peak amplitude'
+        fig_name='PP_manual_all_data_Topomap_'+ch_tit
+    elif what_data=='stds':
+        y_ax_and_fig_title='Standard deviation'
+        fig_name='STD_epoch_all_data_Topomap_'+ch_tit
+    else:
+        raise ValueError('what_data must be set to "stds" or "peaks"')
+
+    
+    data = []
+    names = []
+    pos = np.empty((0, 2))
+
+    for index, row in df.iterrows():
+
+        if row['Type'] == ch_type: #plot only mag/grad
+
+            if what_data == 'stds':
+                data += [row['STD all']]
+            elif what_data == 'peaks':
+                data += [row['PtP all']]
+                # data: array, shape (n_chan,) The data values to plot.
+
+
+            # Filter columns containing 'Sensor_location'
+            sensor_location_cols = [col for col in df.columns if 'Sensor_location' in col]
+            #pos = np.array([[float(row[col]) for col in sensor_location_cols[:2]] for _, row in df.iterrows()])
+            new_pos = np.array([[float(row[col]) for col in sensor_location_cols[:2]]])  # Ensure 2D shape
+            # Append the new row to pos
+            pos = np.vstack([pos, new_pos])
+
+            names += [row['Name']]
+
+    #convert data to array:
+    data = np.array(data)
+    mask = np.array([True for i in range(len(names))])
+
+    mask_params=dict(marker='o', markerfacecolor='k', markeredgecolor='k',
+        linewidth=0, markersize=3)
+    # mask is to change marker look of channels. applied to everything here, 
+    # but in principle it is used to highlight particular channels
+
+    fig, ax = plt.subplots(figsize=(8, 6))  # Create a Matplotlib figure and axes
+
+    mne.viz.plot_topomap(
+    data, pos, ch_type=ch_type, names=names, size=6, mask=mask,
+    mask_params=mask_params, show=False, axes=ax, sphere=(0., 0., 0., 0.1)  
+    )
+
+    # It will give warning; 'invalid value encountered in divide'
+    # This is most likely because for grads positions are the same, 
+    # so the division by 0 occurs. But this is normal. 
+    # Can add some jitter to posoitions if this bothers a lot.
+
+
+    ax.set_title(f'{y_ax_and_fig_title} Topomap for {ch_tit}')
+
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='matplotlib')]
+                 
+    return qc_derivative
+
+
+# ______________________PSD__________________________
 
 def add_log_buttons(fig: go.Figure):
 
