@@ -27,11 +27,20 @@ def run_megqc():
     print(data_directory)
 
     if args.config == None:
-        config_file_path = path_to_megqc_installation + '/settings/settings.ini' 
+        url_megqc_book = 'https://aaronreer.github.io/docker_workshop_setup/settings_explanation.html'
+        text = 'The settings explanation section of our MEGqc User Jupyterbook'
+
+        print('You called the MEGqc pipeline without the optional --config parameter. MEGqc will proceed with the default parameter settings. Detailed information on the user parameters in MEGqc and their default values can be found in here:')
+        print(f"\033]8;;{url_megqc_book}\033\\{text}\033]8;;\033\\")
+        user_input = input('Do you want to proceed with the default settings? (y/n): ').lower().strip() == 'y' 
+        if user_input == True:
+            config_file_path = path_to_megqc_installation + '/settings/settings.ini'
+        else:
+            print("Use the get_megqc_config command line prompt to get the config file. You can then adjust all user parameters to your needs and run the pipeline command (run_megqc) with the --config parameter providing a path to your customized config file") 
+
     else:
         config_file_path = args.config
 
-    
     internal_config_file_path=path_to_megqc_installation + '/settings/settings_internal.ini'
 
     make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory)
@@ -55,6 +64,12 @@ def get_config():
 
 
 def get_plots():
+    dataset_path_parser = argparse.ArgumentParser(description= "parser for MEGqc: --inputdata(mandatory) path/to/your/BIDSds)")
+    dataset_path_parser.add_argument("--inputdata", type=str, required=True, help="path to the root of your BIDS MEG dataset")
+    args=dataset_path_parser.parse_args()
+    data_directory = args.inputdata
+
+    make_plots_meg_qc(data_directory)
 
 
 
