@@ -25,7 +25,7 @@ if __name__ == '__main__':
         url='https://github.com/AaronReer/MEGqc',
         entry_points={
             'console_scripts':[
-                'run-megqc = meg_qc.test:run_megqc'
+                'run-megqc = meg_qc.test:run_megqc',
                 'run-megqc-plotting = meg_qc.test:get_plots'
             ]  
         },

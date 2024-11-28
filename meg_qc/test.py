@@ -36,7 +36,7 @@ def run_megqc():
         if user_input == True:
             config_file_path = path_to_megqc_installation + '/settings/settings.ini'
         else:
-            print("Use the get_megqc_config command line prompt to get the config file. You can then adjust all user parameters to your needs and run the pipeline command (run_megqc) with the --config parameter providing a path to your customized config file") 
+            print("Use the get_megqc_config --target_directory path/to/your/target/directory command line prompt. This will copy the config file to a target destination on your machine.YOu can edit this file, e.g adjust all user parameters to your needs, and run the pipeline command (run_megqc) with the --config parameter providing a path to your customized config file") 
 
     else:
         config_file_path = args.config
@@ -58,7 +58,7 @@ def get_config():
     dataset_path_parser = argparse.ArgumentParser(description= "parser for MEGqc get_config: --target_directory(mandatory) path/to/directory/you/want/the/config/to/be/stored)")
     dataset_path_parser.add_argument("--target_directory", type=str, required=True, help="path to the root of your BIDS MEG dataset")
     args=dataset_path_parser.parse_args()
-    data_directory = args.inputdata
+    destination_directory = args.target_directory + '/settings.ini'
 
     path_to_megqc_installation= os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
     config_file_path =path_to_megqc_installation +'/settings/settings.ini'
