@@ -48,13 +48,15 @@ def run_megqc():
 
     make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory)
 
+    print('MEGqc has completed the calculation of metrics. Results can be found in' + data_directory +'/derivatives/MEGqc/calculation')
+
     user_input = input('Do you want to run the MEGqc plotting module on the MEGqc results? (y/n): ').lower().strip() == 'y'
 
     if user_input == True:
-        make_plots_meg_qc(data_directory)
+        make_plots_meg_qc([data_directory])
+        return
     else:
-        print('MEGqc results can be found in' + data_directory +'/derivatives/MEGqc/calculation')
-    return
+        return
 
 def get_config():
     
@@ -84,7 +86,7 @@ def get_plots():
     args=dataset_path_parser.parse_args()
     data_directory = args.inputdata
 
-    make_plots_meg_qc(data_directory)
+    make_plots_meg_qc([data_directory])
     return
 
 
