@@ -13,6 +13,6 @@ def get_plots():
     print(type(data_directory))
 
     make_plots_meg_qc(data_directory)
-    return
+
 
 get_plots()
