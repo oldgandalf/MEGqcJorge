@@ -86,7 +86,7 @@ def get_plots():
     args=dataset_path_parser.parse_args()
     data_directory = args.inputdata
 
-    make_plots_meg_qc([data_directory])
+    make_plots_meg_qc(data_directory)
     return
 
 

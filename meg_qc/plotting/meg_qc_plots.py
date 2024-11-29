@@ -461,7 +461,7 @@ def combine_tsvs_dict(tsvs_by_metric: dict):
 
     return combined_tsvs_by_metric
 
-def make_plots_meg_qc(ds_paths: List):
+def make_plots_meg_qc(dataset_path: str):
 
     """
     Create plots for the MEG QC pipeline.
