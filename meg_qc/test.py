@@ -32,13 +32,14 @@ def run_megqc():
         url_megqc_book = 'https://aaronreer.github.io/docker_workshop_setup/settings_explanation.html'
         text = 'The settings explanation section of our MEGqc User Jupyterbook'
 
-        print('You called the MEGqc pipeline without the optional \n --config <path/to/custom/config>  argurmant. \n MEGqc will proceed with the default parameter settings. Detailed information on the user parameters in MEGqc and their default values can be found in here:')
+        print('You called the MEGqc pipeline without the optional \n \n --config <path/to/custom/config>  argument. \n \n MEGqc will proceed with the default parameter settings. Detailed information on the user parameters in MEGqc and their default values can be found in here: \n \n')
         print(f"\033]8;;{url_megqc_book}\033\\{text}\033]8;;\033\\")
+        print("\n \n")
         user_input = input('Do you want to proceed with the default settings? (y/n): ').lower().strip() == 'y' 
         if user_input == True:
             config_file_path = path_to_megqc_installation + '/settings/settings.ini'
         else:
-            print("Use the \n get-megqc-config --target_directory <path/to/your/target/directory> \n command line prompt. This will copy the config file to a target destination on your machine.YOu can edit this file, e.g adjust all user parameters to your needs, and run the pipeline command again \n run-megqc \n with the \n --config parameter \n providing a path to your customized config file") 
+            print("Use the \n \n get-megqc-config --target_directory <path/to/your/target/directory> \n \n 2command line prompt. This will copy the config file to a target destination on your machine.YOu can edit this file, e.g adjust all user parameters to your needs, and run the pipeline command again \n run-megqc \n with the \n --config parameter \n providing a path to your customized config file") 
 
     else:
         config_file_path = args.config
