@@ -208,7 +208,7 @@ def get_ds_entities(dataset_path: str):
         dataset = ancpbids.load_dataset(dataset_path)
 
     except:
-        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory pathfor typos and presence of data on your device.')
         return
 
     #create derivatives folder first:
