@@ -68,6 +68,7 @@ def get_config():
     print(config_file_path)
     
     shutil.copy(config_file_path, destination_directory)
+    print('The config file has been copied to '+ destination_directory)
 
     return
 
