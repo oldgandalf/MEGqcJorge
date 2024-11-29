@@ -65,6 +65,9 @@ def create_categories_for_selector(entities: dict):
     for category, subcategories in categories.items():
         categories[category] = ['_ALL_'+category+'s_'] + subcategories
 
+    # Add 'm_or_g' category
+    categories['m_or_g'] = ['_ALL_sensors', 'mag', 'grad']
+
     return categories
 
 
@@ -93,31 +96,35 @@ def selector(entities: dict):
     # SELECT ENTITIES and SETTINGS
     # Define the categories and subcategories
     categories = create_categories_for_selector(entities)
-    categories['m_or_g'] = ['_ALL_sensors', 'mag', 'grad']
 
     selected = {}
     # Create a list of values with category titles
     for key, values in categories.items():
-        subcategory, quit_selector = select_subcategory(categories[key], key)
+        result, quit_selector = select_subcategory(categories[key], key)
+
+        print('___MEGqc___: ', key, result)
 
         if quit_selector: # if user clicked cancel - stop:
             print('___MEGqc___: You clicked cancel. Please start over.')
             return None, None
         
-        selected[key] = subcategory
+        selected[key] = result
 
 
     #Check 1) if nothing was chosen, 2) if ALL was chosen
     for key, values in selected.items():
 
+        print('___MEGqc___: ', key, values)
+
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
-            subcategory, quit_selector = select_subcategory(categories[key], key, title)
-            if not subcategory: # if nothing was chosen again - stop:
+            result, quit_selector = select_subcategory(categories[key], key, title)
+            if not result: # if nothing was chosen again - stop:
                 print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
                 return None, None
             
-        else:
+        else: #TODO: rewrite!! seems it doesnt select all tasks, etc.. but does all metrics???
+            print('ALL in values for key: ', key, ' is: ', [item for item in values if 'ALL' in item.upper()])
             for item in values:
                 if 'ALL' in item.upper():
                     all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
@@ -389,13 +396,16 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
         'ECG': '',
         'EOG': '',
         'HEAD': '',
-        'MUSCLE': ''}
+        'MUSCLE': '',
+        'SENSORS': '',
+        'STIMULUS': ''
+        }
     else:
         with open(report_str_path) as json_file:
             report_strings = json.load(json_file)
 
 
-    report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings, [])
+    report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings)
 
     return report_html_string 
 
@@ -496,14 +506,18 @@ def make_plots_meg_qc(ds_paths: List):
         if not chosen_entities:
             return
         
+        print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
+        
         #Add stimulus to chosen entities:
         chosen_entities['METRIC'].append('stimulus')
 
-        # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
-        # uncomment for debugging, so no need to start selector every time
+        # Ensure 'run', 'task', and 'session' are in chosen_entities, set to None if missing
+        for key in ['run', 'task', 'session']:
+            chosen_entities.setdefault(key, None)
         
         print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
         print('___MEGqc___: CHOSEN settings: ', plot_settings)
+
 
         for sub in chosen_entities['subject']:
 
@@ -670,7 +684,7 @@ def make_plots_meg_qc(ds_paths: List):
 
 # ____________________________
 # RUN IT:
-tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
@@ -680,3 +694,5 @@ tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])
+
+tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/BIDS/ceegridCut'])
