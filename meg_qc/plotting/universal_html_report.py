@@ -85,6 +85,9 @@ def make_metric_section(fig_derivs_metric: List, section_name: str, report_strin
         The html string of 1 section of the report.
     """
 
+    print('Checking report strings:', report_strings)
+
+
     # Define a mapping of section names to report strings and how-to-use plots
     section_mapping = {
         'INITIAL_INFO': ['Data info', report_strings['INITIAL_INFO']],
@@ -272,7 +275,7 @@ def make_joined_report(sections: dict, report_strings: dict):
     return html_string
 
 
-def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: dict, default_settings: dict):
+def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: dict):
 
     """
     Create report as html string with all sections and embed the sections into MNE report object.
