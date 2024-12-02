@@ -1,3 +1,5 @@
 [build-system]
 requires = ["setuptools", "wheel==0.30.0"]
+[project.scripts]
+megqc = "meg_qc.run_megqc:hello_world"
 
