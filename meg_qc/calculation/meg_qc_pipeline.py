@@ -294,13 +294,10 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         List of paths to the BIDS-conform data sets to run the QC on. Has to be list even if there is just one path.
     """
 
-    all_qc_params = get_all_config_params(config_file_path)
-    internal_qc_params = get_internal_config_params(internal_config_file_path)
-
-    if all_qc_params is None:
-        return
-
     ds_paths = check_ds_paths(ds_paths)
+
+    internal_qc_params = get_internal_config_params(internal_config_file_path) 
+    # assume these are not user changable by user, so apply without asking to all data sets.
 
     for dataset_path in ds_paths: #run over several data sets
 
@@ -323,6 +320,12 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         if new_config_file_path:
             config_file_path = new_config_file_path
         print('___MEGqc___: ', 'Using config file: ', config_file_path)
+
+        # Get all the parameters from the config file:
+        all_qc_params = get_all_config_params(config_file_path)
+
+        if all_qc_params is None:
+            return
 
         #entities = dataset.query_entities(dataset_path)
         #entities = query_entities(dataset, scope='raw')
