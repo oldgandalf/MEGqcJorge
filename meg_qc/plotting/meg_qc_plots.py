@@ -677,20 +677,20 @@ def make_plots_meg_qc(dataset_path: str):
                     
     ancpbids.write_derivative(dataset, derivative) 
 
-    return tsvs_to_plot
+    return 
 
 
 # ____________________________
 # RUN IT:
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/camcan')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
+# make_plots_meg_qc(dataset_path='Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/camcan')
 
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000246')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000247')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds002761')
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds004398')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000246')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000247')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds002761')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds004398')
 
-#tsvs_to_plot = make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/BIDS/ceegridCut')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/BIDS/ceegridCut')
