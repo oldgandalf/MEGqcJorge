@@ -194,15 +194,17 @@ def select_subcategory(subcategories: List, category_title: str, window_title: s
     return results, quit_selector
 
 
-def get_ds_entities(dataset_path: str):
+def get_ds_entities(dataset, calculated_derivs_folder: str):
 
     """
     Get the entities of the dataset using ancpbids, only get derivative entities, not all raw data.
 
     Parameters
     ----------
-    dataset_path : str
-        The path to the dataset.
+    dataset : ancpbids object
+        The dataset object.
+    calculated_derivs_folder : str
+        The path to the calculated derivatives folder.
     
     Returns
     -------
@@ -210,32 +212,13 @@ def get_ds_entities(dataset_path: str):
         A dictionary of entities and their subcategories.
 
     """
-    #TODO: remove ds load, we do it above in the main code
-
-    try:
-        dataset = ancpbids.load_dataset(dataset_path)
-
-    except:
-        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
-        return
-
-    #create derivatives folder first:
-    derivatives_path = os.path.join(dataset_path, 'derivatives')
-    if not os.path.isdir(derivatives_path):
-        os.mkdir(derivatives_path)
-
-    derivative = dataset.create_derivative(name="Meg_QC")
-    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
-    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
 
     try: 
         entities = dataset.query_entities(scope=calculated_derivs_folder)
         print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
         #we only get entities of calculated derivatives here, not entire raw ds.
     except:
-        calculated_derivs_folder_full_path = os.path.join(dataset_path, calculated_derivs_folder)
-        raise FileNotFoundError(f'___MEGqc___: No calculated derivatives found in: {calculated_derivs_folder_full_path}')
+        raise FileNotFoundError(f'___MEGqc___: No calculated derivatives found for this ds!')
     
     return entities
 
@@ -497,10 +480,19 @@ def make_plots_meg_qc(dataset_path: str):
         print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
         return
 
+    #make sure the derivatives folder exists (it must! otherwise what do we plot from?):
+    derivatives_path = os.path.join(dataset_path, 'derivatives')
+    if not os.path.isdir(derivatives_path):
+        os.mkdir(derivatives_path)
+        print('___MEGqc___: ', 'Derivs folder was not found! Created new.')
+
+
     derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
-    entities = get_ds_entities(dataset_path) #get entities of the dataset using ancpbids
+    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+
+    entities = get_ds_entities(dataset, calculated_derivs_folder) #get entities of the dataset using ancpbids
 
     chosen_entities, plot_settings = selector(entities)
     if not chosen_entities:
