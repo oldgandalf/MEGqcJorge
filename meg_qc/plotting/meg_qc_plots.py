@@ -213,6 +213,24 @@ def get_ds_entities(dataset, calculated_derivs_folder: str):
 
     """
 
+
+    try:
+        dataset = ancpbids.load_dataset(dataset_path)
+
+    except:
+        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path for typos and presence of data on your device.')
+        return
+
+    #create derivatives folder first:
+    if os.path.isdir(dataset_path+'/derivatives')==False: 
+            os.mkdir(dataset_path+'/derivatives')
+
+    derivative = dataset.create_derivative(name="Meg_QC")
+    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+
+
     try: 
         entities = dataset.query_entities(scope=calculated_derivs_folder)
         print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
@@ -498,6 +516,13 @@ def make_plots_meg_qc(dataset_path: str):
     if not chosen_entities:
         return
     
+
+    #Add stimulus to chosen entities:
+    chosen_entities['METRIC'].append('stimulus')
+
+    # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
+    # uncomment for debugging, so no need to start selector every time
+
     print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
     
     #Add stimulus to chosen entities:
@@ -506,6 +531,7 @@ def make_plots_meg_qc(dataset_path: str):
     # Ensure 'run', 'task', and 'session' are in chosen_entities, set to None if missing
     for key in ['run', 'task', 'session']:
         chosen_entities.setdefault(key, None)
+
     
     print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
     print('___MEGqc___: CHOSEN settings: ', plot_settings)
@@ -582,6 +608,81 @@ def make_plots_meg_qc(dataset_path: str):
                 
                 entities_obj += list(dataset.query(**entities))
                 entities_obj = sorted(entities_obj, key=lambda k: k['name'])
+
+
+
+    for sub in chosen_entities['subject']:
+
+        reports_folder = derivative.create_folder(name='reports')
+        subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
+
+        calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+        try:
+            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
+        except:
+            report_str_path = '' #in case none was created yet
+            print('___MEGqc___: No report strings were created for sub ', sub)
+
+        tsvs_to_plot = {}
+        entities_per_file = {}
+
+        for metric in chosen_entities['METRIC']:
+            # Creating the full list of files for each combination
+            additional_str = None  # or additional_str = 'your_string'
+            desc = metric + additional_str if additional_str else metric
+            
+
+            # We call query with entities that always must present + entities that might present, might not:
+            # This is how the call would look if we had all entities:
+            # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
+
+            entities = {
+                'subj': sub,
+                'suffix': 'meg',
+                'extension': 'tsv', #we only collect tsvs here! 
+                'return_type': 'filename',
+                'desc': desc,
+                'scope': calculated_derivs_folder,
+            }
+
+            if 'session' in chosen_entities and chosen_entities['session']:
+                entities['session'] = chosen_entities['session']
+
+            if 'task' in chosen_entities and chosen_entities['task']:
+                entities['task'] = chosen_entities['task']
+
+            if 'run' in chosen_entities and chosen_entities['run']:
+                entities['run'] = chosen_entities['run']
+
+
+            if metric == 'PSDs':
+                descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+            elif metric == 'ECGs':
+                descriptions = ['ECGchannel', 'ECGs']
+            elif metric == 'EOGs':
+                descriptions = ['EOGchannel', 'EOGs']
+            else:
+                descriptions = [metric]
+
+            # Query tsv derivs and get the tsv paths:
+            tsv_path = []
+            for desc in descriptions:
+                entities['desc'] = desc
+                tsv_path += list(dataset.query(**entities))
+
+            tsvs_to_plot[metric] = sorted(tsv_path)
+
+            #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
+            entities = copy.deepcopy(entities)
+            entities['return_type'] = 'object'
+            #this time we need to return objects, not file paths, rest is same.
+            entities_obj = []
+            for desc in descriptions:
+                entities['desc'] = desc
+                
+                entities_obj += list(dataset.query(**entities))
+                entities_obj = sorted(entities_obj, key=lambda k: k['name'])
+
 
             entities_per_file[metric] = entities_obj
 
@@ -667,6 +768,7 @@ def make_plots_meg_qc(dataset_path: str):
 
                 #define method how the derivative will be written to file system:
                 meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
+
         
                     
     ancpbids.write_derivative(dataset, derivative) 
@@ -676,15 +778,30 @@ def make_plots_meg_qc(dataset_path: str):
 
 # ____________________________
 # RUN IT:
-make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
-# make_plots_meg_qc(dataset_path='/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/camcan')
 
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds000246')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds000247')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds002761')
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds004398')
+
+#make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483/')
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
+
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
+#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])
+
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
+# make_plots_meg_qc(dataset_path='Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/camcan')
+
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000246')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000247')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds002761')
+# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds004398')
+
 
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/BIDS/ceegridCut')
