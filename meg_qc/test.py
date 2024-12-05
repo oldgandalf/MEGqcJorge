@@ -19,7 +19,17 @@ def run_megqc():
     dataset_path_parser.add_argument("--config", type=str, required=False, help="path to config file")
     args=dataset_path_parser.parse_args()
 
+
+    # get the path of the currently executed file (file is on the base level of the package). 
+    # From there we know that the default settings and internal settings will be stored in settings/...
     path_to_megqc_installation= os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
+    relative_path_to_internal_config = "settings/settings_internal.ini"
+    relative_path_to_config = "settings/settings.ini"
+    # Normalize both relative paths (optional but we stick to it for consistency)
+    relative_path_to_internal_config = os.path.normpath(relative_path_to_internal_config)
+    relative_path_to_config = os.path.normpath(relative_path_to_config)
+    #join path 
+    internal_config_file_path=os.path.join(path_to_megqc_installation,relative_path_to_internal_config)
 
     #parent_dir = os.path.dirname(os.getcwd())
     #print(parent_dir)
@@ -37,14 +47,13 @@ def run_megqc():
         print("\n \n")
         user_input = input('Do you want to proceed with the default settings? (y/n): ').lower().strip() == 'y' 
         if user_input == True:
-            config_file_path = path_to_megqc_installation + '/settings/settings.ini'
+            config_file_path = os.path.join(path_to_megqc_installation,relative_path_to_config)
         else:
             print("Use the \n \n get-megqc-config --target_directory <path/to/your/target/directory> \n \n 2command line prompt. This will copy the config file to a target destination on your machine.YOu can edit this file, e.g adjust all user parameters to your needs, and run the pipeline command again \n run-megqc \n with the \n --config parameter \n providing a path to your customized config file") 
 
     else:
         config_file_path = args.config
 
-    internal_config_file_path=path_to_megqc_installation + '/settings/settings_internal.ini'
 
     make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory)
 

@@ -767,7 +767,7 @@ def make_plots_meg_qc(dataset_path: str):
 # ____________________________
 # RUN IT:
 
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/data/areer/MEG_QC_stuff/data/openneuro/ds003483/'] )
+make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483/')
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
