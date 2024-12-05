@@ -147,6 +147,10 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
     """
     Save the config file used for this run as a derivative.
 
+    Note: it is important the config and json to it have the exact same name except the extention!
+    The code relies on it later on in add_raw_to_config_json() function.
+
+
     Parameters
     ----------
     derivative : ancpbids.Derivative
@@ -188,6 +192,83 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
     return
 
 
+def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
+
+    """
+    Add the list of all taken raw files to the existing list of used settings in the config file.
+
+    Expects that the config file .ini and the .json file (with the same name) are already saved as derivatives.
+
+    To get corresponding json here use the easy way: 
+    just exchange ini to json in reuse file path (not using ANCPbids for it).
+    The 'proper' way would be to:
+    - query the desc entitiy of the reused config file
+    - get the json file with the same desc entity
+    This way will still assume that desc are exactly the same, so we use the easy way without ANCPbids d-tour.
+
+    Parameters
+    ----------
+    derivative : ancpbids.Derivative
+        Derivative object to save the config file.
+    reuse_config_file_path : str
+        Path to the config file used for this ds conversion before.
+    all_taken_raw_files : list
+        List of all the raw files processed in this run, for this ds.
+    
+    """
+
+    #exchange ini to json:
+    json_for_reused_config = reuse_config_file_path.replace('.ini', '.json')
+
+    #check if the json file exists:
+    if not os.path.isfile(json_for_reused_config):
+        print('___MEGqc___: ', 'No json file found for the config file used before. Can not add the new raw files to it.')
+        return
+
+    print('___MEGqc___: ', 'json_for_reused_config', json_for_reused_config)
+
+    try:
+        with open(json_for_reused_config, 'r') as file:
+            config_json = json.load(file)
+    except json.JSONDecodeError as e:
+        with open(json_for_reused_config, 'r') as file:
+            content = file.read()
+        print(f"Error decoding JSON: {e}")
+        print(f"File content:\n{content}")
+        # Handle the error appropriately, e.g., set config_json to an empty dict or raise an error
+        config_json = {}
+        return
+
+    # from file name get desc entity to use it as a key in the json file: 
+    # after desc- and before the underscores:
+    file_name = os.path.basename(reuse_config_file_path).split('.')[0]
+    config_desc = file_name.split('desc-')[1].split('_')[0]
+
+    # get what files already were in the config file
+    list_of_files = config_json[config_desc]
+
+    #update the list with new files:
+    list_of_files += all_taken_raw_files
+
+    #sort and remove duplicates:
+    list_of_files = sorted(list(set(list_of_files)))
+
+    #overwrite the old json (premake ancp bids artifact):
+    config_json = {config_desc: list_of_files}
+
+
+    config_folder = derivative.create_folder(name='config')
+    #TODO: we dont need to create config folder again, already got it, how to get it?
+
+    config_json_artifact = config_folder.create_artifact()
+    config_json_artifact.content = lambda file_path, cont = config_json: json.dump(cont, open(file_path, 'w'), indent=4)
+    config_json_artifact.add_entity('desc', config_desc) #file name
+    config_json_artifact.suffix = 'meg'
+    config_json_artifact.extension = '.json'
+
+    return
+
+
 def check_ds_paths(ds_paths: Union[List[str], str]):
 
     """
@@ -215,11 +296,13 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
         
     return ds_paths
 
-def check_config_saved(dataset):
+def check_config_saved_ask_user(dataset):
 
     """
     Check if there is already config file used for this ds:
-    If yes - ask the user if he wants to usi it again. If not - use default one.
+    If yes - ask the user if he wants to use it again. If not - use default one.
+    When no config found or user doesnt want to reuse - will return None.
+    otherwise will return the path to one config file used for this ds before to reuse now.
 
     Parameters
     ----------
@@ -254,7 +337,7 @@ def check_config_saved(dataset):
         
         used_setting_file_list += sorted(list(dataset.query(suffix='meg', extension='.ini', desc = used_settings_entity, return_type='filename', scope='derivatives')))
 
-    new_config_file_path = None
+    reuse_config_file_path = None
 
     # Ask the user if he wants to use any of existing config files:
     if used_setting_file_list:
@@ -265,15 +348,15 @@ def check_config_saved(dataset):
 
         user_input = input('___MEGqc___: Enter the number of the config file you want to use, or press Enter to use the default one: ')
         if user_input:
-            new_config_file_path = used_setting_file_list[int(user_input)]
+            reuse_config_file_path = used_setting_file_list[int(user_input)]
         else:
             print('___MEGqc___: ', 'You chose to use the default config file.')
             
 
-    return new_config_file_path
+    return reuse_config_file_path
 
 
-def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str]):
+def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str]):
 
     """ 
     Main function of MEG QC:
@@ -286,8 +369,9 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
     
     Parameters
     ----------
-    config_file_path : str
-        Path the config file with all the parameters for the QC analysis and data directory path.
+    default_config_file_path : str
+        Path the config file with all the parameters for the QC analysis - default.
+        later the function will ask the user if he wants to use the same config file again or use another one.
     internal_config_file_path : str
         Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
     ds_paths : list or str
@@ -316,9 +400,11 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
 
         # Check if there is already config file used for this ds:
-        new_config_file_path = check_config_saved(dataset)
-        if new_config_file_path:
-            config_file_path = new_config_file_path
+        reuse_config_file_path = check_config_saved_ask_user(dataset) # will give None if no config file was used before
+        if reuse_config_file_path:
+            config_file_path = reuse_config_file_path
+        else:
+            config_file_path = default_config_file_path
         print('___MEGqc___: ', 'Using config file: ', config_file_path)
 
         # Get all the parameters from the config file:
@@ -417,7 +503,7 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
 
 
 
-            for file_ind, data_file in enumerate(list_of_files): #[0:1]: #run over several data files
+            for file_ind, data_file in enumerate(list_of_files[0:1]): #[0:1]: #run over several data files
 
 
                 print('___MEGqc___: ', 'Processing file: ', data_file)
@@ -612,7 +698,13 @@ def make_derivative_meg_qc(config_file_path: str, internal_config_file_path: str
         all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
 
         #Save config file used for this run as a derivative:
-        create_config_artifact(derivative, config_file_path, 'UsedSettings', all_taken_raw_files)
+        if reuse_config_file_path is None:
+            # if no config file was used before, save the one used now
+            create_config_artifact(derivative, config_file_path, 'UsedSettings', all_taken_raw_files)
+        else:
+            #otherwise - dont save config again, but add list of all taken raw files to the existing list of used settings:
+            add_raw_to_config_json(derivative, reuse_config_file_path, all_taken_raw_files)
+
 
         ancpbids.write_derivative(dataset, derivative) 
 
