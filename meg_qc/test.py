@@ -62,7 +62,7 @@ def run_megqc():
     user_input = input('Do you want to run the MEGqc plotting module on the MEGqc results? (y/n): ').lower().strip() == 'y'
 
     if user_input == True:
-        make_plots_meg_qc([data_directory])
+        make_plots_meg_qc(data_directory)
         return
     else:
         return

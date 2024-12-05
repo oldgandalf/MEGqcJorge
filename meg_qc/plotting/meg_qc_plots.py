@@ -213,24 +213,6 @@ def get_ds_entities(dataset, calculated_derivs_folder: str):
 
     """
 
-
-    try:
-        dataset = ancpbids.load_dataset(dataset_path)
-
-    except:
-        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path for typos and presence of data on your device.')
-        return
-
-    #create derivatives folder first:
-    if os.path.isdir(dataset_path+'/derivatives')==False: 
-            os.mkdir(dataset_path+'/derivatives')
-
-    derivative = dataset.create_derivative(name="Meg_QC")
-    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
-    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-
-
     try: 
         entities = dataset.query_entities(scope=calculated_derivs_folder)
         print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
@@ -780,7 +762,7 @@ def make_plots_meg_qc(dataset_path: str):
 # RUN IT:
 
 
-#make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483/')
+make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
 #tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
