@@ -763,16 +763,6 @@ def make_plots_meg_qc(dataset_path: str):
 
 
 make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds003483'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds000117'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/openneuro/ds004330'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/camcan'])
-
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000246'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds000247'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds002761'])
-#tsvs_to_plot = make_plots_meg_qc(ds_paths=['/Volumes/SSD_DATA/MEG_data/CTF/ds004398'])
 
 # make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
 # make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
