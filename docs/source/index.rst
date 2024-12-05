@@ -10,6 +10,7 @@ MEG_QC API documentation
    :maxdepth: 3
    :caption: Contents:
 
+   tutorial
    installation
    api
 
