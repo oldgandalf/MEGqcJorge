@@ -387,11 +387,11 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
         #if they are given as str - IDs:
         if all(isinstance(sub, str) for sub in sub_list):
             sub_list_missing = [sub for sub in sub_list if sub not in available_subs]
+            sub_list = [sub for sub in sub_list if sub in available_subs]
             if sub_list_missing:
                 print('___MEGqc___: ', 'Could NOT find these subs in your data set. Check the subject IDs:', sub_list_missing)
-                print('___MEGqc___: ', 'Available subjects in your data set:', available_subs, 'Only these subjects will be processed.')
+                print('___MEGqc___: ', 'Requested subjects found in your data set:', sub_list, 'Only these subjects will be processed.')
             
-            sub_list = [sub for sub in sub_list if sub in available_subs]
         #if they are given as int - indexes:
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
