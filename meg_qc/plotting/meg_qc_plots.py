@@ -762,7 +762,7 @@ def make_plots_meg_qc(dataset_path: str):
 # RUN IT:
 
 
-make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
+#make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
 # make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
 # make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')

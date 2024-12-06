@@ -503,7 +503,7 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
 
 
 
-            for file_ind, data_file in enumerate(list_of_files[0:1]): #[0:1]: #run over several data files
+            for file_ind, data_file in enumerate(list_of_files): #[0:1]: #run over several data files
 
 
                 print('___MEGqc___: ', 'Processing file: ', data_file)
