@@ -108,9 +108,6 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
 
-        print('___MEGqc___: ', 'entities_per_file', entities_per_file)
-        print('___MEGqc___: ', 'list_of_files', list_of_files)
-
     elif has_ctf:
         list_of_files = ctf_workaround(dataset, sid)
         entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4', scope='raw')
@@ -130,7 +127,16 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         list_of_files = []
         raise ValueError('No fif or ctf files found in the dataset.')
     
+    # Find if we have crosstalk in list of files and entities_per_file, give notification that they will be skipped:
+    #read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
+    crosstalk_files = [f for f in list_of_files if 'crosstalk' in f]
+    if crosstalk_files:
+        print('___MEGqc___: ', 'Crosstalk files found in the list of files. They will be skipped.')
 
+    list_of_files = [f for f in list_of_files if 'crosstalk' not in f]
+    entities_per_file = [e for e in entities_per_file if 'crosstalk' not in e['name']]
+
+    # Check if the names in list_of_files and entities_per_file are the same:
     for i in range(len(list_of_files)):
         file_name_in_path = os.path.basename(list_of_files[i]).split('_meg.')[0]
         file_name_in_obj = entities_per_file[i]['name'].split('_meg.')[0]
@@ -142,6 +148,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     return list_of_files, entities_per_file
     
+
 def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str, all_taken_raw_files: List[str]):
 
     """
@@ -508,9 +515,9 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
                 print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
                 return
 
-            print('___MEGqc___: ', 'list_of_files', list_of_files)
-            print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
-            print('___MEGqc___: ', 'entities_per_file', entities_per_file)
+            print('___MEGqc___: ', 'list_of_files to process:', list_of_files)
+            print('___MEGqc___: ', 'entities_per_file to process', entities_per_file)
+            print('___MEGqc___: ', 'TOTAL files to process: ', len(list_of_files))
 
             all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
 
@@ -530,13 +537,7 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
 
             for file_ind, data_file in enumerate(list_of_files): #[0:1]: #run over several data files
 
-
                 print('___MEGqc___: ', 'Processing file: ', data_file)
-
-                if 'acq-crosstalk' in data_file:
-                    print('___MEGqc___: ', 'Skipping crosstalk file ', data_file)
-                    #read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
-                    continue
 
                 # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
                 shielding_str, m_or_g_skipped_str, epoching_str, ecg_str, eog_str, head_str, muscle_str, pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', '', '', '', '', '', '', '', ''
