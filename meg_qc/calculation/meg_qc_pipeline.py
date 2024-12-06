@@ -512,6 +512,7 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
             print('___MEGqc___: ', 'TOTAL files: ', len(list_of_files))
             print('___MEGqc___: ', 'entities_per_file', entities_per_file)
 
+            all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
 
             # GET all derivs!
             # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
@@ -717,7 +718,6 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
                         # problem with lambda explained:
                         # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
 
-        all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
 
         #Save config file used for this run as a derivative:
         if reuse_config_file_path is None:
