@@ -45,9 +45,6 @@ def get_all_config_params(config_file_path: str):
 
     #TODO: save list of mags and grads here and use later everywhere? because for CTF types are messed up.
 
-    subjects = default_section['subjects']
-    subjects = [sub.strip() for sub in subjects.split(",")]
-
     run_STD = default_section.getboolean('STD')
     run_PSD = default_section.getboolean('PSD')
     run_PTP_manual = default_section.getboolean('PTP_manual')
@@ -70,8 +67,7 @@ def get_all_config_params(config_file_path: str):
             tmax=float(tmax)
 
         default_params = dict({
-            'm_or_g_chosen': m_or_g_chosen, 
-            'subjects': subjects,
+            'm_or_g_chosen': m_or_g_chosen,
             'run_STD': run_STD,
             'run_PSD': run_PSD,
             'run_PTP_manual': run_PTP_manual,

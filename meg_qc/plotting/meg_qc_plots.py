@@ -764,16 +764,16 @@ def make_plots_meg_qc(dataset_path: str):
 
 #make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
-# make_plots_meg_qc(dataset_path='Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/camcan')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
+# make_plots_meg_qc(dataset_path='/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/camcan')
 
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000246')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds000247')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds002761')
-# make_plots_meg_qc(dataset_path='Volumes/SSD_DATA/MEG_data/CTF/ds004398')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds000246')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds000247')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds002761')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/CTF/ds004398')
 
 
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/BIDS/ceegridCut')

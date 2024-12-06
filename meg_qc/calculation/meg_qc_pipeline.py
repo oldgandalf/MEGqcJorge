@@ -355,8 +355,54 @@ def check_config_saved_ask_user(dataset):
 
     return reuse_config_file_path
 
+def check_sub_list(sub_list: Union[List[str], str], dataset):
 
-def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str]):
+    """
+    Check if the given subjects are in the data set.
+    
+    Parameters
+    ----------
+    sub_list : list or str
+        List of subjects to run the QC on.
+    dataset : ancpbids.Dataset
+        Dataset object to work with.
+        
+    Returns
+    -------
+    sub_list : list
+        Updated list of subjects to run the QC on.
+        
+    """
+
+    available_subs = sorted(list(dataset.query_entities(scope='raw')['subject']))
+    if sub_list == 'all':
+        sub_list = available_subs
+    elif isinstance(sub_list, str) and sub_list != 'all':
+        sub_list = [sub_list]
+        #check if this sub is available:
+        if sub_list[0] not in available_subs:
+            print('___MEGqc___: ', 'The subject you want to run the QC on is not in your data set. Check the subject ID.')
+            return
+    elif isinstance(sub_list, list):
+        #if they are given as str - IDs:
+        if all(isinstance(sub, str) for sub in sub_list):
+            sub_list_missing = [sub for sub in sub_list if sub not in available_subs]
+            sub_list = [sub for sub in sub_list if sub in available_subs]
+            if sub_list_missing:
+                print('___MEGqc___: ', 'Could NOT find these subs in your data set. Check the subject IDs:', sub_list_missing)
+                print('___MEGqc___: ', 'Requested subjects found in your data set:', sub_list, 'Only these subjects will be processed.')
+            
+        #if they are given as int - indexes:
+        elif all(isinstance(sub, int) for sub in sub_list):
+            sub_list = [available_subs[i] for i in sub_list]
+
+
+        print('___MEGqc___: ', 'sub_list', sub_list)
+
+
+    return sub_list
+
+def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str], sub_list: Union[List[str], str] = 'all'):
 
     """ 
     Main function of MEG QC:
@@ -376,6 +422,8 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
         Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
     ds_paths : list or str
         List of paths to the BIDS-conform data sets to run the QC on. Has to be list even if there is just one path.
+    sub_list : list or str
+        List of subjects to run the QC on. Can be 'all' or 1 subj like '009' or list of several subjects like ['009', '012'].
     """
 
     ds_paths = check_ds_paths(ds_paths)
@@ -438,30 +486,10 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
         # print('___MEGqc___: ', 'entities', entities)
 
 
-        # sub_list = sorted(list(dataset.query()['subject']))
-        # print(sub_list)
-
-        #return
-
-        try:
-            if all_qc_params['default']['subjects'][0] != 'all':
-                sub_list = all_qc_params['default']['subjects']
-            elif all_qc_params['default']['subjects'][0] == 'all':
-                sub_list = sorted(list(dataset.query_entities(scope='raw')['subject']))
-                #This here gives ANCPbids error now, smth changed in query_entities
-
-            print('___MEGqc___: ', 'sub_list', sub_list)
-
-        except Exception as e:  # Show exception if no subjects are found
-            print(f"Error: {e}")
-            print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
-            
-            return
+        sub_list = check_sub_list(sub_list, dataset)
 
         avg_ecg=[]
         avg_eog=[]
-
-        #list_of_subs = ['009', '012', '019', '020', '021', '022', '023', '024', '025'] #especially 23 in ds 83! There doesnt detect all the ecg peaks and says bad ch, but it s good.
         
         raw=None #preassign in case no calculation will be successful
 
