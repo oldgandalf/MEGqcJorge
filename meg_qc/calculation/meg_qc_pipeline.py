@@ -397,7 +397,7 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
             sub_list = [available_subs[i] for i in sub_list]
 
 
-        print('___MEGqc___: ', 'sub_list', sub_list)
+    print('___MEGqc___: ', 'sub_list to process: ', sub_list)
 
 
     return sub_list
@@ -526,10 +526,6 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
 
 
             counter = 0
-
-            #list_of_files = ['/Volumes/SSD_DATA/MEG_QC_stuff/data/CTF/ds000246/sub-0001/meg/sub-0001_task-AEF_run-01_meg.ds']
-
-
 
             for file_ind, data_file in enumerate(list_of_files): #[0:1]: #run over several data files
 
@@ -668,7 +664,9 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
                 for section in (section for section in QC_derivs.values() if section):
                     # loop over section where deriv.content_type is not 'matplotlib' or 'plotly' or 'report'
                     for deriv in (deriv for deriv in section if deriv.content_type != 'matplotlib' and deriv.content_type != 'plotly' and deriv.content_type != 'report'):
-                        
+
+                        # This is how you would save matplotlib, plotly and reports separately with ancpbids:
+
                         # print('___MEGqc___: ', 'writing deriv: ', d)
                         # print('___MEGqc___: ', deriv)
 
@@ -701,16 +699,12 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
                             meg_artifact.extension = '.tsv'
                             meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path, sep='\t')
 
-
                         elif deriv.content_type == 'json':
                             meg_artifact.extension = '.json'
                             def json_writer(file_path, cont=deriv.content):
                                 with open(file_path, "w") as file_wrapper:
                                     json.dump(cont, file_wrapper, indent=4)
-                            meg_artifact.content = json_writer 
-
-                            # with open('derivs.json', 'w') as file_wrapper:
-                            #     json.dump(metric, file_wrapper, indent=4)
+                            meg_artifact.content = json_writer # function pointer instead of lambda
 
                         elif deriv.content_type == 'info':
                             meg_artifact.extension = '.fif'
@@ -739,7 +733,5 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
         if raw is None:
             print('___MEGqc___: ', 'No data files could be processed.')
             return
-
-    # return raw, raw_cropped_filtered_resampled, QC_derivs, QC_simple, df_head_pos, head_pos, scores_muscle_all1, scores_muscle_all2, scores_muscle_all3, raw1, raw2, raw3, avg_ecg, avg_eog
 
     return 
