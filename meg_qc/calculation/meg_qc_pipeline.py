@@ -399,19 +399,6 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
 
         print('___MEGqc___: ', 'sub_list', sub_list)
 
-    # This was old version over the config file:
-
-    # try:
-    #     if all_qc_params['default']['subjects'][0] != 'all':
-    #         sub_list = all_qc_params['default']['subjects']
-    #     elif all_qc_params['default']['subjects'][0] == 'all':
-    #         sub_list = sorted(list(dataset.query_entities(scope='raw')['subject']))
-    #         #This here gives ANCPbids error now, smth changed in query_entities
-    # except Exception as e:  # Show exception if no subjects are found
-    #     print(f"Error: {e}")
-    #     print('___MEGqc___: ', 'Could not get BIDS entities from you data set. Check the path in setting file. It has to be the direct path to a BIDS-conform data set, or several coma-separated data set paths.')
-        
-    #     return
 
     return sub_list
 
