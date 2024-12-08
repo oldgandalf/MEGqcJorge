@@ -509,7 +509,11 @@ def keep_unique_locs(ch_list: List):
 
 def make_3d_sensors_trace(d3_locs: List, names: List, color: str, textsize: int, legend_category: str = 'channels', symbol: str = 'circle', textposition: str = 'top right'):
 
-    """ Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot labels.
+    """ 
+    Makes traces for sensors in 1 lobe, one color. Names and locations are combined if the sonsors have same coordinates.
+    This func already gets them combined from keep_unique_locs function.
+    (Since grads have 2 sensors located in the same spot - need to put their names together to make pretty plot label. 
+    Mags are located aproxximately in the same place).
 
     Parameters
     ----------
