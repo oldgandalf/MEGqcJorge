@@ -85,8 +85,6 @@ def make_metric_section(fig_derivs_metric: List, section_name: str, report_strin
         The html string of 1 section of the report.
     """
 
-    print('Checking report strings:', report_strings)
-
 
     # Define a mapping of section names to report strings and how-to-use plots
     section_mapping = {

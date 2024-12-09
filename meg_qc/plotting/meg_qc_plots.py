@@ -102,7 +102,7 @@ def selector(entities: dict):
     for key, values in categories.items():
         result, quit_selector = select_subcategory(categories[key], key)
 
-        print('___MEGqc___: ', key, result)
+        print('___MEGqc___: select_subcategory: ', key, result)
 
         if quit_selector: # if user clicked cancel - stop:
             print('___MEGqc___: You clicked cancel. Please start over.')
@@ -114,8 +114,6 @@ def selector(entities: dict):
     #Check 1) if nothing was chosen, 2) if ALL was chosen
     for key, values in selected.items():
 
-        print('___MEGqc___: ', key, values)
-
         if not selected[key]: # if nothing was chosen:
             title = 'You did not choose the '+key+'. Please try again:'
             result, quit_selector = select_subcategory(categories[key], key, title)
@@ -124,10 +122,12 @@ def selector(entities: dict):
                 return None, None
             
         else: #TODO: rewrite!! seems it doesnt select all tasks, etc.. but does all metrics???
-            print('ALL in values for key: ', key, ' is: ', [item for item in values if 'ALL' in item.upper()])
             for item in values:
-                if 'ALL' in item.upper():
-                    all_selected = [str(category) for category in categories[key] if 'ALL' not in str(category).upper()]
+                if '_ALL_' in item.upper():
+                    all_selected = [str(category) for category in categories[key] if '_ALL_' not in str(category).upper()]
+                    #Important! Keep ....if '_ALL_' not in str(category).upper() with underscores!
+                    #otherwise it will excude tasks like 'oddbALL' and such
+
                     selected[key] = all_selected #everything
 
     # Separate into selected_entities and plot_settings
