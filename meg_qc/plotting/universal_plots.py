@@ -637,14 +637,17 @@ def plot_sensors_3d_csv(sensors_csv_path: str):
 
     #system = df['System'].unique().tolist()
 
-    if len(lobes_dict)>1: #if there are lobes - we use color coding: one color per each lobe
+    if len(lobes_dict)>1: 
+        #if there are lobes - we use color coding: one color per each lobe
         for lobe in lobes_dict:
             ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
             traces.append(make_3d_sensors_trace(ch_locs, ch_names, ch_color[0], 10, ch_lobe[0], 'circle', 'top left'))
             #here color and lobe must be identical for all channels in 1 trace, thi is why we take the first element of the list
             # TEXT SIZE set to 10. This works for the "Always show names" option but not for "Show names on hover" option
 
-    else: #if there are no lobes - we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
+    else: 
+        #if there are no lobes - the dict will only have one lobe as the key and all channels inside of it
+        # we use random colors previously assigned to channels, channel names will be used instead of lobe names in make_3d_trace function
         ch_locs, ch_names, ch_color, ch_lobe = keep_unique_locs(lobes_dict[lobe])
         for i, _ in enumerate(ch_locs):
             traces.append(make_3d_sensors_trace([ch_locs[i]], ch_names[i], ch_color[i], 10, ch_names[i], 'circle', 'top left'))
@@ -985,6 +988,113 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='matplotlib')]
                  
+    return qc_derivative
+
+
+def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: str):
+
+    """
+
+
+    Parameters
+    ----------
+    sensors_csv_path : str
+        Path to the tsv file with the sensors locations.
+    ch_type : str
+        Type of the channels: mag or grad
+    what_data : str
+        'peaks' or 'stds'
+    
+    Returns
+    -------
+    qc_derivative : List
+        A list of QC_derivative objects containing the plotly figures with the sensor locations.
+
+    """
+    
+    df = pd.read_csv(sensors_csv_path, sep='\t')
+
+    #take only those channels that are of right type:
+    df = df[df['Type'] == ch_type]
+
+    ch_tit, unit = get_tit_and_unit(ch_type)
+
+    # Assuming df is your DataFrame
+    # Extract sensor locations and STD all values
+    sensor_locations = df[['Sensor_location_0', 'Sensor_location_1', 'Sensor_location_2']].values
+
+    if what_data=='peaks':
+        fig_name='PP_manual_all_data_Topomap_'+ch_tit
+        metric = 'PtP'
+        metric_column = 'PtP all'
+    elif what_data=='stds':
+        fig_name='STD_epoch_all_data_Topomap_'+ch_tit
+        metric = 'STD'
+        metric_column = 'STD all'
+    else:
+        raise ValueError('what_data must be set to "stds" or "peaks"')
+    
+    std_ptp_values = df[metric_column].values
+    
+
+    # Normalize the STD all values to range between 0 and 1
+    #norm_std_all = (std_all_values - np.min(std_all_values)) / (np.max(std_all_values) - np.min(std_all_values))
+    # Create a color scale from blue to red
+    #colors = [f'rgba({int(255 * val)}, 0, {int(255 * (1 - val))}, 1)' for val in norm_std_all]
+
+    # Create the 3D scatter plot
+    fig = go.Figure()
+
+    text = [f"{name} - {metric}: {std:.2e} {unit}" for name, std in zip(df['Name'], df[metric_column])]
+
+    fig.add_trace(go.Scatter3d(
+        x=sensor_locations[:, 0],
+        y=sensor_locations[:, 1],
+        z=sensor_locations[:, 2],
+        mode='markers',
+        marker=dict(
+            size=13,
+            color=std_ptp_values,  # Use the actual STD all values for the color scale
+            colorscale='Bluered',  # Use the 'Bluered' colorscale
+            colorbar=dict(
+                title=metric + ', ' + unit,
+                titleside='right',
+                tickmode='array',
+                tickvals=[np.min(std_ptp_values), np.max(std_ptp_values)],
+                ticktext=[f'{np.min(std_ptp_values):.2e}', f'{np.max(std_ptp_values):.2e}'],
+                ticks='outside'
+            ),
+            opacity=0.8
+        ),
+        text=text,  # Use channel names and formatted STD all values as hover text
+        hoverinfo='text'
+    ))
+
+    # Set plot layout
+    fig.update_layout(
+        width=900, height=900,
+        title={
+        'text': metric + ' topomap: '+ ch_tit,
+        'y':0.85,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'})
+    
+    fig.update_layout(
+        scene = dict(
+        xaxis = dict(visible=False),
+        yaxis = dict(visible=False),
+        zaxis =dict(visible=False)
+        )
+    )
+
+    # Add the button to have names show up on hover or always:
+    fig = switch_names_on_off(fig)
+
+    fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
+   
+    qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
+
     return qc_derivative
 
 
