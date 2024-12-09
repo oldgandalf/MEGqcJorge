@@ -198,46 +198,102 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
 
     return
 
-def ask_user_rerun_subs(list_of_files_json: List[str], all_taken_raw_files: List[str]):
+def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
 
     """
     Ask the user if he wants to rerun the same subjects again or skip them.
 
     Parameters
     ----------
-    list_of_files : list
-        List of files previously processed taken from json connected to used config.
-    all_taken_raw_files : list
-        List of all the raw files to be processed additiomslly usong this config.
+    reuse_config_file_path : str
+        Path to the config file used for this ds conversion before.
+    sub_list : list
+        List of subjects to run the QC on.
 
     Returns
     -------
-    all_taken_raw_files : list
-        Updated list of all the raw files processed in this run, for this
+    sub_list : list
+        Updated list of subjects to run the QC on.
 
     """
 
-    #compare the list with all_taken_raw_files and see if there are files that overlap:
-    overlapping_files = [f for f in all_taken_raw_files if f in list_of_files_json]
+    list_of_files_json, _ = get_list_of_raws_for_config(reuse_config_file_path)
+    if not list_of_files_json:
+        return sub_list
+    
+    # find all 'sub-' in the file names to get the subject ID:
+    subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
 
-    #if there are overlapping - ask the user if he wants to rerun the same subjects again or skip them:
-    if overlapping_files:
-        # find all 'sub-' in the file names to get the subject ID:
-        subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in overlapping_files]
+    #keep unique subjects:
+    subjects_to_skip = list(set(subjects_to_skip))
 
-        #ask the user if he wants to skip these subjects:
-        print('___MEGqc___: ', 'The following subjects were already processed with this config file:', subjects_to_skip)
-        while True:
-            user_input = input('___MEGqc___: Do you want to RERUN these subjects? (Y/N): ').lower()
-            if user_input == 'n':  # remove these subs from all_taken_raw_files
-                all_taken_raw_files = [f for f in all_taken_raw_files if f not in overlapping_files]
-                break
-            elif user_input == 'y':  # keep these subs in all_taken_raw_files
-                break
-            else:  # ask again if the input is not correct
-                print('___MEGqc___: ', 'Wrong input. Please enter Y or N.')
+    #ask the user if he wants to skip these subjects:
+    print('___MEGqc___: ', 'The following subjects were already processed with this config file:', subjects_to_skip)
+    while True:
+        user_input = input('___MEGqc___: Do you want to RERUN these subjects? (Y/N): ').lower()
+        if user_input == 'n':  # remove these subs 
+            print('___MEGqc___: ', 'Subjects to skip:', subjects_to_skip)
+            sub_list = [sub for sub in sub_list if sub not in subjects_to_skip]
+            print('___MEGqc___: ', 'Subjects to process:', sub_list)
+            break
+        elif user_input == 'y':  # keep these subs in all_taken_raw_files
+            print('___MEGqc___: ', 'Subjects to process:', sub_list)
+            break
+        else:  # ask again if the input is not correct
+            print('___MEGqc___: ', 'Wrong input. Please enter Y or N.')
 
-    return all_taken_raw_files
+    return sub_list
+
+
+def get_list_of_raws_for_config(reuse_config_file_path: str):
+
+    """
+    Get the list of all raw files processed with the config file used before.
+
+    Parameters
+    ----------
+    reuse_config_file_path : str
+        Path to the config file used for this ds conversion before.
+
+    Returns
+    -------
+    list_of_files : list
+        List of all the raw files processed in this run, for this ds.
+    config_desc : str
+        Description entity of the config file used before.
+    """
+
+    #exchange ini to json:
+    json_for_reused_config = reuse_config_file_path.replace('.ini', '.json')
+
+    #check if the json file exists:
+    if not os.path.isfile(json_for_reused_config):
+        print('___MEGqc___: ', 'No json file found for the config file used before. Can not add the new raw files to it.')
+        return
+
+    print('___MEGqc___: ', 'json_for_reused_config', json_for_reused_config)
+
+    try:
+        with open(json_for_reused_config, 'r') as file:
+            config_json = json.load(file)
+    except json.JSONDecodeError as e:
+        with open(json_for_reused_config, 'r') as file:
+            content = file.read()
+        print(f"Error decoding JSON: {e}")
+        print(f"File content:\n{content}")
+        # Handle the error appropriately, e.g., set config_json to an empty dict or raise an error
+        config_json = {}
+        return
+
+    # from file name get desc entity to use it as a key in the json file: 
+    # after desc- and before the underscores:
+    file_name = os.path.basename(reuse_config_file_path).split('.')[0]
+    config_desc = file_name.split('desc-')[1].split('_')[0]
+
+    # get what files already were in the config file
+    list_of_files = config_json[config_desc]
+
+    return list_of_files, config_desc
 
 def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
 
@@ -272,37 +328,7 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     
     """
 
-    #exchange ini to json:
-    json_for_reused_config = reuse_config_file_path.replace('.ini', '.json')
-
-    #check if the json file exists:
-    if not os.path.isfile(json_for_reused_config):
-        print('___MEGqc___: ', 'No json file found for the config file used before. Can not add the new raw files to it.')
-        return
-
-    print('___MEGqc___: ', 'json_for_reused_config', json_for_reused_config)
-
-    try:
-        with open(json_for_reused_config, 'r') as file:
-            config_json = json.load(file)
-    except json.JSONDecodeError as e:
-        with open(json_for_reused_config, 'r') as file:
-            content = file.read()
-        print(f"Error decoding JSON: {e}")
-        print(f"File content:\n{content}")
-        # Handle the error appropriately, e.g., set config_json to an empty dict or raise an error
-        config_json = {}
-        return
-
-    # from file name get desc entity to use it as a key in the json file: 
-    # after desc- and before the underscores:
-    file_name = os.path.basename(reuse_config_file_path).split('.')[0]
-    config_desc = file_name.split('desc-')[1].split('_')[0]
-
-    # get what files already were in the config file
-    list_of_files = config_json[config_desc]
-
-    all_taken_raw_files = ask_user_rerun_subs(list_of_files, all_taken_raw_files)
+    list_of_files, config_desc = get_list_of_raws_for_config(reuse_config_file_path)
 
     #Continue to update the list with new files:
     list_of_files += all_taken_raw_files
@@ -453,9 +479,7 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
 
-
-    print('___MEGqc___: ', 'sub_list to process: ', sub_list)
-
+    print('___MEGqc___: ', 'initial sub_list to process: ', sub_list)
 
     return sub_list
 
@@ -544,6 +568,9 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
 
 
         sub_list = check_sub_list(sub_list, dataset)
+
+        if reuse_config_file_path:
+            sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
         avg_ecg=[]
         avg_eog=[]
