@@ -198,6 +198,46 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
 
     return
 
+def ask_user_rerun_subs(list_of_files_json: List[str], all_taken_raw_files: List[str]):
+
+    """
+    Ask the user if he wants to rerun the same subjects again or skip them.
+
+    Parameters
+    ----------
+    list_of_files : list
+        List of files previously processed taken from json connected to used config.
+    all_taken_raw_files : list
+        List of all the raw files to be processed additiomslly usong this config.
+
+    Returns
+    -------
+    all_taken_raw_files : list
+        Updated list of all the raw files processed in this run, for this
+
+    """
+
+    #compare the list with all_taken_raw_files and see if there are files that overlap:
+    overlapping_files = [f for f in all_taken_raw_files if f in list_of_files_json]
+
+    #if there are overlapping - ask the user if he wants to rerun the same subjects again or skip them:
+    if overlapping_files:
+        # find all 'sub-' in the file names to get the subject ID:
+        subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in overlapping_files]
+
+        #ask the user if he wants to skip these subjects:
+        print('___MEGqc___: ', 'The following subjects were already processed with this config file:', subjects_to_skip)
+        while True:
+            user_input = input('___MEGqc___: Do you want to RERUN these subjects? (Y/N): ').lower()
+            if user_input == 'n':  # remove these subs from all_taken_raw_files
+                all_taken_raw_files = [f for f in all_taken_raw_files if f not in overlapping_files]
+                break
+            elif user_input == 'y':  # keep these subs in all_taken_raw_files
+                break
+            else:  # ask again if the input is not correct
+                print('___MEGqc___: ', 'Wrong input. Please enter Y or N.')
+
+    return all_taken_raw_files
 
 def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
 
@@ -213,6 +253,9 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     - get the json file with the same desc entity
     This way will still assume that desc are exactly the same, so we use the easy way without ANCPbids d-tour.
 
+    The function will also output the updated list of all taken raw files for this ds based on the users choice:
+    rewrite or not the subjects that have already been processed with this config file.
+
     Parameters
     ----------
     derivative : ancpbids.Derivative
@@ -221,6 +264,11 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
         Path to the config file used for this ds conversion before.
     all_taken_raw_files : list
         List of all the raw files processed in this run, for this ds.
+
+    Returns
+    -------
+    all_taken_raw_files : list
+        Updated list of all the raw files processed in this run, for this ds.
     
     """
 
@@ -254,7 +302,9 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     # get what files already were in the config file
     list_of_files = config_json[config_desc]
 
-    #update the list with new files:
+    all_taken_raw_files = ask_user_rerun_subs(list_of_files, all_taken_raw_files)
+
+    #Continue to update the list with new files:
     list_of_files += all_taken_raw_files
 
     #sort and remove duplicates:
@@ -262,7 +312,6 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
 
     #overwrite the old json (premake ancp bids artifact):
     config_json = {config_desc: list_of_files}
-
 
     config_folder = derivative.create_folder(name='config')
     #TODO: we dont need to create config folder again, already got it, how to get it?
@@ -273,7 +322,7 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     config_json_artifact.suffix = 'meg'
     config_json_artifact.extension = '.json'
 
-    return
+    return all_taken_raw_files
 
 
 def check_ds_paths(ds_paths: Union[List[str], str]):
@@ -361,6 +410,7 @@ def check_config_saved_ask_user(dataset):
             
 
     return reuse_config_file_path
+
 
 def check_sub_list(sub_list: Union[List[str], str], dataset):
 
