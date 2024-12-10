@@ -100,35 +100,16 @@ def selector(entities: dict):
     selected = {}
     # Create a list of values with category titles
     for key, values in categories.items():
-        result, quit_selector = select_subcategory(categories[key], key)
+        results, quit_selector = select_subcategory(categories[key], key)
 
-        print('___MEGqc___: select_subcategory: ', key, result)
+        print('___MEGqc___: select_subcategory: ', key, results)
 
         if quit_selector: # if user clicked cancel - stop:
             print('___MEGqc___: You clicked cancel. Please start over.')
             return None, None
         
-        selected[key] = result
+        selected[key] = results
 
-
-    #Check 1) if nothing was chosen, 2) if ALL was chosen
-    for key, values in selected.items():
-
-        if not selected[key]: # if nothing was chosen:
-            title = 'You did not choose the '+key+'. Please try again:'
-            result, quit_selector = select_subcategory(categories[key], key, title)
-            if not result: # if nothing was chosen again - stop:
-                print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
-                return None, None
-            
-        else: #TODO: rewrite!! seems it doesnt select all tasks, etc.. but does all metrics???
-            for item in values:
-                if '_ALL_' in item.upper():
-                    all_selected = [str(category) for category in categories[key] if '_ALL_' not in str(category).upper()]
-                    #Important! Keep ....if '_ALL_' not in str(category).upper() with underscores!
-                    #otherwise it will excude tasks like 'oddbALL' and such
-
-                    selected[key] = all_selected #everything
 
     # Separate into selected_entities and plot_settings
     selected_entities = {key: values for key, values in selected.items() if key != 'm_or_g'}
@@ -165,31 +146,41 @@ def select_subcategory(subcategories: List, category_title: str, window_title: s
     quit_selector = False
 
     # Create a list of values with category titles
-    values = []
-    for items in subcategories:
-        values.append((str(items), str(items)))
+    values = [(str(items), str(items)) for items in subcategories]
 
-        # Each tuple represents a checkbox item and should contain two elements:
-        # A string that will be returned when the checkbox is selected.
-        # A string that will be displayed as the label of the checkbox.
+    while True:
+        results = checkboxlist_dialog(
+            title=window_title,
+            text=category_title,
+            values=values,
+            style=Style.from_dict({
+                'dialog': 'bg:#cdbbb3',
+                'button': 'bg:#bf99a4',
+                'checkbox': '#e8612c',
+                'dialog.body': 'bg:#a9cfd0',
+                'dialog shadow': 'bg:#c98982',
+                'frame.label': '#fcaca3',
+                'dialog.body label': '#fd8bb6',
+            })
+        ).run()
 
-    results = checkboxlist_dialog(
-        title=window_title,
-        text=category_title,
-        values=values,
-        style=Style.from_dict({
-            'dialog': 'bg:#cdbbb3',
-            'button': 'bg:#bf99a4',
-            'checkbox': '#e8612c',
-            'dialog.body': 'bg:#a9cfd0',
-            'dialog shadow': 'bg:#c98982',
-            'frame.label': '#fcaca3',
-            'dialog.body label': '#fd8bb6',
-        })
-    ).run()
+        # Set quit_selector to True if the user clicked Cancel (results is None)
+        quit_selector = results is None
 
-    # Set quit_selector to True if the user clicked Cancel (results is None)
-    quit_selector = results is None
+        if quit_selector or results:
+            break
+        else:
+            print('___MEGqc___: Please select at least one subcategory or click Cancel.')
+
+
+    # if '_ALL_' was chosen - choose all categories, except _ALL_ itself:
+    if results: #if something was chosen
+        for r in results:
+            if '_ALL_' in r.upper():
+                results = [str(category) for category in subcategories if '_ALL_' not in str(category).upper()]
+                #Important! Keep ....if '_ALL_' not in str(category).upper() with underscores!
+                #otherwise it will excude tasks like 'oddbALL' and such
+                break
 
     return results, quit_selector
 
@@ -766,7 +757,7 @@ def make_plots_meg_qc(dataset_path: str):
 
 # make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
 # make_plots_meg_qc(dataset_path='/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
