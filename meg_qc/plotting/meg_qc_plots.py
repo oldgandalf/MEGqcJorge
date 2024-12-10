@@ -490,28 +490,28 @@ def make_plots_meg_qc(dataset_path: str):
     chosen_entities, plot_settings = selector(entities)
     if not chosen_entities:
         return
+
+    #check that 'task' and 'subject' entities are not empty, because they are REQUIRED: 
+    if 'task' not in chosen_entities or not chosen_entities['task']:
+        print('___MEGqc___: ', 'Task entity is required! Please start over and select a task.')
+        return
     
-
-    #Add stimulus to chosen entities:
-    chosen_entities['METRIC'].append('stimulus')
-
-    # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
-    # uncomment for debugging, so no need to start selector every time
-
-    print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
+    if 'subject' not in chosen_entities or not chosen_entities['subject']:
+        print('___MEGqc___: ', 'Subject entity is required! Please start over and select a subject.')
+        return
     
-    #Add stimulus to chosen entities:
-    chosen_entities['METRIC'].append('stimulus')
-
-    # Ensure 'run', 'task', and 'session' are in chosen_entities, set to None if missing
-    for key in ['run', 'task', 'session']:
+    # Ensure 'run' and 'session' are in chosen_entities, set to None if missing.
+    # None can be ignored by ancpbids later, but empty list can raie errors
+    for key in ['run', 'session']:
         chosen_entities.setdefault(key, None)
 
-    
+    #Add stimulus to chosen entities:
+    chosen_entities['METRIC'].append('stimulus')
+
     print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
     print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
-
+    # Here we choose which tsvs will be plotetd in the report for each sub, metric:
     for sub in chosen_entities['subject']:
 
         reports_folder = derivative.create_folder(name='reports')
@@ -537,8 +537,10 @@ def make_plots_meg_qc(dataset_path: str):
             # This is how the call would look if we had all entities:
             # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
 
+            #required entities:
             entities = {
                 'subj': sub,
+                'task': chosen_entities['task'],
                 'suffix': 'meg',
                 'extension': 'tsv', #we only collect tsvs here! 
                 'return_type': 'filename',
@@ -546,11 +548,9 @@ def make_plots_meg_qc(dataset_path: str):
                 'scope': calculated_derivs_folder,
             }
 
+            #optional entities:
             if 'session' in chosen_entities and chosen_entities['session']:
                 entities['session'] = chosen_entities['session']
-
-            if 'task' in chosen_entities and chosen_entities['task']:
-                entities['task'] = chosen_entities['task']
 
             if 'run' in chosen_entities and chosen_entities['run']:
                 entities['run'] = chosen_entities['run']
@@ -586,77 +586,75 @@ def make_plots_meg_qc(dataset_path: str):
 
 
 
-    for sub in chosen_entities['subject']:
+    # for sub in chosen_entities['subject']:
 
-        reports_folder = derivative.create_folder(name='reports')
-        subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
+    #     reports_folder = derivative.create_folder(name='reports')
+    #     subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
 
-        calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-        try:
-            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
-        except:
-            report_str_path = '' #in case none was created yet
-            print('___MEGqc___: No report strings were created for sub ', sub)
+    #     calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
+    #     try:
+    #         report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
+    #     except:
+    #         report_str_path = '' #in case none was created yet
+    #         print('___MEGqc___: No report strings were created for sub ', sub)
 
-        tsvs_to_plot = {}
-        entities_per_file = {}
+    #     tsvs_to_plot = {}
+    #     entities_per_file = {}
 
-        for metric in chosen_entities['METRIC']:
-            # Creating the full list of files for each combination
-            additional_str = None  # or additional_str = 'your_string'
-            desc = metric + additional_str if additional_str else metric
+    #     for metric in chosen_entities['METRIC']:
+    #         # Creating the full list of files for each combination
+    #         additional_str = None  # or additional_str = 'your_string'
+    #         desc = metric + additional_str if additional_str else metric
             
 
-            # We call query with entities that always must present + entities that might present, might not:
-            # This is how the call would look if we had all entities:
-            # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
+    #         # We call query with entities that always must present + entities that might present, might not:
+    #         # This is how the call would look if we had all entities:
+    #         # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
 
-            entities = {
-                'subj': sub,
-                'suffix': 'meg',
-                'extension': 'tsv', #we only collect tsvs here! 
-                'return_type': 'filename',
-                'desc': desc,
-                'scope': calculated_derivs_folder,
-            }
+    #         entities = {
+    #             'subj': sub,
+    #             'task': chosen_entities['task'],
+    #             'suffix': 'meg',
+    #             'extension': 'tsv', #we only collect tsvs here! 
+    #             'return_type': 'filename',
+    #             'desc': desc,
+    #             'scope': calculated_derivs_folder,
+    #         }
 
-            if 'session' in chosen_entities and chosen_entities['session']:
-                entities['session'] = chosen_entities['session']
+    #         if 'session' in chosen_entities and chosen_entities['session']:
+    #             entities['session'] = chosen_entities['session']
 
-            if 'task' in chosen_entities and chosen_entities['task']:
-                entities['task'] = chosen_entities['task']
-
-            if 'run' in chosen_entities and chosen_entities['run']:
-                entities['run'] = chosen_entities['run']
+    #         if 'run' in chosen_entities and chosen_entities['run']:
+    #             entities['run'] = chosen_entities['run']
 
 
-            if metric == 'PSDs':
-                descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
-            elif metric == 'ECGs':
-                descriptions = ['ECGchannel', 'ECGs']
-            elif metric == 'EOGs':
-                descriptions = ['EOGchannel', 'EOGs']
-            else:
-                descriptions = [metric]
+    #         if metric == 'PSDs':
+    #             descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+    #         elif metric == 'ECGs':
+    #             descriptions = ['ECGchannel', 'ECGs']
+    #         elif metric == 'EOGs':
+    #             descriptions = ['EOGchannel', 'EOGs']
+    #         else:
+    #             descriptions = [metric]
 
-            # Query tsv derivs and get the tsv paths:
-            tsv_path = []
-            for desc in descriptions:
-                entities['desc'] = desc
-                tsv_path += list(dataset.query(**entities))
+    #         # Query tsv derivs and get the tsv paths:
+    #         tsv_path = []
+    #         for desc in descriptions:
+    #             entities['desc'] = desc
+    #             tsv_path += list(dataset.query(**entities))
 
-            tsvs_to_plot[metric] = sorted(tsv_path)
+    #         tsvs_to_plot[metric] = sorted(tsv_path)
 
-            #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
-            entities = copy.deepcopy(entities)
-            entities['return_type'] = 'object'
-            #this time we need to return objects, not file paths, rest is same.
-            entities_obj = []
-            for desc in descriptions:
-                entities['desc'] = desc
+    #         #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
+    #         entities = copy.deepcopy(entities)
+    #         entities['return_type'] = 'object'
+    #         #this time we need to return objects, not file paths, rest is same.
+    #         entities_obj = []
+    #         for desc in descriptions:
+    #             entities['desc'] = desc
                 
-                entities_obj += list(dataset.query(**entities))
-                entities_obj = sorted(entities_obj, key=lambda k: k['name'])
+    #             entities_obj += list(dataset.query(**entities))
+    #             entities_obj = sorted(entities_obj, key=lambda k: k['name'])
 
 
             entities_per_file[metric] = entities_obj
