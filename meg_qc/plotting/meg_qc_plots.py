@@ -100,35 +100,16 @@ def selector(entities: dict):
     selected = {}
     # Create a list of values with category titles
     for key, values in categories.items():
-        result, quit_selector = select_subcategory(categories[key], key)
+        results, quit_selector = select_subcategory(categories[key], key)
 
-        print('___MEGqc___: select_subcategory: ', key, result)
+        print('___MEGqc___: select_subcategory: ', key, results)
 
         if quit_selector: # if user clicked cancel - stop:
             print('___MEGqc___: You clicked cancel. Please start over.')
             return None, None
         
-        selected[key] = result
+        selected[key] = results
 
-
-    #Check 1) if nothing was chosen, 2) if ALL was chosen
-    for key, values in selected.items():
-
-        if not selected[key]: # if nothing was chosen:
-            title = 'You did not choose the '+key+'. Please try again:'
-            result, quit_selector = select_subcategory(categories[key], key, title)
-            if not result: # if nothing was chosen again - stop:
-                print('___MEGqc___: You still  did not choose the '+key+'. Please start over.')
-                return None, None
-            
-        else: #TODO: rewrite!! seems it doesnt select all tasks, etc.. but does all metrics???
-            for item in values:
-                if '_ALL_' in item.upper():
-                    all_selected = [str(category) for category in categories[key] if '_ALL_' not in str(category).upper()]
-                    #Important! Keep ....if '_ALL_' not in str(category).upper() with underscores!
-                    #otherwise it will excude tasks like 'oddbALL' and such
-
-                    selected[key] = all_selected #everything
 
     # Separate into selected_entities and plot_settings
     selected_entities = {key: values for key, values in selected.items() if key != 'm_or_g'}
@@ -165,31 +146,41 @@ def select_subcategory(subcategories: List, category_title: str, window_title: s
     quit_selector = False
 
     # Create a list of values with category titles
-    values = []
-    for items in subcategories:
-        values.append((str(items), str(items)))
+    values = [(str(items), str(items)) for items in subcategories]
 
-        # Each tuple represents a checkbox item and should contain two elements:
-        # A string that will be returned when the checkbox is selected.
-        # A string that will be displayed as the label of the checkbox.
+    while True:
+        results = checkboxlist_dialog(
+            title=window_title,
+            text=category_title,
+            values=values,
+            style=Style.from_dict({
+                'dialog': 'bg:#cdbbb3',
+                'button': 'bg:#bf99a4',
+                'checkbox': '#e8612c',
+                'dialog.body': 'bg:#a9cfd0',
+                'dialog shadow': 'bg:#c98982',
+                'frame.label': '#fcaca3',
+                'dialog.body label': '#fd8bb6',
+            })
+        ).run()
 
-    results = checkboxlist_dialog(
-        title=window_title,
-        text=category_title,
-        values=values,
-        style=Style.from_dict({
-            'dialog': 'bg:#cdbbb3',
-            'button': 'bg:#bf99a4',
-            'checkbox': '#e8612c',
-            'dialog.body': 'bg:#a9cfd0',
-            'dialog shadow': 'bg:#c98982',
-            'frame.label': '#fcaca3',
-            'dialog.body label': '#fd8bb6',
-        })
-    ).run()
+        # Set quit_selector to True if the user clicked Cancel (results is None)
+        quit_selector = results is None
 
-    # Set quit_selector to True if the user clicked Cancel (results is None)
-    quit_selector = results is None
+        if quit_selector or results:
+            break
+        else:
+            print('___MEGqc___: Please select at least one subcategory or click Cancel.')
+
+
+    # if '_ALL_' was chosen - choose all categories, except _ALL_ itself:
+    if results: #if something was chosen
+        for r in results:
+            if '_ALL_' in r.upper():
+                results = [str(category) for category in subcategories if '_ALL_' not in str(category).upper()]
+                #Important! Keep ....if '_ALL_' not in str(category).upper() with underscores!
+                #otherwise it will excude tasks like 'oddbALL' and such
+                break
 
     return results, quit_selector
 
@@ -499,28 +490,28 @@ def make_plots_meg_qc(dataset_path: str):
     chosen_entities, plot_settings = selector(entities)
     if not chosen_entities:
         return
+
+    #check that 'task' and 'subject' entities are not empty, because they are REQUIRED: 
+    if 'task' not in chosen_entities or not chosen_entities['task']:
+        print('___MEGqc___: ', 'Task entity is required! Please start over and select a task.')
+        return
     
-
-    #Add stimulus to chosen entities:
-    chosen_entities['METRIC'].append('stimulus')
-
-    # chosen_entities = {'subject': ['009'], 'session': ['1'], 'task': ['deduction', 'induction'], 'run': ['1'], 'METRIC': ['ECGs', 'Muscle']}
-    # uncomment for debugging, so no need to start selector every time
-
-    print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
+    if 'subject' not in chosen_entities or not chosen_entities['subject']:
+        print('___MEGqc___: ', 'Subject entity is required! Please start over and select a subject.')
+        return
     
-    #Add stimulus to chosen entities:
-    chosen_entities['METRIC'].append('stimulus')
-
-    # Ensure 'run', 'task', and 'session' are in chosen_entities, set to None if missing
-    for key in ['run', 'task', 'session']:
+    # Ensure 'run' and 'session' are in chosen_entities, set to None if missing.
+    # None can be ignored by ancpbids later, but empty list can raie errors
+    for key in ['run', 'session']:
         chosen_entities.setdefault(key, None)
 
-    
+    #Add stimulus to chosen entities:
+    chosen_entities['METRIC'].append('stimulus')
+
     print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
     print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
-
+    # Here we choose which tsvs will be plotetd in the report for each sub, metric:
     for sub in chosen_entities['subject']:
 
         reports_folder = derivative.create_folder(name='reports')
@@ -546,8 +537,10 @@ def make_plots_meg_qc(dataset_path: str):
             # This is how the call would look if we had all entities:
             # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
 
+            #required entities:
             entities = {
                 'subj': sub,
+                'task': chosen_entities['task'],
                 'suffix': 'meg',
                 'extension': 'tsv', #we only collect tsvs here! 
                 'return_type': 'filename',
@@ -555,11 +548,9 @@ def make_plots_meg_qc(dataset_path: str):
                 'scope': calculated_derivs_folder,
             }
 
+            #optional entities:
             if 'session' in chosen_entities and chosen_entities['session']:
                 entities['session'] = chosen_entities['session']
-
-            if 'task' in chosen_entities and chosen_entities['task']:
-                entities['task'] = chosen_entities['task']
 
             if 'run' in chosen_entities and chosen_entities['run']:
                 entities['run'] = chosen_entities['run']
@@ -592,81 +583,6 @@ def make_plots_meg_qc(dataset_path: str):
                 
                 entities_obj += list(dataset.query(**entities))
                 entities_obj = sorted(entities_obj, key=lambda k: k['name'])
-
-
-
-    for sub in chosen_entities['subject']:
-
-        reports_folder = derivative.create_folder(name='reports')
-        subject_folder = reports_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
-
-        calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-        try:
-            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
-        except:
-            report_str_path = '' #in case none was created yet
-            print('___MEGqc___: No report strings were created for sub ', sub)
-
-        tsvs_to_plot = {}
-        entities_per_file = {}
-
-        for metric in chosen_entities['METRIC']:
-            # Creating the full list of files for each combination
-            additional_str = None  # or additional_str = 'your_string'
-            desc = metric + additional_str if additional_str else metric
-            
-
-            # We call query with entities that always must present + entities that might present, might not:
-            # This is how the call would look if we had all entities:
-            # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
-
-            entities = {
-                'subj': sub,
-                'suffix': 'meg',
-                'extension': 'tsv', #we only collect tsvs here! 
-                'return_type': 'filename',
-                'desc': desc,
-                'scope': calculated_derivs_folder,
-            }
-
-            if 'session' in chosen_entities and chosen_entities['session']:
-                entities['session'] = chosen_entities['session']
-
-            if 'task' in chosen_entities and chosen_entities['task']:
-                entities['task'] = chosen_entities['task']
-
-            if 'run' in chosen_entities and chosen_entities['run']:
-                entities['run'] = chosen_entities['run']
-
-
-            if metric == 'PSDs':
-                descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
-            elif metric == 'ECGs':
-                descriptions = ['ECGchannel', 'ECGs']
-            elif metric == 'EOGs':
-                descriptions = ['EOGchannel', 'EOGs']
-            else:
-                descriptions = [metric]
-
-            # Query tsv derivs and get the tsv paths:
-            tsv_path = []
-            for desc in descriptions:
-                entities['desc'] = desc
-                tsv_path += list(dataset.query(**entities))
-
-            tsvs_to_plot[metric] = sorted(tsv_path)
-
-            #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
-            entities = copy.deepcopy(entities)
-            entities['return_type'] = 'object'
-            #this time we need to return objects, not file paths, rest is same.
-            entities_obj = []
-            for desc in descriptions:
-                entities['desc'] = desc
-                
-                entities_obj += list(dataset.query(**entities))
-                entities_obj = sorted(entities_obj, key=lambda k: k['name'])
-
 
             entities_per_file[metric] = entities_obj
 
