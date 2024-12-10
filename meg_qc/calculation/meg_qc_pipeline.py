@@ -222,15 +222,18 @@ def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
         return sub_list
     
     # find all 'sub-' in the file names to get the subject ID:
-    subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
+    json_subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
 
     #keep unique subjects:
-    subjects_to_skip = list(set(subjects_to_skip))
+    json_subjects_to_skip = list(set(json_subjects_to_skip))
+
+    #find subjects overlapping withing current list and the json file:
+    subjects_to_skip = [sub for sub in sub_list if sub in json_subjects_to_skip]
 
     #ask the user if he wants to skip these subjects:
-    print('___MEGqc___: ', 'The following subjects were already processed with this config file:', subjects_to_skip)
+    print('___MEGqc___: ', 'These requested subjects were already processed before with this config file:', subjects_to_skip)
     while True:
-        user_input = input('___MEGqc___: Do you want to RERUN these subjects? (Y/N): ').lower()
+        user_input = input('___MEGqc___: Do you want to RERUN these subjects with the same config parameters? (Y/N): ').lower()
         if user_input == 'n':  # remove these subs 
             print('___MEGqc___: ', 'Subjects to skip:', subjects_to_skip)
             sub_list = [sub for sub in sub_list if sub not in subjects_to_skip]
@@ -479,7 +482,7 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
 
-    print('___MEGqc___: ', 'initial sub_list to process: ', sub_list)
+    print('___MEGqc___: ', 'Requested sub_list to process: ', sub_list)
 
     return sub_list
 
