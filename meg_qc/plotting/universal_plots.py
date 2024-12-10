@@ -994,7 +994,11 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
 def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: str):
 
     """
-
+    Plot the topomap of STP/PtP values (values take over all time, not epoched).
+    One dot reperesnt 1 channel. Dots are colored from blue (lowest std/ptp) to red (highest).
+    Plots is intereactive 3d with hovering labels.
+    If we got gradiometers - 2 channels usually have same locations - values will be combined.
+    See comemnts in the code below for this case.
 
     Parameters
     ----------
@@ -1019,9 +1023,6 @@ def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: 
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
-    # Assuming df is your DataFrame
-    # Extract sensor locations and STD all values
-    sensor_locations = df[['Sensor_location_0', 'Sensor_location_1', 'Sensor_location_2']].values
 
     if what_data=='peaks':
         fig_name='PP_manual_all_data_Topomap_'+ch_tit
@@ -1034,39 +1035,49 @@ def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: 
     else:
         raise ValueError('what_data must be set to "stds" or "peaks"')
     
-    std_ptp_values = df[metric_column].values
-    
 
-    # Normalize the STD all values to range between 0 and 1
-    #norm_std_all = (std_all_values - np.min(std_all_values)) / (np.max(std_all_values) - np.min(std_all_values))
-    # Create a color scale from blue to red
-    #colors = [f'rgba({int(255 * val)}, 0, {int(255 * (1 - val))}, 1)' for val in norm_std_all]
+    # Create a DataFrame with sensor locations as columns
+    sensor_df = df[['Sensor_location_0', 'Sensor_location_1', 'Sensor_location_2', metric_column, 'Name']]
+
+    # Group by sensor locations, this is done in case we got GRADIOMETERS,
+    # cos they have 2 sensors located in the same spot.
+    # We calculate mean value for each group: the mean of 'STD all' or 'PtP all' columns for 2 channels,
+    # this mean value will be used to define the color. 
+    # We assume that means std/ptp of physically close to each other gardiomeeters is also close in value.
+    # Here also create groupped names, later used in hover 
+    grouped = sensor_df.groupby(['Sensor_location_0', 'Sensor_location_1', 'Sensor_location_2']).agg({
+        metric_column: 'mean',
+        'Name': lambda x: ', '.join([f"{name} - {metric}: {std:.2e} {unit}" for name, std in zip(x, sensor_df.loc[x.index, metric_column])])
+    }).reset_index()
+
+    # Extract the grouped sensor locations and mean metric values
+    grouped_sensor_locations = grouped[['Sensor_location_0', 'Sensor_location_1', 'Sensor_location_2']].values
+    mean_metric_values = grouped[metric_column].values
+    grouped_names = grouped['Name'].values
 
     # Create the 3D scatter plot
     fig = go.Figure()
 
-    text = [f"{name} - {metric}: {std:.2e} {unit}" for name, std in zip(df['Name'], df[metric_column])]
-
     fig.add_trace(go.Scatter3d(
-        x=sensor_locations[:, 0],
-        y=sensor_locations[:, 1],
-        z=sensor_locations[:, 2],
+        x=grouped_sensor_locations[:, 0],
+        y=grouped_sensor_locations[:, 1],
+        z=grouped_sensor_locations[:, 2],
         mode='markers',
         marker=dict(
             size=13,
-            color=std_ptp_values,  # Use the actual STD all values for the color scale
+            color=mean_metric_values,  # Use the mean metric values for the color scale
             colorscale='Bluered',  # Use the 'Bluered' colorscale
             colorbar=dict(
-                title=metric + ', ' + unit,
+                title=f'{metric}, {unit}',
                 titleside='right',
                 tickmode='array',
-                tickvals=[np.min(std_ptp_values), np.max(std_ptp_values)],
-                ticktext=[f'{np.min(std_ptp_values):.2e}', f'{np.max(std_ptp_values):.2e}'],
+                tickvals=[np.min(mean_metric_values), np.max(mean_metric_values)],
+                ticktext=[f'{np.min(mean_metric_values):.2e}', f'{np.max(mean_metric_values):.2e}'],
                 ticks='outside'
             ),
             opacity=0.8
         ),
-        text=text,  # Use channel names and formatted STD all values as hover text
+        text=grouped_names,  # Use channel names and formatted mean metric values as hover text
         hoverinfo='text'
     ))
 
@@ -1088,11 +1099,8 @@ def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: 
         )
     )
 
-    # Add the button to have names show up on hover or always:
-    fig = switch_names_on_off(fig)
-
     fig.update_traces(hoverlabel=dict(font=dict(size=10))) #TEXT SIZE set to 10 again. This works for the "Show names on hover" option, but not for "Always show names" option
-   
+
     qc_derivative = [QC_derivative(content=fig, name=fig_name, content_type='plotly')]
 
     return qc_derivative

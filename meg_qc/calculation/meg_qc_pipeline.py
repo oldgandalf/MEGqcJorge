@@ -198,30 +198,69 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
 
     return
 
-
-def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
+def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
 
     """
-    Add the list of all taken raw files to the existing list of used settings in the config file.
-
-    Expects that the config file .ini and the .json file (with the same name) are already saved as derivatives.
-
-    To get corresponding json here use the easy way: 
-    just exchange ini to json in reuse file path (not using ANCPbids for it).
-    The 'proper' way would be to:
-    - query the desc entitiy of the reused config file
-    - get the json file with the same desc entity
-    This way will still assume that desc are exactly the same, so we use the easy way without ANCPbids d-tour.
+    Ask the user if he wants to rerun the same subjects again or skip them.
 
     Parameters
     ----------
-    derivative : ancpbids.Derivative
-        Derivative object to save the config file.
     reuse_config_file_path : str
         Path to the config file used for this ds conversion before.
-    all_taken_raw_files : list
-        List of all the raw files processed in this run, for this ds.
+    sub_list : list
+        List of subjects to run the QC on.
+
+    Returns
+    -------
+    sub_list : list
+        Updated list of subjects to run the QC on.
+
+    """
+
+    list_of_files_json, _ = get_list_of_raws_for_config(reuse_config_file_path)
+    if not list_of_files_json:
+        return sub_list
     
+    # find all 'sub-' in the file names to get the subject ID:
+    subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
+
+    #keep unique subjects:
+    subjects_to_skip = list(set(subjects_to_skip))
+
+    #ask the user if he wants to skip these subjects:
+    print('___MEGqc___: ', 'The following subjects were already processed with this config file:', subjects_to_skip)
+    while True:
+        user_input = input('___MEGqc___: Do you want to RERUN these subjects? (Y/N): ').lower()
+        if user_input == 'n':  # remove these subs 
+            print('___MEGqc___: ', 'Subjects to skip:', subjects_to_skip)
+            sub_list = [sub for sub in sub_list if sub not in subjects_to_skip]
+            print('___MEGqc___: ', 'Subjects to process:', sub_list)
+            break
+        elif user_input == 'y':  # keep these subs in all_taken_raw_files
+            print('___MEGqc___: ', 'Subjects to process:', sub_list)
+            break
+        else:  # ask again if the input is not correct
+            print('___MEGqc___: ', 'Wrong input. Please enter Y or N.')
+
+    return sub_list
+
+
+def get_list_of_raws_for_config(reuse_config_file_path: str):
+
+    """
+    Get the list of all raw files processed with the config file used before.
+
+    Parameters
+    ----------
+    reuse_config_file_path : str
+        Path to the config file used for this ds conversion before.
+
+    Returns
+    -------
+    list_of_files : list
+        List of all the raw files processed in this run, for this ds.
+    config_desc : str
+        Description entity of the config file used before.
     """
 
     #exchange ini to json:
@@ -254,7 +293,44 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     # get what files already were in the config file
     list_of_files = config_json[config_desc]
 
-    #update the list with new files:
+    return list_of_files, config_desc
+
+def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
+
+    """
+    Add the list of all taken raw files to the existing list of used settings in the config file.
+
+    Expects that the config file .ini and the .json file (with the same name) are already saved as derivatives.
+
+    To get corresponding json here use the easy way: 
+    just exchange ini to json in reuse file path (not using ANCPbids for it).
+    The 'proper' way would be to:
+    - query the desc entitiy of the reused config file
+    - get the json file with the same desc entity
+    This way will still assume that desc are exactly the same, so we use the easy way without ANCPbids d-tour.
+
+    The function will also output the updated list of all taken raw files for this ds based on the users choice:
+    rewrite or not the subjects that have already been processed with this config file.
+
+    Parameters
+    ----------
+    derivative : ancpbids.Derivative
+        Derivative object to save the config file.
+    reuse_config_file_path : str
+        Path to the config file used for this ds conversion before.
+    all_taken_raw_files : list
+        List of all the raw files processed in this run, for this ds.
+
+    Returns
+    -------
+    all_taken_raw_files : list
+        Updated list of all the raw files processed in this run, for this ds.
+    
+    """
+
+    list_of_files, config_desc = get_list_of_raws_for_config(reuse_config_file_path)
+
+    #Continue to update the list with new files:
     list_of_files += all_taken_raw_files
 
     #sort and remove duplicates:
@@ -262,7 +338,6 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
 
     #overwrite the old json (premake ancp bids artifact):
     config_json = {config_desc: list_of_files}
-
 
     config_folder = derivative.create_folder(name='config')
     #TODO: we dont need to create config folder again, already got it, how to get it?
@@ -273,7 +348,7 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     config_json_artifact.suffix = 'meg'
     config_json_artifact.extension = '.json'
 
-    return
+    return all_taken_raw_files
 
 
 def check_ds_paths(ds_paths: Union[List[str], str]):
@@ -362,6 +437,7 @@ def check_config_saved_ask_user(dataset):
 
     return reuse_config_file_path
 
+
 def check_sub_list(sub_list: Union[List[str], str], dataset):
 
     """
@@ -403,9 +479,7 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
 
-
-    print('___MEGqc___: ', 'sub_list to process: ', sub_list)
-
+    print('___MEGqc___: ', 'initial sub_list to process: ', sub_list)
 
     return sub_list
 
@@ -494,6 +568,9 @@ def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_p
 
 
         sub_list = check_sub_list(sub_list, dataset)
+
+        if reuse_config_file_path:
+            sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
         avg_ecg=[]
         avg_eog=[]
