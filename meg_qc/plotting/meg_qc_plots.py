@@ -408,10 +408,10 @@ def create_key_from_obj(obj):
     name_without_desc = re.sub(r'_desc-[^_]+', '', obj.name)
     return (name_without_desc, obj.extension, obj.suffix)
 
-def combine_tsvs_dict(tsvs_by_metric: dict):
+def sort_tsvs_by_raw(tsvs_by_metric: dict):
 
     """
-    For every metric, if we got same raw entitites, we can combine dwerivatives for the same raw into a list.
+    For every metric, if we got same raw entitites, we can combine derivatives for the same raw into a list.
     Since we collected entities not from raw but from derivatives, we need to remove the desc part from the name.
     After that we combine files with the same 'name' in entity_val objects in 1 list:
 
@@ -427,7 +427,7 @@ def combine_tsvs_dict(tsvs_by_metric: dict):
 
     """
 
-    combined_tsvs_by_metric = {}
+    sorted_tsvs_by_raw = {}
 
     for metric, obj_dict in tsvs_by_metric.items():
         combined_dict = defaultdict(list)
@@ -445,9 +445,11 @@ def combine_tsvs_dict(tsvs_by_metric: dict):
                     final_dict[obj] = paths
                     break
     
-        combined_tsvs_by_metric[metric] = final_dict
+        sorted_tsvs_by_raw[metric] = final_dict
 
-    return combined_tsvs_by_metric
+    print('___MEGqc___: ', 'sorted_tsvs_by_raw: ', sorted_tsvs_by_raw)
+
+    return sorted_tsvs_by_raw
 
 def make_plots_meg_qc(dataset_path: str):
 
@@ -461,7 +463,7 @@ def make_plots_meg_qc(dataset_path: str):
     
     Returns
     -------
-    tsvs_to_plot : dict
+    tsvs_to_plot_by_metric : dict
         A dictionary of metrics and their corresponding TSV files.
     
     """
@@ -526,7 +528,7 @@ def make_plots_meg_qc(dataset_path: str):
             report_str_path = '' #in case none was created yet
             print('___MEGqc___: No report strings were created for sub ', sub)
 
-        tsvs_to_plot = {}
+        tsvs_to_plot_by_metric = {}
         entities_per_file = {}
 
         for metric in chosen_entities['METRIC']:
@@ -568,7 +570,7 @@ def make_plots_meg_qc(dataset_path: str):
             # Query tsv derivs and get the tsv paths:
             tsv_path = list(dataset.query(**entities))
 
-            tsvs_to_plot[metric] = sorted(tsv_path)
+            tsvs_to_plot_by_metric[metric] = sorted(tsv_path)
 
             #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
             entities['return_type'] = 'object'
@@ -594,17 +596,17 @@ def make_plots_meg_qc(dataset_path: str):
             #this will not cause an error in query, but will be ignored.
 
 
-        # 1. Check that we got same entities_per_file and tsvs_to_plot:
+        # 1. Check that we got same entities_per_file and tsvs_to_plot_by_metric:
         
         # 2. we can have several tsvs for one metric with same raw entities, 
         # all these tsvs have to be added to one report later.
         # so we create a dict: {metric: {entities: [tsv1, tsv2, tsv3]}}
 
         print('___MEGqc___: ', 'entities_per_file', entities_per_file)
-        print('___MEGqc___: ', 'tsvs_to_plot', tsvs_to_plot)
+        print('___MEGqc___: ', 'tsvs_to_plot_by_metric', tsvs_to_plot_by_metric)
 
         tsvs_by_metric = {}
-        for (tsv_metric, tsv_paths), (entity_metric, entity_vals) in zip(tsvs_to_plot.items(), entities_per_file.items()):
+        for (tsv_metric, tsv_paths), (entity_metric, entity_vals) in zip(tsvs_to_plot_by_metric.items(), entities_per_file.items()):
 
             # Here start part 1:
             if len(tsv_paths) != len(entity_vals):
@@ -616,12 +618,11 @@ def make_plots_meg_qc(dataset_path: str):
                 file_name_in_obj = entity_val['name'].split('_meg.')[0]
 
                 if file_name_in_obj not in file_name_in_path:
-                    raise ValueError('Different names in tsvs_to_plot and entities_per_file')
+                    raise ValueError('Different names in tsvs_to_plot_by_metric and entities_per_file')
 
                 # Here start part 2:
                 # Initialize the dictionary for the metric if it doesn't exist
 
-                
                 #this is the collection of entities belonging to the same raw file disregarding the desc part 
                 # (desc appears from derivatives, but we care about the basic raw entitites).
                 #from entity_val name remove the description part:
@@ -637,7 +638,7 @@ def make_plots_meg_qc(dataset_path: str):
                 # Append the tsv_path to the list
                 tsvs_by_metric[tsv_metric][entity_val].append(tsv_path)
 
-        tsvs_by_metric = combine_tsvs_dict(tsvs_by_metric)
+        tsvs_by_metric = sort_tsvs_by_raw(tsvs_by_metric)
 
         # We can loop over the dict and create the derivatives: all tsvs for 1 metric used to create 1 report
         # Then save report with the same entities from original tsv derivatives
