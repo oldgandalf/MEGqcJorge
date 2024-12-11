@@ -2080,7 +2080,10 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
     mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
     
-    ecg_str += ecg_str_checked
+    n_events = len(event_indexes)
+    print('___MEGqc___: ', 'ECG events detected: ', n_events)
+    n_events_str = '<br><br>ECG events detected: ' + str(n_events)
+    ecg_str += ecg_str_checked + n_events_str
 
     ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
     ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
@@ -2251,12 +2254,16 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     event_indexes = event_indexes[0]
     print('___MEG_QC___: Blinks will be detected based on channel: ', eog_ch_name)
 
+    n_events = len(event_indexes)
+    print('___MEGqc___: ', 'EOG events detected: ', n_events)
+    n_events_str = '<br><br>EOG events detected: ' + str(n_events)
+
     use_method = 'correlation_recorded' #'mean_threshold' 
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion on recorded ch (if channel present) or fail.
 
     
     mean_good, eog_str_checked, mean_blink, mean_rwave_time = check_mean_wave(eog_data, 'EOG', event_indexes, tmin, tmax, sfreq, eog_params_internal, thresh_lvl_peakfinder)
-    eog_str += eog_str_checked
+    eog_str += eog_str_checked + n_events_str
 
 
     #save to df:
