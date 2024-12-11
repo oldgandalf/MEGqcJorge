@@ -1508,37 +1508,37 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
 
     picks_ECG = mne.pick_types(raw.info, ecg=True)
 
-    ecg_ch = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
+    ecg_ch_name = [raw.info['chs'][name]['ch_name'] for name in picks_ECG]
 
-    print ('___MEGqc___: ECG channel names:', ecg_ch)
+    print ('___MEGqc___: ECG channel names:', ecg_ch_name)
 
-    if len(ecg_ch)>=1: #ecg channel present
+    if len(ecg_ch_name)>=1: #ecg channel present
 
-        if len(ecg_ch)>1: #more than 1 ecg channel present
+        if len(ecg_ch_name)>1: #more than 1 ecg channel present
             ecg_str = 'More than 1 ECG channel found. The first one is used to identify hearbeats. '
 
-        ecg_ch = ecg_ch[0]
+        ecg_ch_name = ecg_ch_name[0]
 
-        bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = detect_noisy_ecg(raw, ecg_ch,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
+        bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
 
         #Collect the data into 1 df for plotting later. ecg_ch as name of first column, ecg_data as data, event_indexes as indexes of the events:
         event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
         fs_with_none = [raw.info['sfreq']] + [None] * (len(ecg_data) - 1)
 
         ecg_ch_df = pd.DataFrame({
-            ecg_ch: ecg_data,
+            ecg_ch_name: ecg_data,
             'event_indexes': event_indexes_with_none,
             'fs': fs_with_none})
 
-        if bad_ecg_eog[ecg_ch] == 'bad': #ecg channel present but noisy:
+        if bad_ecg_eog[ecg_ch_name] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. \n'
             print('___MEGqc___: ', ecg_str)
-            raw.drop_channels(ecg_ch)
+            raw.drop_channels(ecg_ch_name)
             use_method = 'correlation_reconstructed'
 
 
-        elif bad_ecg_eog[ecg_ch] == 'good': #ecg channel present and good - use it
-            ecg_str = ecg_ch + ' is used to identify hearbeats. \n'
+        elif bad_ecg_eog[ecg_ch_name] == 'good': #ecg channel present and good - use it
+            ecg_str = ecg_ch_name + ' is used to identify hearbeats. \n'
             use_method = 'correlation_recorded'
 
     else: #no ecg channel present
@@ -1551,10 +1551,10 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
         # ecg_data = ecg_data[0]
 
     if use_method == 'correlation_reconstructed':
-        ecg_ch = 'Reconstructed'
+        ecg_ch_name = 'Reconstructed'
         bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = reconstruct_ecg_and_check(raw, ecg_params['n_breaks_bursts_allowed_per_10min'], ecg_params['allowed_range_of_peaks_stds'], ecg_params['height_multiplier'])
         
-        if bad_ecg_eog[ecg_ch] == 'bad':
+        if bad_ecg_eog[ecg_ch_name] == 'bad':
             use_method = 'skip'
             #pass here, cos we dont need to do anything with the data if it is bad
 
@@ -1562,11 +1562,6 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
     #Collect the data into 1 df for plotting later. ecg_ch as name of first column, ecg_data as data, event_indexes as indexes of the events:
     event_indexes_with_none = event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes))
     fs_with_none = [raw.info['sfreq']] + [None] * (len(ecg_data) - 1)
-
-    ecg_ch_df = pd.DataFrame({
-    ecg_ch: ecg_data,
-    'event_indexes': event_indexes_with_none,
-    'fs': fs_with_none})
             
     print('___MEGqc___: ', ecg_str)
 
@@ -1574,7 +1569,7 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict):
     #Replace all \n with <br> for the html report:
     ecg_str_total = ecg_str_total.replace('\n', '<br>')
 
-    return use_method, ecg_str_total, ecg_ch_df, ecg_data, event_indexes
+    return use_method, ecg_str_total, ecg_ch_name, ecg_data, event_indexes
 
 
 def get_EOG_data(raw: mne.io.Raw):
@@ -2072,7 +2067,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     thresh_lvl_peakfinder=ecg_params['thresh_lvl_peakfinder']
 
     ecg_derivs = []
-    use_method, ecg_str, ecg_ch_df, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
+    use_method, ecg_str, ecg_ch_name, ecg_data, event_indexes = get_ECG_data_choose_method(raw, ecg_params)
     
     if use_method == 'skip': # data was reconstricted and is bad - dont continue
         simple_metric_ECG = {'description': ecg_str}
@@ -2081,13 +2076,14 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
     mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
     
     n_events = len(event_indexes)
+    minutes_in_data = len(ecg_data) / sfreq / 60
+    events_rate_per_min = round(n_events / minutes_in_data, 1)
     print('___MEGqc___: ', 'ECG events detected: ', n_events)
     n_events_str = '<br><br>ECG events detected: ' + str(n_events)
+    print('___MEGqc___: ', 'Heart beats per minute: ', events_rate_per_min)
+    n_events_str += '<br>Heart beats per minute: ' + str(events_rate_per_min)
+    
     ecg_str += ecg_str_checked + n_events_str
-
-    ecg_ch_df['mean_rwave'] = mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
-    ecg_ch_df['mean_rwave_time'] = mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time))
-    ecg_ch_df['recorded_or_reconstructed'] = [use_method] + [None] * (len(ecg_data) - 1)
 
     if mean_good is False: #mean ECG wave is bad - dont continue
         simple_metric_ECG = {'description': ecg_str}
@@ -2167,7 +2163,18 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
             raise ValueError('use_method should be either mean_threshold or correlation_recorded or correlation_reconstructed')
         
 
-        ecg_ch_df['mean_rwave_shifted'] = best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave))
+        #Create df to be exported to tsv:
+        ecg_ch_df = pd.DataFrame({
+            ecg_ch_name: ecg_data,
+            'event_indexes': event_indexes.tolist() + [None] * (len(ecg_data) - len(event_indexes)),
+            'fs': [raw.info['sfreq']] + [None] * (len(ecg_data) - 1),
+            'mean_rwave': mean_rwave.tolist() + [None] * (len(ecg_data) - len(mean_rwave)),
+            'mean_rwave_time': mean_rwave_time.tolist() + [None] * (len(ecg_data) - len(mean_rwave_time)),
+            'recorded_or_reconstructed': [use_method] + [None] * (len(ecg_data) - 1),
+            'mean_rwave_shifted' : best_mean_rwave_shifted.tolist() + [None] * (len(ecg_data) - len(mean_rwave)),
+            'n_events' : [n_events] + [None] * (len(ecg_data) - 1),
+            'events_rate_per_min' : [events_rate_per_min] + [None] * (len(ecg_data) - 1)})
+
         ecg_derivs += [QC_derivative(content=ecg_ch_df, name='ECGchannel', content_type = 'df')]
 
         #higher thresh_lvl_peakfinder - more peaks will be found on the eog artifact for both separate channels and average overall. As a result, average overll may change completely, since it is centered around the peaks of 5 most prominent channels.
@@ -2255,8 +2262,12 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     print('___MEG_QC___: Blinks will be detected based on channel: ', eog_ch_name)
 
     n_events = len(event_indexes)
+    minutes_in_data = len(eog_data) / sfreq / 60
+    events_rate_per_min = round(n_events / minutes_in_data, 1)
     print('___MEGqc___: ', 'EOG events detected: ', n_events)
     n_events_str = '<br><br>EOG events detected: ' + str(n_events)
+    print('___MEGqc___: ', 'Blink rate per minute: ', events_rate_per_min)
+    n_events_str += '<br>Blink rate per minute: ' + str(events_rate_per_min)
 
     use_method = 'correlation_recorded' #'mean_threshold' 
     #no need to choose method in EOG because we cant reconstruct channel, always correlaion on recorded ch (if channel present) or fail.
@@ -2267,17 +2278,17 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
 
 
     #save to df:
-    event_indexes_with_none = event_indexes + [None] * (len(eog_data) - len(event_indexes))
-    fs_with_none = [raw.info['sfreq']] + [None] * (len(eog_data) - 1)
-
-
     eog_ch_df = pd.DataFrame({
         eog_ch_name: eog_data,
-        'event_indexes': event_indexes_with_none,
-        'fs': fs_with_none,
+        'event_indexes': event_indexes + [None] * (len(eog_data) - len(event_indexes)),
+        'fs': [raw.info['sfreq']] + [None] * (len(eog_data) - 1),
         'mean_rwave': mean_blink.tolist() + [None] * (len(eog_data) - len(mean_blink)),
         'mean_rwave_time': mean_rwave_time.tolist() + [None] * (len(eog_data) - len(mean_rwave_time)),
-        'recorded_or_reconstructed': [use_method] + [None] * (len(eog_data) - 1)})
+        'recorded_or_reconstructed': [use_method] + [None] * (len(eog_data) - 1),
+        'n_events': [n_events] + [None] * (len(eog_data) - 1),
+        'events_rate_per_min': [events_rate_per_min] + [None] * (len(eog_data) - 1)})
+    
+    eog_derivs += [QC_derivative(content=eog_ch_df, name='EOGchannel', content_type = 'df')]
     
 
     if mean_good is False:
@@ -2348,6 +2359,5 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
     eog_csv_deriv = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'EOGs')
 
     eog_derivs += eog_csv_deriv
-    eog_derivs += [QC_derivative(content=eog_ch_df, name='EOGchannel', content_type = 'df')]
 
     return eog_derivs, simple_metric_EOG, eog_str, avg_objects_eog
