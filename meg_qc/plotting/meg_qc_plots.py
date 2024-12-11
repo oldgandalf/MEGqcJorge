@@ -501,7 +501,7 @@ def make_plots_meg_qc(dataset_path: str):
         return
     
     # Ensure 'run' and 'session' are in chosen_entities, set to None if missing.
-    # None can be ignored by ancpbids later, but empty list can raie errors
+    # None can be ignored by ancpbids later, but empty list can raise errors
     for key in ['run', 'session']:
         chosen_entities.setdefault(key, None)
 
@@ -511,7 +511,7 @@ def make_plots_meg_qc(dataset_path: str):
     print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
     print('___MEGqc___: CHOSEN settings: ', plot_settings)
 
-    # Here we choose which tsvs will be plotetd in the report for each sub, metric:
+    # Here we choose which tsvs will be plotted in the report for each sub, metric:
     for sub in chosen_entities['subject']:
 
         reports_folder = derivative.create_folder(name='reports')
@@ -519,6 +519,8 @@ def make_plots_meg_qc(dataset_path: str):
 
         calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
         try:
+            report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))
+            print('!!!___MEGqc___: report_str_pathS: ', report_str_path)
             report_str_path = sorted(list(dataset.query(suffix='meg', extension='.json', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = 'ReportStrings', scope=calculated_derivs_folder)))[0]
         except:
             report_str_path = '' #in case none was created yet
@@ -529,8 +531,8 @@ def make_plots_meg_qc(dataset_path: str):
 
         for metric in chosen_entities['METRIC']:
             # Creating the full list of files for each combination
-            additional_str = None  # or additional_str = 'your_string'
-            desc = metric + additional_str if additional_str else metric
+            # additional_str = None  # or additional_str = 'your_string'
+            # desc = metric + additional_str if additional_str else metric
             
 
             # We call query with entities that always must present + entities that might present, might not:
@@ -600,7 +602,7 @@ def make_plots_meg_qc(dataset_path: str):
             scope=calculated_derivs_folder
             )[0]
             #using get here, cos if some entities dont exist, it will return None, 
-            #this will not couse an error in query, but will be ignored.
+            #this will not cause an error in query, but will be ignored.
 
 
         # 1. Check that we got same entities_per_file and tsvs_to_plot:
@@ -682,7 +684,7 @@ def make_plots_meg_qc(dataset_path: str):
 
 # make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
-# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
 # make_plots_meg_qc(dataset_path='/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
