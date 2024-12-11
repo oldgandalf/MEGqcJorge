@@ -531,9 +531,6 @@ def make_plots_meg_qc(dataset_path: str):
 
         for metric in chosen_entities['METRIC']:
             # Creating the full list of files for each combination
-            # additional_str = None  # or additional_str = 'your_string'
-            # desc = metric + additional_str if additional_str else metric
-            
 
             # We call query with entities that always must present + entities that might present, might not:
             # This is how the call would look if we had all entities:
@@ -546,9 +543,20 @@ def make_plots_meg_qc(dataset_path: str):
                 'suffix': 'meg',
                 'extension': 'tsv', #we only collect tsvs here! 
                 'return_type': 'filename',
-                'desc': desc,
+                'desc': '',
                 'scope': calculated_derivs_folder,
             }
+
+            #add desc based on metric:
+            if metric == 'PSDs':
+                entities['desc'] = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+            elif metric == 'ECGs':
+                entities['desc'] = ['ECGchannel', 'ECGs']
+            elif metric == 'EOGs':
+                entities['desc'] = ['EOGchannel', 'EOGs']
+            else:
+                entities['desc'] = [metric]
+
 
             #optional entities:
             if 'session' in chosen_entities and chosen_entities['session']:
@@ -557,34 +565,15 @@ def make_plots_meg_qc(dataset_path: str):
             if 'run' in chosen_entities and chosen_entities['run']:
                 entities['run'] = chosen_entities['run']
 
-
-            if metric == 'PSDs':
-                descriptions = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
-            elif metric == 'ECGs':
-                descriptions = ['ECGchannel', 'ECGs']
-            elif metric == 'EOGs':
-                descriptions = ['EOGchannel', 'EOGs']
-            else:
-                descriptions = [metric]
-
             # Query tsv derivs and get the tsv paths:
-            tsv_path = []
-            for desc in descriptions:
-                entities['desc'] = desc
-                tsv_path += list(dataset.query(**entities))
+            tsv_path = list(dataset.query(**entities))
 
             tsvs_to_plot[metric] = sorted(tsv_path)
 
             #Query same tsv derivs and get the tsv entities to later use them to save report with same entities:
-            entities = copy.deepcopy(entities)
             entities['return_type'] = 'object'
             #this time we need to return objects, not file paths, rest is same.
-            entities_obj = []
-            for desc in descriptions:
-                entities['desc'] = desc
-                
-                entities_obj += list(dataset.query(**entities))
-                entities_obj = sorted(entities_obj, key=lambda k: k['name'])
+            entities_obj = sorted(list(dataset.query(**entities)), key=lambda k: k['name'])
 
             entities_per_file[metric] = entities_obj
 
