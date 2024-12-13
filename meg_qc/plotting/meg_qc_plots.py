@@ -455,6 +455,33 @@ def sort_tsvs_by_raw(tsvs_by_metric: dict):
 
 class Deriv_to_plot:
 
+    """
+    A class to represent the derivatives to be plotted.
+
+    Attributes
+    ----------
+    path : str
+        The path to the TSV file.
+    metric : str
+        The metric to be plotted.
+    deriv_entity_obj : dict
+        The entity object of the derivative created with ANCPBIDS.
+    raw_entity_name : str
+        The name of the raw entity.
+    subject : str
+        The subject ID.
+    
+    Methods
+    -------
+    __repr__()
+        Return a string representation of the object.
+    print_detailed_entities()
+        Print the detailed entities of the object.
+    find_raw_entity_name()
+        Find the raw entity name from the deriv entity name.
+    
+    """ 
+
     def __init__(self, path: str, metric: str, deriv_entity_obj, raw_entity_name: str = None):
 
         self.path = path
@@ -470,6 +497,7 @@ class Deriv_to_plot:
             self.subject = None  # or handle the case where the subject ID is not found
 
     def __repr__(self):
+        
         return (
             f"Deriv_to_plot(\n"
             f"    subject={self.subject},\n"
@@ -481,12 +509,21 @@ class Deriv_to_plot:
         )
 
     def print_detailed_entities(self):
+
+        """
+        Print the detailed entities of the object.
+        """
+
         keys = list(self.deriv_entity_obj.keys())
         for val in keys[:-1]:  # Iterate over all keys except the last one
             print('_Deriv_: ', val, self.deriv_entity_obj[val])
 
     def find_raw_entity_name(self):
-        #find the raw entity name from the deriv entity name:
+
+        """
+        Find the raw entity name from the deriv entity name
+        """
+
         self.raw_entity_name = re.sub(r'_desc-.*', '', self.deriv_entity_obj['name'])
 
 
@@ -631,12 +668,6 @@ def make_plots_meg_qc(dataset_path: str):
 
             derivs_to_plot.append(deriv)
 
-    pprint('_________________________end part2_________________________')
-    for d in derivs_to_plot:
-        print(d)
-        d.print_detailed_entities()
-        pprint(' ')
-
 
     # 3. ___Create the derivatives for each metric and save them to the dataset:___
 
@@ -654,20 +685,10 @@ def make_plots_meg_qc(dataset_path: str):
         #find existing raws for this subject:
         existing_raws_per_sub = list(set([deriv.raw_entity_name for deriv in derivs_to_plot if deriv.subject == sub]))
 
-        print('___MEGqc___: ', 'existing_raws_per_sub: ', existing_raws_per_sub)
-        
 
         for raw_entity_name in existing_raws_per_sub:
             #for each raw entity name, find all derivs that belong to this raw:
             derivs_for_this_raw = [deriv for deriv in derivs_to_plot if deriv.raw_entity_name == raw_entity_name]
-
-            pprint('___________Part3: derivs_for_this_raw______________')
-            for d in derivs_for_this_raw:
-                print(d)
-                d.print_detailed_entities()
-                pprint(' ')
-
-            #print('___MEGqc___: ', 'derivs_for_this_raw: ', derivs_for_this_raw)
 
             #find RawInfo and ReportStrings for this raw in derivs_for_this_raw:
             raw_info_path = None
@@ -726,8 +747,6 @@ def make_plots_meg_qc(dataset_path: str):
                 meg_artifact.extension = '.html'
 
                 deriv = csv_to_html_report(raw_info_path, metric, tsv_paths, report_str_path, plot_settings)
-
-                print('___MEGqc___: ', 'deriv: ', deriv)
 
                 #define method how the derivative will be written to file system:
                 meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
