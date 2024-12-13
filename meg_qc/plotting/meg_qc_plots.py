@@ -497,7 +497,7 @@ class Deriv_to_plot:
             self.subject = None  # or handle the case where the subject ID is not found
 
     def __repr__(self):
-        
+
         return (
             f"Deriv_to_plot(\n"
             f"    subject={self.subject},\n"
@@ -705,7 +705,7 @@ def make_plots_meg_qc(dataset_path: str):
             # Now create a separate report for each METRIC for this raw file:
             metrics_to_plot = [metric for metric in chosen_entities['METRIC'] if metric not in ['RawInfo', 'ReportStrings']]
 
-            counter = 0
+
             for metric in metrics_to_plot:
 
                 #collect tsvs for this metric:
@@ -714,27 +714,13 @@ def make_plots_meg_qc(dataset_path: str):
                     print(f'___MEGqc___: No tsvs found for this metric ({metric}) and subject ({sub})')
                     continue
                     
-
                 tsvs_for_this_raw = [deriv for deriv in derivs_for_this_raw if deriv.metric == metric]
-
-                print('______NEW VERSION_____')
-                print('___MEGqc___: ', 'metric: ', metric)
-                print('___MEGqc___: ', 'tsv_paths: ', tsv_paths)
-                print('___MEGqc___: ', 'tsvs_for_this_raw: ', tsvs_for_this_raw)
 
                 raw_entities_to_write = tsvs_for_this_raw[0].deriv_entity_obj
                 # take any file belonging to this raw and metric, we only need basic ancpbids entities, 
                 # desc and extention add later.
                 # But if we take one randow file for this raw, but not this metric, everything gets messed up,
                 # some ancp bids magic, talk to developers about it. XD
-
-               
-                print('___MEGqc___: ', 'raw_entities_to_write: ', raw_entities_to_write)
-                keys = list(raw_entities_to_write.keys())
-                for val in keys[:-1]:  # Iterate over all keys except the last one
-                    print('___val___: ', val, raw_entities_to_write[val])
-                print('___MEGqc___: ', 'raw_info_path: ', raw_info_path)
-                print(' ')
                 
 
                 # Now prepare the derivative to be written:
@@ -751,10 +737,7 @@ def make_plots_meg_qc(dataset_path: str):
                 #define method how the derivative will be written to file system:
                 meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
 
-                counter += 1
-                print('counter: ', counter)
-
-
+    #write the derivative to the dataset:
     ancpbids.write_derivative(dataset, derivative) 
 
     return 
@@ -767,7 +750,7 @@ def make_plots_meg_qc(dataset_path: str):
 
 # make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
-make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
+# make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds003483')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds000117')
 # make_plots_meg_qc(dataset_path='/Users/jenya/Local Storage/Job Uni Rieger lab/data/ds83')
 # make_plots_meg_qc(dataset_path='/Volumes/SSD_DATA/MEG_data/openneuro/ds004330')
