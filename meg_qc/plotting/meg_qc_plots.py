@@ -511,7 +511,9 @@ class Deriv_to_plot:
     def print_detailed_entities(self):
 
         """
-        Print the detailed entities of the object.
+        Print the detailed entities of the object, cos in ANCP representation it s cut.
+        Here skipping the last value, cos it s the contents. 
+        If u got a lot of contents, like html it ll print you a book XD.
         """
 
         keys = list(self.deriv_entity_obj.keys())
