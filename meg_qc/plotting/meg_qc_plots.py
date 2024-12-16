@@ -289,7 +289,9 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
         elif 'PSD' in metric.upper():
 
-            method = 'welch' #is also hard coded in PSD_meg_qc() for now
+            method = 'welch' 
+            #is also preselected in internal_settings.ini Adjust here if change in calculation, 
+            # this module doesnt access internal settings
 
             psd_derivs += plot_sensors_3d_csv(tsv_path)
 
@@ -511,7 +513,9 @@ class Deriv_to_plot:
     def print_detailed_entities(self):
 
         """
-        Print the detailed entities of the object.
+        Print the detailed entities of the object, cos in ANCP representation it s cut.
+        Here skipping the last value, cos it s the contents. 
+        If u got a lot of contents, like html it ll print you a book XD.
         """
 
         keys = list(self.deriv_entity_obj.keys())
@@ -531,6 +535,17 @@ def make_plots_meg_qc(dataset_path: str):
 
     """
     Create plots for the MEG QC pipeline.
+
+    How it works:
+    - Load the data set with ancp bids
+    - Find what entities (sub, task, etc we have in Derivatives of that data set in MEG_QC folder
+    - based on entities creates a selector for the user in the command line. Selector is sort of a gui, slect by clicking, scroll with buttons up/down
+    - For selected entities finds all fitting TSVs, also raw info and ReportStrings in MEG_QC drivs folder using ancpbids
+    - Arranges figure for every separate metric and referring to every original raw data file into a separate HTML report
+    - Writes that HTML report into the file system with ancpbuds usong the recreated entities of original raw file.
+    (Here we dont have access to raw file, only to derivatives, so the original entities are recareted using the search on the file name and such. 
+    Maybe there is a better way using ANCP bids to reacreate the raw entities, consult devs.)
+
 
     Parameters
     ----------
@@ -745,8 +760,6 @@ def make_plots_meg_qc(dataset_path: str):
 
 # ____________________________
 # RUN IT:
-
-# THIS IS NEW VERSION
 
 # make_plots_meg_qc(dataset_path='/data/areer/MEG_QC_stuff/data/openneuro/ds003483')
 
