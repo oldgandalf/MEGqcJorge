@@ -2,20 +2,24 @@ import argparse
 import os
 import sys
 import shutil
+from typing import List, Union
+
 
 def hello_world():
     dataset_path_parser = argparse.ArgumentParser(description= "parser for string to print")
-    dataset_path_parser.add_argument("--inputstring", type=str, required=True, help="path to the root of your BIDS MEG dataset")
+    dataset_path_parser.add_argument("--subs", nargs='+',type=str, required=False, help="path to config file")
     args=dataset_path_parser.parse_args()
-    print(args.inputstring)
+    print(args.subs)
+
 
 
 def run_megqc():
     from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
     
-    dataset_path_parser = argparse.ArgumentParser(description= "parser for MEGqc: --inputdata(mandatory) path/to/your/BIDSds --config path/to/config  if None default parameters are used)")
+    dataset_path_parser = argparse.ArgumentParser(description= "Commandline argument parser for MEGqc: --inputdata(mandatory) path/to/your/BIDSds --config path/to/config  if None default parameters are used --subs list of subject identifiers if None pipeline will be run on all subjects found in the ds)")
     dataset_path_parser.add_argument("--inputdata", type=str, required=True, help="path to the root of your BIDS MEG dataset")
     dataset_path_parser.add_argument("--config", type=str, required=False, help="path to config file")
+    dataset_path_parser.add_argument("--subs",nargs='+', type=str, required=False, help="List of subject identifiers that the pipeline should be run on. Default is all subjects")
     args=dataset_path_parser.parse_args()
 
 
@@ -36,6 +40,12 @@ def run_megqc():
 
     data_directory = args.inputdata
     print(data_directory)
+    #check if the --sub argument was used: if not we will run the pipeline on all subjects. otherwise we will use the sub_list given by the user
+    if args.subs == None:
+        sub_list = 'all'
+    else:
+        sub_list = args.subs
+        print(sub_list)
 
     if args.config == None:
         url_megqc_book = 'https://aaronreer.github.io/docker_workshop_setup/settings_explanation.html'
@@ -54,7 +64,7 @@ def run_megqc():
         config_file_path = args.config
 
 
-    make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory)
+    make_derivative_meg_qc(config_file_path, internal_config_file_path, data_directory,sub_list)
 
     print('MEGqc has completed the calculation of metrics. Results can be found in' + data_directory +'/derivatives/MEGqc/calculation')
 
