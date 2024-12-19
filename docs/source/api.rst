@@ -16,6 +16,10 @@ In the html report:
 UML diagrams presenting the flow of the analysis for each module are available here:
 https://github.com/ANCPLabOldenburg/MEG-QC-code/tree/main/diagrams
 
+Tutorial:
+
+https://ancplaboldenburg.github.io/docker_workshop_template/
+
 
 
 .. toctree::
