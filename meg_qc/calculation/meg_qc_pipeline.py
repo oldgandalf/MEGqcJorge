@@ -908,28 +908,28 @@ def make_derivative_meg_qc(
         if reuse_config_file_path:
             sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
-        # # Parallel execution over subjects
-        # # Each subject is processed by process_one_subject() in parallel
-        # # with n_jobs specifying how many workers to run simultaneously
-        # results = Parallel(n_jobs=n_jobs)(
-        #     delayed(process_one_subject)(
-        #         sub=sub,
-        #         dataset=dataset,
-        #         dataset_path=dataset_path,
-        #         all_qc_params=all_qc_params,
-        #         internal_qc_params=internal_qc_params
-        #     )
-        #     for sub in sub_list
-        # )
-
-        for sub in sub_list:
-            process_one_subject(
+        # Parallel execution over subjects
+        # Each subject is processed by process_one_subject() in parallel
+        # with n_jobs specifying how many workers to run simultaneously
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(process_one_subject)(
                 sub=sub,
                 dataset=dataset,
                 dataset_path=dataset_path,
                 all_qc_params=all_qc_params,
                 internal_qc_params=internal_qc_params
             )
+            for sub in sub_list
+        )
+
+        # for sub in sub_list:
+        #     process_one_subject(
+        #         sub=sub,
+        #         dataset=dataset,
+        #         dataset_path=dataset_path,
+        #         all_qc_params=all_qc_params,
+        #         internal_qc_params=internal_qc_params
+        #     )
         # Optionally, you can handle the returned values here, e.g.,:
         # global_all_taken_raw_files = []
         # global_avg_ecg = []
