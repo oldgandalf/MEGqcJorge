@@ -9,7 +9,7 @@ import re
 from typing import List, Union
 
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
-from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
+from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data)
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 
 
@@ -967,7 +967,7 @@ def assign_psds_to_channels(chs_by_lobe: dict, freqs: List, psds: List):
     return chs_by_lobe
 
 #%%
-def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_by_lobe: dict, raw_orig: mne.io.Raw, m_or_g_chosen: List, helper_plots: bool):
+def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_by_lobe: dict, data_path:str, m_or_g_chosen: List, helper_plots: bool):
     
     """
     Main psd function. Calculates:
@@ -1024,8 +1024,10 @@ def PSD_meg_qc(psd_params: dict, psd_params_internal: dict, channels:dict, chs_b
         dictionary with noisy frequencies for average psd - used in Muscle artifact detection
 
     """
-    
-    raw = raw_orig.copy() # make a copy of the raw data, to make sure the original data is not changed while filtering for this metric.
+    # Load data
+    raw, shielding_str, meg_system = load_data(data_path)
+
+    # raw.load_data()
 
     # these parameters will be saved into a dictionary. this allowes to calculate for mag or grad or both:
     freqs = {}

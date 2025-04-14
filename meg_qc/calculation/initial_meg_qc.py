@@ -1,4 +1,6 @@
 import os
+import shutil
+import gc
 import mne
 import configparser
 import numpy as np
@@ -492,7 +494,7 @@ def load_data(file_path):
     if os.path.isdir(file_path) and file_path.endswith('.ds'):
         # It's a CTF data directory
         print("___MEGqc___: ", "Loading CTF data...")
-        raw = mne.io.read_raw_ctf(file_path, preload=True)
+        raw = mne.io.read_raw_ctf(file_path, preload=True, verbose='ERROR')
         meg_system = 'CTF'
 
     elif os.path.isfile(file_path) and file_path.endswith('.fif'):
@@ -501,9 +503,9 @@ def load_data(file_path):
 
         print("___MEGqc___: ", "Loading FIF data...")
         try:
-            raw = mne.io.read_raw_fif(file_path, on_split_missing='ignore')
+            raw = mne.io.read_raw_fif(file_path, on_split_missing='ignore', verbose='ERROR')
         except: 
-            raw = mne.io.read_raw_fif(file_path, allow_maxshield=True, on_split_missing='ignore')
+            raw = mne.io.read_raw_fif(file_path, allow_maxshield=True, on_split_missing='ignore', verbose='ERROR')
             shielding_str=''' <p>This fif file contains Internal Active Shielding data. Quality measurements calculated on this data should not be compared to the measuremnts calculated on the data without active shileding, since in the current case invironmental noise reduction was already partially performed by shileding, which normally should not be done before assesing the quality.</p>'''
 
     else:
@@ -831,8 +833,99 @@ def sort_channels_by_lobe(channels_objs: dict):
     return chs_by_lobe
 
 
+def save_meg_with_suffix(file_path: str, dataset_path: str, raw, final_suffix: str = "FILTERED") -> str:
+    """
+    Given the original file_path and an MNE raw object, this function creates an output
+    directory based on the file_path and saves the raw data in FIF format with a suffix
+    provided by the user.
 
-def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, file_path: str):
+    The output directory is constructed as:
+         <base_dir>/derivatives/temp/<subject>
+    where:
+         - base_dir is the portion of file_path up to and including 'ds_orig'
+         - subject is the folder immediately after 'ds_orig'
+
+    Parameters
+    ----------
+    file_path : str
+         Absolute path to the original MEG file.
+    raw : mne.io.Raw
+         The raw data object to be saved.
+    final_suffix : str, optional
+         Suffix to append to the filename (default is "FILTERED").
+
+    Returns
+    -------
+    new_file_path : str
+         Absolute path to the saved file.
+    """
+    # Normalize and split the file path into components
+    components = os.path.normpath(file_path).split(os.sep)
+    # For an absolute path, the first component is an empty string; remove it.
+    if components[0] == '':
+        components = components[1:]
+
+    # Locate 'ds_orig' and extract the subject (the folder immediately after)
+    ds_name = os.path.basename(os.path.normpath(dataset_path))
+    print(ds_name)
+
+    idx = components.index(ds_name)
+
+    if 'temp' in components:
+        subject = components[idx + 3]
+    else:
+        subject = components[idx + 1]
+
+    # Build the base directory from 'ds_orig'
+    base_dir = os.path.join(os.sep, *components[:idx + 1])
+
+    # Construct the output directory: base_dir/derivatives/temp/<subject>
+    output_dir = os.path.join(base_dir, 'derivatives', 'temp', subject)
+    output_dir = os.path.abspath(output_dir)
+    print("Output directory:", output_dir)
+
+    # Create the directory (including intermediate directories) if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    print("Directory created (or already exists):", output_dir)
+
+    # Build the new filename by adding the final suffix
+    filename = os.path.basename(file_path)
+    name, ext = os.path.splitext(filename)
+    new_filename = f"{name}_{final_suffix}{ext}"
+
+    new_file_path = os.path.join(output_dir, new_filename)
+    print("New file path:", new_file_path)
+
+    # Save the raw object (overwrite if exists)
+    raw.save(new_file_path, overwrite=True, verbose='ERROR')
+
+    return new_file_path
+
+def delete_temp_folder(dataset_path: str) -> str:
+    """
+    Given the original dataset_path, this function re-creates the temporary written files
+    directory and then delete it.
+
+    The output directory is constructed as:
+         <base_dir>/derivatives/temp/<subject>
+    where:
+         - base_dir is the portion of file_path up to and including 'ds_orig'
+         - subject is the folder immediately after 'ds_orig'
+
+    Parameters
+    ----------
+    dataset_path : str
+         Absolute path to the dataset folder.
+    """
+    temp_dir = os.path.join(dataset_path, 'derivatives', 'temp')
+    temp_dir = os.path.abspath(temp_dir)
+    shutil.rmtree(temp_dir)
+    print("Removing directory:", temp_dir)
+
+    return
+
+
+def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params:dict, file_path: str, dataset_path: str):
 
     """
     Here all the initial actions needed to analyse MEG data are done: 
@@ -934,25 +1027,36 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     raw_cropped_filtered = raw_cropped.copy()
     if filtering_settings['apply_filtering'] is True:
         raw_cropped.load_data() #Data has to be loaded into mememory before filetering:
-        raw_cropped_filtered = raw_cropped.copy()
+        # Save raw_cropped
+        raw_cropped_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped, final_suffix="CROPPED")
+
+        raw_cropped_filtered = raw_cropped
 
         #if filtering_settings['h_freq'] is higher than the Nyquist frequency, set it to Nyquist frequency:
         if filtering_settings['h_freq'] > raw_cropped_filtered.info['sfreq']/2 - 1:
             filtering_settings['h_freq'] = raw_cropped_filtered.info['sfreq']/2 - 1
             print('___MEGqc___: ', 'High frequency for filtering is higher than Nyquist frequency. High frequency was set to Nyquist frequency:', filtering_settings['h_freq'])
+
+
         raw_cropped_filtered.filter(l_freq=filtering_settings['l_freq'], h_freq=filtering_settings['h_freq'], picks='meg', method=filtering_settings['method'], iir_params=None)
         print('___MEGqc___: ', 'Data filtered from', filtering_settings['l_freq'], 'to', filtering_settings['h_freq'], 'Hz.')
-        
+
+        # Save filtered signal
+        raw_cropped_filtered_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped_filtered, final_suffix="FILTERED")
+
         if filtering_settings['downsample_to_hz'] is False:
-            raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
+            raw_cropped_filtered_resampled = raw_cropped_filtered
+            raw_cropped_filtered_resampled_path = raw_cropped_filtered_path
             resample_str = 'Data not resampled. '
             print('___MEGqc___: ', resample_str)
         elif filtering_settings['downsample_to_hz'] >= filtering_settings['h_freq']*5:
-            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
+            raw_cropped_filtered_resampled = raw_cropped_filtered.resample(sfreq=filtering_settings['downsample_to_hz'])
+            raw_cropped_filtered_resampled_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped_filtered_resampled, final_suffix="FILTERED_RESAMPLED")
             resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
             print('___MEGqc___: ', resample_str)
         else:
-            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['h_freq']*5)
+            raw_cropped_filtered_resampled = raw_cropped_filtered.resample(sfreq=filtering_settings['h_freq']*5)
+            raw_cropped_filtered_resampled_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped_filtered_resampled, final_suffix="FILTERED_RESAMPLED")
             #frequency to resample is 5 times higher than the maximum chosen frequency of the function
             resample_str = 'Chosen "downsample_to_hz" value set was too low, it must be at least 5 time higher than the highest filer frequency. Data resampled to ' + str(filtering_settings['h_freq']*5) + ' Hz. '
             print('___MEGqc___: ', resample_str)
@@ -962,7 +1066,8 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
         print('___MEGqc___: ', 'Data not filtered.')
         #And downsample:
         if filtering_settings['downsample_to_hz'] is not False:
-            raw_cropped_filtered_resampled = raw_cropped_filtered.copy().resample(sfreq=filtering_settings['downsample_to_hz'])
+            raw_cropped_filtered_resampled = raw_cropped_filtered.resample(sfreq=filtering_settings['downsample_to_hz'])
+            raw_cropped_filtered_resampled_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped_filtered_resampled, final_suffix="FILTERED_RESAMPLED")
             if filtering_settings['downsample_to_hz'] < 500:
                 resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. Keep in mind: resampling to less than 500Hz is not recommended, since it might result in high frequency data loss (for example of the CHPI coils signal. '
                 print('___MEGqc___: ', resample_str)
@@ -970,11 +1075,18 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
                 resample_str = 'Data resampled to ' + str(filtering_settings['downsample_to_hz']) + ' Hz. '
                 print('___MEGqc___: ', resample_str)
         else:
-            raw_cropped_filtered_resampled = raw_cropped_filtered.copy()
+            raw_cropped_filtered_resampled = raw_cropped_filtered
+            raw_cropped_filtered_resampled_path = save_meg_with_suffix(file_path, dataset_path, raw_cropped_filtered_resampled, final_suffix="FILTERED_RESAMPLED")
             resample_str = 'Data not resampled. '
             print('___MEGqc___: ', resample_str)
 
-        
+
+    del raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw
+    gc.collect()
+
+    # Load data
+    raw_cropped_filtered, shielding_str, meg_system = load_data(raw_cropped_filtered_path)
+
     #Apply epoching: USE NON RESAMPLED DATA. Or should we resample after epoching? 
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
@@ -989,7 +1101,9 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     #Extract chs_by_lobe into a data frame
     sensors_derivs = chs_dict_to_csv(chs_by_lobe,  file_name_prefix = 'Sensors')
 
-    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
+    raw_path = file_path
+
+    return meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered_path, raw_cropped_filtered_resampled_path, raw_cropped_path, raw_path, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str
 
 
 def chs_dict_to_csv(chs_by_lobe: dict, file_name_prefix: str):

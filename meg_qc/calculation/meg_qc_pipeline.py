@@ -1,4 +1,5 @@
 import os
+import gc
 import ancpbids
 from ancpbids.query import query_entities
 import time
@@ -7,6 +8,8 @@ import sys
 import mne
 import shutil
 from typing import List, Union
+from joblib import Parallel, delayed
+
 
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append(os.path.join('.'))
@@ -22,7 +25,7 @@ sys.path.append(os.path.join('..', '..', '..', 'meg_qc', 'calculation'))
 sys.path.append(os.path.join('..', '..', '..', '..', 'meg_qc', 'calculation'))
 
 
-from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params
+from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params, delete_temp_folder
 # from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
@@ -67,7 +70,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         Path to the BIDS-conform data set to run the QC on.
     dataset : ancpbids.Dataset
         Dataset object to work with.
-    
+
 
     Returns
     -------
@@ -83,7 +86,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     for root, dirs, files in os.walk(dataset_path):
 
-        # Exclude the 'derivatives' folder. 
+        # Exclude the 'derivatives' folder.
         # Because we will later save ds info as derivative with extension .fif
         # so if we work on this ds again it might see a ctf ds as fif.
         dirs[:] = [d for d in dirs if d != 'derivatives']
@@ -91,7 +94,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         # Check for .fif files
         if any(file.endswith('.fif') for file in files):
             has_fif = True
-        
+
         # Check for folders ending with .ds
         if any(dir.endswith('.ds') for dir in dirs):
             has_ctf = True
@@ -103,7 +106,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
     if has_fif:
         list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid, scope='raw')))
-        
+
         entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif', scope='raw')
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
@@ -113,20 +116,20 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.res4', scope='raw')
 
         # entities_per_file is a list of Artifact objects of ancpbids created from raw files. (fif for fif files and res4 for ctf files)
-        # TODO: this assumes every .ds directory has a single corresponding .res4 file. 
+        # TODO: this assumes every .ds directory has a single corresponding .res4 file.
         # Is it always so?
         # Used because I cant get entities_per_file from .ds folders, ancpbids doesnt support folder query.
-        # But we need entities_per_file to pass into subject_folder.create_artifact(), 
+        # But we need entities_per_file to pass into subject_folder.create_artifact(),
         # so that it can add automatically all the entities to the new derivative on base of entities from raw file.
-    
-        
+
+
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
 
     else:
         list_of_files = []
         raise ValueError('No fif or ctf files found in the dataset.')
-    
+
     # Find if we have crosstalk in list of files and entities_per_file, give notification that they will be skipped:
     #read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
     crosstalk_files = [f for f in list_of_files if 'crosstalk' in f]
@@ -147,7 +150,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
     # we can also check that final file of path in list of files is same as name in jsons
 
     return list_of_files, entities_per_file
-    
+
 
 def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str, all_taken_raw_files: List[str]):
 
@@ -168,7 +171,7 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
         Name of the config file to save.
     all_taken_raw_files : list
         List of all the raw files processed in this run, for this ds.
-    
+
     """
 
     #get current time stamp for config file
@@ -220,7 +223,7 @@ def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
     list_of_files_json, _ = get_list_of_raws_for_config(reuse_config_file_path)
     if not list_of_files_json:
         return sub_list
-    
+
     # find all 'sub-' in the file names to get the subject ID:
     json_subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
 
@@ -234,7 +237,7 @@ def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
     print('___MEGqc___: ', 'These requested subjects were already processed before with this config file:', subjects_to_skip)
     while True:
         user_input = input('___MEGqc___: Do you want to RERUN these subjects with the same config parameters? (Y/N): ').lower()
-        if user_input == 'n':  # remove these subs 
+        if user_input == 'n':  # remove these subs
             print('___MEGqc___: ', 'Subjects to skip:', subjects_to_skip)
             sub_list = [sub for sub in sub_list if sub not in subjects_to_skip]
             print('___MEGqc___: ', 'Subjects to process:', sub_list)
@@ -288,7 +291,7 @@ def get_list_of_raws_for_config(reuse_config_file_path: str):
         config_json = {}
         return
 
-    # from file name get desc entity to use it as a key in the json file: 
+    # from file name get desc entity to use it as a key in the json file:
     # after desc- and before the underscores:
     file_name = os.path.basename(reuse_config_file_path).split('.')[0]
     config_desc = file_name.split('desc-')[1].split('_')[0]
@@ -305,7 +308,7 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
 
     Expects that the config file .ini and the .json file (with the same name) are already saved as derivatives.
 
-    To get corresponding json here use the easy way: 
+    To get corresponding json here use the easy way:
     just exchange ini to json in reuse file path (not using ANCPbids for it).
     The 'proper' way would be to:
     - query the desc entitiy of the reused config file
@@ -328,7 +331,7 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
     -------
     all_taken_raw_files : list
         Updated list of all the raw files processed in this run, for this ds.
-    
+
     """
 
     list_of_files, config_desc = get_list_of_raws_for_config(reuse_config_file_path)
@@ -358,12 +361,12 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
 
     """
     Check if the given paths to the data sets exist.
-    
+
     Parameters
     ----------
     ds_paths : list or str
         List of paths to the BIDS-conform data sets to run the QC on.
-        
+
     Returns
     -------
     ds_paths : list
@@ -373,12 +376,12 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
     #has to be a list, even if there is just one path:
     if isinstance(ds_paths, str):
         ds_paths = [ds_paths]
-    
+
     #make sure all directories in the list exist:
     for ds_path in ds_paths:
         if not os.path.isdir(ds_path):
             raise ValueError(f'Given path to the dataset does not exist. Path: {ds_path}')
-        
+
     return ds_paths
 
 def check_config_saved_ask_user(dataset):
@@ -419,7 +422,7 @@ def check_config_saved_ask_user(dataset):
 
     used_setting_file_list = []
     for used_settings_entity in used_settings_entity_list:
-        
+
         used_setting_file_list += sorted(list(dataset.query(suffix='meg', extension='.ini', desc = used_settings_entity, return_type='filename', scope='derivatives')))
 
     reuse_config_file_path = None
@@ -436,7 +439,7 @@ def check_config_saved_ask_user(dataset):
             reuse_config_file_path = used_setting_file_list[int(user_input)]
         else:
             print('___MEGqc___: ', 'You chose to use the default config file.')
-            
+
 
     return reuse_config_file_path
 
@@ -445,19 +448,19 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
 
     """
     Check if the given subjects are in the data set.
-    
+
     Parameters
     ----------
     sub_list : list or str
         List of subjects to run the QC on.
     dataset : ancpbids.Dataset
         Dataset object to work with.
-        
+
     Returns
     -------
     sub_list : list
         Updated list of subjects to run the QC on.
-        
+
     """
 
     available_subs = sorted(list(dataset.query_entities(scope='raw')['subject']))
@@ -477,7 +480,7 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
             if sub_list_missing:
                 print('___MEGqc___: ', 'Could NOT find these subs in your data set. Check the subject IDs:', sub_list_missing)
                 print('___MEGqc___: ', 'Requested subjects found in your data set:', sub_list, 'Only these subjects will be processed.')
-            
+
         #if they are given as int - indexes:
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
@@ -486,333 +489,460 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
 
     return sub_list
 
-def make_derivative_meg_qc(default_config_file_path: str, internal_config_file_path: str, ds_paths: Union[List[str], str], sub_list: Union[List[str], str] = 'all'):
 
-    """ 
-    Main function of MEG QC:
-    
-    * Parse parameters from config: user config + internal config
-    * Get the data .fif file for each subject using ancpbids
-    * Run initial processing (filtering, epoching, resampling)
-    * Run whole QC analysis for every subject, every fif (only chosen metrics from config)
-    * Save derivatives (csvs, html reports) into the file system using ancpbids.
-    
+def process_one_subject(
+        sub: str,
+        dataset,
+        dataset_path: str,
+        all_qc_params: dict,
+        internal_qc_params: dict
+):
+    """
+    This function processes a single subject. It contains all the code that was
+    originally inside the 'for sub in sub_list:' loop in 'make_derivative_meg_qc'.
+
     Parameters
     ----------
-    default_config_file_path : str
-        Path the config file with all the parameters for the QC analysis - default.
-        later the function will ask the user if he wants to use the same config file again or use another one.
-    internal_config_file_path : str
-        Path the config file with all the parameters for the QC analysis preset - not to be changed by the user.
-    ds_paths : list or str
-        List of paths to the BIDS-conform data sets to run the QC on. Has to be list even if there is just one path.
-    sub_list : list or str
-        List of subjects to run the QC on. Can be 'all' or 1 subj like '009' or list of several subjects like ['009', '012'].
+    sub : str
+        Single subject ID string (e.g. '009').
+    dataset : ancpbids.dataset
+        BIDS-conform dataset loaded by ancpbids.
+    dataset_path : str
+        Path to the BIDS dataset.
+    all_qc_params : dict
+        QC parameters from user config file.
+    internal_qc_params : dict
+        Internal QC parameters that users do not change.
     """
 
+    # We replicate everything that was inside the loop.
+
+    # CREATE DERIVATIVE FOR THIS SUBJECT
+    derivative = dataset.create_derivative(name="Meg_QC")
+    derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+    print('___MEGqc___: ', 'Take SUB: ', sub)
+
+    calculation_folder = derivative.create_folder(name='calculation')
+    subject_folder = calculation_folder.create_folder(
+        type_=dataset.get_schema().Subject,
+        name='sub-' + sub
+    )
+
+    # GET FILE LIST FOR THIS SUBJECT
+    list_of_files, entities_per_file = get_files_list(sub, dataset_path, dataset)
+
+    if not list_of_files:
+        print('___MEGqc___: ',
+              'No files to work on. Check that given subjects are present in your data set.')
+        return  # Stop if no files exist for this subject
+
+    print('___MEGqc___: ', 'list_of_files to process:', list_of_files)
+    print('___MEGqc___: ', 'entities_per_file to process:', entities_per_file)
+    print('___MEGqc___: ', 'TOTAL files to process: ', len(list_of_files))
+
+    # Keep track of all raw files processed for this subject (optional)
+    all_taken_raw_files = [os.path.basename(f) for f in list_of_files]
+
+    # Preassign in case nothing is processed
+    raw = None
+
+    # Counters, accumulators
+    counter = 0
+    avg_ecg = []
+    avg_eog = []
+
+    # LOOP OVER FIF FILES FOR THIS SUBJECT
+    for file_ind, data_file in enumerate(list_of_files):  # e.g. [0:1] in your example
+
+        print('___MEGqc___: ', 'Processing file: ', data_file)
+
+        # Preassign strings with notes for the user (just as in your code)
+        shielding_str, m_or_g_skipped_str, epoching_str = '', '', ''
+        ecg_str, eog_str, head_str, muscle_str = '', '', '', ''
+        pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', ''
+
+        print('___MEGqc___: ', 'Starting initial processing...')
+        start_time = time.time()
+
+        # INITIAL PROCESSING
+        (meg_system,
+         dict_epochs_mg,
+         chs_by_lobe,
+         channels,
+         raw_cropped_filtered,
+         raw_cropped_filtered_resampled,
+         raw_cropped,
+         raw,
+         info_derivs,
+         stim_deriv,
+         shielding_str,
+         epoching_str,
+         sensors_derivs,
+         m_or_g_chosen,
+         m_or_g_skipped_str,
+         lobes_color_coding_str,
+         resample_str) = initial_processing(
+            default_settings=all_qc_params['default'],
+            filtering_settings=all_qc_params['Filtering'],
+            epoching_params=all_qc_params['Epoching'],
+            file_path=data_file,
+            dataset_path=dataset_path
+        )
+
+        print('___MEGqc___: ',
+              "Finished initial processing. --- Execution %s seconds ---"
+              % (time.time() - start_time))
+
+        # PREDEFINE VARIABLES FOR QC
+        noisy_freqs_global = None
+        std_derivs, psd_derivs = [], []
+        pp_manual_derivs, pp_auto_derivs = [], []
+        ecg_derivs, eog_derivs = [], []
+        head_derivs, muscle_derivs = [], []
+        simple_metrics_psd, simple_metrics_std = [], []
+        simple_metrics_pp_manual, simple_metrics_pp_auto = [], []
+        simple_metrics_ecg, simple_metrics_eog = [], []
+        simple_metrics_head, simple_metrics_muscle = [], []
+
+        # 1) STD
+        if all_qc_params['default']['run_STD'] is True:
+            print('___MEGqc___: ', 'Starting STD...')
+            start_time = time.time()
+            (std_derivs,
+             simple_metrics_std,
+             std_str) = STD_meg_qc(
+                all_qc_params['STD'],
+                channels,
+                chs_by_lobe,
+                dict_epochs_mg,
+                raw_cropped_filtered_resampled,
+                m_or_g_chosen
+            )
+            print('___MEGqc___: ',
+                  "Finished STD. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # 2) PSD
+        if all_qc_params['default']['run_PSD'] is True:
+            print('___MEGqc___: ', 'Starting PSD...')
+            start_time = time.time()
+            (psd_derivs,
+             simple_metrics_psd,
+             psd_str,
+             noisy_freqs_global) = PSD_meg_qc(
+                all_qc_params['PSD'],
+                internal_qc_params['PSD'],
+                channels,
+                chs_by_lobe,
+                raw_cropped_filtered,
+                m_or_g_chosen,
+                helper_plots=False
+            )
+            print('___MEGqc___: ',
+                  "Finished PSD. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # 3) Peak-to-Peak manual
+        if all_qc_params['default']['run_PTP_manual'] is True:
+            print('___MEGqc___: ', 'Starting Peak-to-Peak manual...')
+            start_time = time.time()
+            (pp_manual_derivs,
+             simple_metrics_pp_manual,
+             pp_manual_str) = PP_manual_meg_qc(
+                all_qc_params['PTP_manual'],
+                channels,
+                chs_by_lobe,
+                dict_epochs_mg,
+                raw_cropped_filtered_resampled,
+                m_or_g_chosen
+            )
+            print('___MEGqc___: ',
+                  "Finished Peak-to-Peak manual. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # 4) Peak-to-Peak auto from MNE
+        if all_qc_params['default']['run_PTP_auto_mne'] is True:
+            print('___MEGqc___: ', 'Starting Peak-to-Peak auto...')
+            start_time = time.time()
+            (pp_auto_derivs,
+             bad_channels,
+             pp_auto_str) = PP_auto_meg_qc(
+                all_qc_params['PTP_auto'],
+                channels,
+                raw_cropped_filtered_resampled,
+                m_or_g_chosen
+            )
+            print('___MEGqc___: ',
+                  "Finished Peak-to-Peak auto. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # 5) ECG
+        if all_qc_params['default']['run_ECG'] is True:
+            print('___MEGqc___: ', 'Starting ECG...')
+            start_time = time.time()
+            (ecg_derivs,
+             simple_metrics_ecg,
+             ecg_str,
+             avg_objects_ecg) = ECG_meg_qc(
+                all_qc_params['ECG'],
+                internal_qc_params['ECG'],
+                raw_cropped,
+                channels,
+                chs_by_lobe,
+                m_or_g_chosen
+            )
+            print('___MEGqc___: ',
+                  "Finished ECG. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+            avg_ecg += avg_objects_ecg
+
+        # 6) EOG
+        if all_qc_params['default']['run_EOG'] is True:
+            print('___MEGqc___: ', 'Starting EOG...')
+            start_time = time.time()
+            (eog_derivs,
+             simple_metrics_eog,
+             eog_str,
+             avg_objects_eog) = EOG_meg_qc(
+                all_qc_params['EOG'],
+                internal_qc_params['EOG'],
+                raw_cropped,
+                channels,
+                chs_by_lobe,
+                m_or_g_chosen
+            )
+            print('___MEGqc___: ',
+                  "Finished EOG. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+            avg_eog += avg_objects_eog
+
+        # 7) Head movement artifacts
+        if all_qc_params['default']['run_Head'] is True:
+            print('___MEGqc___: ', 'Starting Head movement calculation...')
+            (head_derivs,
+             simple_metrics_head,
+             head_str,
+             df_head_pos,
+             head_pos) = HEAD_movement_meg_qc(raw_cropped)
+            print('___MEGqc___: ',
+                  "Finished Head movement calculation. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # 8) Muscle artifacts
+        if all_qc_params['default']['run_Muscle'] is True:
+            print('___MEGqc___: ', 'Starting Muscle artifacts calculation...')
+            start_time = time.time()
+            (muscle_derivs,
+             simple_metrics_muscle,
+             muscle_str,
+             scores_muscle_all3) = MUSCLE_meg_qc(
+                all_qc_params['Muscle'],
+                all_qc_params['PSD'],
+                internal_qc_params['PSD'],
+                channels,
+                raw_cropped_filtered,
+                noisy_freqs_global,
+                m_or_g_chosen,
+                dataset_path,
+                attach_dummy=True,
+                cut_dummy=True
+            )
+            print('___MEGqc___: ',
+                  "Finished Muscle artifacts calculation. --- Execution %s seconds ---"
+                  % (time.time() - start_time))
+
+        # REPORT STRINGS
+        report_strings = {
+            'INITIAL_INFO': (m_or_g_skipped_str + resample_str + epoching_str +
+                             shielding_str + lobes_color_coding_str),
+            'STD': std_str,
+            'PSD': psd_str,
+            'PTP_MANUAL': pp_manual_str,
+            'PTP_AUTO': pp_auto_str,
+            'ECG': ecg_str,
+            'EOG': eog_str,
+            'HEAD': head_str,
+            'MUSCLE': muscle_str,
+            'STIMULUS': 'If the data was cropped for this calculation, the stimulus data is also cropped.'
+        }
+
+        report_str_derivs = [QC_derivative(report_strings, 'ReportStrings', 'json')]
+
+        # ORGANIZE QC DERIVATIVES
+        QC_derivs = {
+            'Raw info': info_derivs,
+            'Stimulus channels': stim_deriv,
+            'Report_strings': report_str_derivs,
+            'Sensors locations': sensors_derivs,
+            'Standard deviation of the data': std_derivs,
+            'Frequency spectrum': psd_derivs,
+            'Peak-to-Peak manual': pp_manual_derivs,
+            'Peak-to-Peak auto from MNE': pp_auto_derivs,
+            'ECG': ecg_derivs,
+            'EOG': eog_derivs,
+            'Head movement artifacts': head_derivs,
+            'High frequency (Muscle) artifacts': muscle_derivs
+        }
+
+        QC_simple = {
+            'STD': simple_metrics_std,
+            'PSD': simple_metrics_psd,
+            'PTP_MANUAL': simple_metrics_pp_manual,
+            'PTP_AUTO': simple_metrics_pp_auto,
+            'ECG': simple_metrics_ecg,
+            'EOG': simple_metrics_eog,
+            'HEAD': simple_metrics_head,
+            'MUSCLE': simple_metrics_muscle
+        }
+
+        QC_derivs['Simple_metrics'] = [QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
+
+        # SAVE DERIVATIVES (EXCEPT MATPLOTLIB, PLOTLY, REPORT)
+        for section in (sec for sec in QC_derivs.values() if sec):
+            for deriv in (
+                    d for d in section
+                    if d.content_type not in ['matplotlib', 'plotly', 'report']
+            ):
+                meg_artifact = subject_folder.create_artifact(raw=entities_per_file[file_ind])
+                counter += 1
+                print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
+
+                meg_artifact.add_entity('desc', deriv.name)  # file name
+                meg_artifact.suffix = 'meg'
+                meg_artifact.extension = '.html'
+
+                if deriv.content_type == 'df':
+                    meg_artifact.extension = '.tsv'
+                    meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(
+                        file_path, sep='\t'
+                    )
+
+                elif deriv.content_type == 'json':
+                    meg_artifact.extension = '.json'
+
+                    def json_writer(file_path, cont=deriv.content):
+                        with open(file_path, "w") as file_wrapper:
+                            json.dump(cont, file_wrapper, indent=4)
+
+                    meg_artifact.content = json_writer
+
+                elif deriv.content_type == 'info':
+                    meg_artifact.extension = '.fif'
+                    meg_artifact.content = lambda file_path, cont=deriv.content: mne.io.write_info(
+                        file_path, cont
+                    )
+                else:
+                    print('___MEGqc___: ', meg_artifact.name)
+                    meg_artifact.content = 'dummy text'
+                    meg_artifact.extension = '.txt'
+
+        # CLEAN UP TEMP FILES
+        try:
+            os.remove(raw_cropped)
+            os.remove(raw_cropped_filtered)
+            os.remove(raw_cropped_filtered_resampled)
+
+            del (meg_system, dict_epochs_mg, chs_by_lobe, channels,
+                 raw_cropped_filtered, raw_cropped_filtered_resampled,
+                 raw_cropped, info_derivs, stim_deriv, shielding_str,
+                 epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str,
+                 lobes_color_coding_str, resample_str)
+            gc.collect()
+            print('REMOVING TRASH: SUCCED')
+        except:
+            print('REMOVING TRASH: FAILED')
+
+    # WRITE DERIVATIVE
+    ancpbids.write_derivative(dataset, derivative)
+    del meg_artifact, derivative
+    gc.collect()
+
+    # Check if raw is None => means we never processed a file
+    try:
+        if raw is None:
+            print('___MEGqc___: ', 'No data files could be processed for subject:', sub)
+            return
+    except:
+        print('___MEGqc___: ', 'No data files could be processed for subject:', sub)
+
+    # You can return whatever you want from here
+    return
+
+
+def make_derivative_meg_qc(
+    default_config_file_path: str,
+    internal_config_file_path: str,
+    ds_paths: Union[List[str], str],
+    sub_list: Union[List[str], str] = 'all',
+    n_jobs: int = 5  # Number of parallel jobs
+):
+
     ds_paths = check_ds_paths(ds_paths)
+    internal_qc_params = get_internal_config_params(internal_config_file_path)
 
-    internal_qc_params = get_internal_config_params(internal_config_file_path) 
-    # assume these are not user changable by user, so apply without asking to all data sets.
-
-    for dataset_path in ds_paths: #run over several data sets
-
+    for dataset_path in ds_paths:
         print('___MEGqc___: ', 'DS path:', dataset_path)
-
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
 
-
-        #create derivatives folder first:
         derivatives_path = os.path.join(dataset_path, 'derivatives')
         if not os.path.isdir(derivatives_path):
             os.mkdir(derivatives_path)
 
-        derivative = dataset.create_derivative(name="Meg_QC")
-        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
-        # Check if there is already config file used for this ds:
-        reuse_config_file_path = check_config_saved_ask_user(dataset) # will give None if no config file was used before
+        reuse_config_file_path = check_config_saved_ask_user(dataset)
         if reuse_config_file_path:
             config_file_path = reuse_config_file_path
         else:
             config_file_path = default_config_file_path
         print('___MEGqc___: ', 'Using config file: ', config_file_path)
 
-        # Get all the parameters from the config file:
         all_qc_params = get_all_config_params(config_file_path)
-
         if all_qc_params is None:
             return
 
-        #entities = dataset.query_entities(dataset_path)
-        #entities = query_entities(dataset, scope='raw')
-
-        # print('_____BIDS data info___')
-        # print(schema)
-        # print(dataset)
-        # print(type(dataset.derivatives))
-
-        # print('___MEGqc___: ', schema)
-        # print('___MEGqc___: ', schema.Artifact)
-
-        # print('___MEGqc___: ', dataset.files)
-        # print('___MEGqc___: ', dataset.folders)
-        # print('___MEGqc___: ', dataset.derivatives)
-        # print('___MEGqc___: ', dataset.items())
-        # print('___MEGqc___: ', dataset.keys())
-        # print('___MEGqc___: ', dataset.code)
-        # print('___MEGqc___: ', dataset.name)
-
-        # print('______')
-
-        # entities = query_entities(dataset)
-        # print('___MEGqc___: ', 'entities', entities)
-
-
+        # Determine which subjects to run
         sub_list = check_sub_list(sub_list, dataset)
-
         if reuse_config_file_path:
             sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
-        avg_ecg=[]
-        avg_eog=[]
-        
-        raw=None #preassign in case no calculation will be successful
+        # # Parallel execution over subjects
+        # # Each subject is processed by process_one_subject() in parallel
+        # # with n_jobs specifying how many workers to run simultaneously
+        # results = Parallel(n_jobs=n_jobs)(
+        #     delayed(process_one_subject)(
+        #         sub=sub,
+        #         dataset=dataset,
+        #         dataset_path=dataset_path,
+        #         all_qc_params=all_qc_params,
+        #         internal_qc_params=internal_qc_params
+        #     )
+        #     for sub in sub_list
+        # )
 
-        all_taken_raw_files = []
+        for sub in sub_list:
+            process_one_subject(
+                sub=sub,
+                dataset=dataset,
+                dataset_path=dataset_path,
+                all_qc_params=all_qc_params,
+                internal_qc_params=internal_qc_params
+            )
+        # Optionally, you can handle the returned values here, e.g.,:
+        # global_all_taken_raw_files = []
+        # global_avg_ecg = []
+        # global_avg_eog = []
+        # for res in results:
+        #     if res is not None:
+        #         taken_files, ecg_data, eog_data, raw_obj = res
+        #         global_all_taken_raw_files += taken_files
+        #         global_avg_ecg += ecg_data
+        #         global_avg_eog += eog_data
 
-        for sub in sub_list: #[0:4]:
-    
-            print('___MEGqc___: ', 'Take SUB: ', sub)
-            
-            calculation_folder = derivative.create_folder(name='calculation')
-            subject_folder = calculation_folder.create_folder(type_=schema.Subject, name='sub-'+sub)
+        # Remove temporary folder of intermediate files
+        delete_temp_folder(dataset_path)
 
-            list_of_files, entities_per_file = get_files_list(sub, dataset_path, dataset)
+    return
 
-            if not list_of_files:
-                print('___MEGqc___: ', 'No files to work on. Check that given subjects are present in your data set.')
-                return
-
-            print('___MEGqc___: ', 'list_of_files to process:', list_of_files)
-            print('___MEGqc___: ', 'entities_per_file to process', entities_per_file)
-            print('___MEGqc___: ', 'TOTAL files to process: ', len(list_of_files))
-
-            all_taken_raw_files += [os.path.basename(f) for f in list_of_files]
-
-            # GET all derivs!
-            # derivs_list = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sid, scope='derivatives')))
-            # print('___MEGqc___: ', 'derivs_list', derivs_list)
-
-            # entities = dataset.query_entities()
-            # print('___MEGqc___: ', 'entities', entities)
-
-
-            #TODO; check here that order is really the same as in list_of_fifs
-            #same as list_of_fifs, but return type is not filename, but dict
-
-
-            counter = 0
-
-            for file_ind, data_file in enumerate(list_of_files): #[0:1]: #run over several data files
-
-                print('___MEGqc___: ', 'Processing file: ', data_file)
-
-                # Preassign strings with notes for the user to add to html report (in case some QC analysis was skipped):
-                shielding_str, m_or_g_skipped_str, epoching_str, ecg_str, eog_str, head_str, muscle_str, pp_manual_str, pp_auto_str, std_str, psd_str = '', '', '', '', '', '', '', '', '', '', ''
-    
-                print('___MEGqc___: ', 'Starting initial processing...')
-                start_time = time.time()
-
-                meg_system, dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, info_derivs, stim_deriv, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
-                
-                # Commented out this, because it would cover the actual error while allowing to continue processing.
-                # I wanna see the actual error. Often it happens while reading raw and says: 
-                # file '...' does not start with a file id tag
-                
-                # try:
-                #     dict_epochs_mg, chs_by_lobe, channels, raw_cropped_filtered, raw_cropped_filtered_resampled, raw_cropped, raw, shielding_str, epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str, lobes_color_coding_str, resample_str = initial_processing(default_settings=all_qc_params['default'], filtering_settings=all_qc_params['Filtering'], epoching_params=all_qc_params['Epoching'], file_path=data_file)
-                # except:
-                #     print('___MEGqc___: ', 'Could not process file ', data_file, '. Skipping it.')
-                #     #in case some file can not be processed, the pipeline will continue. To figure out the issue, run the file separately: raw=mne.io.read_raw_fif('.../filepath/...fif')
-                #     continue
-                
-                print('___MEGqc___: ', "Finished initial processing. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                # QC measurements:
-
-                #predefine in case some metrics are not calculated:
-                noisy_freqs_global = None #if we run PSD, this will be properly defined. It is used as an input for Muscle and is supposed to represent powerline noise.
-                std_derivs, psd_derivs, pp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, head_derivs, muscle_derivs = [],[],[],[],[], [],  [], []
-                simple_metrics_psd, simple_metrics_std, simple_metrics_pp_manual, simple_metrics_pp_auto, simple_metrics_ecg, simple_metrics_eog, simple_metrics_head, simple_metrics_muscle = [],[],[],[],[],[], [], []
-
-
-                if all_qc_params['default']['run_STD'] is True:
-                    print('___MEGqc___: ', 'Starting STD...')
-                    start_time = time.time()
-                    std_derivs, simple_metrics_std, std_str = STD_meg_qc(all_qc_params['STD'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-                    print('___MEGqc___: ', "Finished STD. --- Execution %s seconds ---" % (time.time() - start_time))
-    
-                if all_qc_params['default']['run_PSD'] is True:
-                    print('___MEGqc___: ', 'Starting PSD...')
-                    start_time = time.time()
-                    psd_derivs, simple_metrics_psd, psd_str, noisy_freqs_global = PSD_meg_qc(all_qc_params['PSD'], internal_qc_params['PSD'], channels, chs_by_lobe , raw_cropped_filtered, m_or_g_chosen, helper_plots=False)
-                    print('___MEGqc___: ', "Finished PSD. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                if all_qc_params['default']['run_PTP_manual'] is True:
-                    print('___MEGqc___: ', 'Starting Peak-to-Peak manual...')
-                    start_time = time.time()
-                    pp_manual_derivs, simple_metrics_pp_manual, pp_manual_str = PP_manual_meg_qc(all_qc_params['PTP_manual'], channels, chs_by_lobe, dict_epochs_mg, raw_cropped_filtered_resampled, m_or_g_chosen)
-                    print('___MEGqc___: ', "Finished Peak-to-Peak manual. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                if all_qc_params['default']['run_PTP_auto_mne'] is True:
-                    print('___MEGqc___: ', 'Starting Peak-to-Peak auto...')
-                    start_time = time.time()
-                    pp_auto_derivs, bad_channels, pp_auto_str = PP_auto_meg_qc(all_qc_params['PTP_auto'], channels, raw_cropped_filtered_resampled, m_or_g_chosen)
-                    print('___MEGqc___: ', "Finished Peak-to-Peak auto. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                if all_qc_params['default']['run_ECG'] is True:
-                    print('___MEGqc___: ', 'Starting ECG...')
-                    start_time = time.time()
-                    ecg_derivs, simple_metrics_ecg, ecg_str, avg_objects_ecg = ECG_meg_qc(all_qc_params['ECG'], internal_qc_params['ECG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen)
-                    print('___MEGqc___: ', "Finished ECG. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                    avg_ecg += avg_objects_ecg
-
-                if all_qc_params['default']['run_EOG'] is True:
-                    print('___MEGqc___: ', 'Starting EOG...')
-                    start_time = time.time()
-                    eog_derivs, simple_metrics_eog, eog_str, avg_objects_eog = EOG_meg_qc(all_qc_params['EOG'], internal_qc_params['EOG'], raw_cropped, channels, chs_by_lobe, m_or_g_chosen)
-                    print('___MEGqc___: ', "Finished EOG. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                    avg_eog += avg_objects_eog
-
-                if all_qc_params['default']['run_Head'] is True:
-                    print('___MEGqc___: ', 'Starting Head movement calculation...')
-                    head_derivs, simple_metrics_head, head_str, df_head_pos, head_pos = HEAD_movement_meg_qc(raw_cropped)
-                    print('___MEGqc___: ', "Finished Head movement calculation. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                if all_qc_params['default']['run_Muscle'] is True:
-                    print('___MEGqc___: ', 'Starting Muscle artifacts calculation...')
-                    muscle_derivs, simple_metrics_muscle, muscle_str, scores_muscle_all3, raw3 = MUSCLE_meg_qc(all_qc_params['Muscle'], all_qc_params['PSD'], internal_qc_params['PSD'], channels, raw_cropped_filtered, noisy_freqs_global, m_or_g_chosen, attach_dummy = True, cut_dummy = True)
-                    print('___MEGqc___: ', "Finished Muscle artifacts calculation. --- Execution %s seconds ---" % (time.time() - start_time))
-
-                
-                report_strings = {
-                'INITIAL_INFO': m_or_g_skipped_str+resample_str+epoching_str+shielding_str+lobes_color_coding_str,
-                'STD': std_str,
-                'PSD': psd_str,
-                'PTP_MANUAL': pp_manual_str,
-                'PTP_AUTO': pp_auto_str,
-                'ECG': ecg_str,
-                'EOG': eog_str,
-                'HEAD': head_str,
-                'MUSCLE': muscle_str,
-                'STIMULUS': 'If the data was cropped for this calculation, the stimulus data is also cropped.'}
-
-                # Save report strings as json to read it back in when plotting:
-                report_str_derivs=[QC_derivative(report_strings, 'ReportStrings', 'json')]
-                
-
-                QC_derivs={
-                'Raw info': info_derivs,
-                'Stimulus channels': stim_deriv,
-                'Report_strings': report_str_derivs,
-                'Sensors locations': sensors_derivs,
-                'Standard deviation of the data': std_derivs, 
-                'Frequency spectrum': psd_derivs, 
-                'Peak-to-Peak manual': pp_manual_derivs, 
-                'Peak-to-Peak auto from MNE': pp_auto_derivs, 
-                'ECG': ecg_derivs, 
-                'EOG': eog_derivs,
-                'Head movement artifacts': head_derivs,
-                'High frequency (Muscle) artifacts': muscle_derivs}
-
-                QC_simple={
-                'STD': simple_metrics_std, 
-                'PSD': simple_metrics_psd,
-                'PTP_MANUAL': simple_metrics_pp_manual, 
-                'PTP_AUTO': simple_metrics_pp_auto,
-                'ECG': simple_metrics_ecg, 
-                'EOG': simple_metrics_eog,
-                'HEAD': simple_metrics_head,
-                'MUSCLE': simple_metrics_muscle}  
-
-                #Collect all simple metrics into a dictionary and add to QC_derivs:
-                QC_derivs['Simple_metrics']=[QC_derivative(QC_simple, 'SimpleMetrics', 'json')]
-
-                #if there are any derivs calculated in this section:
-                for section in (section for section in QC_derivs.values() if section):
-                    # loop over section where deriv.content_type is not 'matplotlib' or 'plotly' or 'report'
-                    for deriv in (deriv for deriv in section if deriv.content_type != 'matplotlib' and deriv.content_type != 'plotly' and deriv.content_type != 'report'):
-
-                        # This is how you would save matplotlib, plotly and reports separately with ancpbids:
-
-                        # print('___MEGqc___: ', 'writing deriv: ', d)
-                        # print('___MEGqc___: ', deriv)
-
-                        # if deriv.content_type == 'matplotlib':
-                        #     continue
-                        #     meg_artifact.extension = '.png'
-                        #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.savefig(file_path) 
-
-                        # elif deriv.content_type == 'plotly':
-                        #     continue
-                        #     meg_artifact.content = lambda file_path, cont=deriv.content: cont.write_html(file_path)
-
-                        # elif deriv.content_type == 'report':
-                        #     def html_writer(file_path, cont=deriv.content):
-                        #         with open(file_path, "w") as file:
-                        #             file.write(cont)
-                        #         #'with'command doesnt work in lambda
-                        #     meg_artifact.content = html_writer # function pointer instead of lambda
-
-                        meg_artifact = subject_folder.create_artifact(raw=entities_per_file[file_ind]) #shell. empty derivative
-
-                        counter +=1
-                        print('___MEGqc___: ', 'counter of subject_folder.create_artifact', counter)
-
-                        meg_artifact.add_entity('desc', deriv.name) #file name
-                        meg_artifact.suffix = 'meg'
-                        meg_artifact.extension = '.html'
-
-                        if deriv.content_type == 'df':
-                            meg_artifact.extension = '.tsv'
-                            meg_artifact.content = lambda file_path, cont=deriv.content: cont.to_csv(file_path, sep='\t')
-
-                        elif deriv.content_type == 'json':
-                            meg_artifact.extension = '.json'
-                            def json_writer(file_path, cont=deriv.content):
-                                with open(file_path, "w") as file_wrapper:
-                                    json.dump(cont, file_wrapper, indent=4)
-                            meg_artifact.content = json_writer # function pointer instead of lambda
-
-                        elif deriv.content_type == 'info':
-                            meg_artifact.extension = '.fif'
-                            meg_artifact.content = lambda file_path, cont=deriv.content: mne.io.write_info(file_path, cont)
-
-                        else:
-                            print('___MEGqc___: ', meg_artifact.name)
-                            meg_artifact.content = 'dummy text'
-                            meg_artifact.extension = '.txt'
-                        # problem with lambda explained:
-                        # https://docs.python.org/3/faq/programming.html#why-do-lambdas-defined-in-a-loop-with-different-values-all-return-the-same-result
-
-
-        #Save config file used for this run as a derivative:
-        if reuse_config_file_path is None:
-            # if no config file was used before, save the one used now
-            create_config_artifact(derivative, config_file_path, 'UsedSettings', all_taken_raw_files)
-        else:
-            #otherwise - dont save config again, but add list of all taken raw files to the existing list of used settings:
-            add_raw_to_config_json(derivative, reuse_config_file_path, all_taken_raw_files)
-
-
-        ancpbids.write_derivative(dataset, derivative) 
-
-        if raw is None:
-            print('___MEGqc___: ', 'No data files could be processed.')
-            return
-
-    return 

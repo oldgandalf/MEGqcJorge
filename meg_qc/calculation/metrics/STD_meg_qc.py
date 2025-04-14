@@ -5,7 +5,7 @@ import copy
 from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative, assign_epoched_std_ptp_to_channels
 from meg_qc.plotting.universal_html_report import simple_metric_basic
-from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
+from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data)
 
 
 def get_std_all_data(data: mne.io.Raw, channels: List):
@@ -114,22 +114,15 @@ def get_std_epochs(channels: List, epochs_mg: mne.Epochs):
     pd.DataFrame
         dataframe with std values for each channel and each epoch
     """
-    
-    dict_ep = {}
 
-    #get 1 epoch, 1 channel and calculate std of its data:
-    for ep in range(0, len(epochs_mg)):
-        std_epoch=[]
-        for ch_name in channels: 
-            data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)[0][0] 
-            #[0][0] is because get_data creats array in array in array, it expects several epochs, several channels, but we only need  one.
+    # Get the data of all epochs and channels at once
+    data_epochs = epochs_mg.get_data(picks=channels)  # shape: (n_epochs, n_channels, n_times)
 
-            std_ch_ep = np.std(data_ch_epoch) 
-            std_epoch.append(np.float64(std_ch_ep))
+    # Compute the standard deviation along the time axis (axis=2) for each channel in every epoch
+    std_array = np.std(data_epochs, axis=2)  # shape: (n_epochs, n_channels)
 
-        dict_ep[ep] = std_epoch
-
-    return pd.DataFrame(dict_ep, index=channels)
+    # Transpose so that rows represent channels and columns represent epochs, matching the original version
+    return pd.DataFrame(std_array.T, index=channels)
 
 
 
@@ -387,7 +380,7 @@ def make_simple_metric_std(std_params:  dict, big_std_with_value_all_data: List[
     return simple_metric
 
 #%%
-def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: List):
+def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data_path:str, m_or_g_chosen: List):
 
     """
     Main STD function. Calculates:
@@ -421,6 +414,10 @@ def STD_meg_qc(std_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_
         String with notes about STD for report
     
     """
+    # Load data
+    data, shielding_str, meg_system = load_data(data_path)
+
+    # data.load_data()
 
     big_std_with_value_all_data = {}
     small_std_with_value_all_data = {}

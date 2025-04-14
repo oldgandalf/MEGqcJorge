@@ -20,15 +20,18 @@
 # spans of "good data" in between muscle artifacts are included in the
 # surrounding "BAD" annotation.
 
-
-
+import time
+import os
+import gc
 import mne
 import pandas as pd
 from scipy.signal import find_peaks
 import numpy as np
-from mne.preprocessing import annotate_muscle_zscore
+# from mne.preprocessing import annotate_muscle_zscore
+from meg_qc.optimizations.artifact_detection_ancp import annotate_muscle_zscore
 from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
+from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data,save_meg_with_suffix)
 
 def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chosen, channels):
 
@@ -64,7 +67,7 @@ def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chos
     noisy_freqs = {}
     for m_or_g in m_or_g_chosen:
 
-        psds, freqs = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=channels[m_or_g], n_jobs=-1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
+        psds, freqs = raw.compute_psd(method=method, fmin=psd_params['freq_min'], fmax=psd_params['freq_max'], picks=channels[m_or_g], n_jobs=1, n_fft=nfft, n_per_seg=nperseg).get_data(return_freqs=True)
         avg_psd=np.mean(psds,axis=0) # average psd over all channels
         prominence_pos=(max(avg_psd) - min(avg_psd)) / prominence_lvl_pos_avg
 
@@ -220,7 +223,7 @@ def attach_dummy_data(raw: mne.io.Raw, attach_seconds: int = 5):
 
 
 
-def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined):
+def calculate_muscle_NO_threshold(raw_muscle_path, m_or_g_decided, muscle_params, threshold_muscle, muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined, dataset_path):
 
     """
     Calculate muscle artifacts without thresholding by user.
@@ -267,8 +270,13 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
         z_score_details={}
 
         annot_muscle, scores_muscle = annotate_muscle_zscore(
-        raw, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
-        filter_freq=muscle_freqs)
+        raw_muscle_path,dataset_path, ch_type=m_or_g, threshold=threshold_muscle, min_length_good=muscle_params['min_length_good'],
+        filter_freq=muscle_freqs,)
+        gc.collect()
+
+        # Load raw muscle stage signal
+        raw, shielding_str, meg_system = load_data(raw_muscle_path)
+        # raw.load_data()
 
         #cut attached beginning and end from annot_muscle, scores_muscle:
         if cut_dummy is True:
@@ -278,7 +286,6 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
             scores_muscle = scores_muscle[int(attach_sec*raw.info['sfreq']): int(-attach_sec*raw.info['sfreq'])]
             raw = raw.crop(tmin=attach_sec, tmax=raw.times[int(-attach_sec*raw.info['sfreq'])])
 
-
         # Plot muscle z-scores across recording
         peak_locs_pos, _ = find_peaks(scores_muscle, height=threshold_muscle, distance=raw.info['sfreq']*min_distance_between_different_muscle_events)
 
@@ -286,6 +293,10 @@ def calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_
         high_scores_muscle=scores_muscle[peak_locs_pos]
 
         df_deriv = save_muscle_to_csv('Muscle', raw, scores_muscle, muscle_times, high_scores_muscle, m_or_g_decided[0])
+
+        # Clean raw
+        del raw
+        gc.collect()
 
         # collect all details for simple metric:
         z_score_details['muscle_event_times'] = muscle_times.tolist()
@@ -340,7 +351,7 @@ def save_muscle_to_csv(file_name_prefix: str, raw: mne.io.Raw, scores_muscle: np
     return df_deriv
 
 
-def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: dict, channels: dict, raw_orig: mne.io.Raw, noisy_freqs_global: dict, m_or_g_chosen:list, attach_dummy:bool = True, cut_dummy:bool = True):
+def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: dict, channels: dict, data_path: str, noisy_freqs_global: dict, m_or_g_chosen:list, dataset_path: str, attach_dummy:bool = True, cut_dummy:bool = True):
 
     """
     Detect muscle artifacts in MEG data. 
@@ -389,6 +400,10 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
 
     """
 
+    # Load data
+    raw_orig, shielding_str, meg_system = load_data(data_path)
+
+
     if noisy_freqs_global is None: # if PSD was not calculated before, calculate noise frequencies now:
         noisy_freqs_global = find_powerline_noise_short(raw_orig, psd_params, psd_params_internal, m_or_g_chosen, channels)
         print('___MEGqc___: ', 'Noisy frequencies found in data at (HZ): ', noisy_freqs_global)
@@ -398,7 +413,7 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
 
     muscle_freqs = muscle_params['muscle_freqs']
    
-    raw = raw_orig.copy() # make a copy of the raw data, to make sure the original data is not changed while filtering for this metric.
+    raw = raw_orig # make a copy of the raw data, to make sure the original data is not changed while filtering for this metric.
 
     if 'mag' in m_or_g_chosen:
         m_or_g_decided=['mag']
@@ -415,20 +430,29 @@ def MUSCLE_meg_qc(muscle_params: dict, psd_params: dict, psd_params_internal: di
     muscle_note = "This metric shows high frequency artifacts in range between 110-140 Hz. High power in this frequency band compared to the rest of the signal is strongly correlated with muscles artifacts, as suggested by MNE. However, high frequency oscillations may also occure in this range for reasons other than muscle activity (for example, in an empty room recording). "
     muscle_str_joined=muscle_note+"<p>"+muscle_str+"</p>"
 
-    raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
-
     attach_sec = 3 # seconds
 
     if attach_dummy is True:
         raw = attach_dummy_data(raw, attach_sec) #attach dummy data to avoid filtering artifacts at the beginning and end of the recording.  
 
+    raw.load_data() #need to preload data for filtering both in notch filter and in annotate_muscle_zscore
+
     # Filter out power line noise and other noisy freqs in range of muscle artifacts before muscle artifact detection.
     raw = filter_noise_before_muscle_detection(raw, noisy_freqs_global, muscle_freqs)
+
+    # Save filtered
+    raw_muscle_path = save_meg_with_suffix(data_path, dataset_path, raw, final_suffix="MUSCLE_FILTERED")
+    # Clean filtered
+    del raw
+    del raw_orig
+    gc.collect()
 
     # Loop through different thresholds for muscle artifact detection:
     threshold_muscle_list = muscle_params['threshold_muscle']  # z-score
     min_distance_between_different_muscle_events = muscle_params['min_distance_between_different_muscle_events']  # seconds
-    
-    simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined)
 
-    return df_deriv, simple_metric, muscle_str_joined, scores_muscle, raw
+    time.sleep(3)
+    simple_metric, scores_muscle, df_deriv = calculate_muscle_NO_threshold(raw_muscle_path, m_or_g_decided, muscle_params, threshold_muscle_list[0], muscle_freqs, cut_dummy, attach_sec, min_distance_between_different_muscle_events, muscle_str_joined,dataset_path)
+
+    os.remove(raw_muscle_path)
+    return df_deriv, simple_metric, muscle_str_joined, scores_muscle

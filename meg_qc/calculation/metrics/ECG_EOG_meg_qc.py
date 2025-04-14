@@ -10,7 +10,7 @@ from scipy.stats import pearsonr
 from typing import List, Union
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
-from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
+from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data)
 
 
 def check_3_conditions(ch_data: Union[List, np.ndarray], fs: int, ecg_or_eog: str, n_breaks_bursts_allowed_per_10min: int, allowed_range_of_peaks_stds: float, height_multiplier: float):
@@ -2007,7 +2007,7 @@ def align_mean_rwave(mean_rwave: np.ndarray, artif_per_ch: List, tmin: float, tm
 
 
 #%%
-def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, channels: List, chs_by_lobe_orig: dict, m_or_g_chosen: List):
+def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, channels: List, chs_by_lobe_orig: dict, m_or_g_chosen: List):
     
     """
     Main ECG function. Calculates average ECG artifact and finds affected channels.
@@ -2040,6 +2040,9 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
         
 
     """
+
+    # Load data
+    raw, shielding_str, meg_system = load_data(data_path)
 
     chs_by_lobe = copy.deepcopy(chs_by_lobe_orig) 
     #in case we will change this variable in any way. If not copied it might introduce errors in parallel processing. 
@@ -2228,7 +2231,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, raw: mne.io.Raw, cha
 
 
 #%%
-def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, channels: dict, chs_by_lobe_orig: dict, m_or_g_chosen: List):
+def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, data_path: str, channels: dict, chs_by_lobe_orig: dict, m_or_g_chosen: List):
     
     """
     Main EOG function. Calculates average EOG artifact and finds affected channels.
@@ -2260,6 +2263,8 @@ def EOG_meg_qc(eog_params: dict, eog_params_internal: dict, raw: mne.io.Raw, cha
         List of Avg_artif objects, each of which contains the EOG artifact from one MEG channel.
     
     """
+    # Load data
+    raw, shielding_str, meg_system = load_data(data_path)
 
     chs_by_lobe = copy.deepcopy(chs_by_lobe_orig) 
     #in case we will change this variable in any way. If not copied it might introduce errors in parallel processing. 

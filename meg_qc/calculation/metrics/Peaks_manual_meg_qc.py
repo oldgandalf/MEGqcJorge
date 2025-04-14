@@ -6,78 +6,99 @@ from scipy.signal import find_peaks
 from meg_qc.plotting.universal_plots import assign_epoched_std_ptp_to_channels
 from meg_qc.plotting.universal_html_report import simple_metric_basic
 from meg_qc.calculation.metrics.STD_meg_qc import make_dict_global_std_ptp, make_dict_local_std_ptp, get_big_small_std_ptp_all_data, get_noisy_flat_std_ptp_epochs
-from meg_qc.calculation.initial_meg_qc import chs_dict_to_csv
+from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data)
 import copy
 
 #The manual PtP version. 
 
-def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int, pos_peak_locs:np.ndarray, neg_peak_locs:np.ndarray, pos_peak_magnitudes: np.ndarray, neg_peak_magnitudes: np.ndarray):
+def neighbour_peak_amplitude(max_pair_dist_sec: float, sfreq: int,
+                             pos_peak_locs: np.ndarray, neg_peak_locs: np.ndarray,
+                             pos_magnitudes: np.ndarray, neg_magnitudes: np.ndarray):
+    """
+    Vectorized version that pairs each positive peak with the nearest negative peak.
+    Avoids Python loops and does not build the huge n_pos x n_neg matrix.
 
-    """ 
-    Find a pair: postive + negative peak and calculates the amplitude between them. 
-    If no neighbour is found withing given distance - this peak is skipped. 
-    If several neighbours are found - several pairs are created. 
-    As the result a mean peak-to-peak distance is calculated over all detected pairs for given chunck of data
-    
-    Parameters:
-    -----------
+    Parameters
+    ----------
     max_pair_dist_sec : float
-        Maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair
+        Maximum allowed distance (in seconds) for pairing +/- peaks
     sfreq : int
-        Sampling frequency of data. Attention to which data is used! original or resampled.
-    pos_peak_locs : np.ndarray
-        Output of peak_finder function - positions of detected Positive peaks
-    neg_peak_locs : np.ndarray
-        Output of peak_finder function - positions of detected Negative peaks
-    pos_peak_magnitudes : np.ndarray
-        Output of peak_finder function - magnitudes of detected Positive peaks
-    neg_peak_magnitudes : np.ndarray
-        Output of peak_finder function - magnitudes of detected Negative peaks
+        Sampling frequency
+    pos_peak_locs : np.ndarray (sorted)
+        Indices of detected positive peaks
+    neg_peak_locs : np.ndarray (sorted)
+        Indices of detected negative peaks
+    pos_magnitudes : np.ndarray
+        Magnitude at each positive peak
+    neg_magnitudes : np.ndarray
+        Magnitude at each negative peak
 
-    Returns:
-    --------
-    mean_amplitude : float
-        Mean value over all detected peak pairs for this chunck of data.
-    amplitude : np.ndarray
-        Array of all detected peak pairs for this chunck of data.
-
+    Returns
+    -------
+    mean_amp : float
+        Mean amplitude of all valid pairs
+    amplitudes : np.ndarray
+        Amplitudes of all valid pairs
     """
 
-    if len(pos_peak_locs)<1 or len(neg_peak_locs)<1:
-        return 0, None
-    
-    pair_dist=max_pair_dist_sec*sfreq
-    pairs_magnitudes=[]
-    pairs_locs=[]
+    # If there are no peaks, nothing can be calculated
+    if len(pos_peak_locs) == 0 or len(neg_peak_locs) == 0:
+        return 0.0, None
 
-    # Looping over all positive peaks
-    for posit_peak_ind, posit_peak_loc in enumerate(pos_peak_locs):
-        
-        # Finding the value in neg_peak_locs which is closest to posit_peak_loc
-        closest_negative_peak_index = np.abs(neg_peak_locs - posit_peak_loc).argmin()
+    max_pair_dist = (max_pair_dist_sec * sfreq) / 2.0
 
-        # Check if the closest negative peak is within the given distance
-        if np.abs(neg_peak_locs[closest_negative_peak_index] - posit_peak_loc) <= pair_dist / 2:
-            pairs_locs.append([pos_peak_locs[posit_peak_ind], neg_peak_locs[closest_negative_peak_index]])
-            pairs_magnitudes.append([pos_peak_magnitudes[posit_peak_ind], neg_peak_magnitudes[closest_negative_peak_index]])
-        
+    # 1) Use searchsorted to position each positive peak in neg_peak_locs
+    #    idxs_left is the index where each positive peak would be "inserted."
+    #    Thus, idxs_left[i] - 1 points to the negative peak on the left,
+    #    and idxs_left[i] points to the one on the right (if it exists).
+    idxs_left = np.searchsorted(neg_peak_locs, pos_peak_locs, side='left')
 
-    # if no positive+negative pairs were fould (no corresponding peaks at given distamce to each other) -> 
-    # - give the difference between min and max value of the data + a note that no pairs were found
+    # 2) Build arrays of indices for the candidate negative peak to the left (left_cand)
+    #    and to the right (right_cand). Where the left one does not exist (idx=0), we set -1
+    left_cand = idxs_left - 1  # could be -1 if it does not exist
+    right_cand = idxs_left    # could be == len(neg_peak_locs) if it does not exist
 
-    if len(pairs_magnitudes)==0:
-        pairs_magnitudes.append([max(pos_peak_magnitudes), min(neg_peak_magnitudes)])
-        print('___MEGqc___: ', 'No pairs found with the given distance between peaks. The amplitude is calculated as the difference between the max and min value of the entire data. \nConsider changing the distance between peaks in the config file.')
+    # Ensure they do not exceed the valid bounds [0, len(neg_peak_locs)-1]
+    valid_left = (left_cand >= 0)
+    valid_right = (right_cand < len(neg_peak_locs))
 
-    amplitude=np.zeros(len(pairs_magnitudes),)
-    #print('___MEGqc___: ', 'Number of peaks pairs used for for PtP calculation: ', len(pairs_magnitudes))
-    #TODO: think of: sometimes we get only a few pairs, like 1-2-3, this is not enough for an accurate estimation of the mean amplitude.
-    # Set minimum of pairs or another approach?
-    
-    for i, pair in enumerate(pairs_magnitudes):
-        amplitude[i]=pair[0]-pair[1]
+    # 3) Create arrays for the locations and magnitudes of each candidate
+    #    If the candidate is invalid, set an 'impossible' value that we'll filter out later.
+    left_locs = np.full_like(pos_peak_locs, -999999, dtype=np.int64)
+    left_mags = np.zeros_like(pos_magnitudes)
+    left_locs[valid_left] = neg_peak_locs[left_cand[valid_left]]
+    left_mags[valid_left] = neg_magnitudes[left_cand[valid_left]]
 
-    return np.mean(amplitude), amplitude
+    right_locs = np.full_like(pos_peak_locs, 999999999, dtype=np.int64)
+    right_mags = np.zeros_like(pos_magnitudes)
+    right_locs[valid_right] = neg_peak_locs[right_cand[valid_right]]
+    right_mags[valid_right] = neg_magnitudes[right_cand[valid_right]]
+
+    # 4) For each positive peak, compute the distance to its left and right candidate
+    dist_left = np.abs(pos_peak_locs - left_locs)
+    dist_right = np.abs(pos_peak_locs - right_locs)
+
+    # Choose whichever is closer
+    left_is_better = (dist_left <= dist_right)
+
+    # Build arrays 'best_neg_loc' and 'best_neg_mag' with the best candidate for each positive peak
+    best_neg_loc = np.where(left_is_better, left_locs, right_locs)
+    best_neg_mag = np.where(left_is_better, left_mags, right_mags)
+    best_dist = np.where(left_is_better, dist_left, dist_right)
+
+    # 5) Filter only those pairs within max_pair_dist
+    mask_valid = best_dist <= max_pair_dist
+    if not np.any(mask_valid):
+        # Fallback case: there are no pairs within distance, use max-min of everything
+        fallback_amp = pos_magnitudes.max() - neg_magnitudes.min()
+        print("___MEGqc___: No valid +/- pairs found; fallback amplitude used.")
+        return fallback_amp, np.array([fallback_amp], dtype=float)
+
+    # 6) Calculate amplitude: pos_peak - neg_peak
+    amps = pos_magnitudes[mask_valid] - best_neg_mag[mask_valid]
+
+    return amps.mean(), amps
+
 
 
 def get_ptp_all_data(data: mne.io.Raw, channels: List, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
@@ -132,56 +153,65 @@ def get_ptp_all_data(data: mne.io.Raw, channels: List, sfreq: int, ptp_thresh_lv
     return peak_ampl_channels_named
 
 
-def get_ptp_epochs(channels: List, epochs_mg: mne.Epochs, sfreq: int, ptp_thresh_lvl: float, max_pair_dist_sec: float):
-
-    """  
-    Calculate peak-to-peak amplitude for every epoch and every channel (mag or grad).
-
-    Parameters:
-    -----------
-    channels : List
-        List of channel names to be used for peak-to-peak amplitude calculation
-    epochs_mg : mne.Epochs
-        Epochs data
-    sfreq : int
-        Sampling frequency of data. Attention to which data is used! original or resampled.
-    ptp_thresh_lvl : float  
-        The level definig how the PtP threshold will be scaled. Higher number will result in more peaks detected.
-        The threshold is calculated as (max - min) / ptp_thresh_lvl
-    max_pair_dist_sec : float
-        Maximum distance in seconds which is allowed for negative+positive peaks to be detected as a pair
-
-    Returns:
-    --------
-    pd.DataFrame
-        Dataframe containing the mean peak-to-peak aplitude for each epoch for each channel
-
+def get_ptp_epochs(channels: List, epochs_mg: mne.Epochs, sfreq: int,
+                   ptp_thresh_lvl: float, max_pair_dist_sec: float):
     """
-    dict_ep = {}
+    Computes the peak-to-peak (PtP) amplitude for each epoch and each channel in a vectorized manner.
 
-    #get 1 epoch, 1 channel and calculate PtP on its data:
-    for ep in range(0, len(epochs_mg)):
-        peak_ampl_epoch=[]
-        for ch_name in channels: 
-            data_ch_epoch=epochs_mg[ep].get_data(picks=ch_name)[0][0]
-            #[0][0] is because get_data creats array in array in array, it expects several epochs, several channels, but we only need  one.
-            
-            thresh=(max(data_ch_epoch) - min(data_ch_epoch)) / ptp_thresh_lvl 
-            #can also change the whole thresh to a single number setting
+    Parameters
+    ----------
+    channels : List
+        List of channel names.
+    epochs_mg : mne.Epochs
+        Epoched data.
+    sfreq : int
+        Sampling frequency.
+    ptp_thresh_lvl : float
+        Threshold: (max-min)/ptp_thresh_lvl.
+    max_pair_dist_sec : float
+        Maximum distance in seconds for pairing peaks.
 
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with one row per channel and one column per epoch, containing the PtP amplitude.
+    """
+    # Extract the data for the selected channels
+    # data shape: (n_epochs, n_channels, n_times)
+    data = epochs_mg.get_data(picks=channels)
+    n_epochs = data.shape[0]
+    n_channels = data.shape[1]
 
-            pos_peak_locs, _ = find_peaks(data_ch_epoch, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
-            pos_peak_magnitudes = data_ch_epoch[pos_peak_locs]
+    # Initialize a matrix to store the PtP amplitude for each channel/epoch
+    ptp_matrix = np.empty((n_channels, n_epochs))
 
-            neg_peak_locs, _ = find_peaks(-data_ch_epoch, prominence=thresh) #assume there are no peaks within 0.5 seconds from each other.
-            neg_peak_magnitudes = data_ch_epoch[neg_peak_locs]
-            
-            pp_ampl,_=neighbour_peak_amplitude(max_pair_dist_sec, sfreq, pos_peak_locs, neg_peak_locs, pos_peak_magnitudes, neg_peak_magnitudes)
-            peak_ampl_epoch.append(pp_ampl)
+    # Loop through epochs and channels
+    for ep in range(n_epochs):
+        for ch in range(n_channels):
+            one_ch_data = data[ep, ch, :]
+            # Compute a threshold based on the difference between max and min,
+            # scaled by ptp_thresh_lvl
+            thresh = (one_ch_data.max() - one_ch_data.min()) / ptp_thresh_lvl
 
-        dict_ep[ep] = peak_ampl_epoch
+            # Find positive and negative peaks above that threshold
+            pos_peaks, _ = find_peaks(one_ch_data, prominence=thresh)
+            neg_peaks, _ = find_peaks(-one_ch_data, prominence=thresh)
+            pos_mags = one_ch_data[pos_peaks]
+            neg_mags = one_ch_data[neg_peaks]
 
-    return pd.DataFrame(dict_ep, index=channels)
+            # Use neighbour_peak_amplitude to compute the mean amplitude
+            mean_amp, _ = neighbour_peak_amplitude(
+                max_pair_dist_sec, sfreq,
+                pos_peaks, neg_peaks,
+                pos_mags, neg_mags
+            )
+
+            # Fill in the results
+            ptp_matrix[ch, ep] = mean_amp
+
+    # Return the results in a DataFrame, indexed by channel
+    return pd.DataFrame(ptp_matrix, index=channels)
+
 
 
 
@@ -240,7 +270,7 @@ def make_simple_metric_ptp_manual(ptp_manual_params: dict, big_ptp_with_value_al
     return simple_metric
 
 
-def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data: mne.io.Raw, m_or_g_chosen: List):
+def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict, dict_epochs_mg: dict, data_path:str, m_or_g_chosen: List):
 
     """
     Main Peak to peak amplitude function. Calculates:
@@ -278,7 +308,10 @@ def PP_manual_meg_qc(ptp_manual_params: dict, channels: dict, chs_by_lobe: dict,
         String with notes about PtP manual for report
     
     """
+    # Load data
+    data, shielding_str, meg_system = load_data(data_path)
 
+    # data.load_data()
 
     sfreq = data.info['sfreq']
 

@@ -38,7 +38,7 @@ def create_categories_for_selector(entities: dict):
     ----------
     entities : dict
         A dictionary of entities and their subcategories.
-    
+
     Returns
     -------
     categories : dict
@@ -54,9 +54,9 @@ def create_categories_for_selector(entities: dict):
         for k, v in categories.items()
     }
 
-    #From METRIC remove whatever is not metric. 
+    #From METRIC remove whatever is not metric.
     #Cos METRIC is originally a desc entity which can contain just anything:
-                
+
     if 'METRIC' in categories:
         valid_metrics = ['_ALL_METRICS_', 'STDs', 'PSDs', 'PtPsManual', 'PtPsAuto', 'ECGs', 'EOGs', 'Head', 'Muscle']
         categories['METRIC'] = [x for x in categories['METRIC'] if x.lower() in [metric.lower() for metric in valid_metrics]]
@@ -108,7 +108,7 @@ def selector(entities: dict):
         if quit_selector: # if user clicked cancel - stop:
             print('___MEGqc___: You clicked cancel. Please start over.')
             return None, None
-        
+
         selected[key] = results
 
 
@@ -197,7 +197,7 @@ def get_ds_entities(dataset, calculated_derivs_folder: str):
         The dataset object.
     calculated_derivs_folder : str
         The path to the calculated derivatives folder.
-    
+
     Returns
     -------
     entities : dict
@@ -205,13 +205,13 @@ def get_ds_entities(dataset, calculated_derivs_folder: str):
 
     """
 
-    try: 
+    try:
         entities = dataset.query_entities(scope=calculated_derivs_folder)
         print('___MEGqc___: ', 'Entities found in the dataset: ', entities)
         #we only get entities of calculated derivatives here, not entire raw ds.
     except:
         raise FileNotFoundError(f'___MEGqc___: No calculated derivatives found for this ds!')
-    
+
     return entities
 
 
@@ -232,26 +232,26 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
         The path to the JSON file containing the report strings.
     plot_settings : dict
         A dictionary of selected settings for plotting.
-    
+
     Returns
     -------
     report_html_string : str
         The HTML report as a string.
-    
+
     """
 
-    m_or_g_chosen = plot_settings['m_or_g'] 
+    m_or_g_chosen = plot_settings['m_or_g']
 
     time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
     stim_derivs = []
-    
+
     for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
         #get the final file name of tsv path:
         basename = os.path.basename(tsv_path)
         if 'desc-stimulus' in basename:
-            stim_derivs = plot_stim_csv(tsv_path) 
+            stim_derivs = plot_stim_csv(tsv_path)
 
         if 'STD' in metric.upper():
 
@@ -259,7 +259,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
             fig_std_epoch1 = []
 
             std_derivs += plot_sensors_3d_csv(tsv_path)
-        
+
             for m_or_g in m_or_g_chosen:
 
                 fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
@@ -276,7 +276,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
             fig_ptp_epoch1 = []
 
             ptp_manual_derivs += plot_sensors_3d_csv(tsv_path)
-        
+
             for m_or_g in m_or_g_chosen:
 
                 fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
@@ -289,8 +289,8 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
         elif 'PSD' in metric.upper():
 
-            method = 'welch' 
-            #is also preselected in internal_settings.ini Adjust here if change in calculation, 
+            method = 'welch'
+            #is also preselected in internal_settings.ini Adjust here if change in calculation,
             # this module doesnt access internal settings
 
             psd_derivs += plot_sensors_3d_csv(tsv_path)
@@ -325,19 +325,19 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
             eog_derivs += plot_ECG_EOG_channel_csv(tsv_path)
 
             eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
-                
+
             for m_or_g in m_or_g_chosen:
                 eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
                 #eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
-            
+
         elif 'MUSCLE' in metric.upper():
 
             muscle_derivs +=  plot_muscle_csv(tsv_path)
 
-            
+
         elif 'HEAD' in metric.upper():
-                
+
             head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
             # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
             # head_pos_derivs += head_pos_derivs2
@@ -388,19 +388,19 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
     report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings)
 
-    return report_html_string 
+    return report_html_string
 
 
 def extract_raw_entities_from_obj(obj):
 
     """
     Function to create a key from the object excluding the 'desc' attribute
-    
+
     Parameters
     ----------
     obj : ancpbids object
         An object from ancpbids.
-    
+
     Returns
     -------
     tuple
@@ -423,7 +423,7 @@ def sort_tsvs_by_raw(tsvs_by_metric: dict):
     ----------
     tsvs_by_metric : dict
         A dictionary of metrics and their corresponding TSV files.
-    
+
     Returns
     -------
     combined_tsvs_by_metric : dict
@@ -435,11 +435,11 @@ def sort_tsvs_by_raw(tsvs_by_metric: dict):
 
     for metric, obj_dict in tsvs_by_metric.items():
         combined_dict = defaultdict(list)
-        
+
         for obj, tsv_path in obj_dict.items():
             raw_entities = extract_raw_entities_from_obj(obj)
             combined_dict[raw_entities].extend(tsv_path)
-        
+
         # Convert keys back to original objects
         final_dict = {}
         for raw_entities, paths in combined_dict.items():
@@ -448,7 +448,7 @@ def sort_tsvs_by_raw(tsvs_by_metric: dict):
                 if extract_raw_entities_from_obj(obj) == raw_entities:
                     final_dict[obj] = paths
                     break
-    
+
         sorted_tsvs_by_metric_by_raw[metric] = final_dict
 
     pprint('___MEGqc___: ', 'sorted_tsvs_by_metric_by_raw: ', sorted_tsvs_by_metric_by_raw)
@@ -472,7 +472,7 @@ class Deriv_to_plot:
         The name of the raw entity.
     subject : str
         The subject ID.
-    
+
     Methods
     -------
     __repr__()
@@ -481,8 +481,8 @@ class Deriv_to_plot:
         Print the detailed entities of the object.
     find_raw_entity_name()
         Find the raw entity name from the deriv entity name.
-    
-    """ 
+
+    """
 
     def __init__(self, path: str, metric: str, deriv_entity_obj, raw_entity_name: str = None):
 
@@ -514,7 +514,7 @@ class Deriv_to_plot:
 
         """
         Print the detailed entities of the object, cos in ANCP representation it s cut.
-        Here skipping the last value, cos it s the contents. 
+        Here skipping the last value, cos it s the contents.
         If u got a lot of contents, like html it ll print you a book XD.
         """
 
@@ -532,230 +532,172 @@ class Deriv_to_plot:
 
 
 def make_plots_meg_qc(dataset_path: str):
-
     """
-    Create plots for the MEG QC pipeline.
-
-    How it works:
-    - Load the data set with ancp bids
-    - Find what entities (sub, task, etc we have in Derivatives of that data set in MEG_QC folder
-    - based on entities creates a selector for the user in the command line. Selector is sort of a gui, slect by clicking, scroll with buttons up/down
-    - For selected entities finds all fitting TSVs, also raw info and ReportStrings in MEG_QC drivs folder using ancpbids
-    - Arranges figure for every separate metric and referring to every original raw data file into a separate HTML report
-    - Writes that HTML report into the file system with ancpbuds usong the recreated entities of original raw file.
-    (Here we dont have access to raw file, only to derivatives, so the original entities are recareted using the search on the file name and such. 
-    Maybe there is a better way using ANCP bids to reacreate the raw entities, consult devs.)
-
-
-    Parameters
-    ----------
-    dataset_path : str
-        A list of paths to the datasets.
-    
-    Returns
-    -------
-    tsvs_to_plot_by_metric : dict
-        A dictionary of metrics and their corresponding TSV files.
-    
+    Create plots for the MEG QC pipeline, but WITHOUT the interactive selector.
+    Instead, we assume 'all' for every entity (subject, task, session, run, metric).
     """
-
-    #1. ____Collect what we got in the derivatives and give user selector to choose what to plot in report____
 
     try:
         dataset = ancpbids.load_dataset(dataset_path)
         schema = dataset.get_schema()
     except:
-        print('___MEGqc___: ', 'No data found in the given directory path! \nCheck directory path in config file and presence of data on your device.')
+        print('___MEGqc___: ',
+              'No data found in the given directory path! \nCheck directory path in config file and presence of data.')
         return
 
-    #make sure the derivatives folder exists (it must! otherwise what do we plot from?):
+    # Make sure the derivatives folder exists:
     derivatives_path = os.path.join(dataset_path, 'derivatives')
     if not os.path.isdir(derivatives_path):
         os.mkdir(derivatives_path)
-        print('___MEGqc___: ', 'Derivs folder was not found! Created new.')
+        print('___MEGqc___: Derivs folder was not found! Created new.')
 
     calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
 
-    entities = get_ds_entities(dataset, calculated_derivs_folder) #get entities of the dataset using ancpbids
+    # --------------------------------------------------------------------------------
+    # REPLACE THE SELECTOR WITH A HARDCODED "ALL" CHOICE
+    # --------------------------------------------------------------------------------
+    # 1) Get all discovered entities from the derivatives scope
+    entities_found = get_ds_entities(dataset, calculated_derivs_folder)
 
-    chosen_entities, plot_settings = selector(entities)
-    if not chosen_entities:
-        return
+    # Suppose 'description' is the metric list
+    all_metrics = entities_found.get('description', [])
 
-    #check that 'task' and 'subject' entities are not empty, because they are REQUIRED: 
-    if 'task' not in chosen_entities or not chosen_entities['task']:
-        print('___MEGqc___: ', 'Task entity is required! Please start over and select a task.')
-        return
-    
-    if 'subject' not in chosen_entities or not chosen_entities['subject']:
-        print('___MEGqc___: ', 'Subject entity is required! Please start over and select a subject.')
-        return
-    
-    # Ensure 'run' and 'session' are in chosen_entities, set to None if missing.
-    # None can be ignored by ancpbids later, but empty list can raise errors
-    for key in ['run', 'session']:
-        chosen_entities.setdefault(key, None)
+    # If you want them deduplicated, do:
+    all_metrics = list(set(all_metrics))
 
-    #Add stimulus, raw info obj and report strings.
+    # Now store it in chosen_entities as a list
+    chosen_entities = {
+        'subject': list(entities_found.get('subject', [])),
+        'task': list(entities_found.get('task', [])),
+        'session': list(entities_found.get('session', [])),
+        'run': list(entities_found.get('run', [])),
+        'METRIC': all_metrics
+    }
+
+    # And now you can append or pop, etc.
     chosen_entities['METRIC'].append('stimulus')
     chosen_entities['METRIC'].append('RawInfo')
     chosen_entities['METRIC'].append('ReportStrings')
 
-    print('___MEGqc___: CHOSEN entities to plot: ', chosen_entities)
-    print('___MEGqc___: CHOSEN settings: ', plot_settings)
+    # 5) Define a simple plot_settings. Example: always 'mag' and 'grad'
+    plot_settings = {'m_or_g': ['mag', 'grad']}
 
+    print('___MEGqc___: CHOSEN entities to plot:', chosen_entities)
+    print('___MEGqc___: CHOSEN settings:', plot_settings)
+    # --------------------------------------------------------------------------------
 
-    # 2. ____Here we collect tsvs to be plotted in the report for each sub, metric based on selection:____
-
-    calculated_derivs_folder = os.path.join('derivatives', 'Meg_QC', 'calculation')
-
+    # 2. Collect TSVs for each sub + metric
     tsvs_to_plot_by_metric = {}
     tsv_entities_by_metric = {}
 
     for metric in chosen_entities['METRIC']:
-        # Creating the full list of files for each combination of chosen entities:
-
-        # We call query with entities that always must present + entities that might present, might not:
-        # This is how the call would look if we had all entities:
-        # tsv_path = sorted(list(dataset.query(suffix='meg', extension='.tsv', return_type='filename', subj=sub, ses = chosen_entities['session'], task = chosen_entities['task'], run = chosen_entities['run'], desc = desc, scope=calculated_derivs_folder)))
-
-        #required entities:
-        entities = {
+        query_args = {
             'subj': chosen_entities['subject'],
             'task': chosen_entities['task'],
             'suffix': 'meg',
-            'extension': ['tsv', 'json', 'fif'], 
-            #tsv is for all the figures, json is for report strings, fif is for raw info obj.
+            'extension': ['tsv', 'json', 'fif'],
             'return_type': 'filename',
             'desc': '',
             'scope': calculated_derivs_folder,
         }
 
-        #add desc based on metric:
+        # If the user (now "all") had multiple possible descs for PSDs, ECGs, etc.
         if metric == 'PSDs':
-            entities['desc'] = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
+            query_args['desc'] = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
         elif metric == 'ECGs':
-            entities['desc'] = ['ECGchannel', 'ECGs']
+            query_args['desc'] = ['ECGchannel', 'ECGs']
         elif metric == 'EOGs':
-            entities['desc'] = ['EOGchannel', 'EOGs']
+            query_args['desc'] = ['EOGchannel', 'EOGs']
         else:
-            entities['desc'] = [metric]
+            query_args['desc'] = [metric]
 
+        # Optional session/run
+        if chosen_entities['session']:
+            query_args['session'] = chosen_entities['session']
+        if chosen_entities['run']:
+            query_args['run'] = chosen_entities['run']
 
-        #optional entities:
-        if 'session' in chosen_entities and chosen_entities['session']:
-            entities['session'] = chosen_entities['session']
-
-        if 'run' in chosen_entities and chosen_entities['run']:
-            entities['run'] = chosen_entities['run']
-
-        # Query tsv derivs and get the tsv paths:
-        tsv_paths = list(dataset.query(**entities))
+        tsv_paths = list(dataset.query(**query_args))
         tsvs_to_plot_by_metric[metric] = sorted(tsv_paths)
 
-        # Query same tsv derivs and get the tsv entities to later use them to save report with same entities by ancpbids:
-        entities['return_type'] = 'object'
-        entities_obj = sorted(list(dataset.query(**entities)), key=lambda k: k['name'])
+        # Now query object form for ancpbids entities
+        query_args['return_type'] = 'object'
+        entities_obj = sorted(list(dataset.query(**query_args)), key=lambda k: k['name'])
         tsv_entities_by_metric[metric] = entities_obj
 
-
-    # Collect all derivs into a list of Deriv_to_plot objects, combining tsv path and its entities:
+    # Convert them into a list of Deriv_to_plot objects
     derivs_to_plot = []
-    for (tsv_metric, tsv_paths), (entity_metric, entity_vals) in zip(tsvs_to_plot_by_metric.items(), tsv_entities_by_metric.items()):
-
-        # 1) Check:
+    for (tsv_metric, tsv_paths), (entity_metric, entity_vals) in zip(
+        tsvs_to_plot_by_metric.items(),
+        tsv_entities_by_metric.items()
+    ):
         if tsv_metric != entity_metric:
             raise ValueError('Different metrics in tsvs_to_plot_by_metric and entities_per_file')
         if len(tsv_paths) != len(entity_vals):
-            raise ValueError('Different number of tsvs and entities for metric: ', tsv_metric)
-        
-        for tsv_paths, deriv_entities in zip(tsv_paths, entity_vals):
-        #check that every metric_value is same as file_value:
-            file_name_in_path = os.path.basename(tsv_paths).split('_meg.')[0]
+            raise ValueError(f'Different number of tsvs and entities for metric: {tsv_metric}')
+
+        for tsv_path, deriv_entities in zip(tsv_paths, entity_vals):
+            file_name_in_path = os.path.basename(tsv_path).split('_meg.')[0]
             file_name_in_obj = deriv_entities['name'].split('_meg.')[0]
 
             if file_name_in_obj not in file_name_in_path:
                 raise ValueError('Different names in tsvs_to_plot_by_metric and entities_per_file')
-            
-            #2) Collect:
-            deriv = Deriv_to_plot(path = tsv_paths, metric = tsv_metric, deriv_entity_obj = deriv_entities)
-            deriv.find_raw_entity_name()
 
+            deriv = Deriv_to_plot(path=tsv_path, metric=tsv_metric, deriv_entity_obj=deriv_entities)
+            deriv.find_raw_entity_name()
             derivs_to_plot.append(deriv)
 
-
-    # 3. ___Create the derivatives for each metric and save them to the dataset:___
-
-    # Create a folder for the reports
+    # 3. Create derivative folder for reports
     derivative = dataset.create_derivative(name="Meg_QC")
     derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
-
     reports_folder = derivative.create_folder(name='reports')
 
-    #for each sub and each raw_entity_name derivs_to_plot find RawInfo, ReportStrings and all tsvs for this raw:
-
+    # For each subject, gather raw_entity_name(s) and build HTML
     for sub in chosen_entities['subject']:
-        subject_folder = reports_folder.create_folder(name='sub-'+sub)
+        subject_folder = reports_folder.create_folder(name='sub-' + sub)
 
-        #find existing raws for this subject:
-        existing_raws_per_sub = list(set([deriv.raw_entity_name for deriv in derivs_to_plot if deriv.subject == sub]))
-
+        existing_raws_per_sub = list(set(
+            d.raw_entity_name for d in derivs_to_plot if d.subject == sub
+        ))
 
         for raw_entity_name in existing_raws_per_sub:
-            #for each raw entity name, find all derivs that belong to this raw:
-            derivs_for_this_raw = [deriv for deriv in derivs_to_plot if deriv.raw_entity_name == raw_entity_name]
+            derivs_for_this_raw = [d for d in derivs_to_plot if d.raw_entity_name == raw_entity_name]
 
-            #find RawInfo and ReportStrings for this raw in derivs_for_this_raw:
             raw_info_path = None
             report_str_path = None
-            tsv_paths = []
+            for d in derivs_for_this_raw:
+                if d.metric == 'RawInfo':
+                    raw_info_path = d.path
+                elif d.metric == 'ReportStrings':
+                    report_str_path = d.path
 
-            for deriv in derivs_for_this_raw:
-                if deriv.metric == 'RawInfo':
-                    raw_info_path = deriv.path
-                elif deriv.metric == 'ReportStrings':
-                    report_str_path = deriv.path
-
-
-            # Now create a separate report for each METRIC for this raw file:
-            metrics_to_plot = [metric for metric in chosen_entities['METRIC'] if metric not in ['RawInfo', 'ReportStrings']]
-
+            # Now create separate reports for each METRIC
+            metrics_to_plot = [m for m in chosen_entities['METRIC'] if m not in ['RawInfo', 'ReportStrings']]
 
             for metric in metrics_to_plot:
-
-                #collect tsvs for this metric:
-                tsv_paths = [deriv.path for deriv in derivs_for_this_raw if deriv.metric == metric]
+                tsv_paths = [d.path for d in derivs_for_this_raw if d.metric == metric]
                 if not tsv_paths:
-                    print(f'___MEGqc___: No tsvs found for this metric ({metric}) and subject ({sub})')
+                    print(f'___MEGqc___: No tsvs found for {metric} / subject {sub}')
                     continue
-                    
-                tsvs_for_this_raw = [deriv for deriv in derivs_for_this_raw if deriv.metric == metric]
 
+                tsvs_for_this_raw = [d for d in derivs_for_this_raw if d.metric == metric]
                 raw_entities_to_write = tsvs_for_this_raw[0].deriv_entity_obj
-                # take any file belonging to this raw and metric, we only need basic ancpbids entities, 
-                # desc and extention add later.
-                # But if we take one randow file for this raw, but not this metric, everything gets messed up,
-                # some ancp bids magic, talk to developers about it. XD
-                
 
-                # Now prepare the derivative to be written:
-                meg_artifact = subject_folder.create_artifact(raw=raw_entities_to_write) 
-                #meg_artifact = subject_folder.create_artifact() 
-                # create artifact, take entities from entities of the previously calculated tsv derivative
-
-                meg_artifact.add_entity('desc', metric) #add metric to entities
+                meg_artifact = subject_folder.create_artifact(raw=raw_entities_to_write)
+                meg_artifact.add_entity('desc', metric)
                 meg_artifact.suffix = 'meg'
                 meg_artifact.extension = '.html'
 
-                deriv = csv_to_html_report(raw_info_path, metric, tsv_paths, report_str_path, plot_settings)
+                # Build the HTML
+                html_report = csv_to_html_report(raw_info_path, metric, tsv_paths, report_str_path, plot_settings)
 
-                #define method how the derivative will be written to file system:
-                meg_artifact.content = lambda file_path, cont=deriv: cont.save(file_path, overwrite=True, open_browser=False)
+                # define how to write
+                meg_artifact.content = lambda file_path, rep=html_report: rep.save(
+                    file_path, overwrite=True, open_browser=False
+                )
 
-    #write the derivative to the dataset:
-    ancpbids.write_derivative(dataset, derivative) 
-
-    return 
+    ancpbids.write_derivative(dataset, derivative)
+    return
 
 
 # ____________________________
