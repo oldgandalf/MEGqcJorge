@@ -1,0 +1,4 @@
+[console_scripts]
+get-megqc-config = meg_qc.test:get_config
+run-megqc = meg_qc.test:run_megqc
+run-megqc-plotting = meg_qc.test:get_plots

@@ -1,5 +1,8 @@
-[build-system]
-requires = ["setuptools", "wheel==0.30.0"]
-[project.scripts]
-megqc = "meg_qc.run_megqc:hello_world"
+#[build-system]
+#requires = ["setuptools", "wheel==0.30.0"]
+#[project.scripts]
+#megqc = "meg_qc.run_megqc:hello_world"
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "versioneer[toml]"]
+build-backend = "setuptools.build_meta"
