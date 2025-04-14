@@ -3,4 +3,4 @@ prompt_toolkit==3.0.48
 mne~=1.6.0
 pandas>=2.0.3
 plotly==5.24.1
-
+joblib==1.4.2

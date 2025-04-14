@@ -21,8 +21,8 @@ if __name__ == '__main__':
         cmdclass=versioneer.get_cmdclass(),
         setup_requires=SETUP_REQUIRES,
         install_requires=INSTALL_REQUIRES,
-        packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings'],
-        url='https://github.com/AaronReer/MEGqc',
+        packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings','meg_qc/calculation','meg_qc/optimizations'],
+        url='https://github.com/karellopez/MEGqc',
         entry_points={
             'console_scripts':[
                 'run-megqc = meg_qc.test:run_megqc',
@@ -32,4 +32,4 @@ if __name__ == '__main__':
         },
         license='MIT',
         author='ANCP',
-        author_email='aaron.reer@uol.de')
+        author_email='karel.mauricio.lopez.vilaret@uni-oldenburg.de')
