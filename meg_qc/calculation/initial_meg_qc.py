@@ -854,7 +854,8 @@ def sort_channels_by_lobe(channels_objs: dict):
 
     return chs_by_lobe
 
-def save_meg_with_suffix( file_path: str,dataset_path: str,raw,final_suffix: str = "FILTERED") -> str:
+
+def save_meg_with_suffix(file_path: str, dataset_path: str, raw, final_suffix: str = "FILTERED") -> str:
     """
     Given the original file_path (MEG data) and an MNE raw object,
     this function creates an output directory based on the file_path
@@ -931,16 +932,21 @@ def save_meg_with_suffix( file_path: str,dataset_path: str,raw,final_suffix: str
     os.makedirs(output_dir, exist_ok=True)
     print("Directory created (or already exists):", output_dir)
 
-    # 10) Build new filename with suffix
+    # 10) Build new filename with suffix.
+    #    If the data is CTF, it will replace .ds with .fif
     filename = os.path.basename(file_path)
     name, ext = os.path.splitext(filename)
-    new_filename = f"{name}_{final_suffix}{ext}"
 
+    if ext.lower() == '.ds':
+        ext = '.fif'
+
+    new_filename = f"{name}_{final_suffix}{ext}"
     new_file_path = os.path.join(output_dir, new_filename)
     print("New file path:", new_file_path)
 
     # 11) Save
     raw.save(new_file_path, overwrite=True, verbose='ERROR')
+
     return new_file_path
 
 
