@@ -10,7 +10,6 @@ import shutil
 from typing import List, Union
 from joblib import Parallel, delayed
 
-
 # Needed to import the modules without specifying the full path, for command line and jupyter notebook
 sys.path.append(os.path.join('.'))
 sys.path.append(os.path.join('.', 'meg_qc', 'calculation'))
@@ -24,8 +23,8 @@ sys.path.append(os.path.join('..', '..', 'meg_qc', 'calculation'))
 sys.path.append(os.path.join('..', '..', '..', 'meg_qc', 'calculation'))
 sys.path.append(os.path.join('..', '..', '..', '..', 'meg_qc', 'calculation'))
 
-
-from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params, delete_temp_folder
+from meg_qc.calculation.initial_meg_qc import get_all_config_params, initial_processing, get_internal_config_params, \
+    delete_temp_folder
 # from meg_qc.plotting.universal_html_report import make_joined_report, make_joined_report_mne
 from meg_qc.plotting.universal_plots import QC_derivative
 
@@ -37,8 +36,8 @@ from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
-def ctf_workaround(dataset, sid):
 
+def ctf_workaround(dataset, sid):
     artifacts = dataset.query(suffix="meg", return_type="object", subj=sid, scope='raw')
     # convert to folders of found files
     folders = map(lambda a: a.get_parent().get_absolute_path(), artifacts)
@@ -57,7 +56,6 @@ def ctf_workaround(dataset, sid):
 
 
 def get_files_list(sid: str, dataset_path: str, dataset):
-
     """
     Different ways for fif, ctf, etc...
     Using ancpbids to get the list of files for each subject in ds.
@@ -83,7 +81,6 @@ def get_files_list(sid: str, dataset_path: str, dataset):
     has_fif = False
     has_ctf = False
 
-
     for root, dirs, files in os.walk(dataset_path):
 
         # Exclude the 'derivatives' folder.
@@ -103,9 +100,9 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         if has_fif and has_ctf:
             raise ValueError('Both fif and ctf files found in the dataset. Can not define how to read the ds.')
 
-
     if has_fif:
-        list_of_files = sorted(list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid, scope='raw')))
+        list_of_files = sorted(
+            list(dataset.query(suffix='meg', extension='.fif', return_type='filename', subj=sid, scope='raw')))
 
         entities_per_file = dataset.query(subj=sid, suffix='meg', extension='.fif', scope='raw')
         # sort list_of_sub_jsons by name key to get same order as list_of_files
@@ -122,7 +119,6 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         # But we need entities_per_file to pass into subject_folder.create_artifact(),
         # so that it can add automatically all the entities to the new derivative on base of entities from raw file.
 
-
         # sort list_of_sub_jsons by name key to get same order as list_of_files
         entities_per_file = sorted(entities_per_file, key=lambda k: k['name'])
 
@@ -131,7 +127,7 @@ def get_files_list(sid: str, dataset_path: str, dataset):
         raise ValueError('No fif or ctf files found in the dataset.')
 
     # Find if we have crosstalk in list of files and entities_per_file, give notification that they will be skipped:
-    #read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
+    # read about crosstalk files here: https://bids-specification.readthedocs.io/en/stable/appendices/meg-file-formats.html
     crosstalk_files = [f for f in list_of_files if 'crosstalk' in f]
     if crosstalk_files:
         print('___MEGqc___: ', 'Crosstalk files found in the list of files. They will be skipped.')
@@ -153,7 +149,6 @@ def get_files_list(sid: str, dataset_path: str, dataset):
 
 
 def create_config_artifact(derivative, config_file_path: str, f_name_to_save: str, all_taken_raw_files: List[str]):
-
     """
     Save the config file used for this run as a derivative.
 
@@ -174,7 +169,7 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
 
     """
 
-    #get current time stamp for config file
+    # get current time stamp for config file
 
     timestamp = time.strftime("Date%Y%m%dTime%H%M%S")
 
@@ -183,26 +178,26 @@ def create_config_artifact(derivative, config_file_path: str, f_name_to_save: st
     config_folder = derivative.create_folder(name='config')
     config_artifact = config_folder.create_artifact()
 
-    config_artifact.content = lambda file_path, cont = config_file_path: shutil.copy(cont, file_path)
-    config_artifact.add_entity('desc', f_name_to_save) #file name
+    config_artifact.content = lambda file_path, cont=config_file_path: shutil.copy(cont, file_path)
+    config_artifact.add_entity('desc', f_name_to_save)  # file name
     config_artifact.suffix = 'meg'
     config_artifact.extension = '.ini'
 
-    #Create a seconf json file with config name as key and all taken raw files as value
+    # Create a seconf json file with config name as key and all taken raw files as value
     # and prepare it to be save as derivative
 
     config_json = {f_name_to_save: all_taken_raw_files}
 
     config_json_artifact = config_folder.create_artifact()
-    config_json_artifact.content = lambda file_path, cont = config_json: json.dump(cont, open(file_path, 'w'), indent=4)
-    config_json_artifact.add_entity('desc', f_name_to_save) #file name
+    config_json_artifact.content = lambda file_path, cont=config_json: json.dump(cont, open(file_path, 'w'), indent=4)
+    config_json_artifact.add_entity('desc', f_name_to_save)  # file name
     config_json_artifact.suffix = 'meg'
     config_json_artifact.extension = '.json'
 
     return
 
-def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
 
+def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
     """
     Ask the user if he wants to rerun the same subjects again or skip them.
 
@@ -227,16 +222,18 @@ def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
     # find all 'sub-' in the file names to get the subject ID:
     json_subjects_to_skip = [f.split('sub-')[1].split('_')[0] for f in list_of_files_json]
 
-    #keep unique subjects:
+    # keep unique subjects:
     json_subjects_to_skip = list(set(json_subjects_to_skip))
 
-    #find subjects overlapping withing current list and the json file:
+    # find subjects overlapping withing current list and the json file:
     subjects_to_skip = [sub for sub in sub_list if sub in json_subjects_to_skip]
 
-    #ask the user if he wants to skip these subjects:
-    print('___MEGqc___: ', 'These requested subjects were already processed before with this config file:', subjects_to_skip)
+    # ask the user if he wants to skip these subjects:
+    print('___MEGqc___: ', 'These requested subjects were already processed before with this config file:',
+          subjects_to_skip)
     while True:
-        user_input = input('___MEGqc___: Do you want to RERUN these subjects with the same config parameters? (Y/N): ').lower()
+        user_input = input(
+            '___MEGqc___: Do you want to RERUN these subjects with the same config parameters? (Y/N): ').lower()
         if user_input == 'n':  # remove these subs
             print('___MEGqc___: ', 'Subjects to skip:', subjects_to_skip)
             sub_list = [sub for sub in sub_list if sub not in subjects_to_skip]
@@ -252,7 +249,6 @@ def ask_user_rerun_subs(reuse_config_file_path: str, sub_list: List[str]):
 
 
 def get_list_of_raws_for_config(reuse_config_file_path: str):
-
     """
     Get the list of all raw files processed with the config file used before.
 
@@ -269,12 +265,13 @@ def get_list_of_raws_for_config(reuse_config_file_path: str):
         Description entity of the config file used before.
     """
 
-    #exchange ini to json:
+    # exchange ini to json:
     json_for_reused_config = reuse_config_file_path.replace('.ini', '.json')
 
-    #check if the json file exists:
+    # check if the json file exists:
     if not os.path.isfile(json_for_reused_config):
-        print('___MEGqc___: ', 'No json file found for the config file used before. Can not add the new raw files to it.')
+        print('___MEGqc___: ',
+              'No json file found for the config file used before. Can not add the new raw files to it.')
         return
 
     print('___MEGqc___: ', 'json_for_reused_config', json_for_reused_config)
@@ -301,8 +298,8 @@ def get_list_of_raws_for_config(reuse_config_file_path: str):
 
     return list_of_files, config_desc
 
-def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
 
+def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_raw_files: List[str]):
     """
     Add the list of all taken raw files to the existing list of used settings in the config file.
 
@@ -336,21 +333,21 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
 
     list_of_files, config_desc = get_list_of_raws_for_config(reuse_config_file_path)
 
-    #Continue to update the list with new files:
+    # Continue to update the list with new files:
     list_of_files += all_taken_raw_files
 
-    #sort and remove duplicates:
+    # sort and remove duplicates:
     list_of_files = sorted(list(set(list_of_files)))
 
-    #overwrite the old json (premake ancp bids artifact):
+    # overwrite the old json (premake ancp bids artifact):
     config_json = {config_desc: list_of_files}
 
     config_folder = derivative.create_folder(name='config')
-    #TODO: we dont need to create config folder again, already got it, how to get it?
+    # TODO: we dont need to create config folder again, already got it, how to get it?
 
     config_json_artifact = config_folder.create_artifact()
-    config_json_artifact.content = lambda file_path, cont = config_json: json.dump(cont, open(file_path, 'w'), indent=4)
-    config_json_artifact.add_entity('desc', config_desc) #file name
+    config_json_artifact.content = lambda file_path, cont=config_json: json.dump(cont, open(file_path, 'w'), indent=4)
+    config_json_artifact.add_entity('desc', config_desc)  # file name
     config_json_artifact.suffix = 'meg'
     config_json_artifact.extension = '.json'
 
@@ -358,7 +355,6 @@ def add_raw_to_config_json(derivative, reuse_config_file_path: str, all_taken_ra
 
 
 def check_ds_paths(ds_paths: Union[List[str], str]):
-
     """
     Check if the given paths to the data sets exist.
 
@@ -373,19 +369,19 @@ def check_ds_paths(ds_paths: Union[List[str], str]):
         List of paths to the BIDS-conform data sets to run the QC on.
     """
 
-    #has to be a list, even if there is just one path:
+    # has to be a list, even if there is just one path:
     if isinstance(ds_paths, str):
         ds_paths = [ds_paths]
 
-    #make sure all directories in the list exist:
+    # make sure all directories in the list exist:
     for ds_path in ds_paths:
         if not os.path.isdir(ds_path):
             raise ValueError(f'Given path to the dataset does not exist. Path: {ds_path}')
 
     return ds_paths
 
-def check_config_saved_ask_user(dataset):
 
+def check_config_saved_ask_user(dataset):
     """
     Check if there is already config file used for this ds:
     If yes - ask the user if he wants to use it again. If not - use default one.
@@ -409,7 +405,7 @@ def check_config_saved_ask_user(dataset):
 
     entities = query_entities(dataset, scope='derivatives')
 
-    #print('___MEGqc___: ', 'entities', entities)
+    # print('___MEGqc___: ', 'entities', entities)
 
     # search if there is already a derivative with 'UsedSettings' in the name
     # if yes - ask the user if he wants to use it again. If not - use default one.
@@ -422,30 +418,31 @@ def check_config_saved_ask_user(dataset):
 
     used_setting_file_list = []
     for used_settings_entity in used_settings_entity_list:
-
-        used_setting_file_list += sorted(list(dataset.query(suffix='meg', extension='.ini', desc = used_settings_entity, return_type='filename', scope='derivatives')))
+        used_setting_file_list += sorted(list(
+            dataset.query(suffix='meg', extension='.ini', desc=used_settings_entity, return_type='filename',
+                          scope='derivatives')))
 
     reuse_config_file_path = None
 
     # Ask the user if he wants to use any of existing config files:
     if used_setting_file_list:
-        print('___MEGqc___: ', 'There are already config files used for this data set. Do you want to use any of them again?')
+        print('___MEGqc___: ',
+              'There are already config files used for this data set. Do you want to use any of them again?')
         print('___MEGqc___: ', 'List of the config files previously used for this data set:')
         for i, file in enumerate(used_setting_file_list):
             print('___MEGqc___: ', i, file)
 
-        user_input = input('___MEGqc___: Enter the number of the config file you want to use, or press Enter to use the default one: ')
+        user_input = input(
+            '___MEGqc___: Enter the number of the config file you want to use, or press Enter to use the default one: ')
         if user_input:
             reuse_config_file_path = used_setting_file_list[int(user_input)]
         else:
             print('___MEGqc___: ', 'You chose to use the default config file.')
 
-
     return reuse_config_file_path
 
 
 def check_sub_list(sub_list: Union[List[str], str], dataset):
-
     """
     Check if the given subjects are in the data set.
 
@@ -468,20 +465,23 @@ def check_sub_list(sub_list: Union[List[str], str], dataset):
         sub_list = available_subs
     elif isinstance(sub_list, str) and sub_list != 'all':
         sub_list = [sub_list]
-        #check if this sub is available:
+        # check if this sub is available:
         if sub_list[0] not in available_subs:
-            print('___MEGqc___: ', 'The subject you want to run the QC on is not in your data set. Check the subject ID.')
+            print('___MEGqc___: ',
+                  'The subject you want to run the QC on is not in your data set. Check the subject ID.')
             return
     elif isinstance(sub_list, list):
-        #if they are given as str - IDs:
+        # if they are given as str - IDs:
         if all(isinstance(sub, str) for sub in sub_list):
             sub_list_missing = [sub for sub in sub_list if sub not in available_subs]
             sub_list = [sub for sub in sub_list if sub in available_subs]
             if sub_list_missing:
-                print('___MEGqc___: ', 'Could NOT find these subs in your data set. Check the subject IDs:', sub_list_missing)
-                print('___MEGqc___: ', 'Requested subjects found in your data set:', sub_list, 'Only these subjects will be processed.')
+                print('___MEGqc___: ', 'Could NOT find these subs in your data set. Check the subject IDs:',
+                      sub_list_missing)
+                print('___MEGqc___: ', 'Requested subjects found in your data set:', sub_list,
+                      'Only these subjects will be processed.')
 
-        #if they are given as int - indexes:
+        # if they are given as int - indexes:
         elif all(isinstance(sub, int) for sub in sub_list):
             sub_list = [available_subs[i] for i in sub_list]
 
@@ -869,17 +869,16 @@ def process_one_subject(
         print('___MEGqc___: ', 'No data files could be processed for subject:', sub)
 
     # You can return whatever you want from here
-    return
+    return all_taken_raw_files
 
 
 def make_derivative_meg_qc(
-    default_config_file_path: str,
-    internal_config_file_path: str,
-    ds_paths: Union[List[str], str],
-    sub_list: Union[List[str], str] = 'all',
-    n_jobs: int = 5  # Number of parallel jobs
+        default_config_file_path: str,
+        internal_config_file_path: str,
+        ds_paths: Union[List[str], str],
+        sub_list: Union[List[str], str] = 'all',
+        n_jobs: int = 5  # Number of parallel jobs
 ):
-
     ds_paths = check_ds_paths(ds_paths)
     internal_qc_params = get_internal_config_params(internal_config_file_path)
 
@@ -943,6 +942,25 @@ def make_derivative_meg_qc(
 
         # Remove temporary folder of intermediate files
         delete_temp_folder(dataset_path)
+
+        # Save config file used for this run as a derivative:
+        all_subs_raw_files = []
+        for subj_files in results:
+            if subj_files is not None:
+                all_subs_raw_files.extend(subj_files)
+
+        derivative = dataset.create_derivative(name="Meg_QC")
+        derivative.dataset_description.GeneratedBy.Name = "MEG QC Pipeline"
+
+        if reuse_config_file_path is None:
+            # if no config file was used before, save the one used now
+            create_config_artifact(derivative, config_file_path, 'UsedSettings', all_subs_raw_files)
+        else:
+            # otherwise - dont save config again, but add list of all taken raw files to the existing list of used settings:
+            add_raw_to_config_json(derivative, reuse_config_file_path, all_subs_raw_files)
+
+        # Write the pipeline-level derivative to disk
+        ancpbids.write_derivative(dataset, derivative)
 
     return
 
