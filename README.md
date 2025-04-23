@@ -8,7 +8,7 @@ Since neuroimaging data can be very diverse concerning their structural organiza
 
 MEGqc strongly relies on the MNE-python software package (Gramfort et al., 2013).
 
-Tutorial: https://ancplaboldenburg.github.io/docker_workshop_template/
+Tutorial: https://ancplaboldenburg.github.io/megqc_documentation/
 
 Documentation: https://meg-qc.readthedocs.io/
 
