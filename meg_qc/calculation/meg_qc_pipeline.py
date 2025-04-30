@@ -851,7 +851,7 @@ def process_one_subject(
                  epoching_str, sensors_derivs, m_or_g_chosen, m_or_g_skipped_str,
                  lobes_color_coding_str, resample_str)
             gc.collect()
-            print('REMOVING TRASH: SUCCED')
+            print('REMOVING TRASH: SUCCEED')
         except:
             print('REMOVING TRASH: FAILED')
 
