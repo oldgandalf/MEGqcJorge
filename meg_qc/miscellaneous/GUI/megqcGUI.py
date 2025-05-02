@@ -43,8 +43,8 @@ try:
 
     SETTINGS_PATH = Path(files('meg_qc.settings').joinpath('settings.ini'))
     INTERNAL_PATH = Path(files('meg_qc.settings').joinpath('settings_internal.ini'))
-    # Automatically locate bundled logo/icon in meg_qc.miscellaneous.GUI.other
-    LOGO_PATH = Path(files('meg_qc.miscellaneous.GUI.other').joinpath('logo.png'))
+    # Automatically locate bundled logo/icon in meg_qc.miscellaneous.GUI
+    LOGO_PATH = Path(files('meg_qc.miscellaneous.GUI').joinpath('logo.png'))
     ICON_PATH = LOGO_PATH  # use same logo for window icon or change to icon.png if available
 except Exception:
     from meg_qc.settings import settings as _pkg
@@ -54,7 +54,7 @@ except Exception:
     INTERNAL_PATH = pkg_dir / 'settings_internal.ini'
     # Fallback for logo/icon location
     try:
-        from meg_qc.miscellaneous.GUI.other import logo as _logo_mod
+        from meg_qc.miscellaneous.GUI import logo as _logo_mod
 
         logo_dir = Path(os.path.dirname(_logo_mod.__file__))
         LOGO_PATH = logo_dir / 'logo.png'
