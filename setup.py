@@ -28,7 +28,7 @@ if __name__ == '__main__':
         url='https://github.com/karellopez/MEGqc',
         entry_points={
             'console_scripts':[
-                'megqc = meg_qc.miscellaneous.GUI.megqcGUI:run_megqc_gui',
+                'megqc = meg_qc.miscellaneous.GUI.megqcGUI:run_megqc_gui'
                 'run-megqc = meg_qc.test:run_megqc',
                 'run-megqc-plotting = meg_qc.test:get_plots',
                 'get-megqc-config = meg_qc.test:get_config'

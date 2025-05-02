@@ -725,3 +725,6 @@ def run_megqc_gui():
     win.show()
     sys.exit(app.exec())
 
+if __name__ == '__main__':
+    run_megqc_gui()
+
