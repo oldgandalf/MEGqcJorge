@@ -23,10 +23,8 @@ if __name__ == '__main__':
         install_requires=INSTALL_REQUIRES,
         packages=['meg_qc','meg_qc/calculation','meg_qc/calculation/metrics','meg_qc/plotting','meg_qc/settings',
                   'meg_qc/miscellaneous','meg_qc/miscellaneous/examples','meg_qc/miscellaneous/optimizations',
-                  'meg_qc/miscellaneous/GUI','meg_qc/miscellaneous/GUI/other'
+                  'meg_qc/miscellaneous/GUI'
                   ],
-        include_package_data=True,
-        package_data={'meg_qc.miscellaneous.GUI.other': ['logo.png']},
         url='https://github.com/karellopez/MEGqc',
         entry_points={
             'console_scripts':[
