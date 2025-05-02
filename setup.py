@@ -25,10 +25,11 @@ if __name__ == '__main__':
                   'meg_qc/miscellaneous','meg_qc/miscellaneous/examples','meg_qc/miscellaneous/optimizations',
                   'meg_qc/miscellaneous/GUI','meg_qc/miscellaneous/GUI/other'
                   ],
-        include_package_data=True,
-        package_data={
-            'meg_qc.miscellaneous.GUI.other': ['logo.png'],
-        },
+    package_data={
+        'meg_qc.miscellaneous.GUI.other': ['logo.png'],
+    },
+    include_package_data=True,
+
         url='https://github.com/karellopez/MEGqc',
         entry_points={
             'console_scripts':[
