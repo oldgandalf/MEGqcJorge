@@ -28,10 +28,10 @@ import pandas as pd
 from scipy.signal import find_peaks
 import numpy as np
 # from mne.preprocessing import annotate_muscle_zscore
-from meg_qc.optimizations.artifact_detection_ancp import annotate_muscle_zscore
+from meg_qc.miscellaneous.optimizations.artifact_detection_ancp import annotate_muscle_zscore
 from typing import List
 from meg_qc.plotting.universal_plots import QC_derivative
-from meg_qc.calculation.initial_meg_qc import (chs_dict_to_csv,load_data,save_meg_with_suffix)
+from meg_qc.calculation.initial_meg_qc import (load_data, save_meg_with_suffix)
 
 def find_powerline_noise_short(raw, psd_params, psd_params_internal, m_or_g_chosen, channels):
 

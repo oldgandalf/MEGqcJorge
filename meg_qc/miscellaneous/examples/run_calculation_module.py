@@ -5,19 +5,18 @@ from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
 # Parameters:
 # ------------------------------------------------------------------
 # Path to the root of your BIDS MEG dataset.
-data_directory = '/home/karelo/Desktop/Development/MEGQC_workshop/ds_orig/'
+data_directory = '/home/karelo/Desktop/Development/MEGQC_workshop/datasets/ds003483/'
 # Path to a INI config file with user-defined parameters.
 config_file_path = '/home/karelo/PycharmProjects/test/.venv/lib/python3.10/site-packages/meg_qc/settings/settings.ini'
 # Path to a INI config file of internal parameters.
 internal_config_file_path = '/home/karelo/PycharmProjects/test/.venv/lib/python3.10/site-packages/meg_qc/settings/settings_internal.ini'
 # List of subject IDs to run the pipeline on
-sub_list = 'all'
-# sub_list = ['009']
+#sub_list = 'all'
+sub_list = ['009']
 # sub_list = ['009','012','013','014','015']
 
 # Number of CPU cores you want to use (for example, 4). Use -1 to utilize all available CPU cores:
 n_jobs_to_use = 1
-
 # Number of parallel jobs to use during processing.
 # Default is 1. Use -1 to utilize all available CPU cores.
 #

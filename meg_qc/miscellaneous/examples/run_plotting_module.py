@@ -6,7 +6,7 @@ from meg_qc.plotting.meg_qc_plots import make_plots_meg_qc
 # Parameters:
 # ------------------------------------------------------------------
 # Path to the root of your BIDS MEG dataset.
-data_directory = '/home/karelo/Desktop/Development/MEGQC_workshop/ds006035/'
+data_directory = '/home/karelo/Desktop/Development/MEGQC_workshop/datasets/ds003483'
 # ------------------------------------------------------------------
 
 # RUN plotting Module
