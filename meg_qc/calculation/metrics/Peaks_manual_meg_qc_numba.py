@@ -226,7 +226,7 @@ def make_simple_metric_ptp_manual(
     return simple_metric
 
 
-def PP_manual_meg_qc(
+def PP_manual_meg_qc_numba(
     ptp_manual_params: dict,
     channels: dict,
     chs_by_lobe: dict,

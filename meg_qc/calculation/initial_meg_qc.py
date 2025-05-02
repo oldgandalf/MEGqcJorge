@@ -144,6 +144,7 @@ def get_all_config_params(config_file_path: str):
 
         ptp_manual_section = config['PTP_manual']
         all_qc_params['PTP_manual'] = dict({
+            'numba_version': ptp_manual_section.getboolean('numba_version'),
             'max_pair_dist_sec': ptp_manual_section.getfloat('max_pair_dist_sec'),
             'ptp_thresh_lvl': ptp_manual_section.getfloat('ptp_thresh_lvl'),
             'allow_percent_noisy_flat_epochs': ptp_manual_section.getfloat('allow_percent_noisy_flat_epochs'),

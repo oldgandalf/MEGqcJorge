@@ -31,6 +31,7 @@ from meg_qc.plotting.universal_plots import QC_derivative
 from meg_qc.calculation.metrics.STD_meg_qc import STD_meg_qc
 from meg_qc.calculation.metrics.PSD_meg_qc import PSD_meg_qc
 from meg_qc.calculation.metrics.Peaks_manual_meg_qc import PP_manual_meg_qc
+from meg_qc.calculation.metrics.Peaks_manual_meg_qc_numba import PP_manual_meg_qc_numba
 from meg_qc.calculation.metrics.Peaks_auto_meg_qc import PP_auto_meg_qc
 from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
@@ -643,13 +644,22 @@ def process_one_subject(
                   "Finished PSD. --- Execution %s seconds ---"
                   % (time.time() - start_time))
 
-        # 3) Peak-to-Peak manual
+        # 3) Peak‑to‑Peak manual
         if all_qc_params['default']['run_PTP_manual'] is True:
-            print('___MEGqc___: ', 'Starting Peak-to-Peak manual...')
             start_time = time.time()
+
+            # choose the implementation ----------------------------------
+            if all_qc_params['PTP_manual']['numba_version'] is True:
+                print('___MEGqc___: ', 'Starting Peak‑to‑Peak manual (Numba)...')
+                func = PP_manual_meg_qc_numba  #  accelerated version
+            else:
+                print('___MEGqc___: ', 'Starting Peak‑to‑Peak manual...')
+                func = PP_manual_meg_qc  # standard version
+            # -------------------------------------------------------------
+
             (pp_manual_derivs,
              simple_metrics_pp_manual,
-             pp_manual_str) = PP_manual_meg_qc(
+             pp_manual_str) = func(
                 all_qc_params['PTP_manual'],
                 channels,
                 chs_by_lobe,
@@ -657,8 +667,9 @@ def process_one_subject(
                 raw_cropped_filtered_resampled,
                 m_or_g_chosen
             )
+
             print('___MEGqc___: ',
-                  "Finished Peak-to-Peak manual. --- Execution %s seconds ---"
+                  "Finished Peak‑to‑Peak manual. --- Execution %s seconds ---"
                   % (time.time() - start_time))
 
         # 4) Peak-to-Peak auto from MNE
