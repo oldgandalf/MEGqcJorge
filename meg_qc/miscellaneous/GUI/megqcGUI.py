@@ -15,6 +15,7 @@ import signal
 import configparser
 import multiprocessing
 from pathlib import Path
+from typing import Dict
 
 # Attempt to import psutil for accurate RAM info; if unavailable, fallback later
 try:
@@ -38,30 +39,19 @@ from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
 from meg_qc.plotting.meg_qc_plots import make_plots_meg_qc
 
 # Locate bundled settings and logo files within the package
-try:
-    from importlib.resources import files
+# Locate bundled settings and logo files within the package by filepath
+# GUI_DIR es la carpeta donde está este mismo archivo
+GUI_DIR = Path(__file__).parent
+# PKG_ROOT apunta a la raíz del paquete meg_qc (dos niveles arriba)
+PKG_ROOT = GUI_DIR.parent.parent
 
-    SETTINGS_PATH = Path(files('meg_qc.settings').joinpath('settings.ini'))
-    INTERNAL_PATH = Path(files('meg_qc.settings').joinpath('settings_internal.ini'))
-    # Automatically locate bundled logo/icon in meg_qc.miscellaneous.GUI
-    LOGO_PATH = Path(files('meg_qc.miscellaneous.GUI').joinpath('logo.png'))
-    ICON_PATH = LOGO_PATH  # use same logo for window icon or change to icon.png if available
-except Exception:
-    from meg_qc.settings import settings as _pkg
+# Rutas a los ficheros
+SETTINGS_PATH = PKG_ROOT / "settings" / "settings.ini"
+INTERNAL_PATH = PKG_ROOT / "settings" / "settings_internal.ini"
+# Logo e icon se quedan en la carpeta GUI
+LOGO_PATH = GUI_DIR / "logo.png"
+ICON_PATH = LOGO_PATH
 
-    pkg_dir = Path(os.path.dirname(_pkg.__file__))
-    SETTINGS_PATH = pkg_dir / 'settings.ini'
-    INTERNAL_PATH = pkg_dir / 'settings_internal.ini'
-    # Fallback for logo/icon location
-    try:
-        from meg_qc.miscellaneous.GUI import logo as _logo_mod
-
-        logo_dir = Path(os.path.dirname(_logo_mod.__file__))
-        LOGO_PATH = logo_dir / 'logo.png'
-        ICON_PATH = LOGO_PATH
-    except Exception:
-        LOGO_PATH = Path()
-        ICON_PATH = Path()
 
 
 class Worker(QThread):
@@ -330,7 +320,7 @@ class MainWindow(QMainWindow):
     # ──────────────────────────────── #
     # palette dictionary builder       #
     # ──────────────────────────────── #
-    def _build_theme_dict(self) -> dict[str, QPalette]:
+    def _build_theme_dict(self) -> Dict[str, QPalette]:
         """Return dictionary: theme label → QPalette."""
         themes: dict[str, QPalette] = {}
 
