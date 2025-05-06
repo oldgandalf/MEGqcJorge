@@ -31,12 +31,15 @@ from PyQt6.QtWidgets import (
     QGroupBox, QSpinBox, QTabWidget, QScrollArea, QFrame, QMessageBox,
     QMenu               #  ← add this entry
 )
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QCoreApplication
 from PyQt6.QtGui import QPixmap, QIcon, QPalette, QColor  # for loading images, setting icon, and theme toggling
 
 # Core MEG QC pipeline functions
 from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
 from meg_qc.plotting.meg_qc_plots import make_plots_meg_qc
+
+# Use Qt5 widget integration and not the OS integrations (This will prevent incompatibilities)
+QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeDialogs)
 
 # Locate bundled settings and logo files within the package
 # Locate bundled settings and logo files within the package by filepath
@@ -658,7 +661,26 @@ class MainWindow(QMainWindow):
     # helper: browse directory         #
     # ──────────────────────────────── #
     def _browse(self, edit: QLineEdit):
-        path = QFileDialog.getExistingDirectory(self, "Select Directory")
+        # Build options: only show directories, and force Qt's built-in dialog
+        options = (
+                QFileDialog.Option.ShowDirsOnly
+                | QFileDialog.Option.DontUseNativeDialog
+        )
+
+        # Call Qt's folder picker
+        #   - parent: self
+        #   - window title: "Select Directory"
+        #   - initial directory: use current text in the QLineEdit, or "" for home
+        #   - options: as defined above
+        start_dir = edit.text() or ""
+        path = QFileDialog.getExistingDirectory(
+            self,
+            "Select Directory",
+            start_dir,
+            options
+        )
+
+        # If the user picked something, update the QLineEdit
         if path:
             edit.setText(path)
 
