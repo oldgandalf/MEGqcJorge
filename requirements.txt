@@ -6,3 +6,4 @@ plotly==5.24.1
 joblib==1.4.2
 pyqt6-tools==6.4.2.3.3
 numba==0.58.1
+psutil==5.9.8
