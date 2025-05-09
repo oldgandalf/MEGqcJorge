@@ -56,56 +56,108 @@ LOGO_PATH = GUI_DIR / "logo.png"
 ICON_PATH = LOGO_PATH
 
 
+# megqcGUI.py
+
+# -----------------------------------------------------------------------------
+# This global function is our child‐process entry point. Because it's defined
+# at module level, it's picklable under Windows's 'spawn' start method.
+# On Unix, we call setsid() to create a new process session so that killpg()
+# can later cleanly terminate the entire group (parent + any joblib children).
+# On Windows, setsid() doesn't exist—so we catch AttributeError and continue.
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Child‐process entry point must live at module level so Windows can pickle it.
+# On Unix, we call os.setsid() to create a new session (so killpg() kills
+# the entire group). On Windows setsid() doesn’t exist—so we catch it.
+# -----------------------------------------------------------------------------
+def _worker_target(func, args):
+    try:
+        os.setsid()
+    except AttributeError:
+        # Windows: skip session setup
+        pass
+
+    try:
+        func(*args)
+    except Exception:
+        # Non-zero exit signals error
+        sys.exit(1)
+
 
 class Worker(QThread):
     """
-    Executes a blocking function in a separate OS process group.
-    QThread is used purely for Qt signal integration.
-    This allows us to send SIGTERM to the process group
-    to cleanly kill joblib parallel children.
+    Runs a blocking function in a separate OS process group.
+    QThread is used only to integrate with Qt’s signal/slot system.
     """
-    started = pyqtSignal()
-    finished = pyqtSignal(float)
-    error = pyqtSignal(str)
+    started  = pyqtSignal()
+    finished = pyqtSignal(float)  # elapsed time in seconds
+    error    = pyqtSignal(str)    # error message
 
     def __init__(self, func, *args):
         super().__init__()
-        self.func = func
-        self.args = args
-        self.process = None  # Will hold multiprocessing.Process
+        self.func    = func
+        self.args    = args
+        self.process = None  # the multiprocessing.Process
 
     def run(self):
-        # Emit started signal for UI feedback
+        # 1) notify GUI
         self.started.emit()
-        t0 = time.time()
+        start_time = time.time()
 
-        # Define subprocess target: sets its own session ID
-        def target():
-            # Start new session so killpg kills all children
-            os.setsid()
-            try:
-                self.func(*self.args)
-            except Exception:
-                # Exit with code != 0 to signal error
-                sys.exit(1)
-
-        # Launch subprocess
-        self.process = multiprocessing.Process(target=target)
+        # 2) spawn the subprocess
+        self.process = multiprocessing.Process(
+            target=_worker_target,
+            args=(self.func, self.args),
+        )
         self.process.start()
-        # Block until done or terminated
-        self.process.join()
+        self.process.join()  # blocks until the child exits
 
-        # If terminated by SIGTERM, treat as user cancel without error
+        # 3) interpret exit code
         if self.process.exitcode == -signal.SIGTERM:
+            # user-requested cancellation; no signal emitted
             return
-        # Non-zero exit codes (other than SIGTERM) are errors
+
         if self.process.exitcode != 0:
+            # anything else is an error
             self.error.emit(f"Process exited with code {self.process.exitcode}")
             return
 
-        # On success, emit elapsed time
-        elapsed = time.time() - t0
+        # 4) success
+        elapsed = time.time() - start_time
         self.finished.emit(elapsed)
+
+    def stop(self):
+        """
+        Stop the worker and all its children:
+          • Unix/Linux: send SIGTERM to the entire process group.
+          • Windows: walk the process tree with psutil and terminate each.
+        """
+        if not self.process or not self.process.is_alive():
+            return
+
+        pid = self.process.pid
+        # --- Unix: kill entire process group at once ---
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+            return
+        except (AttributeError, PermissionError):
+            # Windows (no killpg) or lack of permission → fall through
+            pass
+
+        # --- Windows or fallback: terminate main + children via psutil ---
+        try:
+            parent = psutil.Process(pid)
+            # Recursively find all children, kill them first
+            children = parent.children(recursive=True)
+            for child in children:
+                child.terminate()
+            # Wait briefly for children to exit
+            psutil.wait_procs(children, timeout=3)
+            # Finally kill the parent
+            parent.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            # If psutil can’t find or can’t kill, fall back to brute-force
+            self.process.terminate()
 
 
 class SettingsEditor(QWidget):
@@ -318,7 +370,8 @@ class MainWindow(QMainWindow):
 
         # -- Workers dict + initial theme ---------------------------------
         self.workers: dict[str, Worker] = {}
-        self.apply_theme("Monokai  🌵")                # set default palette
+        self.apply_theme("Ocean")                # set default palette
+
 
     # ──────────────────────────────── #
     # palette dictionary builder       #
@@ -340,7 +393,7 @@ class MainWindow(QMainWindow):
         dark.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
         dark.setColor(QPalette.ColorRole.Highlight, QColor(142, 45, 197))
         dark.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Dark  🌙"] = dark
+        themes["Dark"] = dark
 
         # LIGHT ☀
         light = QPalette()
@@ -355,7 +408,7 @@ class MainWindow(QMainWindow):
         light.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         light.setColor(QPalette.ColorRole.Highlight, QColor(100, 149, 237))
         light.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Light 🔆"] = light
+        themes["Light"] = light
 
         # BEIGE 🏜
         beige = QPalette()
@@ -370,7 +423,7 @@ class MainWindow(QMainWindow):
         beige.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         beige.setColor(QPalette.ColorRole.Highlight, QColor(196, 148, 70))
         beige.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Beige  🏜"] = beige
+        themes["Beige"] = beige
 
         # OCEAN 🌊
         ocean = QPalette()
@@ -385,7 +438,7 @@ class MainWindow(QMainWindow):
         ocean.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         ocean.setColor(QPalette.ColorRole.Highlight, QColor(0, 123, 167))  # deep ocean blue
         ocean.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Ocean  🌊"] = ocean
+        themes["Ocean"] = ocean
 
         # CONTRAST 🌓
         hc = QPalette()
@@ -400,7 +453,7 @@ class MainWindow(QMainWindow):
         hc.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
         hc.setColor(QPalette.ColorRole.Highlight, QColor(255, 215, 0))  # vivid gold
         hc.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Contrast  🌓"] = hc
+        themes["Contrast"] = hc
 
         # SOLARIZED 🌞 (light variant)
         solar = QPalette()
@@ -415,7 +468,7 @@ class MainWindow(QMainWindow):
         solar.setColor(QPalette.ColorRole.ButtonText, QColor(88, 110, 117))
         solar.setColor(QPalette.ColorRole.Highlight, QColor(38, 139, 210))  # solarized blue
         solar.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Solar  🌞"] = solar
+        themes["Solar"] = solar
 
         # CYBERPUNK 🕶
         cyber = QPalette()
@@ -430,7 +483,7 @@ class MainWindow(QMainWindow):
         cyber.setColor(QPalette.ColorRole.ButtonText, QColor(255, 0, 255))
         cyber.setColor(QPalette.ColorRole.Highlight, QColor(255, 0, 128))  # neon pink
         cyber.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Cyber  🕶"] = cyber
+        themes["Cyber"] = cyber
 
         # DRACULA  🧛
         drac = QPalette()
@@ -445,7 +498,7 @@ class MainWindow(QMainWindow):
         drac.setColor(QPalette.ColorRole.ButtonText, QColor("#f8f8f2"))
         drac.setColor(QPalette.ColorRole.Highlight, QColor("#bd93f9"))  # purple
         drac.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Dracula  🧛"] = drac
+        themes["Dracula"] = drac
 
         # NORD  🧊
         nord = QPalette()
@@ -460,7 +513,7 @@ class MainWindow(QMainWindow):
         nord.setColor(QPalette.ColorRole.ButtonText, QColor("#d8dee9"))
         nord.setColor(QPalette.ColorRole.Highlight, QColor("#88c0d0"))  # icy cyan
         nord.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Nord  🧊"] = nord
+        themes["Nord"] = nord
 
         # GRUVBOX DARK  🪵
         gruv = QPalette()
@@ -475,7 +528,7 @@ class MainWindow(QMainWindow):
         gruv.setColor(QPalette.ColorRole.ButtonText, QColor("#ebdbb2"))
         gruv.setColor(QPalette.ColorRole.Highlight, QColor("#d79921"))  # warm yellow
         gruv.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Gruvbox  🪵"] = gruv
+        themes["Gruvbox"] = gruv
 
         # MONOKAI  🌵
         mono = QPalette()
@@ -490,7 +543,7 @@ class MainWindow(QMainWindow):
         mono.setColor(QPalette.ColorRole.ButtonText, QColor("#f8f8f2"))
         mono.setColor(QPalette.ColorRole.Highlight, QColor("#a6e22e"))  # neon green
         mono.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Monokai  🌵"] = mono
+        themes["Monokai"] = mono
 
         # TOKYO NIGHT  🗼
         tokyo = QPalette()
@@ -505,7 +558,7 @@ class MainWindow(QMainWindow):
         tokyo.setColor(QPalette.ColorRole.ButtonText, QColor("#c0caf5"))
         tokyo.setColor(QPalette.ColorRole.Highlight, QColor("#7aa2f7"))  # soft blue
         tokyo.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
-        themes["Tokyo  🗼"] = tokyo
+        themes["Tokyo"] = tokyo
 
         # CATPPUCCIN MOCHA 🐈
         mocha = QPalette()
@@ -520,7 +573,7 @@ class MainWindow(QMainWindow):
         mocha.setColor(QPalette.ColorRole.ButtonText, QColor("#cdd6f4"))
         mocha.setColor(QPalette.ColorRole.Highlight, QColor("#f38ba8"))
         mocha.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Mocha  🐈"] = mocha
+        themes["Mocha"] = mocha
 
         # PALENIGHT 🎆
         pale = QPalette()
@@ -535,7 +588,7 @@ class MainWindow(QMainWindow):
         pale.setColor(QPalette.ColorRole.ButtonText, QColor("#a6accd"))
         pale.setColor(QPalette.ColorRole.Highlight, QColor("#82aaff"))
         pale.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        themes["Palenight 🎆"] = pale
+        themes["Palenight"] = pale
 
         return themes
 
@@ -688,32 +741,102 @@ class MainWindow(QMainWindow):
     # start / stop handlers            #
     # ──────────────────────────────── #
     def start_calc(self):
-        data_dir = self.calc_data.text().strip()
-        subs_raw = self.calc_subs.text().strip()
+        """
+        Slot for the “Run Calculation” button.
+        1) Read user inputs from the Run tab
+        2) Build the argument tuple for make_derivative_meg_qc
+        3) Instantiate and configure a Worker
+        4) Start the Worker and store it in self.workers
+        """
+        # 1) Gather inputs
+        data_dir  = self.calc_data.text().strip()
+        subs_raw  = self.calc_subs.text().strip()
+        # If user typed “all” (case-insensitive) or left blank, use the string "all";
+        # otherwise split by commas into a list of IDs.
         subs = (
             [s.strip() for s in subs_raw.split(",") if s.strip()]
             if subs_raw and subs_raw.lower() != "all"
             else "all"
         )
         n_jobs = self.calc_jobs.value()
-        args = [str(SETTINGS_PATH), str(INTERNAL_PATH), data_dir, subs, n_jobs]
-        self._run_task("calc", make_derivative_meg_qc, *args)
+
+        # 2) Match the signature: (settings_path, internal_path, data_dir, subs, n_jobs)
+        args = (
+            str(SETTINGS_PATH),
+            str(INTERNAL_PATH),
+            data_dir,
+            subs,
+            n_jobs,
+        )
+
+        # 3) Create the Worker, hook up signals → log
+        worker = Worker(make_derivative_meg_qc, *args)
+        worker.started.connect(lambda: self.log.appendPlainText("Calculation started"))
+        worker.finished.connect(
+            lambda elapsed: self.log.appendPlainText(f"Calculation finished in {elapsed:.2f}s")
+        )
+        worker.error.connect(
+            lambda err: self.log.appendPlainText(f"Calculation error: {err}")
+        )
+
+        # 4) Launch and save
+        worker.start()
+        self.workers["calc"] = worker
+
 
     def stop_calc(self):
+        """
+        Slot for the “Stop Calculation” button.
+        Delegates termination logic to Worker.stop(), which handles
+        both Unix (killpg) and Windows (process.terminate()).
+        """
         worker = self.workers.get("calc")
-        if worker and worker.process and worker.process.is_alive():
-            os.killpg(os.getpgid(worker.process.pid), signal.SIGTERM)
+        if worker:
+            worker.stop()
             self.log.appendPlainText("Calculation stopped")
 
+
     def start_plot(self):
+        """
+        Slot for the “Run Plotting” button.
+        Same pattern as start_calc:
+        1) Gather inputs
+        2) Build args tuple for make_plots_meg_qc
+        3) Hook up signals → log
+        4) Start Worker and store
+        """
+        # 1) Gather inputs
         data_dir = self.plot_data.text().strip()
-        self._run_task("plot", make_plots_meg_qc, data_dir)
+
+        # 2) Our plotting function only needs (data_dir,)
+        args = (data_dir,)
+
+        # 3) Create Worker and wire signals
+        worker = Worker(make_plots_meg_qc, *args)
+        worker.started.connect(lambda: self.log.appendPlainText("Plotting started"))
+        worker.finished.connect(
+            lambda elapsed: self.log.appendPlainText(f"Plotting finished in {elapsed:.2f}s")
+        )
+        worker.error.connect(
+            lambda err: self.log.appendPlainText(f"Plotting error: {err}")
+        )
+
+        # 4) Launch and save
+        worker.start()
+        self.workers["plot"] = worker
+
 
     def stop_plot(self):
+        """
+        Slot for the “Stop Plotting” button.
+        Calls Worker.stop() to cleanly terminate the plotting process
+        on both Unix and Windows.
+        """
         worker = self.workers.get("plot")
-        if worker and worker.process and worker.process.is_alive():
-            os.killpg(os.getpgid(worker.process.pid), signal.SIGTERM)
+        if worker:
+            worker.stop()
             self.log.appendPlainText("Plotting stopped")
+
 
     # ──────────────────────────────── #
     # generic worker wrapper           #
@@ -733,6 +856,7 @@ class MainWindow(QMainWindow):
 
 def run_megqc_gui():
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
