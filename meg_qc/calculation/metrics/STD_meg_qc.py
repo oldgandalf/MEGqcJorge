@@ -180,6 +180,9 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
     # Make a separate DataFrame and calculate the mean of stds for each channel over all epochs together
     df_std_with_mean = df_std.copy()
     df_std_with_mean['mean'] = df_std_with_mean.mean(axis=1)
+    # Avoid division by zero when the channel is constant by treating the mean
+    # of zero as missing data. Subsequent comparisons will skip these entries.
+    mean_series = df_std_with_mean['mean'].replace(0, np.nan)
 
     #TODO: check mwhy all mean tuen into 1 in tsv???
 
@@ -204,10 +207,12 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
 
     for ep in epochs:  
 
-        df_epoch_vs_mean.iloc[:,ep] = df_epoch_vs_mean.iloc[:,ep]/ df_std_with_mean['mean'] #divide std of this channel for this epoch by mean std of this channel over all epochs
-
-        df_noisy_epoch.iloc[:,ep] = df_noisy_epoch.iloc[:,ep]/ df_std_with_mean['mean'] > noisy_channel_multiplier #if std of this channel for this epoch is over the mean std of this channel for all epochs together*multiplyer
-        df_flat_epoch.iloc[:,ep] = df_flat_epoch.iloc[:,ep]/ df_std_with_mean['mean'] < flat_multiplier #if std of this channel for this epoch is under the mean std of this channel for all epochs together*multiplyer
+        ratio = df_std_with_mean.iloc[:, ep] / mean_series
+        # ratio is NaN for channels with zero mean; these are marked not noisy/flat
+        # by replacing NaN with False in the boolean comparison results
+        df_epoch_vs_mean.iloc[:, ep] = ratio
+        df_noisy_epoch.iloc[:, ep] = (ratio > noisy_channel_multiplier).fillna(False)
+        df_flat_epoch.iloc[:, ep] = (ratio < flat_multiplier).fillna(False)
 
         # Calculate the number of noisy/flat channels in this epoch:
         df_noisy_epoch.loc['number noisy channels', ep] = df_noisy_epoch.iloc[:-3,ep].sum()
