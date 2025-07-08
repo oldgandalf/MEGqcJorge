@@ -211,9 +211,11 @@ def get_noisy_flat_std_ptp_epochs(df_std: pd.DataFrame, ch_type: str, std_or_ptp
         # ratio is NaN for channels with zero mean; these are marked not noisy/flat
         # by replacing NaN with False in the boolean comparison results
         df_epoch_vs_mean.iloc[:, ep] = ratio
-        # Assign only to the original channel rows to avoid length mismatch
-        df_noisy_epoch.iloc[:-3, ep] = (ratio > noisy_channel_multiplier).fillna(False)
-        df_flat_epoch.iloc[:-3, ep] = (ratio < flat_multiplier).fillna(False)
+        # Align to original channel index to avoid broadcasting issues
+        noisy_mask = (ratio > noisy_channel_multiplier).fillna(False)
+        flat_mask = (ratio < flat_multiplier).fillna(False)
+        df_noisy_epoch.loc[df_std.index, ep] = noisy_mask.values
+        df_flat_epoch.loc[df_std.index, ep] = flat_mask.values
 
         # Calculate the number of noisy/flat channels in this epoch:
         df_noisy_epoch.loc['number noisy channels', ep] = df_noisy_epoch.iloc[:-3,ep].sum()
