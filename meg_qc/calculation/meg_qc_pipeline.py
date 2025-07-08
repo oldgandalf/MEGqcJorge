@@ -2,6 +2,7 @@ import os
 import gc
 import ancpbids
 from ancpbids.query import query_entities
+from ancpbids import DatasetOptions
 import time
 import json
 import sys
@@ -36,6 +37,194 @@ from meg_qc.calculation.metrics.Peaks_auto_meg_qc import PP_auto_meg_qc
 from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
+
+import os
+import json
+import pandas as pd
+from typing import Union
+import plotly.graph_objects as go
+from plotly.offline import plot
+
+def create_summary_report(json_file: Union[str, os.PathLike], html_output: str = None, json_output: str = "first_sight_report.json"):
+    # === Load JSON ===
+    with open(json_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if html_output != None:
+        html_name = os.path.splitext(os.path.basename(json_output))[0].replace("-GlobalSummaryReport_meg", "")
+
+    # === STD TABLE (COMBINED VALUES) ===
+    def build_summary_table(source):
+        rows = []
+        for sensor_type in ["mag", "grad"]:
+            n_noisy = source[sensor_type]["number_of_noisy_ch"]
+            p_noisy = source[sensor_type]["percent_of_noisy_ch"]
+            n_flat = source[sensor_type]["number_of_flat_ch"]
+            p_flat = source[sensor_type]["percent_of_flat_ch"]
+            rows.append({
+                "Metric": "Noisy Channels",
+                sensor_type: f"{n_noisy} ({p_noisy:.1f}%)"
+            })
+            rows.append({
+                "Metric": "Flat Channels",
+                sensor_type: f"{n_flat} ({p_flat:.1f}%)"
+            })
+        df = pd.DataFrame(rows)
+        df = df.groupby("Metric").first().reset_index()
+        df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
+        return df
+
+    general_df = build_summary_table(data["STD"]["STD_all_time_series"])
+    ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
+
+    # === GLOBAL QUALITY INDEX ===
+    def extract_quality_percent(source):
+        return [
+            source["mag"]["percent_of_noisy_ch"],
+            source["mag"]["percent_of_flat_ch"],
+            source["grad"]["percent_of_noisy_ch"],
+            source["grad"]["percent_of_flat_ch"]
+        ]
+
+    quality_values = extract_quality_percent(data["STD"]["STD_all_time_series"]) + \
+                     extract_quality_percent(data["PTP_MANUAL"]["ptp_manual_all"])
+
+    quality_values += [
+        data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
+        data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
+        data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
+        data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"]
+    ]
+
+    # === CORRELATION ANALYSIS ===
+    def count_high_correlations_from_details(section, contamination_key):
+        results = []
+        percentages = []
+        for sensor_type in ["mag", "grad"]:
+            entries = data[section][contamination_key][sensor_type]["details"]
+            total = len(entries)
+            high_corr = sum(1 for _, pair in entries.items() if abs(pair[0]) > 0.8)
+            percent = 100 * high_corr / total if total > 0 else 0
+            percentages.append(percent)
+            results.append({
+                "Sensor Type": "MAGNETOMETERS" if sensor_type == "mag" else "GRADIOMETERS",
+                "# |High Correlations| > 0.8": f"{high_corr} ({percent:.1f}%)",
+                "Total Channels": total
+            })
+        return pd.DataFrame(results), percentages
+
+    ecg_df, ecg_percents = count_high_correlations_from_details("ECG", "all_channels_raned_by_ECG_contamination_level")
+    eog_df, eog_percents = count_high_correlations_from_details("EOG", "all_channels_raned_by_EOG_contamination_level")
+
+    correlation_percent_avg = (sum(ecg_percents + eog_percents) / len(ecg_percents + eog_percents)) / 2
+    raw_gqi = sum(quality_values) / len(quality_values)
+    GQI = round(100 - raw_gqi - correlation_percent_avg, 2)
+
+    # === EPOCH SUMMARY TABLE ===
+    def create_epoch_summary_table(source):
+        rows = []
+        for sensor_type, label in zip(["mag", "grad"], ["MAGNETOMETERS", "GRADIOMETERS"]):
+            n_noisy = source[sensor_type]["number_of_noisy_ch"]
+            p_noisy = source[sensor_type]["percent_of_noisy_ch"]
+            n_flat = source[sensor_type]["number_of_flat_ch"]
+            p_flat = source[sensor_type]["percent_of_flat_ch"]
+            rows.append({
+                "Sensor Type": label,
+                "Noisy Epochs": f"{n_noisy} ({p_noisy:.1f}%)",
+                "Flat Epochs": f"{n_flat} ({p_flat:.1f}%)"
+            })
+        return pd.DataFrame(rows)
+
+    std_epoch_df = create_epoch_summary_table(data["STD"]["STD_all_time_series"])
+    ptp_epoch_df = create_epoch_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
+
+    # === MUSCLE TABLE ===
+    muscle_events = data["MUSCLE"]["zscore_thresholds"]["number_muscle_events"]
+    muscle_df = pd.DataFrame([{"# Muscle Events": muscle_events}])
+
+    # === HTML OUTPUT ===
+    std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
+    ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
+    std_epoch_lvl = data["STD"]["STD_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+    ptp_epoch_lvl = data["PTP_MANUAL"]["ptp_manual_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+
+    style = """
+        <style>
+            body { font-family: Arial, sans-serif; margin: 10px; font-size: 16px; }
+            h1 { color: #003366; font-size: 25px; margin-bottom: 6px; font-weight: bold; }
+            h2 { color: #004d99; font-size: 19px; margin: 12px 0 6px 0; }
+            table { border-collapse: collapse; margin: 0 0 8px 0; font-size: 16px; }
+            th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+            th { background-color: #f2f2f2; }
+            .table-flex { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 12px; }
+            .table-box { flex: 1; min-width: 300px; }
+            .file-label { font-size: 18px; font-weight: bold; margin: 0 0 2px 12px; }
+            .subtitle { font-size: 19px; font-weight: bold; color: #222; margin: 0 0 12px 12px; }
+            .header-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-bottom: 0; }
+        </style>
+    """
+
+    if html_output != None:
+        with open(html_output, "w", encoding="utf-8") as f:
+            f.write("</div></div>")
+            f.write("<html><head><meta charset='UTF-8'>" + style + "</head><body>")
+            f.write("<div class='header-grid'>")
+            f.write("<div><h1>MEGQC Global Quality Report</h1></div>")
+            f.write(f"<div><div class='file-label'>File: {html_name}</div>")
+            f.write(f"<div class='subtitle'>Global Quality Index (GQI): {GQI}</div></div></div>")
+            f.write("<div class='table-flex'>")
+            f.write(f"<div class='table-box'><h2>STD Time-Series (STD level: {std_lvl})</h2>")
+            f.write(general_df.to_html(index=False))
+            f.write(f"</div><div class='table-box'><h2>PTP Time-Series (STD level: {ptp_lvl})</h2>")
+            f.write(ptp_df.to_html(index=False))
+            f.write("</div></div>")
+            f.write("<div class='table-flex'>")
+            f.write(f"<div class='table-box'><h2>STD Epoch Summary (STD level: {std_epoch_lvl})</h2>")
+            f.write(std_epoch_df.to_html(index=False))
+            f.write(f"</div><div class='table-box'><h2>PTP Epoch Summary (STD level: {ptp_epoch_lvl})</h2>")
+            f.write(ptp_epoch_df.to_html(index=False))
+            f.write("</div></div>")
+            f.write("<div class='table-flex'>")
+            f.write("<div class='table-box'><h2>ECG Correlation Summary</h2>")
+            f.write(ecg_df.to_html(index=False))
+            f.write("</div><div class='table-box'><h2>EOG Correlation Summary</h2>")
+            f.write(eog_df.to_html(index=False))
+            f.write("</div></div>")
+            f.write("<h2>Muscle Events Summary</h2>")
+            f.write(muscle_df.to_html(index=False))
+            f.write("</body></html>")
+
+    # === JSON SUMMARY OUTPUT ===
+    # json_output = os.path.splitext(html_output)[0] + "_summary.json"
+    file_name = os.path.basename(json_output)
+    summary_data = {
+        "file_name": file_name,
+        "GQI": GQI,
+        "STD_time_series": general_df.to_dict(orient="records"),
+        "PTP_time_series": ptp_df.to_dict(orient="records"),
+        "STD_epoch_summary": std_epoch_df.to_dict(orient="records"),
+        "PTP_epoch_summary": ptp_epoch_df.to_dict(orient="records"),
+        "ECG_correlation_summary": ecg_df.to_dict(orient="records"),
+        "EOG_correlation_summary": eog_df.to_dict(orient="records"),
+        "Muscle_events": {"# Muscle Events": muscle_events},
+        "parameters": {
+            "std_lvl": std_lvl,
+            "ptp_lvl": ptp_lvl,
+            "std_epoch_lvl": std_epoch_lvl,
+            "ptp_epoch_lvl": ptp_epoch_lvl
+        }
+    }
+
+    with open(json_output, "w", encoding="utf-8") as f_json:
+        json.dump(summary_data, f_json, indent=4)
+
+    print(f"HTML successfully generated: {html_output}")
+    print(f"JSON summary successfully generated: {json_output}")
+
+
 
 
 def ctf_workaround(dataset, sid):
@@ -868,6 +1057,17 @@ def process_one_subject(
 
     # WRITE DERIVATIVE
     ancpbids.write_derivative(dataset, derivative)
+
+    # Generate Global report
+    json_simple_metrics = dataset.query(scope="derivatives/Meg_QC/calculation", descr="SimpleMetrics", suffix="meg",
+                                        extension="json")
+    for fname in json_simple_metrics:
+        json_path = fname.get_absolute_path()
+        if json_path:
+            output_json = json_path.replace('SimpleMetrics', 'GlobalSummaryReport')
+        create_summary_report(json_path, None, output_json)
+
+    # Removes intermediate trash objects
     del meg_artifact, derivative
     gc.collect()
 
@@ -895,7 +1095,7 @@ def make_derivative_meg_qc(
 
     for dataset_path in ds_paths:
         print('___MEGqc___: ', 'DS path:', dataset_path)
-        dataset = ancpbids.load_dataset(dataset_path)
+        dataset = ancpbids.load_dataset(dataset_path, DatasetOptions(lazy_loading=True))
         schema = dataset.get_schema()
 
         derivatives_path = os.path.join(dataset_path, 'derivatives')
