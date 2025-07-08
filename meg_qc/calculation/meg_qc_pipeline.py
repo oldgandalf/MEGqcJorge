@@ -135,8 +135,8 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
             })
         return pd.DataFrame(results), percentages
 
-    ecg_df, ecg_percents = count_high_correlations_from_details("ECG", "all_channels_raned_by_ECG_contamination_level")
-    eog_df, eog_percents = count_high_correlations_from_details("EOG", "all_channels_raned_by_EOG_contamination_level")
+    ecg_df, ecg_percents = count_high_correlations_from_details("ECG", "all_channels_ranked_by_ECG_contamination_level")
+    eog_df, eog_percents = count_high_correlations_from_details("EOG", "all_channels_ranked_by_EOG_contamination_level")
 
     correlation_percent_avg = (sum(ecg_percents + eog_percents) / len(ecg_percents + eog_percents)) / 2
     raw_gqi = sum(quality_values) / len(quality_values)
