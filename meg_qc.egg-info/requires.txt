@@ -1,4 +1,4 @@
-ancpbids==0.2.9
+ancpbids==0.3.0
 prompt_toolkit==3.0.48
 mne~=1.6.0
 pandas>=2.0.3
