@@ -49,6 +49,25 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     # === Load JSON ===
     with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
+
+    # Detect automatically if any metric used in the global report is missing
+    # or empty. This avoids failures when datasets are not suitable for all
+    # calculations.
+    metrics_to_check = [
+        "STD",
+        "PSD",
+        "PTP_MANUAL",
+        "ECG",
+        "EOG",
+        "MUSCLE",
+    ]
+    missing = [m for m in metrics_to_check if not data.get(m)]
+    if missing:
+        print(
+            f"___MEGqc___: Skipping GlobalSummaryReport for {json_file}. "
+            f"Missing metrics: {', '.join(missing)}"
+        )
+        return
     if html_output != None:
         html_name = os.path.splitext(os.path.basename(json_output))[0].replace("-GlobalSummaryReport_meg", "")
 
