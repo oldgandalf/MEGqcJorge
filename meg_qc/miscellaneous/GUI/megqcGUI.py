@@ -14,6 +14,7 @@ import os
 import signal
 import configparser
 import multiprocessing
+import traceback
 from pathlib import Path
 from typing import Dict
 
@@ -80,6 +81,7 @@ def _worker_target(func, args):
     try:
         func(*args)
     except Exception:
+        traceback.print_exc()
         # Non-zero exit signals error
         sys.exit(1)
 
@@ -609,38 +611,33 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(10, 10, 10, 10)
         lay.setSpacing(12)
 
-        # — Calculation section —
-        calc_box = QGroupBox("Calculation")
-        calc_form = QFormLayout(calc_box)
+        # --- shared data directory ---
+        shared = QFormLayout()
 
-        self.calc_data = QLineEdit()
+        self.data_dir = QLineEdit()
         btn_browse = QPushButton("Browse")
-        btn_browse.clicked.connect(lambda: self._browse(self.calc_data))
+        btn_browse.clicked.connect(lambda: self._browse(self.data_dir))
         row = QWidget()
         row_lay = QHBoxLayout(row)
         row_lay.setContentsMargins(0, 0, 0, 0)
-        row_lay.addWidget(self.calc_data)
+        row_lay.addWidget(self.data_dir)
         row_lay.addWidget(btn_browse)
-        calc_form.addRow("Data directory:", row)
+        shared.addRow("Data directory:", row)
 
-        self.calc_subs = QLineEdit()
-        self.calc_subs.setPlaceholderText("all or IDs, e.g. 009,012")
-        calc_form.addRow("Subjects:", self.calc_subs)
-
-        self.calc_jobs = QSpinBox()
-        self.calc_jobs.setRange(-1, os.cpu_count() or 1)
-        self.calc_jobs.setValue(-1)
+        self.jobs = QSpinBox()
+        self.jobs.setRange(-1, os.cpu_count() or 1)
+        self.jobs.setValue(-1)
         btn_info = QPushButton("Info")
         btn_info.setToolTip("Parallel jobs info")
 
         def show_jobs_info():
             info = """
-            Number of parallel jobs to use during 
+            Number of parallel jobs to use during
             processing.
-            Default is 1. Use -1 to utilize all 
+            Default is 1. Use -1 to utilize all
             available CPU cores.
 
-            ⚠️ Recommendation based on system 
+            ⚠️ Recommendation based on system
             memory:
 
             - 8 GB → up to 1 job
@@ -649,18 +646,29 @@ class MainWindow(QMainWindow):
             - 64 GB → up to 16 jobs
             - 128 GB → up to 30 jobs
 
-            Using -1 will use all cores. Optimal RAM ≳ 3.5× 
+            Using -1 will use all cores. Optimal RAM ≳ 3.5×
             #cores.
                     """
             QMessageBox.information(self, 'Jobs Recommendation', info)
+
         btn_info.clicked.connect(show_jobs_info)
 
-        row2 = QWidget()
-        row2_lay = QHBoxLayout(row2)
-        row2_lay.setContentsMargins(0, 0, 0, 0)
-        row2_lay.addWidget(self.calc_jobs)
-        row2_lay.addWidget(btn_info)
-        calc_form.addRow("Jobs:", row2)
+        row_jobs = QWidget()
+        jobs_lay = QHBoxLayout(row_jobs)
+        jobs_lay.setContentsMargins(0, 0, 0, 0)
+        jobs_lay.addWidget(self.jobs)
+        jobs_lay.addWidget(btn_info)
+        shared.addRow("Jobs:", row_jobs)
+
+        lay.addLayout(shared)
+
+        # — Calculation section —
+        calc_box = QGroupBox("Calculation")
+        calc_form = QFormLayout(calc_box)
+
+        self.calc_subs = QLineEdit()
+        self.calc_subs.setPlaceholderText("all or IDs, e.g. 009,012")
+        calc_form.addRow("Subjects:", self.calc_subs)
 
         btn_run = QPushButton("Run Calculation")
         btn_run.clicked.connect(self.start_calc)
@@ -678,36 +686,6 @@ class MainWindow(QMainWindow):
         # — Plotting section —
         plot_box = QGroupBox("Plotting")
         plot_form = QFormLayout(plot_box)
-
-        self.plot_data = QLineEdit()
-        btn_pbrowse = QPushButton("Browse")
-        btn_pbrowse.clicked.connect(lambda: self._browse(self.plot_data))
-        prow = QWidget()
-        pl = QHBoxLayout(prow)
-        pl.setContentsMargins(0, 0, 0, 0)
-        pl.addWidget(self.plot_data)
-        pl.addWidget(btn_pbrowse)
-        plot_form.addRow("Data directory:", prow)
-
-        self.plot_jobs = QSpinBox()
-        self.plot_jobs.setRange(-1, os.cpu_count() or 1)
-        self.plot_jobs.setValue(-1)
-        btn_pinfo = QPushButton("Info")
-        btn_pinfo.setToolTip("Parallel jobs info")
-
-        def show_pjobs_info():
-            info = """Number of parallel jobs to use during plotting.\n"""
-            info += "Default is 1. Use -1 to utilize all available CPU cores."
-            QMessageBox.information(self, 'Jobs Recommendation', info)
-
-        btn_pinfo.clicked.connect(show_pjobs_info)
-
-        prow_jobs = QWidget()
-        pl_jobs = QHBoxLayout(prow_jobs)
-        pl_jobs.setContentsMargins(0, 0, 0, 0)
-        pl_jobs.addWidget(self.plot_jobs)
-        pl_jobs.addWidget(btn_pinfo)
-        plot_form.addRow("Jobs:", prow_jobs)
 
         btn_prun = QPushButton("Run Plotting")
         btn_prun.clicked.connect(self.start_plot)
@@ -769,7 +747,7 @@ class MainWindow(QMainWindow):
         4) Start the Worker and store it in self.workers
         """
         # 1) Gather inputs
-        data_dir  = self.calc_data.text().strip()
+        data_dir  = self.data_dir.text().strip()
         subs_raw  = self.calc_subs.text().strip()
         # If user typed “all” (case-insensitive) or left blank, use the string "all";
         # otherwise split by commas into a list of IDs.
@@ -778,7 +756,7 @@ class MainWindow(QMainWindow):
             if subs_raw and subs_raw.lower() != "all"
             else "all"
         )
-        n_jobs = self.calc_jobs.value()
+        n_jobs = self.jobs.value()
 
         # 2) Match the signature: (settings_path, internal_path, data_dir, subs, n_jobs)
         args = (
@@ -826,8 +804,8 @@ class MainWindow(QMainWindow):
         4) Start Worker and store
         """
         # 1) Gather inputs
-        data_dir = self.plot_data.text().strip()
-        n_jobs = self.plot_jobs.value()
+        data_dir = self.data_dir.text().strip()
+        n_jobs = self.jobs.value()
 
         # 2) Build args tuple for make_plots_meg_qc
         args = (data_dir, n_jobs)
