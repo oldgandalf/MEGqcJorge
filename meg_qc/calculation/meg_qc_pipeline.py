@@ -123,16 +123,29 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
         results = []
         percentages = []
         for sensor_type in ["mag", "grad"]:
-            entries = data[section][contamination_key][sensor_type]["details"]
+            entries = (
+                data.get(section, {})
+                .get(contamination_key, {})
+                .get(sensor_type, {})
+                .get("details", {})
+            )
+            if not isinstance(entries, dict):
+                entries = {}
             total = len(entries)
-            high_corr = sum(1 for _, pair in entries.items() if abs(pair[0]) > 0.8)
+            high_corr = sum(
+                1
+                for _, pair in entries.items()
+                if isinstance(pair, (list, tuple)) and pair and abs(pair[0]) > 0.8
+            )
             percent = 100 * high_corr / total if total > 0 else 0
             percentages.append(percent)
-            results.append({
-                "Sensor Type": "MAGNETOMETERS" if sensor_type == "mag" else "GRADIOMETERS",
-                "# |High Correlations| > 0.8": f"{high_corr} ({percent:.1f}%)",
-                "Total Channels": total
-            })
+            results.append(
+                {
+                    "Sensor Type": "MAGNETOMETERS" if sensor_type == "mag" else "GRADIOMETERS",
+                    "# |High Correlations| > 0.8": f"{high_corr} ({percent:.1f}%)",
+                    "Total Channels": total,
+                }
+            )
         return pd.DataFrame(results), percentages
 
     ecg_df, ecg_percents = count_high_correlations_from_details("ECG", "all_channels_ranked_by_ECG_contamination_level")
