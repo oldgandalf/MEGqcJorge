@@ -197,6 +197,40 @@ def get_all_config_params(config_file_path: str):
             'muscle_freqs': muscle_freqs,
             'min_length_good': muscle_section.getfloat('min_length_good')})
 
+        gqi_section = config['GlobalQualityIndex']
+        weights = {
+            'ch': gqi_section.getfloat('ch_weight'),
+            'corr': gqi_section.getfloat('corr_weight'),
+            'mus': gqi_section.getfloat('mus_weight'),
+            'psd': gqi_section.getfloat('psd_weight'),
+        }
+        total_w = sum(weights.values())
+        if total_w == 0:
+            total_w = 1
+        weights = {k: v / total_w for k, v in weights.items()}
+        all_qc_params['GlobalQualityIndex'] = {
+            'ch':   {
+                'start': gqi_section.getfloat('ch_start'),
+                'end': gqi_section.getfloat('ch_end'),
+                'weight': weights['ch']
+            },
+            'corr': {
+                'start': gqi_section.getfloat('corr_start'),
+                'end': gqi_section.getfloat('corr_end'),
+                'weight': weights['corr']
+            },
+            'mus':  {
+                'start': gqi_section.getfloat('mus_start'),
+                'end': gqi_section.getfloat('mus_end'),
+                'weight': weights['mus']
+            },
+            'psd':  {
+                'start': gqi_section.getfloat('psd_start'),
+                'end': gqi_section.getfloat('psd_end'),
+                'weight': weights['psd']
+            },
+        }
+
     except:
         print('___MEGqc___: ',
               'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
