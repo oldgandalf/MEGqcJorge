@@ -41,12 +41,17 @@ from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 import os
 import json
 import pandas as pd
-from typing import Union
+from typing import Union, Optional, Dict
 import plotly.graph_objects as go
 from plotly.offline import plot
 from statistics import mean
 
-def create_summary_report(json_file: Union[str, os.PathLike], html_output: str = None, json_output: str = "first_sight_report.json"):
+def create_summary_report(
+    json_file: Union[str, os.PathLike],
+    html_output: str = None,
+    json_output: str = "first_sight_report.json",
+    gqi_settings: Optional[Dict[str, Dict[str, float]]] = None,
+):
     # === Load JSON ===
     with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -152,13 +157,16 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     # ``ch`` accounts for noisy/flat channels, ``corr`` for ECG/EOG
     # contamination, and ``mus`` for muscle artifacts. Adjust the numbers if
     # different data sets require stricter or looser rules.
-    thresholds = {
-        # Weights sum to 1.0 including the PSD contribution.
-        "ch":   {"start": 5.0,  "end": 30.0, "weight": 0.32},  # bad channels %
-        "corr": {"start": 5.0,  "end": 25.0, "weight": 0.24},  # high correlations %
-        "mus":  {"start": 1.0,  "end": 10.0, "weight": 0.24},  # muscle events %
-        "psd":  {"start": 1.0,  "end": 5.0,  "weight": 0.2},   # power in noisy freqs %
-    }
+    if gqi_settings is not None:
+        thresholds = gqi_settings
+    else:
+        thresholds = {
+            # Weights sum to 1.0 including the PSD contribution.
+            "ch":   {"start": 5.0,  "end": 30.0, "weight": 0.32},
+            "corr": {"start": 5.0,  "end": 25.0, "weight": 0.24},
+            "mus":  {"start": 1.0,  "end": 10.0, "weight": 0.24},
+            "psd":  {"start": 1.0,  "end": 5.0,  "weight": 0.2},
+        }
 
     # Utility converting a measured percentage ``M`` into a quality value
     # between 0 and 1 using a progressive linear ramp. ``start`` marks the
@@ -212,6 +220,15 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
         "EOG", "all_channels_ranked_by_EOG_contamination_level"
     )
 
+    ecg_desc = str(data.get("ECG", {}).get("description", "")).lower()
+    eog_desc = str(data.get("EOG", {}).get("description", "")).lower()
+    def is_noisy(desc: str) -> bool:
+        noisy_markers = ["too noisy", "does not have expected", "can not be detected"]
+        return any(m in desc for m in noisy_markers)
+
+    ecg_noisy = is_noisy(ecg_desc)
+    eog_noisy = is_noisy(eog_desc)
+
     # ---- Observed metrics ----
     # Combine noisy and flat channel percentages across STD and PTP metrics to
     # obtain a single estimate of how many sensors are unreliable.
@@ -226,19 +243,15 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
         data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
     ])
 
-    # Compute the mean percentage of highly correlated channels from ECG and EOG
-    # analyses. If one of them is missing we fall back to a neutral penalty.
-    total_ecg = sum(1 for pct in ecg_percents if pct is not None)
-    total_eog = sum(1 for pct in eog_percents if pct is not None)
-    valid = []
-    if total_ecg > 0:
-        valid += ecg_percents
-    if total_eog > 0:
-        valid += eog_percents
-    if valid:
-        corr_pct = mean(valid)
-    else:
-        corr_pct = thresholds["corr"]["end"]
+    def mean_or_end(percs):
+        vals = [p for p in percs if p is not None]
+        return mean(vals) if vals else thresholds["corr"]["end"]
+
+    ecg_pct = mean_or_end(ecg_percents)
+    eog_pct = mean_or_end(eog_percents)
+
+    q_corr_ecg = 0.0 if ecg_noisy else quality_q(ecg_pct, thresholds["corr"]["start"], thresholds["corr"]["end"])
+    q_corr_eog = 0.0 if eog_noisy else quality_q(eog_pct, thresholds["corr"]["start"], thresholds["corr"]["end"])
 
     # Muscle contamination expressed as percentage of all evaluated events. If
     # the total count is unavailable we fall back to the raw number of detected
@@ -253,16 +266,17 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     # Convert the observed percentages into values between 0 and 1 using the
     # ramp function defined above.
     q_ch = quality_q(bad_pct, thresholds["ch"]["start"], thresholds["ch"]["end"])
-    q_corr = quality_q(corr_pct, thresholds["corr"]["start"], thresholds["corr"]["end"])
     q_mus = quality_q(muscle_pct, thresholds["mus"]["start"], thresholds["mus"]["end"])
     q_psd = quality_q(M_psd, thresholds["psd"]["start"], thresholds["psd"]["end"])
 
-    # Weighted sum of sub-indices scaled to a 0-100 range.
+    weight_corr_each = thresholds["corr"]["weight"] / 2
+
     GQI = round(
         100.0
         * (
             thresholds["ch"]["weight"] * q_ch
-            + thresholds["corr"]["weight"] * q_corr
+            + weight_corr_each * q_corr_ecg
+            + weight_corr_each * q_corr_eog
             + thresholds["mus"]["weight"] * q_mus
             + thresholds["psd"]["weight"] * q_psd
         ),
@@ -1231,7 +1245,7 @@ def process_one_subject(
         json_path = fname.get_absolute_path()
         if json_path:
             output_json = json_path.replace('SimpleMetrics', 'GlobalSummaryReport')
-        create_summary_report(json_path, None, output_json)
+        create_summary_report(json_path, None, output_json, all_qc_params.get("GlobalQualityIndex"))
 
     # Removes intermediate trash objects
     del meg_artifact, derivative

@@ -64,7 +64,13 @@ def test_create_summary_report_handles_missing_corr(tmp_path):
     summary_json = tmp_path / "summary.json"
     json_file.write_text(json.dumps(data))
 
-    create_summary_report(str(json_file), str(html_file), str(summary_json))
+    gqi = {
+        "ch": {"start": 5.0, "end": 30.0, "weight": 0.32},
+        "corr": {"start": 5.0, "end": 25.0, "weight": 0.24},
+        "mus": {"start": 1.0, "end": 10.0, "weight": 0.24},
+        "psd": {"start": 1.0, "end": 5.0, "weight": 0.2},
+    }
+    create_summary_report(str(json_file), str(html_file), str(summary_json), gqi)
 
     assert html_file.exists()
     with open(summary_json) as f:
