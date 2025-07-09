@@ -47,7 +47,10 @@ def test_create_summary_report_handles_missing_corr(tmp_path):
             }
         },
         "PSD": {"present": True},
-        "MUSCLE": {"zscore_thresholds": {"number_muscle_events": 0}},
+        "MUSCLE": {
+            "zscore_thresholds": {"number_muscle_events": 0},
+            "total_number_of_events": 100,
+        },
         "ECG": {"description": "ECG channel noisy"},
         "EOG": {"description": "EOG channel noisy"}
     }
