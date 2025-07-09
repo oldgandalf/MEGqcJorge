@@ -56,6 +56,29 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     # percentage of all evaluated events rather than an absolute count.
     total_events = data.get("MUSCLE", {}).get("total_number_of_events")
 
+    # PSD global: porcentaje de potencia en las frecuencias detectadas como ruido
+    psd_details_mag = (
+        data.get("PSD", {})
+        .get("PSD_global", {})
+        .get("mag", {})
+        .get("details", {})
+    )
+    psd_details_grad = (
+        data.get("PSD", {})
+        .get("PSD_global", {})
+        .get("grad", {})
+        .get("details", {})
+    )
+    noisy_power_mag = sum(
+        d.get("percent_of_this_noise_ampl_relative_to_all_signal_global", 0)
+        for d in psd_details_mag.values()
+    )
+    noisy_power_grad = sum(
+        d.get("percent_of_this_noise_ampl_relative_to_all_signal_global", 0)
+        for d in psd_details_grad.values()
+    )
+    M_psd = mean([noisy_power_mag, noisy_power_grad])
+
     # Parameters for the GQI computation can be tuned in the ``thresholds``
     # dictionary defined below. ``start`` and ``end`` define the linear range
     # where the quality transitions from 100 % to 0 %, while ``weight`` controls
@@ -115,9 +138,11 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     # contamination, and ``mus`` for muscle artifacts. Adjust the numbers if
     # different data sets require stricter or looser rules.
     thresholds = {
-        "ch":   {"start": 5.0,  "end": 30.0, "weight": 0.4},  # bad channels %
-        "corr": {"start": 5.0,  "end": 25.0, "weight": 0.3},  # high correlations %
-        "mus":  {"start": 1.0,  "end": 10.0, "weight": 0.3},  # muscle events %
+        # Weights sum to 1.0 including the PSD contribution.
+        "ch":   {"start": 5.0,  "end": 30.0, "weight": 0.32},  # bad channels %
+        "corr": {"start": 5.0,  "end": 25.0, "weight": 0.24},  # high correlations %
+        "mus":  {"start": 1.0,  "end": 10.0, "weight": 0.24},  # muscle events %
+        "psd":  {"start": 1.0,  "end": 5.0,  "weight": 0.2},   # power in noisy freqs %
     }
 
     # Utility converting a measured percentage ``M`` into a quality value
@@ -215,6 +240,7 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     q_ch = quality_q(bad_pct, thresholds["ch"]["start"], thresholds["ch"]["end"])
     q_corr = quality_q(corr_pct, thresholds["corr"]["start"], thresholds["corr"]["end"])
     q_mus = quality_q(muscle_pct, thresholds["mus"]["start"], thresholds["mus"]["end"])
+    q_psd = quality_q(M_psd, thresholds["psd"]["start"], thresholds["psd"]["end"])
 
     # Weighted sum of sub-indices scaled to a 0-100 range.
     GQI = round(
@@ -223,6 +249,7 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
             thresholds["ch"]["weight"] * q_ch
             + thresholds["corr"]["weight"] * q_corr
             + thresholds["mus"]["weight"] * q_mus
+            + thresholds["psd"]["weight"] * q_psd
         ),
         2,
     )
@@ -247,7 +274,12 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
 
     # === MUSCLE TABLE ===
     muscle_events = data["MUSCLE"]["zscore_thresholds"]["number_muscle_events"]
-    muscle_df = pd.DataFrame([{"# Muscle Events": muscle_events}])
+    muscle_df = pd.DataFrame([
+        {
+            "# Muscle Events": muscle_events,
+            "Total Events": total_events if total_events is not None else 0,
+        }
+    ])
 
     # === HTML OUTPUT ===
     std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
@@ -313,7 +345,10 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
         "PTP_epoch_summary": ptp_epoch_df.to_dict(orient="records"),
         "ECG_correlation_summary": ecg_df.to_dict(orient="records"),
         "EOG_correlation_summary": eog_df.to_dict(orient="records"),
-        "Muscle_events": {"# Muscle Events": muscle_events},
+        "Muscle_events": {
+            "# Muscle Events": muscle_events,
+            "total_number_of_events": total_events,
+        },
         "parameters": {
             "std_lvl": std_lvl,
             "ptp_lvl": ptp_lvl,
