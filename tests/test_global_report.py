@@ -72,3 +72,4 @@ def test_create_summary_report_handles_missing_corr(tmp_path):
     assert summary["ECG_correlation_summary"][0]["Total Channels"] == 0
     assert summary["EOG_correlation_summary"][0]["Total Channels"] == 0
     assert summary["Muscle_events"]["total_number_of_events"] == 100
+    assert summary["PSD_noise_summary"][0]["MAGNETOMETERS"] == "0.00%"

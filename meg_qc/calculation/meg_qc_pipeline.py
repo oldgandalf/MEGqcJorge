@@ -129,6 +129,21 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     general_df = build_summary_table(data["STD"]["STD_all_time_series"])
     ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
 
+    def build_psd_summary(noise_mag, noise_grad):
+        df = pd.DataFrame([
+            {
+                "Metric": "Noise Power",
+                "mag": noise_mag,
+                "grad": noise_grad,
+            }
+        ])
+        df["mag"] = df["mag"].map(lambda v: f"{v:.2f}%")
+        df["grad"] = df["grad"].map(lambda v: f"{v:.2f}%")
+        df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
+        return df
+
+    psd_df = build_psd_summary(noisy_power_mag, noisy_power_grad)
+
     # === GLOBAL QUALITY INDEX ===
     # Ranges and weights used for GQI calculation. Start indicates the
     # threshold below which quality is 100 %, end indicates 0 % quality,
@@ -317,6 +332,8 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
             f.write(f"</div><div class='table-box'><h2>PTP Time-Series (STD level: {ptp_lvl})</h2>")
             f.write(ptp_df.to_html(index=False))
             f.write("</div></div>")
+            f.write("<h2>PSD Noise Summary</h2>")
+            f.write(psd_df.to_html(index=False))
             f.write("<div class='table-flex'>")
             f.write(f"<div class='table-box'><h2>STD Epoch Summary (STD level: {std_epoch_lvl})</h2>")
             f.write(std_epoch_df.to_html(index=False))
@@ -345,6 +362,7 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
         "PTP_epoch_summary": ptp_epoch_df.to_dict(orient="records"),
         "ECG_correlation_summary": ecg_df.to_dict(orient="records"),
         "EOG_correlation_summary": eog_df.to_dict(orient="records"),
+        "PSD_noise_summary": psd_df.to_dict(orient="records"),
         "Muscle_events": {
             "# Muscle Events": muscle_events,
             "total_number_of_events": total_events,
