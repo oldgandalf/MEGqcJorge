@@ -44,11 +44,22 @@ import pandas as pd
 from typing import Union
 import plotly.graph_objects as go
 from plotly.offline import plot
+from statistics import mean
 
 def create_summary_report(json_file: Union[str, os.PathLike], html_output: str = None, json_output: str = "first_sight_report.json"):
     # === Load JSON ===
     with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
+
+    # Extract total number of epochs if present for muscle normalization.  This
+    # value is stored during the muscle metric computation and allows us to
+    # express the number of detected events as a percentage of epochs.
+    total_epochs = data.get("MUSCLE", {}).get("total_number_of_epochs")
+
+    # Parameters for the GQI computation can be tuned in the ``thresholds``
+    # dictionary defined below. ``start`` and ``end`` define the linear range
+    # where the quality transitions from 100 % to 0 %, while ``weight`` controls
+    # the importance of each metric in the final index.
 
     # Detect automatically if any metric used in the global report is missing
     # or empty. This avoids failures when datasets are not suitable for all
@@ -96,29 +107,35 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
 
     # === GLOBAL QUALITY INDEX ===
-    def extract_quality_percent(source):
-        return [
-            source["mag"]["percent_of_noisy_ch"],
-            source["mag"]["percent_of_flat_ch"],
-            source["grad"]["percent_of_noisy_ch"],
-            source["grad"]["percent_of_flat_ch"]
-        ]
+    # Ranges and weights used for GQI calculation. Start indicates the
+    # threshold below which quality is 100 %, end indicates 0 % quality,
+    # and weight controls the metric contribution to the final index.
 
-    quality_values = extract_quality_percent(data["STD"]["STD_all_time_series"]) + \
-                     extract_quality_percent(data["PTP_MANUAL"]["ptp_manual_all"])
+    # ``ch`` accounts for noisy/flat channels, ``corr`` for ECG/EOG
+    # contamination, and ``mus`` for muscle artifacts. Adjust the numbers if
+    # different data sets require stricter or looser rules.
+    thresholds = {
+        "ch":   {"start": 5.0,  "end": 30.0, "weight": 0.4},  # bad channels %
+        "corr": {"start": 5.0,  "end": 25.0, "weight": 0.3},  # high correlations %
+        "mus":  {"start": 1.0,  "end": 10.0, "weight": 0.3},  # muscle events %
+    }
 
-    quality_values += [
-        data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
-        data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
-        data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
-        data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"]
-    ]
+    # Utility converting a measured percentage ``M`` into a quality value
+    # between 0 and 1 using a progressive linear ramp. ``start`` marks the
+    # boundary for perfect quality, ``end`` for worst quality.
+    def quality_q(M, start, end):
+        if M <= start:
+            return 1.0
+        elif M >= end:
+            return 0.0
+        else:
+            f = (M - start) / (end - start)
+            return 1.0 - f
 
     # === CORRELATION ANALYSIS ===
+    # Build a small summary table for ECG/EOG contamination and return the
+    # percentage of channels exceeding the correlation threshold for each sensor
+    # type.
     def count_high_correlations_from_details(section, contamination_key):
         results = []
         percentages = []
@@ -148,12 +165,66 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
             )
         return pd.DataFrame(results), percentages
 
-    ecg_df, ecg_percents = count_high_correlations_from_details("ECG", "all_channels_ranked_by_ECG_contamination_level")
-    eog_df, eog_percents = count_high_correlations_from_details("EOG", "all_channels_ranked_by_EOG_contamination_level")
+    ecg_df, ecg_percents = count_high_correlations_from_details(
+        "ECG", "all_channels_ranked_by_ECG_contamination_level"
+    )
+    eog_df, eog_percents = count_high_correlations_from_details(
+        "EOG", "all_channels_ranked_by_EOG_contamination_level"
+    )
 
-    correlation_percent_avg = (sum(ecg_percents + eog_percents) / len(ecg_percents + eog_percents)) / 2
-    raw_gqi = sum(quality_values) / len(quality_values)
-    GQI = round(100 - raw_gqi - correlation_percent_avg, 2)
+    # ---- Observed metrics ----
+    # Combine noisy and flat channel percentages across STD and PTP metrics to
+    # obtain a single estimate of how many sensors are unreliable.
+    bad_pct = mean([
+        data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
+        data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
+        data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
+        data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
+        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
+    ])
+
+    # Compute the mean percentage of highly correlated channels from ECG and EOG
+    # analyses. If one of them is missing we fall back to a neutral penalty.
+    total_ecg = sum(1 for pct in ecg_percents if pct is not None)
+    total_eog = sum(1 for pct in eog_percents if pct is not None)
+    valid = []
+    if total_ecg > 0:
+        valid += ecg_percents
+    if total_eog > 0:
+        valid += eog_percents
+    if valid:
+        corr_pct = mean(valid)
+    else:
+        corr_pct = thresholds["corr"]["end"]
+
+    # Muscle contamination expressed as percentage of epochs. If the total
+    # number of epochs is unavailable we fall back to the raw event count.
+    muscle_events = data["MUSCLE"]["zscore_thresholds"]["number_muscle_events"]
+    if total_epochs:
+        muscle_pct = 100.0 * muscle_events / total_epochs
+    else:
+        muscle_pct = float(muscle_events)
+
+    # ---- Quality sub-indices ----
+    # Convert the observed percentages into values between 0 and 1 using the
+    # ramp function defined above.
+    q_ch = quality_q(bad_pct, thresholds["ch"]["start"], thresholds["ch"]["end"])
+    q_corr = quality_q(corr_pct, thresholds["corr"]["start"], thresholds["corr"]["end"])
+    q_mus = quality_q(muscle_pct, thresholds["mus"]["start"], thresholds["mus"]["end"])
+
+    # Weighted sum of sub-indices scaled to a 0-100 range.
+    GQI = round(
+        100.0
+        * (
+            thresholds["ch"]["weight"] * q_ch
+            + thresholds["corr"]["weight"] * q_corr
+            + thresholds["mus"]["weight"] * q_mus
+        ),
+        2,
+    )
 
     # === EPOCH SUMMARY TABLE ===
     def create_epoch_summary_table(source):
