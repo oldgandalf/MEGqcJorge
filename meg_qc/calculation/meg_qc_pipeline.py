@@ -51,10 +51,10 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Extract total number of epochs if present for muscle normalization.  This
-    # value is stored during the muscle metric computation and allows us to
-    # express the number of detected events as a percentage of epochs.
-    total_epochs = data.get("MUSCLE", {}).get("total_number_of_epochs")
+    # Extract the total number of events evaluated in the muscle metric. When
+    # present, this allows expressing the number of detected artifacts as a
+    # percentage of all evaluated events rather than an absolute count.
+    total_events = data.get("MUSCLE", {}).get("total_number_of_events")
 
     # Parameters for the GQI computation can be tuned in the ``thresholds``
     # dictionary defined below. ``start`` and ``end`` define the linear range
@@ -200,11 +200,12 @@ def create_summary_report(json_file: Union[str, os.PathLike], html_output: str =
     else:
         corr_pct = thresholds["corr"]["end"]
 
-    # Muscle contamination expressed as percentage of epochs. If the total
-    # number of epochs is unavailable we fall back to the raw event count.
+    # Muscle contamination expressed as percentage of all evaluated events. If
+    # the total count is unavailable we fall back to the raw number of detected
+    # events.
     muscle_events = data["MUSCLE"]["zscore_thresholds"]["number_muscle_events"]
-    if total_epochs:
-        muscle_pct = 100.0 * muscle_events / total_epochs
+    if total_events:
+        muscle_pct = 100.0 * muscle_events / total_events
     else:
         muscle_pct = float(muscle_events)
 
@@ -1053,6 +1054,15 @@ def process_one_subject(
                 attach_dummy=True,
                 cut_dummy=True
             )
+            # Store the total number of events analyzed so we can later express
+            # the number of detected artifacts as a percentage.  The first
+            # derivative contains a TSV table where each row corresponds to one
+            # event that was evaluated during muscle detection.
+            if muscle_derivs:
+                total_events_for_muscle = muscle_derivs[0].content.shape[0]
+                simple_metrics_muscle["total_number_of_events"] = int(
+                    total_events_for_muscle
+                )
             print('___MEGqc___: ',
                   "Finished Muscle artifacts calculation. --- Execution %s seconds ---"
                   % (time.time() - start_time))
