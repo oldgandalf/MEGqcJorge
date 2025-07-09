@@ -46,7 +46,12 @@ def test_create_summary_report_handles_missing_corr(tmp_path):
                 "grad": {"noisy_channel_multiplier": 0}
             }
         },
-        "PSD": {"present": True},
+        "PSD": {
+            "PSD_global": {
+                "mag": {"details": {}},
+                "grad": {"details": {}},
+            }
+        },
         "MUSCLE": {
             "zscore_thresholds": {"number_muscle_events": 0},
             "total_number_of_events": 100,
@@ -66,3 +71,4 @@ def test_create_summary_report_handles_missing_corr(tmp_path):
         summary = json.load(f)
     assert summary["ECG_correlation_summary"][0]["Total Channels"] == 0
     assert summary["EOG_correlation_summary"][0]["Total Channels"] == 0
+    assert summary["Muscle_events"]["total_number_of_events"] == 100
