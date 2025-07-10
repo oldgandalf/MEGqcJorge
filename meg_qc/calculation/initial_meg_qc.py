@@ -198,6 +198,10 @@ def get_all_config_params(config_file_path: str):
             'min_length_good': muscle_section.getfloat('min_length_good')})
 
         gqi_section = config['GlobalQualityIndex']
+
+        compute_gqi = gqi_section.getboolean('compute_gqi', fallback=True)
+        include_corr = gqi_section.getboolean('include_ecg_eog', fallback=True)
+
         weights = {
             'ch': gqi_section.getfloat('bad_ch_weight'),
             'corr': gqi_section.getfloat('correlation_weight'),
@@ -209,6 +213,8 @@ def get_all_config_params(config_file_path: str):
             total_w = 1
         weights = {k: v / total_w for k, v in weights.items()}
         all_qc_params['GlobalQualityIndex'] = {
+            'compute_gqi': compute_gqi,
+            'include_ecg_eog': include_corr,
             'ch':   {
                 'start': gqi_section.getfloat('bad_ch_start'),
                 'end': gqi_section.getfloat('bad_ch_end'),
