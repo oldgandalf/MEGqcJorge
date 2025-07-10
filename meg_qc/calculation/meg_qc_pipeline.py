@@ -1458,9 +1458,13 @@ def make_derivative_meg_qc(
                 with open(path, "r", encoding="utf-8") as f:
                     js = json.load(f)
                 subject = os.path.basename(os.path.dirname(path))
-                metrics = js.get("GQI_metrics", {})
-                row = {"subject": subject, "GQI": js.get("GQI")}
-                row.update(metrics)
+
+                row = {"subject": subject}
+                for key, val in js.items():
+                    if isinstance(val, (dict, list)):
+                        row[key] = json.dumps(val)
+                    else:
+                        row[key] = val
                 rows.append(row)
 
             if rows:
