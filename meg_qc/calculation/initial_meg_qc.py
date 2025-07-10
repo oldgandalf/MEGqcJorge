@@ -199,10 +199,10 @@ def get_all_config_params(config_file_path: str):
 
         gqi_section = config['GlobalQualityIndex']
         weights = {
-            'ch': gqi_section.getfloat('ch_weight'),
-            'corr': gqi_section.getfloat('corr_weight'),
-            'mus': gqi_section.getfloat('mus_weight'),
-            'psd': gqi_section.getfloat('psd_weight'),
+            'ch': gqi_section.getfloat('bad_ch_weight'),
+            'corr': gqi_section.getfloat('correlation_weight'),
+            'mus': gqi_section.getfloat('muscle_weight'),
+            'psd': gqi_section.getfloat('psd_noise_weight'),
         }
         total_w = sum(weights.values())
         if total_w == 0:
@@ -210,23 +210,23 @@ def get_all_config_params(config_file_path: str):
         weights = {k: v / total_w for k, v in weights.items()}
         all_qc_params['GlobalQualityIndex'] = {
             'ch':   {
-                'start': gqi_section.getfloat('ch_start'),
-                'end': gqi_section.getfloat('ch_end'),
+                'start': gqi_section.getfloat('bad_ch_start'),
+                'end': gqi_section.getfloat('bad_ch_end'),
                 'weight': weights['ch']
             },
             'corr': {
-                'start': gqi_section.getfloat('corr_start'),
-                'end': gqi_section.getfloat('corr_end'),
+                'start': gqi_section.getfloat('correlation_start'),
+                'end': gqi_section.getfloat('correlation_end'),
                 'weight': weights['corr']
             },
             'mus':  {
-                'start': gqi_section.getfloat('mus_start'),
-                'end': gqi_section.getfloat('mus_end'),
+                'start': gqi_section.getfloat('muscle_start'),
+                'end': gqi_section.getfloat('muscle_end'),
                 'weight': weights['mus']
             },
             'psd':  {
-                'start': gqi_section.getfloat('psd_start'),
-                'end': gqi_section.getfloat('psd_end'),
+                'start': gqi_section.getfloat('psd_noise_start'),
+                'end': gqi_section.getfloat('psd_noise_end'),
                 'weight': weights['psd']
             },
         }
