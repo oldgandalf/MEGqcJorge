@@ -283,6 +283,15 @@ def create_summary_report(
         2,
     )
 
+    penalties = {
+        "ch": 100 * thresholds["ch"]["weight"] * (1 - q_ch),
+        "corr": 100
+        * thresholds["corr"]["weight"]
+        * (1 - (q_corr_ecg + q_corr_eog) / 2),
+        "mus": 100 * thresholds["mus"]["weight"] * (1 - q_mus),
+        "psd": 100 * thresholds["psd"]["weight"] * (1 - q_psd),
+    }
+
     # === EPOCH SUMMARY TABLE ===
     def create_epoch_summary_table(source):
         rows = []
@@ -340,6 +349,13 @@ def create_summary_report(
             f.write("<div><h1>MEGQC Global Quality Report</h1></div>")
             f.write(f"<div><div class='file-label'>File: {html_name}</div>")
             f.write(f"<div class='subtitle'>Global Quality Index (GQI): {GQI}</div></div></div>")
+            f.write("<h2>GQI Penalties</h2>")
+            f.write(pd.DataFrame([
+                {"Metric": "Bad Channels", "Penalty (%)": f"{penalties['ch']:.2f}"},
+                {"Metric": "Correlation", "Penalty (%)": f"{penalties['corr']:.2f}"},
+                {"Metric": "Muscle", "Penalty (%)": f"{penalties['mus']:.2f}"},
+                {"Metric": "PSD Noise", "Penalty (%)": f"{penalties['psd']:.2f}"},
+            ]).to_html(index=False))
             f.write("<div class='table-flex'>")
             f.write(f"<div class='table-box'><h2>STD Time-Series (STD level: {std_lvl})</h2>")
             f.write(general_df.to_html(index=False))
@@ -381,6 +397,7 @@ def create_summary_report(
             "# Muscle Events": muscle_events,
             "total_number_of_events": total_events,
         },
+        "GQI_penalties": penalties,
         "parameters": {
             "std_lvl": std_lvl,
             "ptp_lvl": ptp_lvl,
