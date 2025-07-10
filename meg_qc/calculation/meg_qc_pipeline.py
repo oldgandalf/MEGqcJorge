@@ -1350,6 +1350,109 @@ def process_one_subject(
     return all_taken_raw_files
 
 
+def _parse_count_percent(val: str):
+    """Return ``(count, percent)`` from strings like ``"10 (5.0%)"``."""
+    if not isinstance(val, str):
+        return val, None
+    try:
+        if "(" in val and "%" in val:
+            count_str, rest = val.split("(", 1)
+            count = float(count_str.strip())
+            percent = float(rest.strip().strip(")% "))
+            return count, percent
+        if val.endswith("%"):
+            return None, float(val.strip("%"))
+        return float(val), None
+    except Exception:
+        return None, None
+
+
+def _parse_percent(val: str):
+    """Parse a percentage string like ``"10.5%"``."""
+    if isinstance(val, str):
+        try:
+            return float(val.strip().strip("%"))
+        except Exception:
+            return None
+    return float(val)
+
+
+def flatten_summary_metrics(js: dict) -> dict:
+    """Flatten one GlobalSummaryReport JSON into numeric columns."""
+    row = {"GQI": js.get("GQI")}
+
+    for item in js.get("STD_time_series", []):
+        metric = item.get("Metric", "").replace(" ", "_").lower()
+        num_mag, pct_mag = _parse_count_percent(item.get("MAGNETOMETERS", ""))
+        num_grad, pct_grad = _parse_count_percent(item.get("GRADIOMETERS", ""))
+        row[f"STD_ts_{metric}_mag_num"] = num_mag
+        row[f"STD_ts_{metric}_mag_percentage"] = pct_mag
+        row[f"STD_ts_{metric}_grad_num"] = num_grad
+        row[f"STD_ts_{metric}_grad_percentage"] = pct_grad
+
+    for item in js.get("PTP_time_series", []):
+        metric = item.get("Metric", "").replace(" ", "_").lower()
+        num_mag, pct_mag = _parse_count_percent(item.get("MAGNETOMETERS", ""))
+        num_grad, pct_grad = _parse_count_percent(item.get("GRADIOMETERS", ""))
+        row[f"PTP_ts_{metric}_mag_num"] = num_mag
+        row[f"PTP_ts_{metric}_mag_percentage"] = pct_mag
+        row[f"PTP_ts_{metric}_grad_num"] = num_grad
+        row[f"PTP_ts_{metric}_grad_percentage"] = pct_grad
+
+    for item in js.get("STD_epoch_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num_noisy, pct_noisy = _parse_count_percent(item.get("Noisy Epochs", ""))
+        num_flat, pct_flat = _parse_count_percent(item.get("Flat Epochs", ""))
+        row[f"STD_ep_{sensor}_noisy_num"] = num_noisy
+        row[f"STD_ep_{sensor}_noisy_percentage"] = pct_noisy
+        row[f"STD_ep_{sensor}_flat_num"] = num_flat
+        row[f"STD_ep_{sensor}_flat_percentage"] = pct_flat
+
+    for item in js.get("PTP_epoch_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num_noisy, pct_noisy = _parse_count_percent(item.get("Noisy Epochs", ""))
+        num_flat, pct_flat = _parse_count_percent(item.get("Flat Epochs", ""))
+        row[f"PTP_ep_{sensor}_noisy_num"] = num_noisy
+        row[f"PTP_ep_{sensor}_noisy_percentage"] = pct_noisy
+        row[f"PTP_ep_{sensor}_flat_num"] = num_flat
+        row[f"PTP_ep_{sensor}_flat_percentage"] = pct_flat
+
+    for item in js.get("ECG_correlation_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num, pct = _parse_count_percent(item.get("# |High Correlations| > 0.8", ""))
+        total = item.get("Total Channels")
+        row[f"ECG_{sensor}_high_corr_num"] = num
+        row[f"ECG_{sensor}_high_corr_percentage"] = pct
+        row[f"ECG_{sensor}_total_channels"] = total
+
+    for item in js.get("EOG_correlation_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num, pct = _parse_count_percent(item.get("# |High Correlations| > 0.8", ""))
+        total = item.get("Total Channels")
+        row[f"EOG_{sensor}_high_corr_num"] = num
+        row[f"EOG_{sensor}_high_corr_percentage"] = pct
+        row[f"EOG_{sensor}_total_channels"] = total
+
+    for item in js.get("PSD_noise_summary", []):
+        row["PSD_noise_mag_percentage"] = _parse_percent(item.get("MAGNETOMETERS", "0"))
+        row["PSD_noise_grad_percentage"] = _parse_percent(item.get("GRADIOMETERS", "0"))
+
+    muscle = js.get("Muscle_events", {})
+    row["Muscle_events_num"] = muscle.get("# Muscle Events")
+    row["Muscle_events_total"] = muscle.get("total_number_of_events")
+
+    for key, val in js.get("GQI_penalties", {}).items():
+        row[f"GQI_penalty_{key}"] = val
+
+    for key, val in js.get("GQI_metrics", {}).items():
+        row[f"GQI_{key}"] = val
+
+    for key, val in js.get("parameters", {}).items():
+        row[f"param_{key}"] = val
+
+    return row
+
+
 def make_derivative_meg_qc(
         default_config_file_path: str,
         internal_config_file_path: str,
@@ -1460,11 +1563,7 @@ def make_derivative_meg_qc(
                 subject = os.path.basename(os.path.dirname(path))
 
                 row = {"subject": subject}
-                for key, val in js.items():
-                    if isinstance(val, (dict, list)):
-                        row[key] = json.dumps(val)
-                    else:
-                        row[key] = val
+                row.update(flatten_summary_metrics(js))
                 rows.append(row)
 
             if rows:
