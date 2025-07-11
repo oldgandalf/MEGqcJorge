@@ -851,13 +851,8 @@ def make_dict_local_psd(noisy_freqs_local: dict, noise_ampl_local: dict, noise_a
 
     noisy_freqs_dict_all_ch={}
     for ch in channels:
-        central_freqs = noisy_freqs_local.get(ch, [])
-        if not central_freqs:
-            warnings.warn(
-                f"No PSD info found for channel {ch}. Skipping local PSD metrics for this channel."
-            )
-            continue
-        noisy_freqs_dict={}
+        central_freqs=noisy_freqs_local[ch]
+        noisy_freqs_dict={}     
         for fr_n, fr in enumerate(central_freqs):
             noisy_freqs_dict[fr]={'noise_ampl_local': float(noise_ampl_local[ch][fr_n]), 'percent_of_ths_noise_ampl_relative_to_all_signal_local':  round(float(noise_ampl_relative_to_all_signal_local[ch][fr_n]*100), 2)}
         noisy_freqs_dict_all_ch[ch]=noisy_freqs_dict
