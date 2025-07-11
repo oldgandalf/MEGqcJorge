@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 from scipy.integrate import simpson
 from scipy.signal import find_peaks, peak_widths
 import copy
-import re   
+import re
+import warnings
 from typing import List, Union
 
 from meg_qc.plotting.universal_plots import QC_derivative, get_tit_and_unit
@@ -779,8 +780,14 @@ def get_ampl_of_noisy_freqs(channels: List, freqs: List, avg_psd: List, psds: Li
     noise_ampl_relative_to_all_signal_local_all_ch={}
     noisy_freqs_local_all_ch={}
 
-    for ch_n, ch in enumerate(channels): #for each channel separately
-        _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs, psds[ch_n,:], helper_plots, m_or_g, cut_noise_from_psd, prominence_lvl_pos_channels, simple_or_complex)
+    if len(channels) != psds.shape[0]:
+        warnings.warn(
+            f"Number of channels ({len(channels)}) does not match PSD array size ({psds.shape[0]}). "
+            "Using the minimum of the two to avoid indexing errors."
+        )
+
+    for ch, psd in zip(channels, psds):  # iterate safely over available data
+        _, noise_ampl_local_all_ch[ch], noise_ampl_relative_to_all_signal_local_all_ch[ch], noisy_freqs_local_all_ch[ch] = find_number_and_ampl_of_noise_freqs(ch, freqs, psd, helper_plots, m_or_g, cut_noise_from_psd, prominence_lvl_pos_channels, simple_or_complex)
 
     return noise_pie_derivative, noise_ampl_global, noise_ampl_relative_to_all_signal_global, noisy_freqs_global, noise_ampl_local_all_ch, noise_ampl_relative_to_all_signal_local_all_ch, noisy_freqs_local_all_ch
 
