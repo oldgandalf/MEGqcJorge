@@ -1350,6 +1350,32 @@ def process_one_subject(
     return all_taken_raw_files
 
 
+def process_one_subject_safe(
+        sub: str,
+        dataset,
+        dataset_path: str,
+        all_qc_params: dict,
+        internal_qc_params: dict):
+    """Wrapper around :func:`process_one_subject` that catches errors.
+
+    Parameters are identical to :func:`process_one_subject`.
+    The function returns a tuple ``(sub, result)`` where ``result`` is
+    ``None`` if the processing failed for this subject.
+    """
+    try:
+        result = process_one_subject(
+            sub=sub,
+            dataset=dataset,
+            dataset_path=dataset_path,
+            all_qc_params=all_qc_params,
+            internal_qc_params=internal_qc_params,
+        )
+        return sub, result
+    except Exception as e:  # Catch any error so the parallel job continues
+        print(f"___MEGqc___: Error processing subject {sub}: {e}")
+        return sub, None
+
+
 def _parse_count_percent(val: str):
     """Return ``(count, percent)`` from strings like ``"10 (5.0%)"``."""
     if not isinstance(val, str):
@@ -1489,10 +1515,10 @@ def make_derivative_meg_qc(
             sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
         # Parallel execution over subjects
-        # Each subject is processed by process_one_subject() in parallel
+        # Each subject is processed by process_one_subject_safe() in parallel
         # with n_jobs specifying how many workers to run simultaneously
         results = Parallel(n_jobs=n_jobs)(
-            delayed(process_one_subject)(
+            delayed(process_one_subject_safe)(
                 sub=sub,
                 dataset=dataset,
                 dataset_path=dataset_path,
@@ -1521,12 +1547,15 @@ def make_derivative_meg_qc(
         #         global_avg_ecg += ecg_data
         #         global_avg_eog += eog_data
 
+        # Collect results and log subjects that failed
+        excluded_subjects = [sub for sub, files in results if files is None]
+
         # Remove temporary folder of intermediate files
         delete_temp_folder(dataset_path)
 
         # Save config file used for this run as a derivative:
         all_subs_raw_files = []
-        for subj_files in results:
+        for sub, subj_files in results:
             if subj_files is not None:
                 all_subs_raw_files.extend(subj_files)
 
@@ -1542,6 +1571,14 @@ def make_derivative_meg_qc(
 
         # Write the pipeline-level derivative to disk
         ancpbids.write_derivative(dataset, derivative)
+
+        # Save list of excluded subjects
+        if excluded_subjects:
+            excl_path = os.path.join(dataset_path, 'derivatives', 'Meg_QC', 'excluded_subjects')
+            os.makedirs(os.path.dirname(excl_path), exist_ok=True)
+            with open(excl_path, 'w', encoding='utf-8') as f:
+                for sub in excluded_subjects:
+                    f.write(str(sub) + '\n')
 
         # ---------------------------------------
         # Create group level table with GQI values
