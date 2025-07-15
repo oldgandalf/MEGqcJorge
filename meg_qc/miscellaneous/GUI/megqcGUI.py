@@ -38,6 +38,7 @@ from PyQt6.QtGui import QPixmap, QIcon, QPalette, QColor  # for loading images, 
 # Core MEG QC pipeline functions
 from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
 from meg_qc.plotting.meg_qc_plots import make_plots_meg_qc
+from meg_qc.calculation.metrics.summary_report_GQI import generate_gqi_summary
 
 # Use Qt5 widget integration and not the OS integrations (This will prevent incompatibilities)
 QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeDialogs)
@@ -681,6 +682,17 @@ class MainWindow(QMainWindow):
         btns_lay.addWidget(btn_stop)
         calc_form.addRow("", row_btns)
 
+        btn_gqi = QPushButton("Run GQI")
+        btn_gqi.clicked.connect(self.start_gqi)
+        btn_gqi_stop = QPushButton("Stop GQI")
+        btn_gqi_stop.clicked.connect(self.stop_gqi)
+        row_gqi = QWidget()
+        gqi_lay = QHBoxLayout(row_gqi)
+        gqi_lay.setContentsMargins(0, 0, 0, 0)
+        gqi_lay.addWidget(btn_gqi)
+        gqi_lay.addWidget(btn_gqi_stop)
+        calc_form.addRow("", row_gqi)
+
         lay.addWidget(calc_box)
 
         # — Plotting section —
@@ -835,6 +847,23 @@ class MainWindow(QMainWindow):
         if worker:
             worker.stop()
             self.log.appendPlainText("Plotting stopped")
+
+    def start_gqi(self):
+        """Run Global Quality Index calculation only."""
+        data_dir = self.data_dir.text().strip()
+        args = (data_dir, str(SETTINGS_PATH))
+        worker = Worker(generate_gqi_summary, *args)
+        worker.started.connect(lambda: self.log.appendPlainText("GQI started"))
+        worker.finished.connect(lambda e: self.log.appendPlainText(f"GQI finished in {e:.2f}s"))
+        worker.error.connect(lambda err: self.log.appendPlainText(f"GQI error: {err}"))
+        worker.start()
+        self.workers["gqi"] = worker
+
+    def stop_gqi(self):
+        worker = self.workers.get("gqi")
+        if worker:
+            worker.stop()
+            self.log.appendPlainText("GQI stopped")
 
 
     # ──────────────────────────────── #
