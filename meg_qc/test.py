@@ -258,3 +258,32 @@ def get_plots():
 
     make_plots_meg_qc(data_directory)
     return
+
+
+def run_gqi():
+    """Recalculate Global Quality Index reports using existing metrics."""
+    from meg_qc.calculation.metrics.summary_report_GQI import generate_gqi_summary
+
+    parser = argparse.ArgumentParser(
+        description="Recompute Global Quality Index using previously calculated metrics"
+    )
+    parser.add_argument(
+        "--inputdata",
+        type=str,
+        required=True,
+        help="Path to the root of your BIDS MEG dataset",
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=False,
+        help="Path to a config file with GQI parameters",
+    )
+    args = parser.parse_args()
+
+    install_path = os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
+    default_config = os.path.join(install_path, "settings", "settings.ini")
+    cfg_path = args.config if args.config else default_config
+
+    generate_gqi_summary(args.inputdata, cfg_path)
+    return

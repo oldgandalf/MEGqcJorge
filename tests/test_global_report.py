@@ -1,6 +1,6 @@
 import json
 import os
-from meg_qc.calculation.meg_qc_pipeline import create_summary_report
+from meg_qc.calculation.metrics.summary_report_GQI import create_summary_report
 
 def test_create_summary_report_handles_missing_corr(tmp_path):
     data = {

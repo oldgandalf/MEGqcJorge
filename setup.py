@@ -40,7 +40,8 @@ if __name__ == '__main__':
                 'megqc = meg_qc.miscellaneous.GUI.megqcGUI:run_megqc_gui',
                 'run-megqc = meg_qc.test:run_megqc',
                 'run-megqc-plotting = meg_qc.test:get_plots',
-                'get-megqc-config = meg_qc.test:get_config'
+                'get-megqc-config = meg_qc.test:get_config',
+                'globalqualityindex = meg_qc.test:run_gqi'
             ]
         },
         license='MIT',
