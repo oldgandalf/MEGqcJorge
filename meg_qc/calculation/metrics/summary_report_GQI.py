@@ -10,6 +10,9 @@ from statistics import mean
 from typing import Union, Optional, Dict
 
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.cm as cm
 
 from meg_qc.calculation.initial_meg_qc import get_all_config_params
 
@@ -327,6 +330,70 @@ def create_summary_report(
     print(f"JSON summary successfully generated: {json_output}")
 
 
+def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: Union[str, os.PathLike]) -> None:
+    """Generate violin plot of group GQI metrics."""
+    df = pd.read_csv(tsv_path, sep="\t")
+
+    cols = [
+        "GQI",
+        "GQI_penalty_ch",
+        "GQI_penalty_corr",
+        "GQI_penalty_mus",
+        "GQI_penalty_psd",
+        "GQI_bad_pct",
+        "GQI_ecg_pct",
+        "GQI_eog_pct",
+        "GQI_muscle_pct",
+        "GQI_psd_noise_pct",
+    ]
+    available_cols = [c for c in cols if c in df.columns]
+    data = df[available_cols].apply(pd.to_numeric, errors="coerce")
+    violin_data = [data[c].dropna().values for c in available_cols]
+
+    palette = cm.get_cmap("tab10", len(available_cols))
+
+    plt.figure(figsize=(22, 10))
+    parts = plt.violinplot(
+        violin_data,
+        showmeans=True,
+        showextrema=True,
+        showmedians=False,
+        widths=0.8,
+    )
+
+    for i, pc in enumerate(parts["bodies"]):
+        color = palette(i)
+        pc.set_facecolor(color)
+        pc.set_edgecolor("black")
+        pc.set_alpha(0.3)
+
+    parts["cmeans"].set_linewidth(3)
+    parts["cmeans"].set_color("black")
+    parts["cbars"].set_color("black")
+
+    for i, y in enumerate(violin_data, start=1):
+        x = np.random.normal(i, 0.08, size=len(y))
+        plt.scatter(
+            x,
+            y,
+            s=40,
+            alpha=0.9,
+            edgecolor="black",
+            linewidth=0.6,
+            facecolor=palette(i - 1),
+        )
+
+    plt.xticks(range(1, len(available_cols) + 1), available_cols, rotation=35, ha="right", fontsize=20, fontweight="bold")
+    plt.yticks(fontsize=18)
+    plt.ylabel("Value", fontsize=22, fontweight="bold")
+    plt.title("Violin Plot of GQI Metrics with Individual Data Points", fontsize=26, pad=25)
+
+    plt.grid(axis="y", linestyle="--", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_png, dpi=300)
+    plt.close()
+
+
 
 def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
     """Generate Global Quality Index summaries from existing metrics."""
@@ -370,7 +437,10 @@ def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
         rows.append(row)
     if rows:
         df = pd.DataFrame(rows)
-        df.to_csv(os.path.join(group_dir, f"Global_Quality_Index_attempt_{attempt}.tsv"), sep="\t", index=False)
+        tsv_file = os.path.join(group_dir, f"Global_Quality_Index_attempt_{attempt}.tsv")
+        df.to_csv(tsv_file, sep="\t", index=False)
+        png_file = os.path.join(group_dir, f"Global_Quality_Index_attempt_{attempt}.png")
+        create_group_metrics_figure(tsv_file, png_file)
 
     config_dir = os.path.join(reports_root, "config")
     os.makedirs(config_dir, exist_ok=True)
