@@ -16,6 +16,11 @@ import matplotlib.cm as cm
 from meg_qc.calculation.initial_meg_qc import get_all_config_params
 
 
+def _safe_dict(val):
+    """Return ``val`` if it is a ``dict``, otherwise return an empty ``dict``."""
+    return val if isinstance(val, dict) else {}
+
+
 # ---------------------------------------------------------------------------
 # High level helper functions
 # ---------------------------------------------------------------------------
@@ -48,16 +53,17 @@ def create_summary_report(
     with open(json_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # Retrieve nested structures safely in case metrics were not computed
+    muscle = _safe_dict(data.get("MUSCLE"))
+    psd = _safe_dict(data.get("PSD"))
+    psd_global = _safe_dict(psd.get("PSD_global"))
+
     # Number of events used when computing the muscle metric
-    total_events = data.get("MUSCLE", {}).get("total_number_of_events")
+    total_events = muscle.get("total_number_of_events")
 
     # Extract PSD noise information for magnetometers and gradiometers
-    psd_details_mag = (
-        data.get("PSD", {}).get("PSD_global", {}).get("mag", {}).get("details", {})
-    )
-    psd_details_grad = (
-        data.get("PSD", {}).get("PSD_global", {}).get("grad", {}).get("details", {})
-    )
+    psd_details_mag = _safe_dict(_safe_dict(psd_global.get("mag")).get("details"))
+    psd_details_grad = _safe_dict(_safe_dict(psd_global.get("grad")).get("details"))
     # Percentage of power attributed to noise for each sensor type
     noisy_power_mag = sum(
         d.get("percent_of_this_noise_ampl_relative_to_all_signal_global", 0)
@@ -180,14 +186,11 @@ def create_summary_report(
         results = []
         percentages = []
         for sensor_type in ["mag", "grad"]:
-            entries = (
-                data.get(section, {})
-                .get(contamination_key, {})
-                .get(sensor_type, {})
-                .get("details", {})
-            )
-            if not isinstance(entries, dict):
-                entries = {}
+            entries = data.get(section)
+            entries = _safe_dict(entries)
+            entries = _safe_dict(entries.get(contamination_key))
+            entries = _safe_dict(entries.get(sensor_type))
+            entries = _safe_dict(entries.get("details"))
             total = len(entries)
             high_corr = sum(
                 1
@@ -206,20 +209,27 @@ def create_summary_report(
         return pd.DataFrame(results), percentages
 
     # Summaries of ECG and EOG channel correlations
-    ecg_df, ecg_percents = count_high_correlations_from_details(
-        "ECG", "all_channels_ranked_by_ECG_contamination_level"
-    )
-    eog_df, eog_percents = count_high_correlations_from_details(
-        "EOG", "all_channels_ranked_by_EOG_contamination_level"
-    )
+    if ecg_present:
+        ecg_df, ecg_percents = count_high_correlations_from_details(
+            "ECG", "all_channels_ranked_by_ECG_contamination_level"
+        )
+    else:
+        ecg_df, ecg_percents = pd.DataFrame(), []
+
+    if eog_present:
+        eog_df, eog_percents = count_high_correlations_from_details(
+            "EOG", "all_channels_ranked_by_EOG_contamination_level"
+        )
+    else:
+        eog_df, eog_percents = pd.DataFrame(), []
 
     def is_noisy(desc: str) -> bool:
         """Return ``True`` if the description indicates a noisy channel."""
         noisy_markers = ["too noisy", "does not have expected", "can not be detected"]
         return any(m in desc for m in noisy_markers)
 
-    ecg_desc = str(data.get("ECG", {}).get("description", "")).lower()
-    eog_desc = str(data.get("EOG", {}).get("description", "")).lower()
+    ecg_desc = str(_safe_dict(data.get("ECG")).get("description", "")).lower()
+    eog_desc = str(_safe_dict(data.get("EOG")).get("description", "")).lower()
     ecg_noisy = is_noisy(ecg_desc)
     eog_noisy = is_noisy(eog_desc)
 
@@ -248,8 +258,6 @@ def create_summary_report(
 
     # Correlation weight is split equally between ECG and EOG
     weight_corr_each = thresholds["corr"]["weight"] / 2
-    ecg_present = bool(data.get("ECG"))
-    eog_present = bool(data.get("EOG"))
     weight_ecg = weight_corr_each if include_corr and ecg_present else 0.0
     weight_eog = weight_corr_each if include_corr and eog_present else 0.0
 
@@ -265,7 +273,7 @@ def create_summary_report(
         else 1.0
     )
 
-    muscle_events = data.get("MUSCLE", {}).get("zscore_thresholds", {}).get("number_muscle_events")
+    muscle_events = _safe_dict(muscle.get("zscore_thresholds")).get("number_muscle_events")
     muscle_pct = None
     if muscle_events is not None and total_events is not None:
         muscle_pct = 100.0 * muscle_events / total_events if total_events else float(muscle_events)
@@ -368,12 +376,17 @@ def create_summary_report(
             f.write(f"</div><div class='table-box'><h2>PTP Epoch Summary (STD level: {ptp_epoch_lvl})</h2>")
             f.write(ptp_epoch_df.to_html(index=False))
             f.write("</div></div>")
-            f.write("<div class='table-flex'>")
-            f.write("<div class='table-box'><h2>ECG Correlation Summary</h2>")
-            f.write(ecg_df.to_html(index=False))
-            f.write("</div><div class='table-box'><h2>EOG Correlation Summary</h2>")
-            f.write(eog_df.to_html(index=False))
-            f.write("</div></div>")
+            if not ecg_df.empty or not eog_df.empty:
+                f.write("<div class='table-flex'>")
+                if not ecg_df.empty:
+                    f.write("<div class='table-box'><h2>ECG Correlation Summary</h2>")
+                    f.write(ecg_df.to_html(index=False))
+                    f.write("</div>")
+                if not eog_df.empty:
+                    f.write("<div class='table-box'><h2>EOG Correlation Summary</h2>")
+                    f.write(eog_df.to_html(index=False))
+                    f.write("</div>")
+                f.write("</div>")
             f.write("<h2>Muscle Events Summary</h2>")
             f.write(muscle_df.to_html(index=False))
             f.write("</body></html>")
