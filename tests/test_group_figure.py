@@ -21,3 +21,15 @@ def test_create_group_metrics_figure(tmp_path):
     png = tmp_path / 'out.png'
     create_group_metrics_figure(tsv, png)
     assert png.exists()
+
+
+def test_group_figure_handles_missing_columns(tmp_path):
+    df = pd.DataFrame({
+        'GQI_bad_pct': [1.0, 2.0],
+        'GQI_psd_noise_pct': [3.0, 4.0],
+    })
+    tsv = tmp_path / 'data2.tsv'
+    df.to_csv(tsv, sep='\t', index=False)
+    png = tmp_path / 'out2.png'
+    create_group_metrics_figure(tsv, png)
+    assert png.exists()
