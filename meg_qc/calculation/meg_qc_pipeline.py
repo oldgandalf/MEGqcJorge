@@ -959,7 +959,9 @@ def _parse_percent(val: str):
 
 def flatten_summary_metrics(js: dict) -> dict:
     """Flatten one GlobalSummaryReport JSON into numeric columns."""
-    row = {"GQI": js.get("GQI")}
+    row = {}
+    if js.get("GQI") is not None:
+        row["GQI"] = js.get("GQI")
 
     for item in js.get("STD_time_series", []):
         metric = item.get("Metric", "").replace(" ", "_").lower()

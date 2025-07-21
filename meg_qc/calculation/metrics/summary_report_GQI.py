@@ -68,26 +68,36 @@ def create_summary_report(
         for d in psd_details_grad.values()
     )
     # Average noise level across magnetometers and gradiometers
-    M_psd = mean([noisy_power_mag, noisy_power_grad])
+    M_psd = mean([noisy_power_mag, noisy_power_grad]) if psd_details_mag or psd_details_grad else None
 
-    # Required metrics for generating a summary
-    metrics_to_check = ["STD", "PSD", "PTP_MANUAL", "MUSCLE"]
+    # Determine which metrics are available
+    std_present = bool(data.get("STD"))
+    psd_present = bool(data.get("PSD"))
+    ptp_present = bool(data.get("PTP_MANUAL"))
+    muscle_present = bool(data.get("MUSCLE"))
+    ecg_present = bool(data.get("ECG"))
+    eog_present = bool(data.get("EOG"))
+
     compute_gqi = True
     include_corr = True
     if gqi_settings is not None:
         # Override default behaviour when configuration is provided
         compute_gqi = gqi_settings.get("compute_gqi", True)
         include_corr = gqi_settings.get("include_ecg_eog", True)
-    if compute_gqi and include_corr:
-        metrics_to_check.extend(["ECG", "EOG"])
-    # Abort if required metrics are missing in the JSON
-    missing = [m for m in metrics_to_check if not data.get(m)]
-    if missing:
-        print(
-            f"___MEGqc___: Skipping GlobalSummaryReport for {json_file}. "
-            f"Missing metrics: {', '.join(missing)}"
-        )
-        return
+
+    # If correlation metrics are missing treat it as disabled
+    if not (ecg_present and eog_present):
+        include_corr = False
+
+    # Only compute GQI when all required metrics are available
+    compute_gqi = (
+        compute_gqi
+        and std_present
+        and psd_present
+        and ptp_present
+        and muscle_present
+    )
+
     if html_output is not None:
         html_name = os.path.splitext(os.path.basename(json_output))[0].replace(
             "-GlobalSummaryReport_meg",
@@ -109,8 +119,27 @@ def create_summary_report(
         df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
         return df
 
-    general_df = build_summary_table(data["STD"]["STD_all_time_series"])
-    ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
+    if std_present:
+        general_df = build_summary_table(data["STD"]["STD_all_time_series"])
+        std_epoch_df = pd.DataFrame(data["STD"].get("STD_epoch", {}))
+        std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
+        std_epoch_lvl = data["STD"]["STD_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+    else:
+        general_df = pd.DataFrame()
+        std_epoch_df = pd.DataFrame()
+        std_lvl = "NA"
+        std_epoch_lvl = "NA"
+
+    if ptp_present:
+        ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
+        ptp_epoch_df = pd.DataFrame(data["PTP_MANUAL"].get("ptp_manual_epoch", {}))
+        ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
+        ptp_epoch_lvl = data["PTP_MANUAL"]["ptp_manual_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+    else:
+        ptp_df = pd.DataFrame()
+        ptp_epoch_df = pd.DataFrame()
+        ptp_lvl = "NA"
+        ptp_epoch_lvl = "NA"
 
     def build_psd_summary(noise_mag, noise_grad):
         """Return a table with global PSD noise percentages."""
@@ -124,17 +153,18 @@ def create_summary_report(
 
     psd_df = build_psd_summary(noisy_power_mag, noisy_power_grad)
 
+    # Default thresholds and weights for the GQI formula
+    thresholds = {
+        "ch": {"start": 5.0, "end": 30.0, "weight": 0.32},
+        "corr": {"start": 5.0, "end": 25.0, "weight": 0.24},
+        "mus": {"start": 1.0, "end": 10.0, "weight": 0.24},
+        "psd": {"start": 1.0, "end": 5.0, "weight": 0.2},
+    }
     if gqi_settings is not None:
-        # Use user supplied thresholds when available
-        thresholds = {k: v for k, v in gqi_settings.items() if isinstance(v, dict)}
-    else:
-        # Default thresholds and weights for the GQI formula
-        thresholds = {
-            "ch": {"start": 5.0, "end": 30.0, "weight": 0.32},
-            "corr": {"start": 5.0, "end": 25.0, "weight": 0.24},
-            "mus": {"start": 1.0, "end": 10.0, "weight": 0.24},
-            "psd": {"start": 1.0, "end": 5.0, "weight": 0.2},
-        }
+        # Override defaults with user supplied thresholds when available
+        for key, val in gqi_settings.items():
+            if isinstance(val, dict):
+                thresholds[key] = {**thresholds.get(key, {}), **val}
 
     def quality_q(M, start, end):
         """Linear quality value between ``start`` and ``end`` thresholds."""
@@ -194,21 +224,24 @@ def create_summary_report(
     eog_noisy = is_noisy(eog_desc)
 
     # Average percentage of bad (noisy or flat) channels
-    bad_pct = mean([
-        data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
-        data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
-        data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
-        data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
-        data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
-    ])
+    if std_present and ptp_present:
+        bad_pct = mean([
+            data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
+            data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
+            data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
+            data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
+            data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
+            data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
+            data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
+            data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
+        ])
+    else:
+        bad_pct = None
 
     def mean_or_end(percs):
-        """Return mean of list or ``corr`` end threshold when empty."""
+        """Return mean of list or ``None`` when empty."""
         vals = [p for p in percs if p is not None]
-        return mean(vals) if vals else thresholds["corr"]["end"]
+        return mean(vals) if vals else None
 
     ecg_pct = mean_or_end(ecg_percents)
     eog_pct = mean_or_end(eog_percents)
@@ -232,12 +265,25 @@ def create_summary_report(
         else 1.0
     )
 
-    muscle_events = data["MUSCLE"]["zscore_thresholds"]["number_muscle_events"]
-    muscle_pct = 100.0 * muscle_events / total_events if total_events else float(muscle_events)
+    muscle_events = data.get("MUSCLE", {}).get("zscore_thresholds", {}).get("number_muscle_events")
+    muscle_pct = None
+    if muscle_events is not None and total_events is not None:
+        muscle_pct = 100.0 * muscle_events / total_events if total_events else float(muscle_events)
 
-    q_ch = quality_q(bad_pct, thresholds["ch"]["start"], thresholds["ch"]["end"])
-    q_mus = quality_q(muscle_pct, thresholds["mus"]["start"], thresholds["mus"]["end"])
-    q_psd = quality_q(M_psd, thresholds["psd"]["start"], thresholds["psd"]["end"])
+    if bad_pct is not None:
+        q_ch = quality_q(bad_pct, thresholds["ch"]["start"], thresholds["ch"]["end"])
+    else:
+        q_ch = 1.0
+
+    if muscle_pct is not None:
+        q_mus = quality_q(muscle_pct, thresholds["mus"]["start"], thresholds["mus"]["end"])
+    else:
+        q_mus = 1.0
+
+    if M_psd is not None:
+        q_psd = quality_q(M_psd, thresholds["psd"]["start"], thresholds["psd"]["end"])
+    else:
+        q_psd = 1.0
 
     # Sum of weights used for normalising the GQI calculation
     weights_sum = (
@@ -271,16 +317,9 @@ def create_summary_report(
         GQI = None
         penalties = {}
 
-    std_epoch_df = pd.DataFrame(data["STD"]["STD_epoch"])
-    ptp_epoch_df = pd.DataFrame(data["PTP_MANUAL"]["ptp_manual_epoch"])
     muscle_df = pd.DataFrame([
         {"# Muscle Events": muscle_events, "Total Events": total_events if total_events is not None else 0}
     ])
-
-    std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
-    ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
-    std_epoch_lvl = data["STD"]["STD_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
-    ptp_epoch_lvl = data["PTP_MANUAL"]["ptp_manual_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
 
     if html_output is not None:
         style = """
@@ -305,15 +344,16 @@ def create_summary_report(
             f.write("<div><h1>MEGQC Global Quality Report</h1></div>")
             f.write(f"<div><div class='file-label'>File: {html_name}</div>")
             f.write(f"<div class='subtitle'>Global Quality Index (GQI): {GQI}</div></div></div>")
-            f.write("<h2>GQI Penalties</h2>")
-            f.write(
-                pd.DataFrame([
-                    {"Metric": "Bad Channels", "Penalty (%)": f"{penalties['ch']:.2f}"},
-                    {"Metric": "Correlation", "Penalty (%)": f"{penalties['corr']:.2f}"},
-                    {"Metric": "Muscle", "Penalty (%)": f"{penalties['mus']:.2f}"},
-                    {"Metric": "PSD Noise", "Penalty (%)": f"{penalties['psd']:.2f}"},
-                ]).to_html(index=False)
-            )
+            if penalties:
+                f.write("<h2>GQI Penalties</h2>")
+                f.write(
+                    pd.DataFrame([
+                        {"Metric": "Bad Channels", "Penalty (%)": f"{penalties['ch']:.2f}"},
+                        {"Metric": "Correlation", "Penalty (%)": f"{penalties['corr']:.2f}"},
+                        {"Metric": "Muscle", "Penalty (%)": f"{penalties['mus']:.2f}"},
+                        {"Metric": "PSD Noise", "Penalty (%)": f"{penalties['psd']:.2f}"},
+                    ]).to_html(index=False)
+                )
             f.write("<div class='table-flex'>")
             f.write(f"<div class='table-box'><h2>STD Time-Series (STD level: {std_lvl})</h2>")
             f.write(general_df.to_html(index=False))
@@ -391,8 +431,10 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         "GQI_muscle_pct",
         "GQI_psd_noise_pct",
     ]
-    # Only plot metrics present in the table
-    available_cols = [c for c in cols if c in df.columns]
+    # Only plot metrics present in the table and containing data
+    available_cols = [
+        c for c in cols if c in df.columns and not df[c].dropna().empty
+    ]
     data = df[available_cols].apply(pd.to_numeric, errors="coerce")
     violin_data = [data[c].dropna().values for c in available_cols]
 
