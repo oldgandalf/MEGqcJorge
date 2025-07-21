@@ -11,6 +11,8 @@ def test_create_group_metrics_figure(tmp_path):
         'GQI_penalty_mus': [5, 0],
         'GQI_penalty_psd': [2, 3],
         'GQI_bad_pct': [1.0, 2.0],
+        'GQI_std_pct': [0.5, 0.6],
+        'GQI_ptp_pct': [0.5, 1.4],
         'GQI_ecg_pct': [0.1, 0.2],
         'GQI_eog_pct': [0.1, 0.0],
         'GQI_muscle_pct': [0.01, 0.02],
