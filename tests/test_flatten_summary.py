@@ -35,6 +35,8 @@ def test_flatten_summary_metrics():
         "GQI_penalties": {"ch": 0.0, "corr": 0.0, "mus": 0.0, "psd": 20.0},
         "GQI_metrics": {
             "bad_pct": 9.1875,
+            "std_pct": 4.0,
+            "ptp_pct": 5.0,
             "ecg_pct": 0.0,
             "eog_pct": 0.0,
             "muscle_pct": 0.0001845015046097701,
@@ -51,4 +53,6 @@ def test_flatten_summary_metrics():
     assert row["PSD_noise_mag_percentage"] == 49.48
     assert row["Muscle_events_num"] == 1
     assert row["GQI_penalty_psd"] == 20.0
+    assert row["GQI_std_pct"] == 4.0
+    assert row["GQI_ptp_pct"] == 5.0
 

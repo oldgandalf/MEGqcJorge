@@ -95,13 +95,12 @@ def create_summary_report(
     if not (ecg_present and eog_present):
         include_corr = False
 
-    # Only compute GQI when all required metrics are available
+    # Only compute GQI when mandatory metrics are available
     compute_gqi = (
         compute_gqi
         and std_present
         and psd_present
         and ptp_present
-        and muscle_present
     )
 
     if html_output is not None:
@@ -233,18 +232,29 @@ def create_summary_report(
     ecg_noisy = is_noisy(ecg_desc)
     eog_noisy = is_noisy(eog_desc)
 
-    # Average percentage of bad (noisy or flat) channels
-    if std_present and ptp_present:
-        bad_pct = mean([
+    # Average percentage of bad (noisy or flat) channels for STD and PTP
+    if std_present:
+        std_pct = mean([
             data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
             data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
             data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
             data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
+        ])
+    else:
+        std_pct = None
+
+    if ptp_present:
+        ptp_pct = mean([
             data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
             data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
             data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
             data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
         ])
+    else:
+        ptp_pct = None
+
+    if std_pct is not None and ptp_pct is not None:
+        bad_pct = mean([std_pct, ptp_pct])
     else:
         bad_pct = None
 
@@ -406,6 +416,8 @@ def create_summary_report(
         "GQI_penalties": penalties,
         "GQI_metrics": {
             "bad_pct": bad_pct,
+            "std_pct": std_pct,
+            "ptp_pct": ptp_pct,
             "ecg_pct": ecg_pct,
             "eog_pct": eog_pct,
             "muscle_pct": muscle_pct,
@@ -439,6 +451,8 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         "GQI_penalty_mus",
         "GQI_penalty_psd",
         "GQI_bad_pct",
+        "GQI_std_pct",
+        "GQI_ptp_pct",
         "GQI_ecg_pct",
         "GQI_eog_pct",
         "GQI_muscle_pct",
