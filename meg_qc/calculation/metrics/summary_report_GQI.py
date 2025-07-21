@@ -426,7 +426,7 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
             x,
             y,
             s=40,
-            alpha=0.9,
+            alpha=0.3,
             edgecolor="black",
             linewidth=0.6,
             facecolor=palette(i - 1),
