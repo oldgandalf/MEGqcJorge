@@ -21,6 +21,23 @@ def _safe_dict(val):
     return val if isinstance(val, dict) else {}
 
 
+def _safe_dataframe(obj):
+    """Return a ``DataFrame`` built from ``obj`` handling scalar-only dictionaries.
+
+    When ``obj`` is not a mapping an empty ``DataFrame`` is returned. If all
+    values are scalars they are converted into a single-row ``DataFrame`` to
+    avoid ``ValueError`` from ``pandas``.
+    """
+    if not isinstance(obj, dict):
+        return pd.DataFrame()
+
+    try:
+        return pd.DataFrame(obj)
+    except ValueError:
+        # Fall back to single-row construction for scalar dictionaries
+        return pd.DataFrame([{k: v for k, v in obj.items()}])
+
+
 # ---------------------------------------------------------------------------
 # High level helper functions
 # ---------------------------------------------------------------------------
@@ -126,9 +143,9 @@ def create_summary_report(
 
     if std_present:
         general_df = build_summary_table(data["STD"]["STD_all_time_series"])
-        std_epoch_df = pd.DataFrame(data["STD"].get("STD_epoch", {}))
+        std_epoch_df = _safe_dataframe(data["STD"].get("STD_epoch", {}))
         std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
-        std_epoch_lvl = data["STD"]["STD_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+        std_epoch_lvl = _safe_dict(data.get("STD", {})).get("STD_epoch", {}).get("mag", {}).get("noisy_channel_multiplier", "NA")
     else:
         general_df = pd.DataFrame()
         std_epoch_df = pd.DataFrame()
@@ -137,9 +154,9 @@ def create_summary_report(
 
     if ptp_present:
         ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
-        ptp_epoch_df = pd.DataFrame(data["PTP_MANUAL"].get("ptp_manual_epoch", {}))
+        ptp_epoch_df = _safe_dataframe(data["PTP_MANUAL"].get("ptp_manual_epoch", {}))
         ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
-        ptp_epoch_lvl = data["PTP_MANUAL"]["ptp_manual_epoch"]["mag"].get("noisy_channel_multiplier", "NA")
+        ptp_epoch_lvl = _safe_dict(data.get("PTP_MANUAL", {})).get("ptp_manual_epoch", {}).get("mag", {}).get("noisy_channel_multiplier", "NA")
     else:
         ptp_df = pd.DataFrame()
         ptp_epoch_df = pd.DataFrame()
