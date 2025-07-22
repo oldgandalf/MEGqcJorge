@@ -17,16 +17,25 @@ from meg_qc.calculation.initial_meg_qc import get_all_config_params
 
 
 def _safe_dict(val):
-    """Return ``val`` if it is a ``dict``, otherwise return an empty ``dict``."""
+    """Return ``val`` if it is a dictionary, otherwise an empty ``dict``.
+
+    This helper prevents ``AttributeError`` when optional sections of the
+    metrics JSON are missing or set to ``null``. It normalises any non mapping
+    values to an empty dictionary so subsequent ``.get()`` calls succeed.
+    """
+
     return val if isinstance(val, dict) else {}
 
 
 def _safe_dataframe(obj):
-    """Return a ``DataFrame`` built from ``obj`` handling scalar-only dictionaries.
+    """Return a ``DataFrame`` from ``obj`` while tolerating malformed inputs.
 
-    When ``obj`` is not a mapping an empty ``DataFrame`` is returned. If all
-    values are scalars they are converted into a single-row ``DataFrame`` to
-    avoid ``ValueError`` from ``pandas``.
+    ``obj`` is expected to be a mapping. When it is not, an empty
+    ``DataFrame`` is returned.  Some metrics can store scalar dictionaries
+    (e.g. results for a single epoch). In that case ``pandas`` raises a
+    ``ValueError`` if we try to build a ``DataFrame`` directly.  This helper
+    converts such scalar dictionaries into a single-row ``DataFrame`` so the
+    rest of the code can operate uniformly.
     """
     if not isinstance(obj, dict):
         return pd.DataFrame()
@@ -145,7 +154,16 @@ def create_summary_report(
         general_df = build_summary_table(data["STD"]["STD_all_time_series"])
         std_epoch_df = _safe_dataframe(data["STD"].get("STD_epoch", {}))
         std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
-        std_epoch_lvl = _safe_dict(data.get("STD", {})).get("STD_epoch", {}).get("mag", {}).get("noisy_channel_multiplier", "NA")
+        # ``STD_epoch`` can be ``null`` in the metrics JSON. Applying ``_safe_dict``
+        # twice ensures we always operate on a dictionary before requesting the
+        # magnetometer multiplier.
+        std_epoch_lvl = (
+            _safe_dict(
+                _safe_dict(data.get("STD", {})).get("STD_epoch")
+            )
+            .get("mag", {})
+            .get("noisy_channel_multiplier", "NA")
+        )
     else:
         general_df = pd.DataFrame()
         std_epoch_df = pd.DataFrame()
@@ -156,7 +174,16 @@ def create_summary_report(
         ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
         ptp_epoch_df = _safe_dataframe(data["PTP_MANUAL"].get("ptp_manual_epoch", {}))
         ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
-        ptp_epoch_lvl = _safe_dict(data.get("PTP_MANUAL", {})).get("ptp_manual_epoch", {}).get("mag", {}).get("noisy_channel_multiplier", "NA")
+        # ``ptp_manual_epoch`` can also be ``null``. By wrapping the nested
+        # ``get`` calls with ``_safe_dict`` we ensure a default dictionary and
+        # avoid ``AttributeError`` when extracting the multiplier.
+        ptp_epoch_lvl = (
+            _safe_dict(
+                _safe_dict(data.get("PTP_MANUAL", {})).get("ptp_manual_epoch")
+            )
+            .get("mag", {})
+            .get("noisy_channel_multiplier", "NA")
+        )
     else:
         ptp_df = pd.DataFrame()
         ptp_epoch_df = pd.DataFrame()
