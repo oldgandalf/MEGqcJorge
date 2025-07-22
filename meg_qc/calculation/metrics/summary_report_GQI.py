@@ -159,10 +159,10 @@ def create_summary_report(
         # magnetometer multiplier.
         std_epoch_lvl = (
             _safe_dict(
-                _safe_dict(data.get("STD", {})).get("STD_epoch")
-            )
-            .get("mag", {})
-            .get("noisy_channel_multiplier", "NA")
+                _safe_dict(
+                    _safe_dict(data.get("STD", {})).get("STD_epoch")
+                ).get("mag")
+            ).get("noisy_channel_multiplier", "NA")
         )
     else:
         general_df = pd.DataFrame()
@@ -179,10 +179,10 @@ def create_summary_report(
         # avoid ``AttributeError`` when extracting the multiplier.
         ptp_epoch_lvl = (
             _safe_dict(
-                _safe_dict(data.get("PTP_MANUAL", {})).get("ptp_manual_epoch")
-            )
-            .get("mag", {})
-            .get("noisy_channel_multiplier", "NA")
+                _safe_dict(
+                    _safe_dict(data.get("PTP_MANUAL", {})).get("ptp_manual_epoch")
+                ).get("mag")
+            ).get("noisy_channel_multiplier", "NA")
         )
     else:
         ptp_df = pd.DataFrame()
