@@ -316,14 +316,17 @@ def stim_data_to_df(raw: mne.io.Raw):
     """
 
     stim_channels = mne.pick_types(raw.info, stim=True)
-    stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
 
-    # Extract data for stimulus channels
-    stim_data, times = raw[stim_channels, :]
-
-    # Create a DataFrame with the stimulus data
-    stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
-    stim_df['time'] = times
+    if len(stim_channels) == 0:
+        print('___MEGqc___: ', 'No stimulus channels found.')
+        stim_df = pd.DataFrame()
+    else:
+        stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
+        # Extract data for stimulus channels
+        stim_data, times = raw[stim_channels, :]
+        # Create a DataFrame with the stimulus data
+        stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
+        stim_df['time'] = times
 
     # save df as QC_derivative object
     stim_deriv = [QC_derivative(stim_df, 'stimulus', 'df')]
