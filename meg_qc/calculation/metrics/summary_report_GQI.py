@@ -99,8 +99,15 @@ def create_summary_report(
         d.get("percent_of_this_noise_ampl_relative_to_all_signal_global", 0)
         for d in psd_details_grad.values()
     )
-    # Average noise level across magnetometers and gradiometers
-    M_psd = mean([noisy_power_mag, noisy_power_grad]) if psd_details_mag or psd_details_grad else None
+    # Average noise level across available sensor types
+    if psd_details_mag and psd_details_grad:
+        M_psd = mean([noisy_power_mag, noisy_power_grad])
+    elif psd_details_mag:
+        M_psd = noisy_power_mag
+    elif psd_details_grad:
+        M_psd = noisy_power_grad
+    else:
+        M_psd = None
 
     # Determine which metrics are available
     std_present = bool(data.get("STD"))
@@ -278,29 +285,39 @@ def create_summary_report(
 
     # Average percentage of bad (noisy or flat) channels for STD and PTP
     if std_present:
-        std_pct = mean([
-            data["STD"]["STD_all_time_series"]["mag"]["percent_of_noisy_ch"],
-            data["STD"]["STD_all_time_series"]["mag"]["percent_of_flat_ch"],
-            data["STD"]["STD_all_time_series"]["grad"]["percent_of_noisy_ch"],
-            data["STD"]["STD_all_time_series"]["grad"]["percent_of_flat_ch"],
-        ])
+        std_global = _safe_dict(data["STD"].get("STD_all_time_series"))
+        vals = []
+        mag = _safe_dict(std_global.get("mag"))
+        grad = _safe_dict(std_global.get("grad"))
+        if mag:
+            vals.append(mag.get("percent_of_noisy_ch"))
+            vals.append(mag.get("percent_of_flat_ch"))
+        if grad:
+            vals.append(grad.get("percent_of_noisy_ch"))
+            vals.append(grad.get("percent_of_flat_ch"))
+        vals = [v for v in vals if v is not None]
+        std_pct = mean(vals) if vals else None
     else:
         std_pct = None
 
     if ptp_present:
-        ptp_pct = mean([
-            data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_noisy_ch"],
-            data["PTP_MANUAL"]["ptp_manual_all"]["mag"]["percent_of_flat_ch"],
-            data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_noisy_ch"],
-            data["PTP_MANUAL"]["ptp_manual_all"]["grad"]["percent_of_flat_ch"],
-        ])
+        ptp_global = _safe_dict(data["PTP_MANUAL"].get("ptp_manual_all"))
+        vals = []
+        mag = _safe_dict(ptp_global.get("mag"))
+        grad = _safe_dict(ptp_global.get("grad"))
+        if mag:
+            vals.append(mag.get("percent_of_noisy_ch"))
+            vals.append(mag.get("percent_of_flat_ch"))
+        if grad:
+            vals.append(grad.get("percent_of_noisy_ch"))
+            vals.append(grad.get("percent_of_flat_ch"))
+        vals = [v for v in vals if v is not None]
+        ptp_pct = mean(vals) if vals else None
     else:
         ptp_pct = None
 
-    if std_pct is not None and ptp_pct is not None:
-        bad_pct = mean([std_pct, ptp_pct])
-    else:
-        bad_pct = None
+    vals = [v for v in (std_pct, ptp_pct) if v is not None]
+    bad_pct = mean(vals) if vals else None
 
     def mean_or_end(percs):
         """Return mean of list or ``None`` when empty."""
