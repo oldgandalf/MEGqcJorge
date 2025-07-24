@@ -15,3 +15,17 @@ The following derivatives are produced as the result of the analysis for each da
 - HTML report for all metrics presented as interactive figures, that can be scrolled through and enlarged;
 - TSV file with the results of the analysis for some of the metrics;
 - machine-readable JSON file with the results of the analysis for all metrics.
+
+### Between sample analysis
+
+The package includes a small utility to compare quality metrics between
+datasets. Assuming you have the per-sample TSV tables created by the MEGqc
+pipeline, run::
+
+    python -m meg_qc.calculation.between_sample_analysis \
+        --tsv sample1/group_metrics.tsv sample2/group_metrics.tsv \
+        --names sample1 sample2 \
+        --output-dir results
+
+All violin plots, regression results and scatter plots will be written to the
+``results`` directory.
