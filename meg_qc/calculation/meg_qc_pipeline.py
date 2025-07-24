@@ -2,11 +2,13 @@ import os
 import gc
 import ancpbids
 from ancpbids.query import query_entities
+from ancpbids import DatasetOptions
 import time
 import json
 import sys
 import mne
 import shutil
+import glob
 from typing import List, Union
 from joblib import Parallel, delayed
 
@@ -37,6 +39,12 @@ from meg_qc.calculation.metrics.ECG_EOG_meg_qc import ECG_meg_qc, EOG_meg_qc
 from meg_qc.calculation.metrics.Head_meg_qc import HEAD_movement_meg_qc
 from meg_qc.calculation.metrics.muscle_meg_qc import MUSCLE_meg_qc
 
+import os
+import json
+import pandas as pd
+from typing import Union, Optional, Dict
+
+from meg_qc.calculation.metrics.summary_report_GQI import generate_gqi_summary
 
 def ctf_workaround(dataset, sid):
     artifacts = dataset.query(suffix="meg", return_type="object", subj=sid, scope='raw')
@@ -761,6 +769,15 @@ def process_one_subject(
                 attach_dummy=True,
                 cut_dummy=True
             )
+            # Store the total number of events analyzed so we can later express
+            # the number of detected artifacts as a percentage.  The first
+            # derivative contains a TSV table where each row corresponds to one
+            # event that was evaluated during muscle detection.
+            if muscle_derivs:
+                total_events_for_muscle = muscle_derivs[0].content.shape[0]
+                simple_metrics_muscle["total_number_of_events"] = int(
+                    total_events_for_muscle
+                )
             print('___MEGqc___: ',
                   "Finished Muscle artifacts calculation. --- Execution %s seconds ---"
                   % (time.time() - start_time))
@@ -868,6 +885,10 @@ def process_one_subject(
 
     # WRITE DERIVATIVE
     ancpbids.write_derivative(dataset, derivative)
+
+
+
+    # Removes intermediate trash objects
     del meg_artifact, derivative
     gc.collect()
 
@@ -883,6 +904,137 @@ def process_one_subject(
     return all_taken_raw_files
 
 
+def process_one_subject_safe(
+        sub: str,
+        dataset,
+        dataset_path: str,
+        all_qc_params: dict,
+        internal_qc_params: dict):
+    """Wrapper around :func:`process_one_subject` that catches errors.
+
+    Parameters are identical to :func:`process_one_subject`.
+    The function returns a tuple ``(sub, result)`` where ``result`` is
+    ``None`` if the processing failed for this subject.
+    """
+    try:
+        result = process_one_subject(
+            sub=sub,
+            dataset=dataset,
+            dataset_path=dataset_path,
+            all_qc_params=all_qc_params,
+            internal_qc_params=internal_qc_params,
+        )
+        return sub, result
+    except Exception as e:  # Catch any error so the parallel job continues
+        print(f"___MEGqc___: Error processing subject {sub}: {e}")
+        return sub, None
+
+
+def _parse_count_percent(val: str):
+    """Return ``(count, percent)`` from strings like ``"10 (5.0%)"``."""
+    if not isinstance(val, str):
+        return val, None
+    try:
+        if "(" in val and "%" in val:
+            count_str, rest = val.split("(", 1)
+            count = float(count_str.strip())
+            percent = float(rest.strip().strip(")% "))
+            return count, percent
+        if val.endswith("%"):
+            return None, float(val.strip("%"))
+        return float(val), None
+    except Exception:
+        return None, None
+
+
+def _parse_percent(val: str):
+    """Parse a percentage string like ``"10.5%"``."""
+    if isinstance(val, str):
+        try:
+            return float(val.strip().strip("%"))
+        except Exception:
+            return None
+    return float(val)
+
+
+def flatten_summary_metrics(js: dict) -> dict:
+    """Flatten one GlobalSummaryReport JSON into numeric columns."""
+    row = {}
+    if js.get("GQI") is not None:
+        row["GQI"] = js.get("GQI")
+
+    for item in js.get("STD_time_series", []):
+        metric = item.get("Metric", "").replace(" ", "_").lower()
+        num_mag, pct_mag = _parse_count_percent(item.get("MAGNETOMETERS", ""))
+        num_grad, pct_grad = _parse_count_percent(item.get("GRADIOMETERS", ""))
+        row[f"STD_ts_{metric}_mag_num"] = num_mag
+        row[f"STD_ts_{metric}_mag_percentage"] = pct_mag
+        row[f"STD_ts_{metric}_grad_num"] = num_grad
+        row[f"STD_ts_{metric}_grad_percentage"] = pct_grad
+
+    for item in js.get("PTP_time_series", []):
+        metric = item.get("Metric", "").replace(" ", "_").lower()
+        num_mag, pct_mag = _parse_count_percent(item.get("MAGNETOMETERS", ""))
+        num_grad, pct_grad = _parse_count_percent(item.get("GRADIOMETERS", ""))
+        row[f"PTP_ts_{metric}_mag_num"] = num_mag
+        row[f"PTP_ts_{metric}_mag_percentage"] = pct_mag
+        row[f"PTP_ts_{metric}_grad_num"] = num_grad
+        row[f"PTP_ts_{metric}_grad_percentage"] = pct_grad
+
+    for item in js.get("STD_epoch_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num_noisy, pct_noisy = _parse_count_percent(item.get("Noisy Epochs", ""))
+        num_flat, pct_flat = _parse_count_percent(item.get("Flat Epochs", ""))
+        row[f"STD_ep_{sensor}_noisy_num"] = num_noisy
+        row[f"STD_ep_{sensor}_noisy_percentage"] = pct_noisy
+        row[f"STD_ep_{sensor}_flat_num"] = num_flat
+        row[f"STD_ep_{sensor}_flat_percentage"] = pct_flat
+
+    for item in js.get("PTP_epoch_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num_noisy, pct_noisy = _parse_count_percent(item.get("Noisy Epochs", ""))
+        num_flat, pct_flat = _parse_count_percent(item.get("Flat Epochs", ""))
+        row[f"PTP_ep_{sensor}_noisy_num"] = num_noisy
+        row[f"PTP_ep_{sensor}_noisy_percentage"] = pct_noisy
+        row[f"PTP_ep_{sensor}_flat_num"] = num_flat
+        row[f"PTP_ep_{sensor}_flat_percentage"] = pct_flat
+
+    for item in js.get("ECG_correlation_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num, pct = _parse_count_percent(item.get("# |High Correlations| > 0.8", ""))
+        total = item.get("Total Channels")
+        row[f"ECG_{sensor}_high_corr_num"] = num
+        row[f"ECG_{sensor}_high_corr_percentage"] = pct
+        row[f"ECG_{sensor}_total_channels"] = total
+
+    for item in js.get("EOG_correlation_summary", []):
+        sensor = "mag" if item.get("Sensor Type") == "MAGNETOMETERS" else "grad"
+        num, pct = _parse_count_percent(item.get("# |High Correlations| > 0.8", ""))
+        total = item.get("Total Channels")
+        row[f"EOG_{sensor}_high_corr_num"] = num
+        row[f"EOG_{sensor}_high_corr_percentage"] = pct
+        row[f"EOG_{sensor}_total_channels"] = total
+
+    for item in js.get("PSD_noise_summary", []):
+        row["PSD_noise_mag_percentage"] = _parse_percent(item.get("MAGNETOMETERS", "0"))
+        row["PSD_noise_grad_percentage"] = _parse_percent(item.get("GRADIOMETERS", "0"))
+
+    muscle = js.get("Muscle_events", {})
+    row["Muscle_events_num"] = muscle.get("# Muscle Events")
+    row["Muscle_events_total"] = muscle.get("total_number_of_events")
+
+    for key, val in js.get("GQI_penalties", {}).items():
+        row[f"GQI_penalty_{key}"] = val
+
+    for key, val in js.get("GQI_metrics", {}).items():
+        row[f"GQI_{key}"] = val
+
+    for key, val in js.get("parameters", {}).items():
+        row[f"param_{key}"] = val
+
+    return row
+
+
 def make_derivative_meg_qc(
         default_config_file_path: str,
         internal_config_file_path: str,
@@ -895,7 +1047,7 @@ def make_derivative_meg_qc(
 
     for dataset_path in ds_paths:
         print('___MEGqc___: ', 'DS path:', dataset_path)
-        dataset = ancpbids.load_dataset(dataset_path)
+        dataset = ancpbids.load_dataset(dataset_path, DatasetOptions(lazy_loading=True))
         schema = dataset.get_schema()
 
         derivatives_path = os.path.join(dataset_path, 'derivatives')
@@ -919,10 +1071,10 @@ def make_derivative_meg_qc(
             sub_list = ask_user_rerun_subs(reuse_config_file_path, sub_list)
 
         # Parallel execution over subjects
-        # Each subject is processed by process_one_subject() in parallel
+        # Each subject is processed by process_one_subject_safe() in parallel
         # with n_jobs specifying how many workers to run simultaneously
         results = Parallel(n_jobs=n_jobs)(
-            delayed(process_one_subject)(
+            delayed(process_one_subject_safe)(
                 sub=sub,
                 dataset=dataset,
                 dataset_path=dataset_path,
@@ -951,12 +1103,15 @@ def make_derivative_meg_qc(
         #         global_avg_ecg += ecg_data
         #         global_avg_eog += eog_data
 
+        # Collect results and log subjects that failed
+        excluded_subjects = [sub for sub, files in results if files is None]
+
         # Remove temporary folder of intermediate files
         delete_temp_folder(dataset_path)
 
         # Save config file used for this run as a derivative:
         all_subs_raw_files = []
-        for subj_files in results:
+        for sub, subj_files in results:
             if subj_files is not None:
                 all_subs_raw_files.extend(subj_files)
 
@@ -972,6 +1127,20 @@ def make_derivative_meg_qc(
 
         # Write the pipeline-level derivative to disk
         ancpbids.write_derivative(dataset, derivative)
+
+        # Save list of excluded subjects
+        if excluded_subjects:
+            excl_path = os.path.join(dataset_path, 'derivatives', 'Meg_QC', 'excluded_subjects')
+            os.makedirs(os.path.dirname(excl_path), exist_ok=True)
+            with open(excl_path, 'w', encoding='utf-8') as f:
+                for sub in excluded_subjects:
+                    f.write(str(sub) + '\n')
+
+        # Generate Global Quality Index reports and group table
+        try:
+            generate_gqi_summary(dataset_path, config_file_path)
+        except Exception as e:
+            print("___MEGqc___: Failed to create global quality reports", e)
 
     return
 

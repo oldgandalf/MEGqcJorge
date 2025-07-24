@@ -1,4 +1,4 @@
-ancpbids==0.2.9
+ancpbids==0.3.0
 prompt_toolkit==3.0.48
 mne~=1.6.0
 pandas>=2.0.3
@@ -7,3 +7,4 @@ joblib==1.4.2
 pyqt6-tools==6.4.2.3.3
 numba==0.58.1
 psutil==5.9.8
+matplotlib==3.8.4

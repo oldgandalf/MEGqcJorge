@@ -197,6 +197,46 @@ def get_all_config_params(config_file_path: str):
             'muscle_freqs': muscle_freqs,
             'min_length_good': muscle_section.getfloat('min_length_good')})
 
+        gqi_section = config['GlobalQualityIndex']
+
+        compute_gqi = gqi_section.getboolean('compute_gqi', fallback=True)
+        include_corr = gqi_section.getboolean('include_ecg_eog', fallback=True)
+
+        weights = {
+            'ch': gqi_section.getfloat('bad_ch_weight'),
+            'corr': gqi_section.getfloat('correlation_weight'),
+            'mus': gqi_section.getfloat('muscle_weight'),
+            'psd': gqi_section.getfloat('psd_noise_weight'),
+        }
+        total_w = sum(weights.values())
+        if total_w == 0:
+            total_w = 1
+        weights = {k: v / total_w for k, v in weights.items()}
+        all_qc_params['GlobalQualityIndex'] = {
+            'compute_gqi': compute_gqi,
+            'include_ecg_eog': include_corr,
+            'ch':   {
+                'start': gqi_section.getfloat('bad_ch_start'),
+                'end': gqi_section.getfloat('bad_ch_end'),
+                'weight': weights['ch']
+            },
+            'corr': {
+                'start': gqi_section.getfloat('correlation_start'),
+                'end': gqi_section.getfloat('correlation_end'),
+                'weight': weights['corr']
+            },
+            'mus':  {
+                'start': gqi_section.getfloat('muscle_start'),
+                'end': gqi_section.getfloat('muscle_end'),
+                'weight': weights['mus']
+            },
+            'psd':  {
+                'start': gqi_section.getfloat('psd_noise_start'),
+                'end': gqi_section.getfloat('psd_noise_end'),
+                'weight': weights['psd']
+            },
+        }
+
     except:
         print('___MEGqc___: ',
               'Invalid setting in config file! Please check instructions for each setting. \nGeneral directions: \nDon`t write any parameter as None. Don`t use quotes.\nLeaving blank is only allowed for parameters: \n- stim_channel, \n- data_crop_tmin, data_crop_tmax, \n- freq_min and freq_max in Filtering section, \n- all parameters of Filtering section if apply_filtering is set to False.')
@@ -276,14 +316,17 @@ def stim_data_to_df(raw: mne.io.Raw):
     """
 
     stim_channels = mne.pick_types(raw.info, stim=True)
-    stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
 
-    # Extract data for stimulus channels
-    stim_data, times = raw[stim_channels, :]
-
-    # Create a DataFrame with the stimulus data
-    stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
-    stim_df['time'] = times
+    if len(stim_channels) == 0:
+        print('___MEGqc___: ', 'No stimulus channels found.')
+        stim_df = pd.DataFrame()
+    else:
+        stim_channel_names = [raw.info['ch_names'][ch] for ch in stim_channels]
+        # Extract data for stimulus channels
+        stim_data, times = raw[stim_channels, :]
+        # Create a DataFrame with the stimulus data
+        stim_df = pd.DataFrame(stim_data.T, columns=stim_channel_names)
+        stim_df['time'] = times
 
     # save df as QC_derivative object
     stim_deriv = [QC_derivative(stim_df, 'stimulus', 'df')]

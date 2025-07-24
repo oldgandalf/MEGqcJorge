@@ -1448,7 +1448,7 @@ def make_simple_metric_ECG_EOG(channels_ranked: dict, m_or_g_chosen: List, ecg_o
         
     """
 
-    metric_global_name = 'all_channels_raned_by_'+ecg_or_eog+'_contamination_level'
+    metric_global_name = 'all_channels_ranked_by_'+ecg_or_eog+'_contamination_level'
     metric_global_content = {'mag': None, 'grad': None}
 
     if use_method == 'mean_threshold':
