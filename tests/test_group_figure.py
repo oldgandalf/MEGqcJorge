@@ -10,7 +10,6 @@ def test_create_group_metrics_figure(tmp_path):
         'GQI_penalty_corr': [0, 5],
         'GQI_penalty_mus': [5, 0],
         'GQI_penalty_psd': [2, 3],
-        'GQI_bad_pct': [1.0, 2.0],
         'GQI_std_pct': [0.5, 0.6],
         'GQI_ptp_pct': [0.5, 1.4],
         'GQI_ecg_pct': [0.1, 0.2],
@@ -27,7 +26,6 @@ def test_create_group_metrics_figure(tmp_path):
 
 def test_group_figure_handles_missing_columns(tmp_path):
     df = pd.DataFrame({
-        'GQI_bad_pct': [1.0, 2.0],
         'GQI_psd_noise_pct': [3.0, 4.0],
     })
     tsv = tmp_path / 'data2.tsv'

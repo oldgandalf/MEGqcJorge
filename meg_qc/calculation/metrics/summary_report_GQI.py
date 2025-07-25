@@ -511,7 +511,6 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         "GQI_penalty_corr",
         "GQI_penalty_mus",
         "GQI_penalty_psd",
-        "GQI_bad_pct",
         "GQI_std_pct",
         "GQI_ptp_pct",
         "GQI_ecg_pct",
@@ -519,6 +518,20 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         "GQI_muscle_pct",
         "GQI_psd_noise_pct",
     ]
+
+    label_map = {
+        "GQI": "GQI",
+        "GQI_penalty_ch": "Variability penalty",
+        "GQI_penalty_corr": "Correlational penalty",
+        "GQI_penalty_mus": "Muscle penalty",
+        "GQI_penalty_psd": "PSD penalty",
+        "GQI_std_pct": "STD noise",
+        "GQI_ptp_pct": "PtP noise",
+        "GQI_ecg_pct": "ECG noise",
+        "GQI_eog_pct": "EOG noise",
+        "GQI_muscle_pct": "Muscle noise",
+        "GQI_psd_noise_pct": "PSD noise",
+    }
     # Only plot metrics present in the table and containing data
     available_cols = [
         c for c in cols if c in df.columns and not df[c].dropna().empty
@@ -563,7 +576,15 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         )
 
     # Label axes and finalise the figure
-    plt.xticks(range(1, len(available_cols) + 1), available_cols, rotation=35, ha="right", fontsize=20, fontweight="bold")
+    tick_labels = [label_map.get(c, c) for c in available_cols]
+    plt.xticks(
+        range(1, len(available_cols) + 1),
+        tick_labels,
+        rotation=35,
+        ha="right",
+        fontsize=20,
+        fontweight="bold",
+    )
     plt.yticks(fontsize=18)
     plt.ylabel("Value", fontsize=22, fontweight="bold")
     plt.title("Violin Plot of GQI Metrics with Individual Data Points", fontsize=26, pad=25)
