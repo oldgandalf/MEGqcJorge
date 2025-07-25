@@ -65,7 +65,7 @@ def _make_violin(data, names, title, ylabel, out_png):
         x = np.random.normal(i, 0.05, size=len(y))
         plt.scatter(x, y, s=20, alpha=0.4, edgecolor="black", linewidth=0.5,
                     facecolor=palette(i - 1))
-    plt.xticks(range(1, len(names) + 1), names, rotation=35, ha="right", fontsize=10)
+    plt.xticks(range(1, len(names) + 1), names, rotation=0, ha="right", fontsize=10)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.tight_layout()
@@ -115,8 +115,8 @@ def _cumulative_plot(tables, metrics, names, out_png):
             labels.append(name)
 
     ax.set_xticks(positions)
-    ax.set_xticklabels(labels, rotation=35, ha="right", fontsize=9)
-    ax.set_ylabel("Value")
+    ax.set_xticklabels(labels, rotation=0, ha="right", fontsize=9)
+    ax.set_ylabel("Percentage of Quality and Noisy Channels")
     ax.set_title("Metrics across samples")
 
     secax = ax.secondary_xaxis(
