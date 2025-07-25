@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from scipy import stats
 import statsmodels.api as sm
 
 LABEL_MAP = {
@@ -36,6 +37,17 @@ LABEL_MAP = {
     "GQI_penalty_mus": "Muscle penalty",
     "GQI_penalty_psd": "PSD penalty",
 }
+
+
+def _get_star(p):
+    """Return asterisks representing the p-value significance."""
+    if p < 0.001:
+        return "***"
+    if p < 0.01:
+        return "**"
+    if p < 0.05:
+        return "*"
+    return ""
 
 
 def _load_tables(paths):
@@ -82,6 +94,7 @@ def _cumulative_plot(tables, metrics, names, out_png):
     positions = []
     labels = []
     for j, metric in enumerate(metrics):
+        metric_values = []
         for i, name in enumerate(names):
             data = tables[i][metric].dropna()
             pos = j * n_samples + i + 1
@@ -111,8 +124,26 @@ def _cumulative_plot(tables, metrics, names, out_png):
                 linewidth=0.5,
                 facecolor=color,
             )
+            metric_values.append(data)
             positions.append(pos)
             labels.append(name)
+
+        # add significance annotations
+        y_range = ax.get_ylim()
+        y_offset = (y_range[1] - y_range[0]) * 0.05
+        offset_count = 0
+        for a in range(n_samples):
+            for b in range(a + 1, n_samples):
+                stat, p = stats.ttest_ind(metric_values[a], metric_values[b], equal_var=False)
+                star = _get_star(p)
+                if not star:
+                    continue
+                x1 = j * n_samples + a + 1
+                x2 = j * n_samples + b + 1
+                y = max(metric_values[a].max(), metric_values[b].max()) + (offset_count + 1) * y_offset
+                ax.plot([x1, x1, x2, x2], [y, y + y_offset / 2, y + y_offset / 2, y], color="black")
+                ax.text((x1 + x2) / 2, y + y_offset / 2, star, ha="center", va="bottom")
+                offset_count += 1
 
     ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=0, ha="center", fontsize=9)
@@ -149,13 +180,17 @@ def _perform_regression(df, metrics, out_tsv):
         "t": model.tvalues.values,
         "p": model.pvalues.values,
     })
-    res_df.to_csv(out_tsv, sep="\t", index=False)
-    return model
+    res_df["asterisk"] = res_df["p"].apply(_get_star)
+    sig_df = res_df[res_df["asterisk"] != ""].copy()
+    sig_df.to_csv(out_tsv, sep="\t", index=False)
+    return model, sig_df
 
 
-def _scatter_plots(df, model, metrics, out_dir):
-    """Create scatter plots for each metric with regression line."""
+def _scatter_plots(df, model, metrics, out_dir, sig_metrics):
+    """Create scatter plots for significant metrics with regression line."""
     for m in metrics:
+        if m not in sig_metrics:
+            continue
         if m not in df.columns:
             continue
         plt.figure(figsize=(8, 6))
@@ -278,11 +313,12 @@ def main():
         df_all.append(temp)
     df_all = pd.concat(df_all, ignore_index=True)
 
-    reg_model = _perform_regression(
+    reg_model, sig_df = _perform_regression(
         df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
     )
 
-    _scatter_plots(df_all, reg_model, metrics, regression_dir)
+    sig_metrics = set(sig_df["variable"]) & set(metrics)
+    _scatter_plots(df_all, reg_model, metrics, regression_dir, sig_metrics)
 
 
 if __name__ == "__main__":
