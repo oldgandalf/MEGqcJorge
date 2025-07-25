@@ -27,5 +27,5 @@ pipeline, run::
         --names sample1 sample2 \
         --output-dir results
 
-All violin plots, regression results and scatter plots will be written to the
-``results`` directory.
+All violin plots and regression results will be written to the ``results``
+directory. Significant regression coefficients are marked with asterisks.
