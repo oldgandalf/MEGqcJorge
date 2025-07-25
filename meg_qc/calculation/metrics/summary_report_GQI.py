@@ -586,7 +586,7 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
         fontweight="bold",
     )
     plt.yticks(fontsize=18)
-    plt.ylabel("Value", fontsize=22, fontweight="bold")
+    plt.ylabel("Percentage of Quality, Penalties and Noise", fontsize=22, fontweight="bold")
     plt.title("Violin Plot of GQI Metrics with Individual Data Points", fontsize=26, pad=25)
 
     plt.grid(axis="y", linestyle="--", alpha=0.3)
