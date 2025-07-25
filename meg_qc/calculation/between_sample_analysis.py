@@ -135,7 +135,11 @@ def _cumulative_plot(tables, metrics, names, out_png):
 
 def _perform_regression(df, metrics, out_tsv):
     """Run linear regression and save results."""
-    X = df[metrics]
+    X = df[metrics].copy()
+    # add all pairwise interactions
+    for i, m1 in enumerate(metrics):
+        for m2 in metrics[i + 1:]:
+            X[f"{m1}:{m2}"] = df[m1] * df[m2]
     X = sm.add_constant(X)
     model = sm.OLS(df["GQI"], X, missing="drop").fit()
     res_df = pd.DataFrame({
@@ -156,12 +160,48 @@ def _scatter_plots(df, model, metrics, out_dir):
             continue
         plt.figure(figsize=(8, 6))
         plt.scatter(df[m], df["GQI"], alpha=0.6, edgecolor="black")
+
         x = np.linspace(df[m].min(), df[m].max(), 100)
-        y = model.params.get("const", 0) + model.params.get(m, 0) * x
-        for v in model.params.index:
-            if v not in ("const", m):
-                y += model.params[v] * df[v].mean()
-        plt.plot(x, y, color="red")
+        pred_data = {}
+        for var in model.params.index:
+            if var == "const":
+                continue
+            if var == m:
+                pred_data[var] = x
+            elif ":" in var:
+                m1, m2 = var.split(":")
+                if m1 == m:
+                    val1 = x
+                    val2 = df[m2].mean()
+                elif m2 == m:
+                    val1 = df[m1].mean()
+                    val2 = x
+                else:
+                    val1 = df[m1].mean()
+                    val2 = df[m2].mean()
+                pred_data[var] = val1 * val2
+            else:
+                pred_data[var] = df[var].mean()
+        X_new = pd.DataFrame(pred_data)
+        X_new = sm.add_constant(X_new, has_constant="add")
+        preds = model.get_prediction(X_new).summary_frame(alpha=0.05)
+        plt.plot(x, preds["mean"], color="red")
+        plt.fill_between(
+            x,
+            preds["mean_ci_lower"],
+            preds["mean_ci_upper"],
+            color="red",
+            alpha=0.2,
+        )
+        beta = model.params.get(m, float("nan"))
+        pval = model.pvalues.get(m, float("nan"))
+        plt.annotate(
+            f"β={beta:.3f}, p={pval:.3g}",
+            xy=(0.05, 0.95),
+            xycoords="axes fraction",
+            ha="left",
+            va="top",
+        )
         plt.xlabel(LABEL_MAP.get(m, m))
         plt.ylabel("GQI")
         plt.title(f"GQI vs {LABEL_MAP.get(m, m)}")
@@ -183,6 +223,12 @@ def main():
         raise ValueError("Number of TSV files must match number of names")
 
     os.makedirs(args.output_dir, exist_ok=True)
+    cumulative_dir = os.path.join(args.output_dir, "cummlative_violin_plot")
+    separated_dir = os.path.join(args.output_dir, "separated_violin_plot")
+    regression_dir = os.path.join(args.output_dir, "regression")
+    os.makedirs(cumulative_dir, exist_ok=True)
+    os.makedirs(separated_dir, exist_ok=True)
+    os.makedirs(regression_dir, exist_ok=True)
 
     tables = _load_tables(args.tsv)
     metrics = [
@@ -201,7 +247,7 @@ def main():
         args.names,
         "Global Quality Index",
         LABEL_MAP["GQI"],
-        os.path.join(args.output_dir, "GQI_violin.png"),
+        os.path.join(separated_dir, "GQI_violin.png"),
     )
 
     # Metric specific violin plots
@@ -214,14 +260,14 @@ def main():
             args.names,
             LABEL_MAP.get(m, m),
             LABEL_MAP.get(m, m),
-            os.path.join(args.output_dir, f"{m}_violin.png"),
+            os.path.join(separated_dir, f"{m}_violin.png"),
         )
 
     _cumulative_plot(
         tables,
         ["GQI", *metrics],
         args.names,
-        os.path.join(args.output_dir, "cumulative_metrics.png"),
+        os.path.join(cumulative_dir, "cumulative_metrics.png"),
     )
 
     # Combine all data for regression
@@ -233,10 +279,10 @@ def main():
     df_all = pd.concat(df_all, ignore_index=True)
 
     reg_model = _perform_regression(
-        df_all, metrics, os.path.join(args.output_dir, "linear_regression_results.tsv")
+        df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
     )
 
-    _scatter_plots(df_all, reg_model, metrics, args.output_dir)
+    _scatter_plots(df_all, reg_model, metrics, regression_dir)
 
 
 if __name__ == "__main__":
