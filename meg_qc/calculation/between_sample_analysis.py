@@ -85,11 +85,24 @@ def _make_violin(data, names, title, ylabel, out_png):
     plt.close()
 
 
-def _cumulative_plot(tables, metrics, names, out_png, out_tsv=None):
+def _cumulative_plot(tables, metrics, names, out_png, out_tsv=None, compute_ttest=True):
     """Create a cumulative violin plot of several metrics for each sample.
 
-    If ``out_tsv`` is provided, pairwise t-test results will be written
-    to that path.
+    Parameters
+    ----------
+    tables : list of pandas.DataFrame
+        Tables with metrics for each sample.
+    metrics : list of str
+        Metrics to include in the plot.
+    names : list of str
+        Sample names.
+    out_png : str
+        Path where the figure will be saved.
+    out_tsv : str or None
+        If provided and ``compute_ttest`` is True, pairwise t-test results
+        are written to this file.
+    compute_ttest : bool, optional
+        Whether to compute pairwise t-tests and annotate the plot.
     """
     n_samples = len(names)
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -133,42 +146,43 @@ def _cumulative_plot(tables, metrics, names, out_png, out_tsv=None):
             positions.append(pos)
             labels.append(name)
 
-        # add significance annotations
-        y_range = ax.get_ylim()
-        y_offset = (y_range[1] - y_range[0]) * 0.05
-        offset_count = 0
-        for a in range(n_samples):
-            for b in range(a + 1, n_samples):
-                stat, p = stats.ttest_ind(
-                    metric_values[a],
-                    metric_values[b],
-                    equal_var=False,
-                )
-                star = _get_star(p)
-                results.append(
-                    {
-                        "metric": metric,
-                        "sample1": names[a],
-                        "sample2": names[b],
-                        "t_stat": stat,
-                        "p": p,
-                        "asterisk": star,
-                    }
-                )
-                if not star:
-                    continue
-                x1 = j * n_samples + a + 1
-                x2 = j * n_samples + b + 1
-                y = max(metric_values[a].max(), metric_values[b].max()) + (
-                    offset_count + 1
-                ) * y_offset
-                ax.plot(
-                    [x1, x1, x2, x2],
-                    [y, y + y_offset / 2, y + y_offset / 2, y],
-                    color="black",
-                )
-                ax.text((x1 + x2) / 2, y + y_offset / 2, star, ha="center", va="bottom")
-                offset_count += 1
+        if compute_ttest:
+            # add significance annotations
+            y_range = ax.get_ylim()
+            y_offset = (y_range[1] - y_range[0]) * 0.05
+            offset_count = 0
+            for a in range(n_samples):
+                for b in range(a + 1, n_samples):
+                    stat, p = stats.ttest_ind(
+                        metric_values[a],
+                        metric_values[b],
+                        equal_var=False,
+                    )
+                    star = _get_star(p)
+                    results.append(
+                        {
+                            "metric": metric,
+                            "sample1": names[a],
+                            "sample2": names[b],
+                            "t_stat": stat,
+                            "p": p,
+                            "asterisk": star,
+                        }
+                    )
+                    if not star:
+                        continue
+                    x1 = j * n_samples + a + 1
+                    x2 = j * n_samples + b + 1
+                    y = max(metric_values[a].max(), metric_values[b].max()) + (
+                        offset_count + 1
+                    ) * y_offset
+                    ax.plot(
+                        [x1, x1, x2, x2],
+                        [y, y + y_offset / 2, y + y_offset / 2, y],
+                        color="black",
+                    )
+                    ax.text((x1 + x2) / 2, y + y_offset / 2, star, ha="center", va="bottom")
+                    offset_count += 1
 
     ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=0, ha="center", fontsize=9)
@@ -186,7 +200,7 @@ def _cumulative_plot(tables, metrics, names, out_png, out_tsv=None):
 
     fig.tight_layout()
     fig.savefig(out_png, dpi=300)
-    if out_tsv is not None:
+    if out_tsv is not None and compute_ttest:
         pd.DataFrame(results).to_csv(out_tsv, sep="\t", index=False)
     plt.close(fig)
 
@@ -246,7 +260,7 @@ def _scatter_plots(df, model, metrics, out_dir, sig_vars):
                     val2 = xx if p2 == m1 else yy if p2 == m2 else df[p2].mean()
                     pred_data[param] = val1 * val2
                 else:
-                    pred_data[param] = df[param].mean()
+                    pred_data[param] = np.full(xx.shape, df[param].mean())
             grid_df = pd.DataFrame({k: v.ravel() for k, v in pred_data.items()})
             grid_df = sm.add_constant(grid_df, has_constant="add")
             preds = model.predict(grid_df).values.reshape(xx.shape)
@@ -291,7 +305,7 @@ def _scatter_plots(df, model, metrics, out_dir, sig_vars):
                         val2 = df[m2].mean()
                     pred_data[param] = val1 * val2
                 else:
-                    pred_data[param] = df[param].mean()
+                    pred_data[param] = np.full_like(x, df[param].mean(), dtype=float)
             X_new = pd.DataFrame(pred_data)
             X_new = sm.add_constant(X_new, has_constant="add")
             preds = model.get_prediction(X_new).summary_frame(alpha=0.05)
@@ -327,6 +341,7 @@ def main():
     parser.add_argument("--names", nargs="+", required=True,
                         help="Sample names corresponding to TSV files")
     parser.add_argument("--output-dir", required=True, help="Directory for outputs")
+    parser.add_argument("--ttest", action="store_true", help="Compute pairwise t-tests for the cumulative plot")
     args = parser.parse_args()
 
     if len(args.tsv) != len(args.names):
@@ -378,7 +393,8 @@ def main():
         ["GQI", *metrics],
         args.names,
         os.path.join(cumulative_dir, "cumulative_metrics.png"),
-        os.path.join(cumulative_dir, "t_test_results.tsv"),
+        os.path.join(cumulative_dir, "t_test_results.tsv") if args.ttest else None,
+        compute_ttest=args.ttest,
     )
 
     # Combine all data for regression
