@@ -23,6 +23,20 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import statsmodels.api as sm
 
+LABEL_MAP = {
+    "GQI": "GQI",
+    "GQI_std_pct": "STD noise",
+    "GQI_ptp_pct": "PtP noise",
+    "GQI_ecg_pct": "ECG noise",
+    "GQI_eog_pct": "EOG noise",
+    "GQI_muscle_pct": "Muscle noise",
+    "GQI_psd_noise_pct": "PSD noise",
+    "GQI_penalty_ch": "Variability penalty",
+    "GQI_penalty_corr": "Correlational penalty",
+    "GQI_penalty_mus": "Muscle penalty",
+    "GQI_penalty_psd": "PSD penalty",
+}
+
 
 def _load_tables(paths):
     """Load TSV tables into pandas DataFrames."""
@@ -59,6 +73,66 @@ def _make_violin(data, names, title, ylabel, out_png):
     plt.close()
 
 
+def _cumulative_plot(tables, metrics, names, out_png):
+    """Create a cumulative violin plot of several metrics for each sample."""
+    n_samples = len(names)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    palette = cm.get_cmap("tab10", len(metrics))
+
+    positions = []
+    labels = []
+    for j, metric in enumerate(metrics):
+        for i, name in enumerate(names):
+            data = tables[i][metric].dropna()
+            pos = j * n_samples + i + 1
+            parts = ax.violinplot(
+                [data],
+                positions=[pos],
+                showmeans=True,
+                showextrema=True,
+                showmedians=False,
+                widths=0.8,
+            )
+            color = palette(j)
+            for pc in parts["bodies"]:
+                pc.set_facecolor(color)
+                pc.set_edgecolor("black")
+                pc.set_alpha(0.5)
+            parts["cmeans"].set_linewidth(2)
+            parts["cmeans"].set_color("black")
+            parts["cbars"].set_color("black")
+            x = np.random.normal(pos, 0.05, size=len(data))
+            ax.scatter(
+                x,
+                data,
+                s=20,
+                alpha=0.4,
+                edgecolor="black",
+                linewidth=0.5,
+                facecolor=color,
+            )
+            positions.append(pos)
+            labels.append(name)
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels, rotation=35, ha="right", fontsize=9)
+    ax.set_ylabel("Value")
+    ax.set_title("Metrics across samples")
+
+    secax = ax.secondary_xaxis(
+        "bottom",
+        functions=(lambda x: x, lambda x: x),
+    )
+    centers = [j * n_samples + (n_samples + 1) / 2 for j in range(len(metrics))]
+    secax.set_xticks(centers)
+    secax.set_xticklabels([LABEL_MAP.get(m, m) for m in metrics], fontsize=10, fontweight="bold")
+    secax.tick_params(pad=20)
+
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=300)
+    plt.close(fig)
+
+
 def _perform_regression(df, metrics, out_tsv):
     """Run linear regression and save results."""
     X = df[metrics]
@@ -88,9 +162,9 @@ def _scatter_plots(df, model, metrics, out_dir):
             if v not in ("const", m):
                 y += model.params[v] * df[v].mean()
         plt.plot(x, y, color="red")
-        plt.xlabel(m)
+        plt.xlabel(LABEL_MAP.get(m, m))
         plt.ylabel("GQI")
-        plt.title(f"GQI vs {m}")
+        plt.title(f"GQI vs {LABEL_MAP.get(m, m)}")
         plt.tight_layout()
         plt.savefig(os.path.join(out_dir, f"{m}_scatter.png"), dpi=300)
         plt.close()
@@ -122,16 +196,33 @@ def main():
 
     # Violin plot for GQI
     gqi_data = [tbl["GQI"] for tbl in tables]
-    _make_violin(gqi_data, args.names, "Global Quality Index", "GQI",
-                 os.path.join(args.output_dir, "GQI_violin.png"))
+    _make_violin(
+        gqi_data,
+        args.names,
+        "Global Quality Index",
+        LABEL_MAP["GQI"],
+        os.path.join(args.output_dir, "GQI_violin.png"),
+    )
 
     # Metric specific violin plots
     for m in metrics:
         metric_data = [t[m] for t in tables if m in t.columns]
         if not metric_data:
             continue
-        _make_violin(metric_data, args.names, m, m,
-                     os.path.join(args.output_dir, f"{m}_violin.png"))
+        _make_violin(
+            metric_data,
+            args.names,
+            LABEL_MAP.get(m, m),
+            LABEL_MAP.get(m, m),
+            os.path.join(args.output_dir, f"{m}_violin.png"),
+        )
+
+    _cumulative_plot(
+        tables,
+        ["GQI", *metrics],
+        args.names,
+        os.path.join(args.output_dir, "cumulative_metrics.png"),
+    )
 
     # Combine all data for regression
     df_all = []
