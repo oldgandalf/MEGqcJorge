@@ -85,14 +85,19 @@ def _make_violin(data, names, title, ylabel, out_png):
     plt.close()
 
 
-def _cumulative_plot(tables, metrics, names, out_png):
-    """Create a cumulative violin plot of several metrics for each sample."""
+def _cumulative_plot(tables, metrics, names, out_png, out_tsv=None):
+    """Create a cumulative violin plot of several metrics for each sample.
+
+    If ``out_tsv`` is provided, pairwise t-test results will be written
+    to that path.
+    """
     n_samples = len(names)
     fig, ax = plt.subplots(figsize=(12, 6))
     palette = cm.get_cmap("tab10", len(metrics))
 
     positions = []
     labels = []
+    results = []
     for j, metric in enumerate(metrics):
         metric_values = []
         for i, name in enumerate(names):
@@ -134,14 +139,34 @@ def _cumulative_plot(tables, metrics, names, out_png):
         offset_count = 0
         for a in range(n_samples):
             for b in range(a + 1, n_samples):
-                stat, p = stats.ttest_ind(metric_values[a], metric_values[b], equal_var=False)
+                stat, p = stats.ttest_ind(
+                    metric_values[a],
+                    metric_values[b],
+                    equal_var=False,
+                )
                 star = _get_star(p)
+                results.append(
+                    {
+                        "metric": metric,
+                        "sample1": names[a],
+                        "sample2": names[b],
+                        "t_stat": stat,
+                        "p": p,
+                        "asterisk": star,
+                    }
+                )
                 if not star:
                     continue
                 x1 = j * n_samples + a + 1
                 x2 = j * n_samples + b + 1
-                y = max(metric_values[a].max(), metric_values[b].max()) + (offset_count + 1) * y_offset
-                ax.plot([x1, x1, x2, x2], [y, y + y_offset / 2, y + y_offset / 2, y], color="black")
+                y = max(metric_values[a].max(), metric_values[b].max()) + (
+                    offset_count + 1
+                ) * y_offset
+                ax.plot(
+                    [x1, x1, x2, x2],
+                    [y, y + y_offset / 2, y + y_offset / 2, y],
+                    color="black",
+                )
                 ax.text((x1 + x2) / 2, y + y_offset / 2, star, ha="center", va="bottom")
                 offset_count += 1
 
@@ -161,6 +186,8 @@ def _cumulative_plot(tables, metrics, names, out_png):
 
     fig.tight_layout()
     fig.savefig(out_png, dpi=300)
+    if out_tsv is not None:
+        pd.DataFrame(results).to_csv(out_tsv, sep="\t", index=False)
     plt.close(fig)
 
 
@@ -186,63 +213,111 @@ def _perform_regression(df, metrics, out_tsv):
     return model, sig_df
 
 
-def _scatter_plots(df, model, metrics, out_dir, sig_metrics):
-    """Create scatter plots for significant metrics with regression line."""
-    for m in metrics:
-        if m not in sig_metrics:
-            continue
-        if m not in df.columns:
-            continue
-        plt.figure(figsize=(8, 6))
-        plt.scatter(df[m], df["GQI"], alpha=0.6, edgecolor="black")
+def _scatter_plots(df, model, metrics, out_dir, sig_vars):
+    """Create scatter plots for significant terms from the regression."""
 
-        x = np.linspace(df[m].min(), df[m].max(), 100)
-        pred_data = {}
-        for var in model.params.index:
-            if var == "const":
+    for var in sig_vars:
+        if var == "const":
+            continue
+        if ":" in var:
+            m1, m2 = var.split(":")
+            if m1 not in df.columns or m2 not in df.columns:
                 continue
-            if var == m:
-                pred_data[var] = x
-            elif ":" in var:
-                m1, m2 = var.split(":")
-                if m1 == m:
-                    val1 = x
-                    val2 = df[m2].mean()
-                elif m2 == m:
-                    val1 = df[m1].mean()
-                    val2 = x
+            fig = plt.figure(figsize=(8, 6))
+            ax = fig.add_subplot(111, projection="3d")
+            ax.scatter(df[m1], df[m2], df["GQI"], alpha=0.6, edgecolor="black")
+
+            x = np.linspace(df[m1].min(), df[m1].max(), 20)
+            y = np.linspace(df[m2].min(), df[m2].max(), 20)
+            xx, yy = np.meshgrid(x, y)
+            pred_data = {}
+            for param in model.params.index:
+                if param == "const":
+                    continue
+                if param == m1:
+                    pred_data[param] = xx
+                elif param == m2:
+                    pred_data[param] = yy
+                elif param == var:
+                    pred_data[param] = xx * yy
+                elif ":" in param:
+                    p1, p2 = param.split(":")
+                    val1 = xx if p1 == m1 else yy if p1 == m2 else df[p1].mean()
+                    val2 = xx if p2 == m1 else yy if p2 == m2 else df[p2].mean()
+                    pred_data[param] = val1 * val2
                 else:
-                    val1 = df[m1].mean()
-                    val2 = df[m2].mean()
-                pred_data[var] = val1 * val2
-            else:
-                pred_data[var] = df[var].mean()
-        X_new = pd.DataFrame(pred_data)
-        X_new = sm.add_constant(X_new, has_constant="add")
-        preds = model.get_prediction(X_new).summary_frame(alpha=0.05)
-        plt.plot(x, preds["mean"], color="red")
-        plt.fill_between(
-            x,
-            preds["mean_ci_lower"],
-            preds["mean_ci_upper"],
-            color="red",
-            alpha=0.2,
-        )
-        beta = model.params.get(m, float("nan"))
-        pval = model.pvalues.get(m, float("nan"))
-        plt.annotate(
-            f"β={beta:.3f}, p={pval:.3g}",
-            xy=(0.05, 0.95),
-            xycoords="axes fraction",
-            ha="left",
-            va="top",
-        )
-        plt.xlabel(LABEL_MAP.get(m, m))
-        plt.ylabel("GQI")
-        plt.title(f"GQI vs {LABEL_MAP.get(m, m)}")
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_dir, f"{m}_scatter.png"), dpi=300)
-        plt.close()
+                    pred_data[param] = df[param].mean()
+            grid_df = pd.DataFrame({k: v.ravel() for k, v in pred_data.items()})
+            grid_df = sm.add_constant(grid_df, has_constant="add")
+            preds = model.predict(grid_df).values.reshape(xx.shape)
+            ax.plot_surface(xx, yy, preds, color="red", alpha=0.3)
+
+            beta = model.params.get(var, float("nan"))
+            pval = model.pvalues.get(var, float("nan"))
+            fig.text(0.05, 0.95, f"β={beta:.3f}, p={pval:.3g}", ha="left", va="top")
+            ax.set_xlabel(LABEL_MAP.get(m1, m1))
+            ax.set_ylabel(LABEL_MAP.get(m2, m2))
+            ax.set_zlabel("GQI")
+            ax.set_title(
+                f"GQI vs {LABEL_MAP.get(m1, m1)} and {LABEL_MAP.get(m2, m2)}"
+            )
+            fig.tight_layout()
+            fig.savefig(os.path.join(out_dir, f"{m1}_{m2}_interaction_scatter.png"), dpi=300)
+            plt.close(fig)
+        else:
+            m = var
+            if m not in df.columns:
+                continue
+            plt.figure(figsize=(8, 6))
+            plt.scatter(df[m], df["GQI"], alpha=0.6, edgecolor="black")
+
+            x = np.linspace(df[m].min(), df[m].max(), 100)
+            pred_data = {}
+            for param in model.params.index:
+                if param == "const":
+                    continue
+                if param == m:
+                    pred_data[param] = x
+                elif ":" in param:
+                    m1, m2 = param.split(":")
+                    if m1 == m:
+                        val1 = x
+                        val2 = df[m2].mean()
+                    elif m2 == m:
+                        val1 = df[m1].mean()
+                        val2 = x
+                    else:
+                        val1 = df[m1].mean()
+                        val2 = df[m2].mean()
+                    pred_data[param] = val1 * val2
+                else:
+                    pred_data[param] = df[param].mean()
+            X_new = pd.DataFrame(pred_data)
+            X_new = sm.add_constant(X_new, has_constant="add")
+            preds = model.get_prediction(X_new).summary_frame(alpha=0.05)
+            plt.plot(x, preds["mean"], color="red")
+            plt.fill_between(
+                x,
+                preds["mean_ci_lower"],
+                preds["mean_ci_upper"],
+                color="red",
+                alpha=0.2,
+            )
+            beta = model.params.get(m, float("nan"))
+            pval = model.pvalues.get(m, float("nan"))
+            plt.annotate(
+                f"β={beta:.3f}, p={pval:.3g}",
+                xy=(0.05, 0.95),
+                xycoords="axes fraction",
+                ha="left",
+                va="top",
+            )
+            plt.xlabel(LABEL_MAP.get(m, m))
+            plt.ylabel("GQI")
+            plt.title(f"GQI vs {LABEL_MAP.get(m, m)}")
+            plt.tight_layout()
+            plt.savefig(os.path.join(out_dir, f"{m}_scatter.png"), dpi=300)
+            plt.close()
 
 
 def main():
@@ -303,6 +378,7 @@ def main():
         ["GQI", *metrics],
         args.names,
         os.path.join(cumulative_dir, "cumulative_metrics.png"),
+        os.path.join(cumulative_dir, "t_test_results.tsv"),
     )
 
     # Combine all data for regression
@@ -317,8 +393,8 @@ def main():
         df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
     )
 
-    sig_metrics = set(sig_df["variable"]) & set(metrics)
-    _scatter_plots(df_all, reg_model, metrics, regression_dir, sig_metrics)
+    sig_vars = set(sig_df["variable"])
+    _scatter_plots(df_all, reg_model, metrics, regression_dir, sig_vars)
 
 
 if __name__ == "__main__":
