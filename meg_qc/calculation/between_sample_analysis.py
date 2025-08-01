@@ -347,6 +347,16 @@ def main():
         df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
     )
 
+    # Mutual information per sample
+    for name, tbl in zip(args.names, tables):
+        _mutual_information(
+            tbl,
+            metrics,
+            os.path.join(mi_dir, f"{name}_mutual_information.png"),
+            os.path.join(mi_dir, f"{name}_mutual_information.tsv"),
+        )
+
+    # Mutual information across all samples
     _mutual_information(
         df_all,
         metrics,

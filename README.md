@@ -29,3 +29,6 @@ pipeline, run::
 
 All violin plots and regression results will be written to the ``results``
 directory. Significant regression coefficients are marked with asterisks.
+For each sample a mutual information analysis of the noise metrics is saved in
+the ``mutual_information`` folder alongside a combined analysis that
+treats all samples as one dataset.
