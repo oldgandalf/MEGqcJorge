@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from scipy import stats
 import statsmodels.api as sm
+from sklearn.feature_selection import mutual_info_regression
+import seaborn as sns
 
 LABEL_MAP = {
     "GQI": "GQI",
@@ -226,6 +228,46 @@ def _perform_regression(df, metrics, out_tsv):
     return model, res_df
 
 
+def _mutual_information(df, metrics, out_png, out_tsv):
+    """Compute pairwise mutual information between metrics.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data frame containing the metrics.
+    metrics : list of str
+        Metrics to include in the analysis.
+    out_png : str
+        Path to save the heatmap figure.
+    out_tsv : str
+        Path to save the mutual information matrix as TSV.
+    """
+    data = df[metrics].dropna()
+    n_neighbors = max(1, min(3, len(data) - 1))
+    mi_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    for m1 in metrics:
+        for m2 in metrics:
+            if m1 == m2:
+                mi = np.nan
+            else:
+                mi = mutual_info_regression(
+                    data[[m1]],
+                    data[m2],
+                    discrete_features=False,
+                    n_neighbors=n_neighbors,
+                )[0]
+            mi_matrix.loc[m1, m2] = mi
+
+    mi_matrix.to_csv(out_tsv, sep="\t")
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(mi_matrix.astype(float), annot=True, fmt=".2f", cmap="viridis")
+    plt.title("Mutual Information between noise metrics")
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=300)
+    plt.close()
+
+
 
 
 def main():
@@ -245,9 +287,11 @@ def main():
     cumulative_dir = os.path.join(args.output_dir, "cummlative_violin_plot")
     separated_dir = os.path.join(args.output_dir, "separated_violin_plot")
     regression_dir = os.path.join(args.output_dir, "regression")
+    mi_dir = os.path.join(args.output_dir, "mutual_information")
     os.makedirs(cumulative_dir, exist_ok=True)
     os.makedirs(separated_dir, exist_ok=True)
     os.makedirs(regression_dir, exist_ok=True)
+    os.makedirs(mi_dir, exist_ok=True)
 
     tables = _load_tables(args.tsv)
     metrics = [
@@ -301,6 +345,13 @@ def main():
 
     reg_model, res_df = _perform_regression(
         df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
+    )
+
+    _mutual_information(
+        df_all,
+        metrics,
+        os.path.join(mi_dir, "mutual_information.png"),
+        os.path.join(mi_dir, "mutual_information.tsv"),
     )
 
 
