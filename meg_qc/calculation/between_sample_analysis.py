@@ -26,6 +26,7 @@ import statsmodels.api as sm
 from sklearn.feature_selection import mutual_info_regression
 import seaborn as sns
 from joblib import Parallel, delayed
+from statsmodels.stats.multitest import multipletests
 
 LABEL_MAP = {
     "GQI": "GQI",
@@ -62,21 +63,37 @@ def _load_tables(paths):
     return tables
 
 
-def _plot_heatmap(matrix, title, out_png):
+def _plot_heatmap(matrix, title, out_png, mask=None):
     """Plot and save a heatmap for the given matrix."""
     plt.figure(figsize=(8, 6))
-    sns.heatmap(matrix.astype(float), annot=True, fmt=".2f", cmap="viridis")
+    sns.heatmap(
+        matrix.astype(float), annot=True, fmt=".2f", cmap="viridis", mask=mask
+    )
     plt.title(title)
     plt.tight_layout()
     plt.savefig(out_png, dpi=300)
     plt.close()
 
 
-def _estimate_entropy(x, bins="fd"):
+def estimate_entropy(x, bins="fd"):
     """Estimate the entropy of a 1D array using histogram binning."""
-    hist, _ = np.histogram(x, bins=bins, density=True)
-    hist = hist[hist > 0]
-    return stats.entropy(hist)
+    hist, _ = np.histogram(x, bins=bins, density=False)
+    probs = hist / hist.sum()
+    probs = probs[probs > 0]
+    return stats.entropy(probs, base=2)
+
+
+def _mi_symmetric(x, y, n_neighbors):
+    """Compute symmetric mutual information between two 1D arrays."""
+    x = np.asarray(x).ravel()
+    y = np.asarray(y).ravel()
+    mi_xy = mutual_info_regression(
+        x.reshape(-1, 1), y, discrete_features=False, n_neighbors=n_neighbors
+    )[0]
+    mi_yx = mutual_info_regression(
+        y.reshape(-1, 1), x, discrete_features=False, n_neighbors=n_neighbors
+    )[0]
+    return 0.5 * (mi_xy + mi_yx)
 
 
 def _make_violin(data, names, title, ylabel, out_png):
@@ -254,6 +271,7 @@ def analyze_mutual_information(
     save_dir=None,
     n_jobs=1,
     redundancy_threshold=None,
+    n_neighbors=None,
 ):
     """Compute mutual information and related statistics between metrics.
 
@@ -276,6 +294,9 @@ def analyze_mutual_information(
         Number of parallel jobs for the permutation test.
     redundancy_threshold : float or None, optional
         Threshold for reporting redundant metric pairs based on NMI.
+    n_neighbors : int or None, optional
+        Number of neighbors for k-NN MI estimation. If ``None``, uses
+        ``max(3, int(np.sqrt(n_samples)))``.
 
     Returns
     -------
@@ -283,7 +304,9 @@ def analyze_mutual_information(
         Dictionary containing the computed matrices and entropy vector.
     """
     data = df[metrics].dropna()
-    n_neighbors = max(1, min(3, len(data) - 1))
+    if n_neighbors is None:
+        n_neighbors = max(3, int(np.sqrt(len(data))))
+    n_neighbors = min(n_neighbors, len(data) - 1)
 
     mi_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
     net_mi_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
@@ -293,65 +316,79 @@ def analyze_mutual_information(
     nmi_ari_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
 
     # Marginal entropies
-    entropy_series = pd.Series({m: _estimate_entropy(data[m]) for m in metrics})
+    entropy_series = pd.Series({m: estimate_entropy(data[m]) for m in metrics})
 
     rng = np.random.default_rng(seed)
 
-    for m1 in metrics:
-        x = data[m1].values.reshape(-1, 1)
-        for m2 in metrics:
-            if m1 == m2:
-                mi = np.nan
-                net = np.nan
-                z = np.nan
-                p = np.nan
-            else:
-                y = data[m2].values
-                mi = mutual_info_regression(
-                    x,
-                    y,
-                    discrete_features=False,
-                    n_neighbors=n_neighbors,
-                )[0]
-                if permutation_test and n_permutations > 0:
-                    perms = [rng.permutation(y) for _ in range(n_permutations)]
-                    perm_mi = Parallel(n_jobs=n_jobs)(
-                        delayed(mutual_info_regression)(
-                            x,
-                            perm,
-                            discrete_features=False,
-                            n_neighbors=n_neighbors,
-                        )
-                        for perm in perms
-                    )
-                    perm_mi = np.asarray(perm_mi).ravel()
-                    perm_mean = perm_mi.mean()
-                    perm_std = perm_mi.std(ddof=1)
-                    net = mi - perm_mean
-                    z = net / perm_std if perm_std > 0 else np.nan
-                    p = (np.sum(perm_mi >= mi) + 1) / (n_permutations + 1)
-                else:
-                    net = np.nan
-                    z = np.nan
-                    p = np.nan
+    for i, m1 in enumerate(metrics):
+        x = data[m1].values
+        for j, m2 in enumerate(metrics):
+            if j < i:
+                mi_matrix.loc[m1, m2] = mi_matrix.loc[m2, m1]
+                net_mi_matrix.loc[m1, m2] = net_mi_matrix.loc[m2, m1]
+                z_matrix.loc[m1, m2] = z_matrix.loc[m2, m1]
+                p_matrix.loc[m1, m2] = p_matrix.loc[m2, m1]
+                nmi_geo_matrix.loc[m1, m2] = nmi_geo_matrix.loc[m2, m1]
+                nmi_ari_matrix.loc[m1, m2] = nmi_ari_matrix.loc[m2, m1]
+                continue
+            if i == j:
+                mi_matrix.loc[m1, m2] = np.nan
+                net_mi_matrix.loc[m1, m2] = np.nan
+                z_matrix.loc[m1, m2] = np.nan
+                p_matrix.loc[m1, m2] = np.nan
+                nmi_geo_matrix.loc[m1, m2] = np.nan
+                nmi_ari_matrix.loc[m1, m2] = np.nan
+                continue
 
-            mi_matrix.loc[m1, m2] = mi
-            net_mi_matrix.loc[m1, m2] = net
-            z_matrix.loc[m1, m2] = z
-            p_matrix.loc[m1, m2] = p
+            y = data[m2].values
+            mi = _mi_symmetric(x, y, n_neighbors)
+            if permutation_test and n_permutations > 0:
+                seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_permutations)
+
+                def _perm_mi(s):
+                    perm = np.random.default_rng(s).permutation(y)
+                    return _mi_symmetric(x, perm, n_neighbors)
+
+                perm_mi = Parallel(n_jobs=n_jobs)(delayed(_perm_mi)(s) for s in seeds)
+                perm_mi = np.asarray(perm_mi)
+                perm_mean = perm_mi.mean()
+                perm_std = perm_mi.std(ddof=1)
+                net = mi - perm_mean
+                z = net / perm_std if perm_std > 0 else np.nan
+                p = (np.sum(perm_mi >= mi) + 1) / (n_permutations + 1)
+            else:
+                net = z = p = np.nan
+
+            mi_matrix.loc[m1, m2] = mi_matrix.loc[m2, m1] = mi
+            net_mi_matrix.loc[m1, m2] = net_mi_matrix.loc[m2, m1] = net
+            z_matrix.loc[m1, m2] = z_matrix.loc[m2, m1] = z
+            p_matrix.loc[m1, m2] = p_matrix.loc[m2, m1] = p
 
             hx = entropy_series[m1]
             hy = entropy_series[m2]
             nmi_geo = mi / np.sqrt(hx * hy) if hx > 0 and hy > 0 else np.nan
             nmi_ari = (2 * mi) / (hx + hy) if (hx + hy) > 0 else np.nan
-            nmi_geo_matrix.loc[m1, m2] = nmi_geo
-            nmi_ari_matrix.loc[m1, m2] = nmi_ari
+            nmi_geo_matrix.loc[m1, m2] = nmi_geo_matrix.loc[m2, m1] = nmi_geo
+            nmi_ari_matrix.loc[m1, m2] = nmi_ari_matrix.loc[m2, m1] = nmi_ari
+
+    if permutation_test and n_permutations > 0:
+        tri_upper = np.triu_indices_from(p_matrix, k=1)
+        flat_p = p_matrix.values[tri_upper]
+        _, p_fdr_flat, _, _ = multipletests(flat_p, method="fdr_bh")
+        p_fdr_matrix = pd.DataFrame(
+            np.nan, index=metrics, columns=metrics, dtype=float
+        )
+        p_fdr_matrix.values[tri_upper] = p_fdr_flat
+        p_fdr_matrix.values[(tri_upper[1], tri_upper[0])] = p_fdr_flat
+    else:
+        p_fdr_matrix = pd.DataFrame(np.nan, index=metrics, columns=metrics)
 
     results = {
         "mi": mi_matrix,
         "net_mi": net_mi_matrix,
         "z": z_matrix,
         "p": p_matrix,
+        "p_fdr": p_fdr_matrix,
         "nmi_geo": nmi_geo_matrix,
         "nmi_ari": nmi_ari_matrix,
         "entropy": entropy_series,
@@ -370,11 +407,13 @@ def analyze_mutual_information(
 
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
+        mask = np.eye(len(metrics), dtype=bool)
         mi_matrix.to_csv(os.path.join(save_dir, "mutual_information.tsv"), sep="\t")
         _plot_heatmap(
             mi_matrix,
             "Mutual Information between noise metrics",
             os.path.join(save_dir, "mutual_information.png"),
+            mask=mask,
         )
         net_mi_matrix.to_csv(
             os.path.join(save_dir, "net_mutual_information.tsv"), sep="\t"
@@ -383,14 +422,30 @@ def analyze_mutual_information(
             net_mi_matrix,
             "Net Mutual Information",
             os.path.join(save_dir, "net_mutual_information.png"),
+            mask=mask,
         )
         z_matrix.to_csv(os.path.join(save_dir, "mi_z_scores.tsv"), sep="\t")
         _plot_heatmap(
-            z_matrix, "MI z-scores", os.path.join(save_dir, "mi_z_scores.png")
+            z_matrix,
+            "MI z-scores",
+            os.path.join(save_dir, "mi_z_scores.png"),
+            mask=mask,
         )
         p_matrix.to_csv(os.path.join(save_dir, "mi_p_values.tsv"), sep="\t")
         _plot_heatmap(
-            p_matrix, "MI p-values", os.path.join(save_dir, "mi_p_values.png")
+            p_matrix,
+            "MI p-values",
+            os.path.join(save_dir, "mi_p_values.png"),
+            mask=mask,
+        )
+        p_fdr_matrix.to_csv(
+            os.path.join(save_dir, "mi_p_values_fdr.tsv"), sep="\t"
+        )
+        _plot_heatmap(
+            p_fdr_matrix,
+            "MI p-values (FDR)",
+            os.path.join(save_dir, "mi_p_values_fdr.png"),
+            mask=mask,
         )
         nmi_geo_matrix.to_csv(
             os.path.join(save_dir, "nmi_geometric.tsv"), sep="\t"
@@ -399,6 +454,7 @@ def analyze_mutual_information(
             nmi_geo_matrix,
             "Normalized MI (geometric)",
             os.path.join(save_dir, "nmi_geometric.png"),
+            mask=mask,
         )
         nmi_ari_matrix.to_csv(
             os.path.join(save_dir, "nmi_arithmetic.tsv"), sep="\t"
@@ -407,6 +463,7 @@ def analyze_mutual_information(
             nmi_ari_matrix,
             "Normalized MI (arithmetic)",
             os.path.join(save_dir, "nmi_arithmetic.png"),
+            mask=mask,
         )
         entropy_series.to_csv(
             os.path.join(save_dir, "marginal_entropies.tsv"),
@@ -428,7 +485,13 @@ def _mutual_information(df, metrics, out_png, out_tsv):
     res = analyze_mutual_information(df, metrics)
     mi_matrix = res["mi"]
     mi_matrix.to_csv(out_tsv, sep="\t")
-    _plot_heatmap(mi_matrix, "Mutual Information between noise metrics", out_png)
+    mask = np.eye(len(mi_matrix), dtype=bool)
+    _plot_heatmap(
+        mi_matrix,
+        "Mutual Information between noise metrics",
+        out_png,
+        mask=mask,
+    )
 
 
 
