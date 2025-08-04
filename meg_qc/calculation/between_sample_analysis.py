@@ -313,13 +313,18 @@ def analyze_mutual_information(
                     discrete_features=False,
                     n_neighbors=n_neighbors,
                 )[0]
-                if permutation_test:
+                if permutation_test and n_permutations > 0:
                     perms = [rng.permutation(y) for _ in range(n_permutations)]
                     perm_mi = Parallel(n_jobs=n_jobs)(
-                        delayed(mutual_info_regression)(x, perm, discrete_features=False, n_neighbors=n_neighbors)[0]
+                        delayed(mutual_info_regression)(
+                            x,
+                            perm,
+                            discrete_features=False,
+                            n_neighbors=n_neighbors,
+                        )
                         for perm in perms
                     )
-                    perm_mi = np.asarray(perm_mi)
+                    perm_mi = np.asarray(perm_mi).ravel()
                     perm_mean = perm_mi.mean()
                     perm_std = perm_mi.std(ddof=1)
                     net = mi - perm_mean
@@ -438,15 +443,10 @@ def main():
     parser.add_argument("--ttest", action="store_true", help="Compute pairwise t-tests for the cumulative plot")
     parser.add_argument("--mi", action="store_true", help="Perform mutual information analysis")
     parser.add_argument(
-        "--mi-permutation",
-        action="store_true",
-        help="Use permutation testing for mutual information",
-    )
-    parser.add_argument(
         "--mi-permutations",
         type=int,
-        default=1000,
-        help="Number of permutations for MI significance testing",
+        default=0,
+        help="Number of permutations for MI significance testing (0 disables)",
     )
     parser.add_argument("--mi-seed", type=int, default=None, help="Seed for MI permutations")
     parser.add_argument(
@@ -537,7 +537,7 @@ def main():
                 tbl,
                 metrics,
                 n_permutations=args.mi_permutations,
-                permutation_test=args.mi_permutation,
+                permutation_test=args.mi_permutations > 0,
                 seed=args.mi_seed,
                 save_dir=os.path.join(mi_dir, name),
                 n_jobs=args.mi_n_jobs,
@@ -547,7 +547,7 @@ def main():
             df_all,
             metrics,
             n_permutations=args.mi_permutations,
-            permutation_test=args.mi_permutation,
+            permutation_test=args.mi_permutations > 0,
             seed=args.mi_seed,
             save_dir=os.path.join(mi_dir, "combined"),
             n_jobs=args.mi_n_jobs,
