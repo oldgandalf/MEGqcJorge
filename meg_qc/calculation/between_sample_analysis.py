@@ -25,6 +25,7 @@ from scipy import stats
 import statsmodels.api as sm
 from sklearn.feature_selection import mutual_info_regression
 import seaborn as sns
+from joblib import Parallel, delayed
 
 LABEL_MAP = {
     "GQI": "GQI",
@@ -59,6 +60,23 @@ def _load_tables(paths):
         df = pd.read_csv(p, sep="\t")
         tables.append(df)
     return tables
+
+
+def _plot_heatmap(matrix, title, out_png):
+    """Plot and save a heatmap for the given matrix."""
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(matrix.astype(float), annot=True, fmt=".2f", cmap="viridis")
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=300)
+    plt.close()
+
+
+def _estimate_entropy(x, bins="fd"):
+    """Estimate the entropy of a 1D array using histogram binning."""
+    hist, _ = np.histogram(x, bins=bins, density=True)
+    hist = hist[hist > 0]
+    return stats.entropy(hist)
 
 
 def _make_violin(data, names, title, ylabel, out_png):
@@ -227,9 +245,17 @@ def _perform_regression(df, metrics, out_tsv):
     res_df.to_csv(out_tsv, sep="\t", index=False)
     return model, res_df
 
-
-def _mutual_information(df, metrics, out_png, out_tsv):
-    """Compute pairwise mutual information between metrics.
+def analyze_mutual_information(
+    df,
+    metrics,
+    n_permutations=1000,
+    permutation_test=False,
+    seed=None,
+    save_dir=None,
+    n_jobs=1,
+    redundancy_threshold=None,
+):
+    """Compute mutual information and related statistics between metrics.
 
     Parameters
     ----------
@@ -237,35 +263,167 @@ def _mutual_information(df, metrics, out_png, out_tsv):
         Data frame containing the metrics.
     metrics : list of str
         Metrics to include in the analysis.
-    out_png : str
-        Path to save the heatmap figure.
-    out_tsv : str
-        Path to save the mutual information matrix as TSV.
+    n_permutations : int, optional
+        Number of permutations for significance testing.
+    permutation_test : bool, optional
+        Whether to run the permutation-based significance test.
+    seed : int or None, optional
+        Random seed for reproducibility.
+    save_dir : str or None, optional
+        Directory where results will be saved. If ``None`` results are not
+        written to disk.
+    n_jobs : int, optional
+        Number of parallel jobs for the permutation test.
+    redundancy_threshold : float or None, optional
+        Threshold for reporting redundant metric pairs based on NMI.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the computed matrices and entropy vector.
     """
     data = df[metrics].dropna()
     n_neighbors = max(1, min(3, len(data) - 1))
+
     mi_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    net_mi_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    z_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    p_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    nmi_geo_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+    nmi_ari_matrix = pd.DataFrame(index=metrics, columns=metrics, dtype=float)
+
+    # Marginal entropies
+    entropy_series = pd.Series({m: _estimate_entropy(data[m]) for m in metrics})
+
+    rng = np.random.default_rng(seed)
+
     for m1 in metrics:
+        x = data[m1].values.reshape(-1, 1)
         for m2 in metrics:
             if m1 == m2:
                 mi = np.nan
+                net = np.nan
+                z = np.nan
+                p = np.nan
             else:
+                y = data[m2].values
                 mi = mutual_info_regression(
-                    data[[m1]],
-                    data[m2],
+                    x,
+                    y,
                     discrete_features=False,
                     n_neighbors=n_neighbors,
                 )[0]
+                if permutation_test:
+                    perms = [rng.permutation(y) for _ in range(n_permutations)]
+                    perm_mi = Parallel(n_jobs=n_jobs)(
+                        delayed(mutual_info_regression)(x, perm, discrete_features=False, n_neighbors=n_neighbors)[0]
+                        for perm in perms
+                    )
+                    perm_mi = np.asarray(perm_mi)
+                    perm_mean = perm_mi.mean()
+                    perm_std = perm_mi.std(ddof=1)
+                    net = mi - perm_mean
+                    z = net / perm_std if perm_std > 0 else np.nan
+                    p = (np.sum(perm_mi >= mi) + 1) / (n_permutations + 1)
+                else:
+                    net = np.nan
+                    z = np.nan
+                    p = np.nan
+
             mi_matrix.loc[m1, m2] = mi
+            net_mi_matrix.loc[m1, m2] = net
+            z_matrix.loc[m1, m2] = z
+            p_matrix.loc[m1, m2] = p
 
+            hx = entropy_series[m1]
+            hy = entropy_series[m2]
+            nmi_geo = mi / np.sqrt(hx * hy) if hx > 0 and hy > 0 else np.nan
+            nmi_ari = (2 * mi) / (hx + hy) if (hx + hy) > 0 else np.nan
+            nmi_geo_matrix.loc[m1, m2] = nmi_geo
+            nmi_ari_matrix.loc[m1, m2] = nmi_ari
+
+    results = {
+        "mi": mi_matrix,
+        "net_mi": net_mi_matrix,
+        "z": z_matrix,
+        "p": p_matrix,
+        "nmi_geo": nmi_geo_matrix,
+        "nmi_ari": nmi_ari_matrix,
+        "entropy": entropy_series,
+    }
+
+    if redundancy_threshold is not None:
+        redundant = []
+        for i, m1 in enumerate(metrics):
+            for m2 in metrics[i + 1:]:
+                nmi_val = nmi_ari_matrix.loc[m1, m2]
+                if nmi_val > redundancy_threshold:
+                    redundant.append((m1, m2, nmi_val))
+        results["redundancy"] = pd.DataFrame(
+            redundant, columns=["metric1", "metric2", "nmi_ari"]
+        )
+
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+        mi_matrix.to_csv(os.path.join(save_dir, "mutual_information.tsv"), sep="\t")
+        _plot_heatmap(
+            mi_matrix,
+            "Mutual Information between noise metrics",
+            os.path.join(save_dir, "mutual_information.png"),
+        )
+        net_mi_matrix.to_csv(
+            os.path.join(save_dir, "net_mutual_information.tsv"), sep="\t"
+        )
+        _plot_heatmap(
+            net_mi_matrix,
+            "Net Mutual Information",
+            os.path.join(save_dir, "net_mutual_information.png"),
+        )
+        z_matrix.to_csv(os.path.join(save_dir, "mi_z_scores.tsv"), sep="\t")
+        _plot_heatmap(
+            z_matrix, "MI z-scores", os.path.join(save_dir, "mi_z_scores.png")
+        )
+        p_matrix.to_csv(os.path.join(save_dir, "mi_p_values.tsv"), sep="\t")
+        _plot_heatmap(
+            p_matrix, "MI p-values", os.path.join(save_dir, "mi_p_values.png")
+        )
+        nmi_geo_matrix.to_csv(
+            os.path.join(save_dir, "nmi_geometric.tsv"), sep="\t"
+        )
+        _plot_heatmap(
+            nmi_geo_matrix,
+            "Normalized MI (geometric)",
+            os.path.join(save_dir, "nmi_geometric.png"),
+        )
+        nmi_ari_matrix.to_csv(
+            os.path.join(save_dir, "nmi_arithmetic.tsv"), sep="\t"
+        )
+        _plot_heatmap(
+            nmi_ari_matrix,
+            "Normalized MI (arithmetic)",
+            os.path.join(save_dir, "nmi_arithmetic.png"),
+        )
+        entropy_series.to_csv(
+            os.path.join(save_dir, "marginal_entropies.tsv"),
+            sep="\t",
+            header=["entropy"],
+        )
+        if "redundancy" in results:
+            results["redundancy"].to_csv(
+                os.path.join(save_dir, "redundant_pairs.tsv"),
+                sep="\t",
+                index=False,
+            )
+
+    return results
+
+
+def _mutual_information(df, metrics, out_png, out_tsv):
+    """Wrapper for backward compatibility with previous API."""
+    res = analyze_mutual_information(df, metrics)
+    mi_matrix = res["mi"]
     mi_matrix.to_csv(out_tsv, sep="\t")
-
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(mi_matrix.astype(float), annot=True, fmt=".2f", cmap="viridis")
-    plt.title("Mutual Information between noise metrics")
-    plt.tight_layout()
-    plt.savefig(out_png, dpi=300)
-    plt.close()
+    _plot_heatmap(mi_matrix, "Mutual Information between noise metrics", out_png)
 
 
 
@@ -278,6 +436,31 @@ def main():
                         help="Sample names corresponding to TSV files")
     parser.add_argument("--output-dir", required=True, help="Directory for outputs")
     parser.add_argument("--ttest", action="store_true", help="Compute pairwise t-tests for the cumulative plot")
+    parser.add_argument("--mi", action="store_true", help="Perform mutual information analysis")
+    parser.add_argument(
+        "--mi-permutation",
+        action="store_true",
+        help="Use permutation testing for mutual information",
+    )
+    parser.add_argument(
+        "--mi-permutations",
+        type=int,
+        default=1000,
+        help="Number of permutations for MI significance testing",
+    )
+    parser.add_argument("--mi-seed", type=int, default=None, help="Seed for MI permutations")
+    parser.add_argument(
+        "--mi-threshold",
+        type=float,
+        default=None,
+        help="Threshold for redundancy reporting based on NMI",
+    )
+    parser.add_argument(
+        "--mi-n-jobs",
+        type=int,
+        default=1,
+        help="Number of parallel jobs for MI permutations",
+    )
     args = parser.parse_args()
 
     if len(args.tsv) != len(args.names):
@@ -291,7 +474,8 @@ def main():
     os.makedirs(cumulative_dir, exist_ok=True)
     os.makedirs(separated_dir, exist_ok=True)
     os.makedirs(regression_dir, exist_ok=True)
-    os.makedirs(mi_dir, exist_ok=True)
+    if args.mi:
+        os.makedirs(mi_dir, exist_ok=True)
 
     tables = _load_tables(args.tsv)
     metrics = [
@@ -347,22 +531,28 @@ def main():
         df_all, metrics, os.path.join(regression_dir, "linear_regression_results.tsv")
     )
 
-    # Mutual information per sample
-    for name, tbl in zip(args.names, tables):
-        _mutual_information(
-            tbl,
+    if args.mi:
+        for name, tbl in zip(args.names, tables):
+            analyze_mutual_information(
+                tbl,
+                metrics,
+                n_permutations=args.mi_permutations,
+                permutation_test=args.mi_permutation,
+                seed=args.mi_seed,
+                save_dir=os.path.join(mi_dir, name),
+                n_jobs=args.mi_n_jobs,
+                redundancy_threshold=args.mi_threshold,
+            )
+        analyze_mutual_information(
+            df_all,
             metrics,
-            os.path.join(mi_dir, f"{name}_mutual_information.png"),
-            os.path.join(mi_dir, f"{name}_mutual_information.tsv"),
+            n_permutations=args.mi_permutations,
+            permutation_test=args.mi_permutation,
+            seed=args.mi_seed,
+            save_dir=os.path.join(mi_dir, "combined"),
+            n_jobs=args.mi_n_jobs,
+            redundancy_threshold=args.mi_threshold,
         )
-
-    # Mutual information across all samples
-    _mutual_information(
-        df_all,
-        metrics,
-        os.path.join(mi_dir, "mutual_information.png"),
-        os.path.join(mi_dir, "mutual_information.tsv"),
-    )
 
 
 if __name__ == "__main__":

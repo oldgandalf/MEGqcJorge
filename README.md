@@ -29,6 +29,18 @@ pipeline, run::
 
 All violin plots and regression results will be written to the ``results``
 directory. Significant regression coefficients are marked with asterisks.
-For each sample a mutual information analysis of the noise metrics is saved in
-the ``mutual_information`` folder alongside a combined analysis that
-treats all samples as one dataset.
+
+To add a mutual information (MI) analysis, include the ``--mi`` flag. A
+permutation-based significance test can be enabled with ``--mi-permutation``
+and the number of permutations controlled via ``--mi-permutations``. For
+example::
+
+    python -m meg_qc.calculation.between_sample_analysis \
+        --tsv sample1/group_metrics.tsv sample2/group_metrics.tsv \
+        --names sample1 sample2 \
+        --output-dir results \
+        --mi --mi-permutation --mi-permutations 1000
+
+MI results (raw, net, z-scores, p-values, normalized variants and entropies)
+are stored in the ``mutual_information`` folder for each sample and for the
+combined dataset.
