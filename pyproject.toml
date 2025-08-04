@@ -1,8 +1,63 @@
-#[build-system]
-#requires = ["setuptools", "wheel==0.30.0"]
-#[project.scripts]
-#megqc = "meg_qc.run_megqc:hello_world"
-
 [build-system]
 requires = ["setuptools>=61.0", "wheel", "versioneer[toml]"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "megqc"
+description = "Tool for automated MEG data quality control"
+readme = "README.md"
+requires-python = ">=3.8,<3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Karel Lopez Vilaret", email = "karel.mauricio.lopez.vilaret@uni-oldenburg.de"},
+    {name = "Evgeniia Gapontseva"},
+    {name = "Aaron Reer"},
+    {name = "Erdal Karaca"},
+]
+maintainers = [
+    {name = "ANCP Lab, University of Oldenburg", email = "currentancp@listserv.uni-oldenburg.de"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/ANCPLabOldenburg/MEGqc"
+
+[project.scripts]
+megqc = "meg_qc.miscellaneous.GUI.megqcGUI:run_megqc_gui"
+run-megqc = "meg_qc.test:run_megqc"
+run-megqc-plotting = "meg_qc.test:get_plots"
+get-megqc-config = "meg_qc.test:get_config"
+run-meg-qc = "meg_qc.run_megqc:hello_world"
+globalqualityindex = "meg_qc.test:run_gqi"
+
+[tool.setuptools]
+include-package-data = true
+package-data = {"meg_qc.miscellaneous.GUI" = ["logo.png"]}
+
+[tool.setuptools.packages.find]
+include = ["meg_qc*"]
+
+[tool.setuptools.dynamic.dependencies]
+file = ["requirements.txt"]
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440-pre"
+versionfile_source = "meg_qc/_version.py"
+versionfile_build = "meg_qc/_version.py"
+tag_prefix = ""
+parentdir_prefix = ""
+
