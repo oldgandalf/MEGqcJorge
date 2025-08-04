@@ -17,8 +17,7 @@ def read_requirements(path: str) -> List[str]:
 
 if __name__ == "__main__":
     setup(
-        version=versioneer.get_version(),
-        cmdclass=versioneer.get_cmdclass(),
+        version="0.6.0",
         install_requires=read_requirements("requirements.txt"),
     )
 
