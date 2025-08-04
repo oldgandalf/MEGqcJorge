@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from meg_qc.calculation.between_sample_analysis import _mutual_information, analyze_mutual_information
 
 
@@ -34,5 +35,7 @@ def test_mutual_information_with_permutation():
         permutation_test=True,
         seed=0,
     )
+    assert np.allclose(res["mi"], res["mi"].T, equal_nan=True)
     assert res["p"].notna().values.sum() > 0
+    assert res["p_fdr"].notna().values.sum() > 0
     assert res["z"].notna().values.sum() > 0
