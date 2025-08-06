@@ -667,6 +667,8 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     chosen_entities['METRIC'].append('stimulus')
     chosen_entities['METRIC'].append('RawInfo')
     chosen_entities['METRIC'].append('ReportStrings')
+    # Ensure SimpleMetrics is always present so that summary reports can be built
+    chosen_entities['METRIC'].append('SimpleMetrics')
 
     # 5) Define a simple plot_settings. Example: always 'mag' and 'grad'
     plot_settings = {'m_or_g': ['mag', 'grad']}
@@ -692,6 +694,8 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
 
         # If the user (now "all") had multiple possible descs for PSDs, ECGs, etc.
         if metric == 'PSDs':
+            # Include all PSD derivatives (noise and waves) so the PSD report is
+            # generated correctly.
             query_args['desc'] = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
         elif metric == 'ECGs':
             query_args['desc'] = ['ECGchannel', 'ECGs']
