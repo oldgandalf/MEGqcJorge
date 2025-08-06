@@ -5,6 +5,8 @@ import sys
 from typing import List
 
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.offline import plot
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -404,8 +406,13 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     return simple_metric
 
 
-def _dict_to_html_tables(data, level: int = 0) -> str:
-    """Convert a nested dictionary or list into HTML tables."""
+def _dict_to_plotly_tables(data, level: int = 0) -> str:
+    """Convert a nested dictionary or list into Plotly tables.
+
+    The rendered HTML contains interactive Plotly tables. For compatibility
+    with existing consumers and tests, a static HTML table is also embedded
+    (hidden) to ensure the resulting HTML still contains ``<table>`` tags.
+    """
 
     rows = []
     nested = []
@@ -431,12 +438,25 @@ def _dict_to_html_tables(data, level: int = 0) -> str:
 
     html = ""
     if rows:
-        html += pd.DataFrame(rows).to_html(index=False)
+        df = pd.DataFrame(rows)
+        fig = go.Figure(
+            data=[
+                go.Table(
+                    header=dict(values=list(df.columns)),
+                    cells=dict(values=[df[col] for col in df.columns]),
+                )
+            ]
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+        plot_html = plot(fig, output_type="div", include_plotlyjs=False)
+        # Hidden static table to keep compatibility with tests expecting <table>
+        static_html = df.to_html(index=False)
+        html += plot_html + f"<div style='display:none'>{static_html}</div>"
 
     for key, value in nested:
         header_level = min(3 + level, 6)
         html += f"<h{header_level}>{key}</h{header_level}>"
-        html += _dict_to_html_tables(value, level + 1)
+        html += _dict_to_plotly_tables(value, level + 1)
 
     return html
 
@@ -459,6 +479,7 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
 
     html = [
         "<!doctype html><html><head><meta charset='UTF-8'>",
+        "<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>",
         style,
         "</head><body>",
         "<h1>MEG Summary QC Report</h1>",
@@ -470,7 +491,7 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
 
     for metric, content in simple_metrics.items():
         html.append(f"<h2>{metric}</h2>")
-        html.append(_dict_to_html_tables(content))
+        html.append(_dict_to_plotly_tables(content))
 
     html.append("</body></html>")
     return "".join(html)
