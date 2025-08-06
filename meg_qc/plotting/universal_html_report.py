@@ -1,7 +1,10 @@
+import json
 import mne
 import os
 import sys
 from typing import List
+
+import pandas as pd
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -399,3 +402,63 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     simple_metric.update(m_local)
 
     return simple_metric
+
+
+def _dict_to_html_tables(data: dict, level: int = 0) -> str:
+    """Convert a nested dictionary into HTML tables."""
+
+    rows = []
+    nested = []
+    for key, value in data.items():
+        if isinstance(value, dict):
+            nested.append((key, value))
+        else:
+            if isinstance(value, list):
+                value = ", ".join(str(v) for v in value)
+            rows.append({"Field": key, "Value": value})
+
+    html = ""
+    if rows:
+        html += pd.DataFrame(rows).to_html(index=False)
+
+    for key, value in nested:
+        header_level = min(3 + level, 6)
+        html += f"<h{header_level}>{key}</h{header_level}>"
+        html += _dict_to_html_tables(value, level + 1)
+
+    return html
+
+
+def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -> str:
+    """Create an HTML summary report from simple metrics and report strings."""
+
+    with open(report_strings_path, "r", encoding="utf-8") as f:
+        report_strings = json.load(f)
+
+    with open(simple_metrics_path, "r", encoding="utf-8") as f:
+        simple_metrics = json.load(f)
+
+    style = (
+        "<style>body{font-family: Arial, sans-serif; margin:10px;} "
+        "table{border-collapse: collapse; margin-bottom:15px;} "
+        "th,td{border:1px solid #ccc; padding:4px 8px; text-align:left;} "
+        "th{background-color:#f2f2f2;}</style>"
+    )
+
+    html = [
+        "<!doctype html><html><head><meta charset='UTF-8'>",
+        style,
+        "</head><body>",
+        "<h1>MEG Summary QC Report</h1>",
+        "<h2>Report Strings</h2>",
+    ]
+
+    for key, text in report_strings.items():
+        html.append(f"<h3>{key}</h3><p>{text}</p>")
+
+    for metric, content in simple_metrics.items():
+        html.append(f"<h2>{metric}</h2>")
+        html.append(_dict_to_html_tables(content))
+
+    html.append("</body></html>")
+    return "".join(html)
