@@ -12,7 +12,15 @@ def test_make_summary_qc_report(tmp_path):
         "STD": {
             "measurement_unit_mag": "Tesla",
             "STD_all_time_series": {
-                "MAGNETOMETERS": {"number_of_noisy_ch": 1},
+                "description": "Standard deviation",
+                "mag": {
+                    "number_of_noisy_ch": 1,
+                    "percent_of_noisy_ch": 20.0,
+                    "number_of_flat_ch": 0,
+                    "percent_of_flat_ch": 0.0,
+                    "std_lvl": 1,
+                    "details": {"noisy_ch": {"MEG0121": 0.1}, "flat_ch": {}}
+                },
             },
         }
     }
@@ -23,7 +31,8 @@ def test_make_summary_qc_report(tmp_path):
     html = make_summary_qc_report(str(report_path), str(simple_path))
 
     assert "Data resampled to 1000 Hz." in html
-    assert "number_of_noisy_ch" in html
+    assert "MAGNETOMETERS" in html
+    assert "MEG0121" in html
     assert "<table" in html
 
 
