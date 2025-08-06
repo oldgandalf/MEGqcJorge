@@ -39,6 +39,6 @@ def test_make_summary_qc_report_handles_list(tmp_path):
 
     html = make_summary_qc_report(str(report_path), str(simple_path))
 
-    assert "<h2>STD</h2>" in html
+    assert "<strong>STD</strong>" in html
     assert "measurement_unit_mag" in html
 
