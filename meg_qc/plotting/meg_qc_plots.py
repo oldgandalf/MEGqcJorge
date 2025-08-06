@@ -577,7 +577,7 @@ def process_subject(
 
         metrics_to_plot = [
             m for m in chosen_entities['METRIC']
-            if m not in ['RawInfo', 'ReportStrings']
+            if m not in ['RawInfo', 'ReportStrings', 'SimpleMetrics']
         ]
 
         for metric in metrics_to_plot:
@@ -653,6 +653,16 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
 
     # If you want them deduplicated, do:
     all_metrics = list(set(all_metrics))
+
+    # Collapse individual PSD descriptions into a single entry so that the
+    # general PSD report (``PSDs``) can gather all derivatives at once.  This
+    # prevents the loss of the ``PSDs`` report when only the noise/waves
+    # derivatives are present in the dataset.
+    psd_related = {'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad'}
+    if psd_related.intersection(all_metrics):
+        all_metrics = [m for m in all_metrics if m not in psd_related]
+        if 'PSDs' not in all_metrics:
+            all_metrics.append('PSDs')
 
     # Now store it in chosen_entities as a list
     chosen_entities = {

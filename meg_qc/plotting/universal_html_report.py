@@ -556,39 +556,41 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
         return "\n".join(html)
 
     def build_generic_table(data, parent_metric=None):
+        """Recursively render ``data`` into an HTML table."""
+
+        def build_rows(obj):
+            rows = []
+            for key, value in obj.items():
+                if isinstance(value, dict):
+                    rows.append(
+                        f"<tr><td colspan='2' style='border:1px solid #ccc; padding:8px; background:#e0f7fa;'><strong>{key}</strong></td></tr>"
+                    )
+                    if parent_metric == "STD" and key == "details":
+                        noisy = extract_channel_names(value.get("noisy_ch", {}))
+                        flat = extract_channel_names(value.get("flat_ch", {}))
+                        rows.append(
+                            f"<tr><td style='border:1px solid #ccc; padding:6px;'>noisy_ch</td><td style='border:1px solid #ccc; padding:6px;'>{noisy}</td></tr>"
+                        )
+                        rows.append(
+                            f"<tr><td style='border:1px solid #ccc; padding:6px;'>flat_ch</td><td style='border:1px solid #ccc; padding:6px;'>{flat}</td></tr>"
+                        )
+                    elif key in {"mag", "grad"}:
+                        rows.append(generar_html_mag_grad(key, value))
+                    else:
+                        rows.extend(build_rows(value))
+                else:
+                    rows.append(
+                        f"<tr><td style='border:1px solid #ccc; padding:6px;'>{key}</td><td style='border:1px solid #ccc; padding:6px;'>{value}</td></tr>"
+                    )
+            return rows
+
         html = ['<table style="margin:auto; border-collapse:collapse; font-family:sans-serif;">']
         html.append('<thead><tr style="background-color:#f2f2f2;">')
         html.append(
             '<th style="border:1px solid #ccc; padding:6px;">Field</th>'
             '<th style="border:1px solid #ccc; padding:6px;">Value</th></tr></thead><tbody>'
         )
-
-        for key, value in data.items():
-            if isinstance(value, dict):
-                html.append(
-                    f'<tr><td colspan="2" style="border:1px solid #ccc; padding:8px; background:#e0f7fa;"><strong>{key}</strong></td></tr>'
-                )
-                if parent_metric == "STD" and key == "details":
-                    noisy = extract_channel_names(value.get("noisy_ch", {}))
-                    flat = extract_channel_names(value.get("flat_ch", {}))
-                    html.append(
-                        f'<tr><td style="border:1px solid #ccc; padding:6px;">noisy_ch</td><td style="border:1px solid #ccc; padding:6px;">{noisy}</td></tr>'
-                    )
-                    html.append(
-                        f'<tr><td style="border:1px solid #ccc; padding:6px;">flat_ch</td><td style="border:1px solid #ccc; padding:6px;">{flat}</td></tr>'
-                    )
-                elif key in {"mag", "grad"}:
-                    html.append(generar_html_mag_grad(key, value))
-                else:
-                    for subkey, subval in value.items():
-                        html.append(
-                            f'<tr><td style="border:1px solid #ccc; padding:6px;">{subkey}</td><td style="border:1px solid #ccc; padding:6px;">{subval}</td></tr>'
-                        )
-            else:
-                html.append(
-                    f'<tr><td style="border:1px solid #ccc; padding:6px;">{key}</td><td style="border:1px solid #ccc; padding:6px;">{value}</td></tr>'
-                )
-
+        html.extend(build_rows(data))
         html.append('</tbody></table>')
         return "".join(html)
 
