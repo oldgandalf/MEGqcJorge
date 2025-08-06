@@ -20,7 +20,10 @@ sys.path.append(parent_dir)
 sys.path.append(gradparent_dir)
 
 from meg_qc.plotting.universal_plots import *
-from meg_qc.plotting.universal_html_report import make_joined_report_mne
+from meg_qc.plotting.universal_html_report import (
+    make_joined_report_mne,
+    make_summary_qc_report,
+)
 
 # IMPORTANT: keep this order of imports, first need to add parent dir to sys.path, then import from it.
 
@@ -559,13 +562,18 @@ def process_subject(
             d for d in derivs_to_plot if d.raw_entity_name == raw_entity_name
         ]
 
+        raw_entities_base = derivs_for_this_raw[0].deriv_entity_obj
+
         raw_info_path = None
         report_str_path = None
+        simple_metrics_path = None
         for d in derivs_for_this_raw:
             if d.metric == 'RawInfo':
                 raw_info_path = d.path
             elif d.metric == 'ReportStrings':
                 report_str_path = d.path
+            elif d.metric == 'SimpleMetrics':
+                simple_metrics_path = d.path
 
         metrics_to_plot = [
             m for m in chosen_entities['METRIC']
@@ -596,6 +604,16 @@ def process_subject(
 
             meg_artifact.content = lambda file_path, rep=html_report: rep.save(
                 file_path, overwrite=True, open_browser=False
+            )
+
+        if report_str_path and simple_metrics_path:
+            summary_html = make_summary_qc_report(report_str_path, simple_metrics_path)
+            meg_artifact = subject_folder.create_artifact(raw=raw_entities_base)
+            meg_artifact.add_entity('desc', 'summary_qc_report')
+            meg_artifact.suffix = 'meg'
+            meg_artifact.extension = '.html'
+            meg_artifact.content = (
+                lambda file_path, cont=summary_html: open(file_path, "w", encoding="utf-8").write(cont)
             )
 
     ancpbids.write_derivative(dataset, derivative)
