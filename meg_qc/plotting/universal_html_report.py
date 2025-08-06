@@ -404,18 +404,30 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     return simple_metric
 
 
-def _dict_to_html_tables(data: dict, level: int = 0) -> str:
-    """Convert a nested dictionary into HTML tables."""
+def _dict_to_html_tables(data, level: int = 0) -> str:
+    """Convert a nested dictionary or list into HTML tables."""
 
     rows = []
     nested = []
-    for key, value in data.items():
-        if isinstance(value, dict):
-            nested.append((key, value))
-        else:
-            if isinstance(value, list):
-                value = ", ".join(str(v) for v in value)
-            rows.append({"Field": key, "Value": value})
+
+    if isinstance(data, list):
+        for idx, item in enumerate(data):
+            if isinstance(item, (dict, list)):
+                nested.append((f"Item {idx + 1}", item))
+            else:
+                rows.append({"Field": idx, "Value": item})
+    else:
+        for key, value in data.items():
+            if isinstance(value, dict):
+                nested.append((key, value))
+            elif isinstance(value, list):
+                if value and all(isinstance(v, dict) for v in value):
+                    nested.append((key, value))
+                else:
+                    value = ", ".join(str(v) for v in value)
+                    rows.append({"Field": key, "Value": value})
+            else:
+                rows.append({"Field": key, "Value": value})
 
     html = ""
     if rows:
