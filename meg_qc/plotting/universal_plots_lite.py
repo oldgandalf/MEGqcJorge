@@ -2172,10 +2172,11 @@ def append_plot_to_html(fig, output_html_path, link_name="Plot", metric:str=None
     fig.update_layout(height=height)
     unique_id = "plot_" + uuid.uuid4().hex[:8]
 
+    metric = (metric or '').upper()
     if metric.startswith("EOG"):
-        metric = "EOGs"
-    if metric.startswith("ECG"):
-        metric = "ECGs"
+        metric = "EOG"
+    elif metric.startswith("ECG"):
+        metric = "ECG"
 
     how_to_dict = {
         'STIMULUS': 'All figures are interactive. Hover over an element to see more information.',
@@ -2705,10 +2706,17 @@ def plot_ECG_EOG_channel_csv(f_path, html_path: str = 'ECGEOG_optimized_plot.htm
 
     df = pd.read_csv(f_path, sep='\t', dtype={6: str})
 
-    if df.shape[1] < 2 or 'event_indexes' not in df.columns or 'fs' not in df.columns:
+    if df.shape[1] < 1 or 'event_indexes' not in df.columns or 'fs' not in df.columns:
         return []
 
-    ch_name = df.columns[1]
+    # Identify the column that stores the ECG/EOG data.  Some TSVs may contain
+    # an unnamed index column, so explicitly search for a column name starting
+    # with ``ECG`` or ``EOG`` and fall back to the first column otherwise.
+    channel_cols = [
+        col for col in df.columns
+        if col.lower().startswith('ecg') or col.lower().startswith('eog')
+    ]
+    ch_name = channel_cols[0] if channel_cols else df.columns[0]
     ch_data_full = df[ch_name].dropna().values
     if not ch_data_full.any():
         return []

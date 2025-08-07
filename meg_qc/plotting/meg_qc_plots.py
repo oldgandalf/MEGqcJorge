@@ -716,6 +716,27 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
         if 'PSDs' not in all_metrics:
             all_metrics.append('PSDs')
 
+    # Retain only recognised metrics and normalise some aliases. This prevents
+    # intermediate derivatives like ``ECGchannel`` from being treated as
+    # standalone metrics and generating separate HTML reports.
+    valid_metrics = {
+        'STDs': 'STDs',
+        'STD': 'STDs',
+        'PSDs': 'PSDs',
+        'PtPsManual': 'PtPsManual',
+        'PtPsAuto': 'PtPsAuto',
+        'ECGs': 'ECGs',
+        'EOGs': 'EOGs',
+        'Head': 'Head',
+        'Muscle': 'Muscle',
+        'RawInfo': 'RawInfo',
+        'ReportStrings': 'ReportStrings',
+        'SimpleMetrics': 'SimpleMetrics',
+    }
+    all_metrics = [valid_metrics[m] for m in all_metrics if m in valid_metrics]
+    # Preserve order while removing duplicates
+    all_metrics = list(dict.fromkeys(all_metrics))
+
     # Now store it in chosen_entities as a list
     chosen_entities = {
         'subject': list(entities_found.get('subject', [])),
