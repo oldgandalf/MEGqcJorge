@@ -12,6 +12,7 @@ authors = [
     {name = "Karel Lopez Vilaret", email = "karel.mauricio.lopez.vilaret@uni-oldenburg.de"},
     {name = "Evgeniia Gapontseva"},
     {name = "Aaron Reer"},
+    {name = "Jorge Bosch"},
     {name = "Erdal Karaca"},
 ]
 maintainers = [
