@@ -23,9 +23,56 @@ sys.path.append(gradparent_dir)
 
 from meg_qc.calculation.objects import QC_derivative
 
-# Plotting backends (universal_plots vs universal_plots_lite) are imported
-# dynamically inside ``make_plots_meg_qc`` based on the ``full_html_reports``
-# option in settings.ini.
+# Plotting backends (``universal_plots`` vs ``universal_plots_lite``) and the
+# accompanying report helpers need to be available not only in the main process
+# but also in the worker processes spawned by joblib.  Configure them at module
+# import time so that all processes share the same setup.
+
+
+def _load_plotting_backend():
+    """Configure plotting backend and expose report helpers."""
+
+    # If the backend has been loaded already, do nothing.
+    if 'make_joined_report_mne' in globals():
+        return
+
+    cfg = configparser.ConfigParser()
+    settings_path = (
+        Path(__file__).resolve().parents[1] / 'settings' / 'settings.ini'
+    )
+    cfg.read(settings_path)
+    use_full_reports = cfg['DEFAULT'].getboolean('full_html_reports', True)
+
+    if use_full_reports:
+        import meg_qc.plotting.universal_plots as _plots
+    else:
+        import meg_qc.plotting.universal_plots_lite as _plots
+
+    # Make the chosen backend available under the expected module name so that
+    # other modules (e.g. ``universal_html_report``) pick it up.
+    sys.modules['meg_qc.plotting.universal_plots'] = _plots
+    globals().update(
+        {
+            name: getattr(_plots, name)
+            for name in dir(_plots)
+            if not name.startswith('_')
+        }
+    )
+
+    from meg_qc.plotting.universal_html_report import (
+        make_joined_report_mne,
+        make_summary_qc_report,
+    )
+
+    globals().update(
+        {
+            'make_joined_report_mne': make_joined_report_mne,
+            'make_summary_qc_report': make_summary_qc_report,
+        }
+    )
+
+
+_load_plotting_backend()
 
 # IMPORTANT: keep this order of imports, first need to add parent dir to sys.path, then import from it.
 
@@ -628,31 +675,8 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     Instead, we assume 'all' for every entity (subject, task, session, run, metric).
     """
 
-    # Decide which plotting backend to use based on settings.ini
-    cfg = configparser.ConfigParser()
-    settings_path = Path(__file__).resolve().parents[1] / 'settings' / 'settings.ini'
-    cfg.read(settings_path)
-    use_full_reports = cfg['DEFAULT'].getboolean('full_html_reports', True)
-
-    if use_full_reports:
-        import meg_qc.plotting.universal_plots as _plots
-    else:
-        import meg_qc.plotting.universal_plots_lite as _plots
-
-    # Expose chosen backend under the expected module name so that helper
-    # modules (e.g. universal_html_report) pick it up.
-    sys.modules['meg_qc.plotting.universal_plots'] = _plots
-    globals().update({name: getattr(_plots, name) for name in dir(_plots)
-                      if not name.startswith('_')})
-
-    from meg_qc.plotting.universal_html_report import (
-        make_joined_report_mne,
-        make_summary_qc_report,
-    )
-    globals().update({
-        'make_joined_report_mne': make_joined_report_mne,
-        'make_summary_qc_report': make_summary_qc_report,
-    })
+    # Ensure plotting backend and report helpers are available
+    _load_plotting_backend()
 
     try:
         dataset = ancpbids.load_dataset(dataset_path, DatasetOptions(lazy_loading=True))
