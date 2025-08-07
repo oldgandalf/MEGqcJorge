@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLineEdit, QLabel,
     QFileDialog, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QFormLayout,
     QGroupBox, QSpinBox, QTabWidget, QScrollArea, QFrame, QMessageBox,
-    QMenu               #  ← add this entry
+    QMenu, QProgressBar
 )
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QCoreApplication
 from PyQt6.QtGui import QPixmap, QIcon, QPalette, QColor  # for loading images, setting icon, and theme toggling
@@ -370,6 +370,14 @@ class MainWindow(QMainWindow):
         sys_l.addWidget(QLabel(f"CPUs: {cpu_cnt}"))
         sys_l.addWidget(QLabel(f"Total RAM: {total_gb:.1f} GB"))
         self.statusBar().addPermanentWidget(sys_w)
+
+        # Spinner shown while background tasks run
+        self.spinner = QProgressBar()
+        self.spinner.setRange(0, 0)  # indefinite mode
+        self.spinner.setFixedWidth(100)
+        self.spinner.hide()
+        self.statusBar().addPermanentWidget(self.spinner)
+        self.active_tasks = 0
 
         # -- Workers dict + initial theme ---------------------------------
         self.workers: dict[str, Worker] = {}
@@ -748,6 +756,21 @@ class MainWindow(QMainWindow):
             edit.setText(path)
 
     # ──────────────────────────────── #
+    # spinner helpers                  #
+    # ──────────────────────────────── #
+    def _spinner_on(self):
+        """Show the status-bar spinner and count active tasks."""
+        self.active_tasks += 1
+        self.spinner.show()
+
+    def _spinner_off(self):
+        """Hide the spinner when no tasks remain."""
+        if self.active_tasks > 0:
+            self.active_tasks -= 1
+        if self.active_tasks == 0:
+            self.spinner.hide()
+
+    # ──────────────────────────────── #
     # start / stop handlers            #
     # ──────────────────────────────── #
     def start_calc(self):
@@ -782,12 +805,15 @@ class MainWindow(QMainWindow):
         # 3) Create the Worker, hook up signals → log
         worker = Worker(make_derivative_meg_qc, *args)
         worker.started.connect(lambda: self.log.appendPlainText("Calculation started"))
+        worker.started.connect(self._spinner_on)
         worker.finished.connect(
             lambda elapsed: self.log.appendPlainText(f"Calculation finished in {elapsed:.2f}s")
         )
+        worker.finished.connect(lambda _: self._spinner_off())
         worker.error.connect(
             lambda err: self.log.appendPlainText(f"Calculation error: {err}")
         )
+        worker.error.connect(lambda _: self._spinner_off())
 
         # 4) Launch and save
         worker.start()
@@ -804,6 +830,7 @@ class MainWindow(QMainWindow):
         if worker:
             worker.stop()
             self.log.appendPlainText("Calculation stopped")
+            self._spinner_off()
 
 
     def start_plot(self):
@@ -828,12 +855,15 @@ class MainWindow(QMainWindow):
         # 3) Create Worker and wire signals
         worker = Worker(make_plots_meg_qc, *args)
         worker.started.connect(lambda: self.log.appendPlainText("Plotting started"))
+        worker.started.connect(self._spinner_on)
         worker.finished.connect(
             lambda elapsed: self.log.appendPlainText(f"Plotting finished in {elapsed:.2f}s")
         )
+        worker.finished.connect(lambda _: self._spinner_off())
         worker.error.connect(
             lambda err: self.log.appendPlainText(f"Plotting error: {err}")
         )
+        worker.error.connect(lambda _: self._spinner_off())
 
         # 4) Launch and save
         worker.start()
@@ -850,6 +880,7 @@ class MainWindow(QMainWindow):
         if worker:
             worker.stop()
             self.log.appendPlainText("Plotting stopped")
+            self._spinner_off()
 
     def start_gqi(self):
         """Run Global Quality Index calculation only."""
@@ -857,8 +888,11 @@ class MainWindow(QMainWindow):
         args = (data_dir, str(SETTINGS_PATH))
         worker = Worker(generate_gqi_summary, *args)
         worker.started.connect(lambda: self.log.appendPlainText("GQI started"))
+        worker.started.connect(self._spinner_on)
         worker.finished.connect(lambda e: self.log.appendPlainText(f"GQI finished in {e:.2f}s"))
+        worker.finished.connect(lambda _: self._spinner_off())
         worker.error.connect(lambda err: self.log.appendPlainText(f"GQI error: {err}"))
+        worker.error.connect(lambda _: self._spinner_off())
         worker.start()
         self.workers["gqi"] = worker
 
@@ -867,6 +901,7 @@ class MainWindow(QMainWindow):
         if worker:
             worker.stop()
             self.log.appendPlainText("GQI stopped")
+            self._spinner_off()
 
 
     # ──────────────────────────────── #
