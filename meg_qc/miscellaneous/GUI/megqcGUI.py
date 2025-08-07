@@ -820,6 +820,9 @@ class MainWindow(QMainWindow):
         n_jobs = self.jobs.value()
 
         # 2) Build args tuple for make_plots_meg_qc
+        # The plotting backend (full or lite) is selected inside
+        # ``make_plots_meg_qc`` based on the 'full_html_reports' option in
+        # settings.ini.
         args = (data_dir, n_jobs)
 
         # 3) Create Worker and wire signals

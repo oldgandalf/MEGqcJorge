@@ -10,6 +10,8 @@ from typing import List
 from pprint import pprint
 import gc
 from ancpbids import DatasetOptions
+import configparser
+from pathlib import Path
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -19,11 +21,11 @@ gradparent_dir = os.path.dirname(parent_dir)
 sys.path.append(parent_dir)
 sys.path.append(gradparent_dir)
 
-from meg_qc.plotting.universal_plots import *
-from meg_qc.plotting.universal_html_report import (
-    make_joined_report_mne,
-    make_summary_qc_report,
-)
+from meg_qc.calculation.objects import QC_derivative
+
+# Plotting backends (universal_plots vs universal_plots_lite) are imported
+# dynamically inside ``make_plots_meg_qc`` based on the ``full_html_reports``
+# option in settings.ini.
 
 # IMPORTANT: keep this order of imports, first need to add parent dir to sys.path, then import from it.
 
@@ -625,6 +627,32 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     Create plots for the MEG QC pipeline, but WITHOUT the interactive selector.
     Instead, we assume 'all' for every entity (subject, task, session, run, metric).
     """
+
+    # Decide which plotting backend to use based on settings.ini
+    cfg = configparser.ConfigParser()
+    settings_path = Path(__file__).resolve().parents[1] / 'settings' / 'settings.ini'
+    cfg.read(settings_path)
+    use_full_reports = cfg['DEFAULT'].getboolean('full_html_reports', True)
+
+    if use_full_reports:
+        import meg_qc.plotting.universal_plots as _plots
+    else:
+        import meg_qc.plotting.universal_plots_lite as _plots
+
+    # Expose chosen backend under the expected module name so that helper
+    # modules (e.g. universal_html_report) pick it up.
+    sys.modules['meg_qc.plotting.universal_plots'] = _plots
+    globals().update({name: getattr(_plots, name) for name in dir(_plots)
+                      if not name.startswith('_')})
+
+    from meg_qc.plotting.universal_html_report import (
+        make_joined_report_mne,
+        make_summary_qc_report,
+    )
+    globals().update({
+        'make_joined_report_mne': make_joined_report_mne,
+        'make_summary_qc_report': make_summary_qc_report,
+    })
 
     try:
         dataset = ancpbids.load_dataset(dataset_path, DatasetOptions(lazy_loading=True))
