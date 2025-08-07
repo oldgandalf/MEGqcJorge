@@ -1946,10 +1946,17 @@ def plot_ECG_EOG_channel_csv(f_path):
     if 'ecgchannel' not in base_name.lower() and 'eogchannel' not in base_name.lower():
         return []
 
-    df = pd.read_csv(f_path, sep='\t', dtype={6: str}) 
+    df = pd.read_csv(f_path, sep='\t', dtype={6: str})
 
-    #name of the first column if it starts with 'ECG' or 'EOG':
-    ch_name = df.columns[1]
+    # Find the column containing the ECG/EOG data. Depending on how the TSV was
+    # written, the first column may be an unnamed index column.  Hence, search
+    # for a column name starting with ``ECG`` or ``EOG`` and fall back to the
+    # first column if none is found.
+    channel_cols = [
+        col for col in df.columns
+        if col.lower().startswith('ecg') or col.lower().startswith('eog')
+    ]
+    ch_name = channel_cols[0] if channel_cols else df.columns[0]
     ch_data = df[ch_name].values
 
     if not ch_data.any():  # Check if all values are falsy (0, False, or empty)

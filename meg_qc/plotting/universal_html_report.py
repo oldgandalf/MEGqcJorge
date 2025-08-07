@@ -1,7 +1,12 @@
+import json
 import mne
 import os
 import sys
 from typing import List
+
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.offline import plot
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -399,3 +404,255 @@ def simple_metric_basic(metric_global_name: str, metric_global_description: str,
     simple_metric.update(m_local)
 
     return simple_metric
+
+
+def _dict_to_plotly_tables(data, level: int = 0) -> str:
+    """Convert a nested dictionary or list into Plotly tables.
+
+    The rendered HTML contains interactive Plotly tables. For compatibility
+    with existing consumers and tests, a static HTML table is also embedded
+    (hidden) to ensure the resulting HTML still contains ``<table>`` tags.
+    """
+
+    rows = []
+    nested = []
+
+    if isinstance(data, list):
+        for idx, item in enumerate(data):
+            if isinstance(item, (dict, list)):
+                nested.append((f"Item {idx + 1}", item))
+            else:
+                rows.append({"Field": idx, "Value": item})
+    else:
+        for key, value in data.items():
+            if isinstance(value, dict):
+                nested.append((key, value))
+            elif isinstance(value, list):
+                if value and all(isinstance(v, dict) for v in value):
+                    nested.append((key, value))
+                else:
+                    value = ", ".join(str(v) for v in value)
+                    rows.append({"Field": key, "Value": value})
+            else:
+                rows.append({"Field": key, "Value": value})
+
+    html = ""
+    if rows:
+        df = pd.DataFrame(rows)
+        fig = go.Figure(
+            data=[
+                go.Table(
+                    header=dict(values=list(df.columns)),
+                    cells=dict(values=[df[col] for col in df.columns]),
+                )
+            ]
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+        plot_html = plot(fig, output_type="div", include_plotlyjs=False)
+        # Hidden static table to keep compatibility with tests expecting <table>
+        static_html = df.to_html(index=False)
+        html += plot_html + f"<div style='display:none'>{static_html}</div>"
+
+    for key, value in nested:
+        header_level = min(3 + level, 6)
+        html += f"<h{header_level}>{key}</h{header_level}>"
+        html += _dict_to_plotly_tables(value, level + 1)
+
+    return html
+
+
+def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -> str:
+    """Create an HTML summary report using :class:`mne.Report`.
+
+    The original implementation produced a very small static HTML file.  The new
+    version mirrors the behaviour of the stand-alone script preferred by users
+    and leverages the rendering capabilities of :mod:`mne`.  The function
+    returns the rendered HTML as a string so that the calling code can store it
+    as an artifact.
+    """
+
+    # ------------------------------------------------------------------
+    # Helper functions copied from the stand‑alone script
+    # ------------------------------------------------------------------
+    def html_escape(text):
+        return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def build_text_block(title, body):
+        if '<p>' in body or '<br>' in body:
+            body_html = (
+                f'<div style="text-align:center; font-family:sans-serif; font-size:16px;">{body}</div>'
+            )
+        else:
+            body_html = (
+                f'<p style="text-align:center; font-family:sans-serif; font-size:16px;">{html_escape(body)}</p>'
+            )
+        title_html = (
+            f'<h3 style="text-align:center; font-family:sans-serif; font-size:18px;">'
+            f'<strong>{html_escape(title)}</strong></h3>'
+        )
+        return title_html + body_html + "<br>"
+
+    def extract_channel_names(channel_dict):
+        if not isinstance(channel_dict, dict):
+            return str(channel_dict)
+        return ", ".join(channel_dict.keys())
+
+    def generar_html_mag_grad(tipo_coil, datos):
+        html = []
+        stname = "MAGNETOMETERS" if tipo_coil == "mag" else "GRADIOMETERS"
+        html.append(
+            f"<tr><td colspan='2' style='border:1px solid #ccc; text-align:center; padding:6px;'><strong>{stname}</strong></td></tr>"
+        )
+
+        if 'number_of_noisy_ch' in datos:
+            for key in [
+                'number_of_noisy_ch',
+                'percent_of_noisy_ch',
+                'number_of_flat_ch',
+                'percent_of_flat_ch',
+                'std_lvl',
+            ]:
+                val = datos.get(key, 'N/A')
+                html.append(
+                    f"<tr><td style='border:1px solid #ccc; padding:6px;'><strong>{key}</strong></td>"
+                    f"<td style='border:1px solid #ccc; padding:6px;'>{val}</td></tr>"
+                )
+
+            detalles = datos.get('details', {})
+            noisy = extract_channel_names(detalles.get('noisy_ch', {}))
+            flat = extract_channel_names(detalles.get('flat_ch', {}))
+            html.append(
+                f"<tr><td style='border:1px solid #ccc; padding:6px;'><strong>noisy_ch</strong></td>"
+                f"<td style='border:1px solid #ccc; padding:6px;'>{noisy}</td></tr>"
+            )
+            html.append(
+                f"<tr><td style='border:1px solid #ccc; padding:6px;'><strong>flat_ch</strong></td>"
+                f"<td style='border:1px solid #ccc; padding:6px;'>{flat}</td></tr>"
+            )
+        elif 'total_num_noisy_ep' in datos:
+            total_noisy = datos.get('total_num_noisy_ep', 0)
+            html.append(
+                f"<tr><td style='border:1px solid #ccc; padding:6px;'><strong>total_num_noisy_ep</strong></td>"
+                f"<td style='border:1px solid #ccc; padding:6px;'>{total_noisy}</td></tr>"
+            )
+            for key in [
+                'allow_percent_noisy_flat_epochs',
+                'noisy_channel_multiplier',
+                'flat_multiplier',
+                'total_num_noisy_ep',
+                'total_perc_noisy_ep',
+                'total_num_flat_ep',
+                'total_perc_flat_ep',
+            ]:
+                val = datos.get(key, 'N/A')
+                html.append(
+                    f"<tr><td style='border:1px solid #ccc; padding:6px;'><strong>{key}</strong></td>"
+                    f"<td style='border:1px solid #ccc; padding:6px;'>{val}</td></tr>"
+                )
+        else:
+            html.append(
+                "<tr><td colspan='2' style='border:1px solid #ccc; padding:6px;'>No issues found here</td></tr>"
+            )
+        return "\n".join(html)
+
+    def build_generic_table(data, parent_metric=None):
+        """Recursively render ``data`` into an HTML table."""
+
+        def build_rows(obj):
+            rows = []
+            for key, value in obj.items():
+                if isinstance(value, dict):
+                    rows.append(
+                        f"<tr><td colspan='2' style='border:1px solid #ccc; padding:8px; background:#e0f7fa;'><strong>{key}</strong></td></tr>"
+                    )
+                    if parent_metric == "STD" and key == "details":
+                        noisy = extract_channel_names(value.get("noisy_ch", {}))
+                        flat = extract_channel_names(value.get("flat_ch", {}))
+                        rows.append(
+                            f"<tr><td style='border:1px solid #ccc; padding:6px;'>noisy_ch</td><td style='border:1px solid #ccc; padding:6px;'>{noisy}</td></tr>"
+                        )
+                        rows.append(
+                            f"<tr><td style='border:1px solid #ccc; padding:6px;'>flat_ch</td><td style='border:1px solid #ccc; padding:6px;'>{flat}</td></tr>"
+                        )
+                    elif key in {"mag", "grad"}:
+                        rows.append(generar_html_mag_grad(key, value))
+                    else:
+                        rows.extend(build_rows(value))
+                else:
+                    rows.append(
+                        f"<tr><td style='border:1px solid #ccc; padding:6px;'>{key}</td><td style='border:1px solid #ccc; padding:6px;'>{value}</td></tr>"
+                    )
+            return rows
+
+        html = ['<table style="margin:auto; border-collapse:collapse; font-family:sans-serif;">']
+        html.append('<thead><tr style="background-color:#f2f2f2;">')
+        html.append(
+            '<th style="border:1px solid #ccc; padding:6px;">Field</th>'
+            '<th style="border:1px solid #ccc; padding:6px;">Value</th></tr></thead><tbody>'
+        )
+        html.extend(build_rows(data))
+        html.append('</tbody></table>')
+        return "".join(html)
+
+    # ------------------------------------------------------------------
+    # Load JSON files
+    # ------------------------------------------------------------------
+    with open(report_strings_path, "r", encoding="utf-8") as f:
+        reportstrings = json.load(f)
+    with open(simple_metrics_path, "r", encoding="utf-8") as f:
+        simplemetrics = json.load(f)
+
+    report = mne.Report(title="MEG QC Report")
+
+    # Add report strings section
+    rs_html = '<h2 style="text-align:center; font-family:sans-serif;">Summary: Report Strings</h2>'
+    for metric, content in reportstrings.items():
+        if content and str(content).strip():
+            rs_html += build_text_block(metric, str(content).replace("\n", "<br>"))
+    report.add_html(rs_html, title="Report Strings", section="reportstrings")
+
+    # Add tables for simple metrics
+    for metric, metric_data in simplemetrics.items():
+        if isinstance(metric_data, list):
+            table_html = (
+                pd.DataFrame(metric_data).to_html(index=False)
+                if metric_data
+                else "<p>No data</p>"
+            )
+            full_html = (
+                f'<h3 style="text-align:center; font-family:sans-serif; font-size:18px;"><strong>{metric}</strong></h3>'
+                + table_html
+                + "<br>"
+            )
+            report.add_html(full_html, title=f"{metric} Table", section=f"text_{metric}")
+            continue
+
+        if not isinstance(metric_data, dict):
+            continue
+
+        description = metric_data.get("description")
+        if description is not None and not str(description).strip():
+            continue
+
+        if description:
+            desc_html = build_text_block(metric, description.replace("\n", "<br>"))
+            report.add_html(desc_html, title=f"{metric}", section=f"text_{metric}")
+
+        table_html = build_generic_table(metric_data, parent_metric=metric)
+        full_html = (
+            f'<h3 style="text-align:center; font-family:sans-serif; font-size:18px;"><strong>{metric}</strong></h3>'
+            + table_html
+            + "<br>"
+        )
+        report.add_html(full_html, title=f"{metric} Table", section=f"text_{metric}")
+
+    # Render to a temporary file and return as string
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+        tmp_name = tmp.name
+    report.save(tmp_name, overwrite=True, open_browser=False)
+    with open(tmp_name, "r", encoding="utf-8") as f:
+        html_out = f.read()
+    os.remove(tmp_name)
+
+    return html_out

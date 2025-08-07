@@ -15,3 +15,31 @@ The following derivatives are produced as the result of the analysis for each da
 - HTML report for all metrics presented as interactive figures, that can be scrolled through and enlarged;
 - TSV file with the results of the analysis for some of the metrics;
 - machine-readable JSON file with the results of the analysis for all metrics.
+
+### Between sample analysis
+
+The package includes a small utility to compare quality metrics between
+datasets. Assuming you have the per-sample TSV tables created by the MEGqc
+pipeline, run::
+
+    python -m meg_qc.calculation.between_sample_analysis \
+        --tsv sample1/group_metrics.tsv sample2/group_metrics.tsv \
+        --names sample1 sample2 \
+        --output-dir results
+
+All violin plots and regression results will be written to the ``results``
+directory. Significant regression coefficients are marked with asterisks.
+
+To add a mutual information (MI) analysis, include the ``--mi`` flag. The
+number of permutations for the significance test is controlled via
+``--mi-permutations`` (use ``0`` to disable permutation testing). For example::
+
+    python -m meg_qc.calculation.between_sample_analysis \
+        --tsv sample1/group_metrics.tsv sample2/group_metrics.tsv \
+        --names sample1 sample2 \
+        --output-dir results \
+        --mi --mi-permutations 1000
+
+MI results (raw, net, z-scores, p-values, normalized variants and entropies)
+are stored in the ``mutual_information`` folder for each sample and for the
+combined dataset.

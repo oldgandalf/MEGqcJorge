@@ -10,6 +10,8 @@ from typing import List
 from pprint import pprint
 import gc
 from ancpbids import DatasetOptions
+import configparser
+from pathlib import Path
 
 # Get the absolute path of the parent directory of the current script
 parent_dir = os.path.dirname(os.getcwd())
@@ -19,8 +21,58 @@ gradparent_dir = os.path.dirname(parent_dir)
 sys.path.append(parent_dir)
 sys.path.append(gradparent_dir)
 
-from meg_qc.plotting.universal_plots import *
-from meg_qc.plotting.universal_html_report import make_joined_report_mne
+from meg_qc.calculation.objects import QC_derivative
+
+# Plotting backends (``universal_plots`` vs ``universal_plots_lite``) and the
+# accompanying report helpers need to be available not only in the main process
+# but also in the worker processes spawned by joblib.  Configure them at module
+# import time so that all processes share the same setup.
+
+
+def _load_plotting_backend():
+    """Configure plotting backend and expose report helpers."""
+
+    # If the backend has been loaded already, do nothing.
+    if 'make_joined_report_mne' in globals():
+        return
+
+    cfg = configparser.ConfigParser()
+    settings_path = (
+        Path(__file__).resolve().parents[1] / 'settings' / 'settings.ini'
+    )
+    cfg.read(settings_path)
+    use_full_reports = cfg['DEFAULT'].getboolean('full_html_reports', True)
+
+    if use_full_reports:
+        import meg_qc.plotting.universal_plots as _plots
+    else:
+        import meg_qc.plotting.universal_plots_lite as _plots
+
+    # Make the chosen backend available under the expected module name so that
+    # other modules (e.g. ``universal_html_report``) pick it up.
+    sys.modules['meg_qc.plotting.universal_plots'] = _plots
+    globals().update(
+        {
+            name: getattr(_plots, name)
+            for name in dir(_plots)
+            if not name.startswith('_')
+        }
+    )
+
+    from meg_qc.plotting.universal_html_report import (
+        make_joined_report_mne,
+        make_summary_qc_report,
+    )
+
+    globals().update(
+        {
+            'make_joined_report_mne': make_joined_report_mne,
+            'make_summary_qc_report': make_summary_qc_report,
+        }
+    )
+
+
+_load_plotting_backend()
 
 # IMPORTANT: keep this order of imports, first need to add parent dir to sys.path, then import from it.
 
@@ -559,17 +611,22 @@ def process_subject(
             d for d in derivs_to_plot if d.raw_entity_name == raw_entity_name
         ]
 
+        raw_entities_base = derivs_for_this_raw[0].deriv_entity_obj
+
         raw_info_path = None
         report_str_path = None
+        simple_metrics_path = None
         for d in derivs_for_this_raw:
             if d.metric == 'RawInfo':
                 raw_info_path = d.path
             elif d.metric == 'ReportStrings':
                 report_str_path = d.path
+            elif d.metric == 'SimpleMetrics':
+                simple_metrics_path = d.path
 
         metrics_to_plot = [
             m for m in chosen_entities['METRIC']
-            if m not in ['RawInfo', 'ReportStrings']
+            if m not in ['RawInfo', 'ReportStrings', 'SimpleMetrics']
         ]
 
         for metric in metrics_to_plot:
@@ -598,6 +655,16 @@ def process_subject(
                 file_path, overwrite=True, open_browser=False
             )
 
+        if report_str_path and simple_metrics_path:
+            summary_html = make_summary_qc_report(report_str_path, simple_metrics_path)
+            meg_artifact = subject_folder.create_artifact(raw=raw_entities_base)
+            meg_artifact.add_entity('desc', 'summary_qc_report')
+            meg_artifact.suffix = 'meg'
+            meg_artifact.extension = '.html'
+            meg_artifact.content = (
+                lambda file_path, cont=summary_html: open(file_path, "w", encoding="utf-8").write(cont)
+            )
+
     ancpbids.write_derivative(dataset, derivative)
     return
 
@@ -607,6 +674,9 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     Create plots for the MEG QC pipeline, but WITHOUT the interactive selector.
     Instead, we assume 'all' for every entity (subject, task, session, run, metric).
     """
+
+    # Ensure plotting backend and report helpers are available
+    _load_plotting_backend()
 
     try:
         dataset = ancpbids.load_dataset(dataset_path, DatasetOptions(lazy_loading=True))
@@ -636,6 +706,37 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     # If you want them deduplicated, do:
     all_metrics = list(set(all_metrics))
 
+    # Collapse individual PSD descriptions into a single entry so that the
+    # general PSD report (``PSDs``) can gather all derivatives at once.  This
+    # prevents the loss of the ``PSDs`` report when only the noise/waves
+    # derivatives are present in the dataset.
+    psd_related = {'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad'}
+    if psd_related.intersection(all_metrics):
+        all_metrics = [m for m in all_metrics if m not in psd_related]
+        if 'PSDs' not in all_metrics:
+            all_metrics.append('PSDs')
+
+    # Retain only recognised metrics and normalise some aliases. This prevents
+    # intermediate derivatives like ``ECGchannel`` from being treated as
+    # standalone metrics and generating separate HTML reports.
+    valid_metrics = {
+        'STDs': 'STDs',
+        'STD': 'STDs',
+        'PSDs': 'PSDs',
+        'PtPsManual': 'PtPsManual',
+        'PtPsAuto': 'PtPsAuto',
+        'ECGs': 'ECGs',
+        'EOGs': 'EOGs',
+        'Head': 'Head',
+        'Muscle': 'Muscle',
+        'RawInfo': 'RawInfo',
+        'ReportStrings': 'ReportStrings',
+        'SimpleMetrics': 'SimpleMetrics',
+    }
+    all_metrics = [valid_metrics[m] for m in all_metrics if m in valid_metrics]
+    # Preserve order while removing duplicates
+    all_metrics = list(dict.fromkeys(all_metrics))
+
     # Now store it in chosen_entities as a list
     chosen_entities = {
         'subject': list(entities_found.get('subject', [])),
@@ -649,6 +750,8 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
     chosen_entities['METRIC'].append('stimulus')
     chosen_entities['METRIC'].append('RawInfo')
     chosen_entities['METRIC'].append('ReportStrings')
+    # Ensure SimpleMetrics is always present so that summary reports can be built
+    chosen_entities['METRIC'].append('SimpleMetrics')
 
     # 5) Define a simple plot_settings. Example: always 'mag' and 'grad'
     plot_settings = {'m_or_g': ['mag', 'grad']}
@@ -674,6 +777,8 @@ def make_plots_meg_qc(dataset_path: str, n_jobs: int = 1):
 
         # If the user (now "all") had multiple possible descs for PSDs, ECGs, etc.
         if metric == 'PSDs':
+            # Include all PSD derivatives (noise and waves) so the PSD report is
+            # generated correctly.
             query_args['desc'] = ['PSDs', 'PSDnoiseMag', 'PSDnoiseGrad', 'PSDwavesMag', 'PSDwavesGrad']
         elif metric == 'ECGs':
             query_args['desc'] = ['ECGchannel', 'ECGs']
