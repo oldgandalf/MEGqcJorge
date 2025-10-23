@@ -51,13 +51,13 @@ def _safe_dataframe(obj):
 # High level helper functions
 # ---------------------------------------------------------------------------
 
-
 def create_summary_report(
-    json_file: Union[str, os.PathLike],
-    html_output: str | None = None,
-    json_output: str = "first_sight_report.json",
-    gqi_settings: Optional[Dict[str, Dict[str, float]]] = None,
-):
+        json_file: Union[str, os.PathLike],
+        html_output: str | None = None,
+        json_output: str = "first_sight_report.json",
+        data_type: str = "",
+        gqi_settings: Optional[Dict[str, Dict[str, float]]] = None,
+) -> None:
     """Create a human readable QC summary from the metrics JSON file.
 
     Parameters
@@ -73,6 +73,8 @@ def create_summary_report(
     gqi_settings : dict | None
         Dictionary with Global Quality Index configuration. When ``None`` the
         default thresholds defined in this function are used.
+        :param data_type:
+        :param data_type:
     """
 
     # Read the metrics produced by the calculation pipeline
@@ -142,23 +144,29 @@ def create_summary_report(
             "",
         )
 
-    def build_summary_table(source):
+    def build_summary_table(source, data_type):
         """Return a table summarising noisy and flat channels."""
         rows = []
         for sensor_type in ["mag", "grad"]:
-            n_noisy = source[sensor_type]["number_of_noisy_ch"]
-            p_noisy = source[sensor_type]["percent_of_noisy_ch"]
-            n_flat = source[sensor_type]["number_of_flat_ch"]
-            p_flat = source[sensor_type]["percent_of_flat_ch"]
-            rows.append({"Metric": "Noisy Channels", sensor_type: f"{n_noisy} ({p_noisy:.1f}%)"})
-            rows.append({"Metric": "Flat Channels", sensor_type: f"{n_flat} ({p_flat:.1f}%)"})
+            try:
+                n_noisy = source[sensor_type]["number_of_noisy_ch"]
+                p_noisy = source[sensor_type]["percent_of_noisy_ch"]
+                n_flat = source[sensor_type]["number_of_flat_ch"]
+                p_flat = source[sensor_type]["percent_of_flat_ch"]
+                rows.append({"Metric": "Noisy Channels", sensor_type: f"{n_noisy} ({p_noisy:.1f}%)"})
+                rows.append({"Metric": "Flat Channels", sensor_type: f"{n_flat} ({p_flat:.1f}%)"})
+            except Exception:
+                None
         df = pd.DataFrame(rows)
         df = df.groupby("Metric").first().reset_index()
-        df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
+        if data_type == 'EEG':
+                df.rename(columns={"mag": "ELECTRODES", "grad": ""}, inplace=True)
+        else:
+            df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
         return df
 
     if std_present:
-        general_df = build_summary_table(data["STD"]["STD_all_time_series"])
+        general_df = build_summary_table(data["STD"]["STD_all_time_series"], data_type)
         std_epoch_df = _safe_dataframe(data["STD"].get("STD_epoch", {}))
         std_lvl = data["STD"]["STD_all_time_series"]["mag"].get("std_lvl", "NA")
         # ``STD_epoch`` can be ``null`` in the metrics JSON. Applying ``_safe_dict``
@@ -178,7 +186,7 @@ def create_summary_report(
         std_epoch_lvl = "NA"
 
     if ptp_present:
-        ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"])
+        ptp_df = build_summary_table(data["PTP_MANUAL"]["ptp_manual_all"], data_type)
         ptp_epoch_df = _safe_dataframe(data["PTP_MANUAL"].get("ptp_manual_epoch", {}))
         ptp_lvl = data["PTP_MANUAL"]["ptp_manual_all"]["mag"].get("ptp_lvl", "NA")
         # ``ptp_manual_epoch`` can also be ``null``. By wrapping the nested
@@ -197,17 +205,20 @@ def create_summary_report(
         ptp_lvl = "NA"
         ptp_epoch_lvl = "NA"
 
-    def build_psd_summary(noise_mag, noise_grad):
+    def build_psd_summary(noise_mag, noise_grad, data_type):
         """Return a table with global PSD noise percentages."""
         df = pd.DataFrame([
             {"Metric": "Noise Power", "mag": noise_mag, "grad": noise_grad}
         ])
         df["mag"] = df["mag"].map(lambda v: f"{v:.2f}%")
         df["grad"] = df["grad"].map(lambda v: f"{v:.2f}%")
-        df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
+        if data_type == 'EEG':
+                df.rename(columns={"mag": "ELECTRODES", "grad": ""}, inplace=True)
+        else:
+            df.rename(columns={"mag": "MAGNETOMETERS", "grad": "GRADIOMETERS"}, inplace=True)
         return df
 
-    psd_df = build_psd_summary(noisy_power_mag, noisy_power_grad)
+    psd_df = build_psd_summary(noisy_power_mag, noisy_power_grad, data_type)
 
     # Default thresholds and weights for the GQI formula
     thresholds = {
@@ -231,7 +242,7 @@ def create_summary_report(
         f = (M - start) / (end - start)
         return 1.0 - f
 
-    def count_high_correlations_from_details(section, contamination_key):
+    def count_high_correlations_from_details(section, contamination_key, data_type):
         """Return a table with channels having |corr| > 0.8 for ECG/EOG."""
         results = []
         percentages = []
@@ -249,9 +260,16 @@ def create_summary_report(
             )
             percent = 100 * high_corr / total if total > 0 else 0
             percentages.append(percent)
+            if data_type == 'EEG':
+                stype =  "ELECTRODES"
+            else:
+                if sensor_type == "mag":
+                    stype = "MAGNETOMETERS"
+                else:
+                    stype = "GRADIOMETERS"
             results.append(
                 {
-                    "Sensor Type": "MAGNETOMETERS" if sensor_type == "mag" else "GRADIOMETERS",
+                    "Sensor Type": stype,
                     "# |High Correlations| > 0.8": f"{high_corr} ({percent:.1f}%)",
                     "Total Channels": total,
                 }
@@ -261,14 +279,14 @@ def create_summary_report(
     # Summaries of ECG and EOG channel correlations
     if ecg_present:
         ecg_df, ecg_percents = count_high_correlations_from_details(
-            "ECG", "all_channels_ranked_by_ECG_contamination_level"
+            "ECG", "all_channels_ranked_by_ECG_contamination_level", data_type
         )
     else:
         ecg_df, ecg_percents = pd.DataFrame(), []
 
     if eog_present:
         eog_df, eog_percents = count_high_correlations_from_details(
-            "EOG", "all_channels_ranked_by_EOG_contamination_level"
+            "EOG", "all_channels_ranked_by_EOG_contamination_level", data_type
         )
     else:
         eog_df, eog_percents = pd.DataFrame(), []
@@ -496,8 +514,10 @@ def create_summary_report(
         json.dump(summary_data, f_json, indent=4)
 
     # Inform the user about generated outputs
-    print(f"HTML successfully generated: {html_output}")
-    print(f"JSON summary successfully generated: {json_output}")
+    if html_output:
+        print(f"HTML successfully generated: {html_output}")
+    if json_output:
+        print(f"JSON summary successfully generated: {json_output}")
 
 
 def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: Union[str, os.PathLike]) -> None:
@@ -596,9 +616,11 @@ def create_group_metrics_figure(tsv_path: Union[str, os.PathLike], output_png: U
 
 
 
-def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
+def generate_gqi_summary(dataset_path: str, config_file: str, data_type: str) -> None:
     """Generate Global Quality Index summaries from existing metrics."""
     # Load user configuration to retrieve GQI settings
+    import shutil
+    import re
     qc_params = get_all_config_params(config_file)
     if qc_params is None:
         return
@@ -616,7 +638,10 @@ def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
     attempt_dir = os.path.join(reports_root, f"global_quality_index_{attempt}")
     os.makedirs(attempt_dir, exist_ok=True)
 
-    pattern = os.path.join(calc_dir, "sub-*", "*SimpleMetrics_meg.json")
+    if data_type == 'EEG':
+        pattern = os.path.join(calc_dir, "sub-*", "*SimpleMetrics_eeg.json")
+    else:
+        pattern = os.path.join(calc_dir, "sub-*", "*SimpleMetrics_meg.json")
     summary_paths = []
     for json_path in glob.glob(pattern):
         sub_dir = os.path.basename(os.path.dirname(json_path))
@@ -624,9 +649,23 @@ def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
         os.makedirs(out_sub, exist_ok=True)
         base = os.path.basename(json_path).replace("SimpleMetrics", f"GlobalSummaryReport_attempt{attempt}")
         out_json = os.path.join(out_sub, base)
+
+        html_output = None
+        #html_output = out_json.replace(".json", ".html")   #prueba Bosch
         # Generate per-subject summary JSON (no HTML)
-        create_summary_report(json_path, None, out_json, gqi_params)
+        create_summary_report(json_path, html_output, out_json, data_type, gqi_params)
         summary_paths.append(out_json)
+        #copy the JSON file to the calculation directory
+        json_calculation = os.path.dirname(json_path)
+        # Ensure the target directory exists
+        # os.makedirs(json_calculation, exist_ok=True)
+        # Build full destination path
+        destination_path = os.path.join(json_calculation, os.path.basename(out_json))
+        # Substitute "_attempt" + any number of digits + "_" with a single "_"
+        destination_path = re.sub(r'_attempt\d+_', '_', destination_path)
+        # Copy the file
+        shutil.copy2(out_json, destination_path)
+        print(f"File copied to: {destination_path}")
 
     # Collate per-subject summaries into a group table and figure
     group_dir = os.path.join(reports_root, "group_metrics")
@@ -637,6 +676,21 @@ def generate_gqi_summary(dataset_path: str, config_file: str) -> None:
         # Flatten each summary JSON into a one-row dictionary
         with open(path, "r", encoding="utf-8") as f:
             js = json.load(f)
+        if data_type == 'EEG':
+            for item in js['STD_epoch_summary']:
+                if 'mag' in item:
+                    # Renombrar 'mag' a 'eeg'
+                    item['eeg'] = item.pop('mag')
+                if 'grad' in item:
+                    # Eliminar 'grad'
+                    del item['grad']
+                for item in js['PTP_epoch_summary']:
+                    if 'mag' in item:
+                        # Renombrar 'mag' a 'eeg'
+                        item['eeg'] = item.pop('mag')
+                    if 'grad' in item:
+                        # Eliminar 'grad'
+                        del item['grad']
         subject = os.path.basename(os.path.dirname(path))
         row = {"subject": subject}
         row.update(flatten_summary_metrics(js))
