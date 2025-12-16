@@ -334,6 +334,519 @@ def stim_data_to_df(raw: mne.io.Raw):
     return stim_deriv
 
 
+def robust_epoching(data, events, sfreq, tmin, tmax,
+                    baseline=None, reject=None, picks=None,
+                    preload=True, verbose=True, ch_types='eeg'):
+    """
+    Robust epoch extraction with complete control over the process.
+
+    This function manually extracts epochs from continuous data, providing
+    more reliability than mne.Epochs by explicitly handling edge cases
+    and giving transparent feedback about valid/invalid events.
+
+    Parameters
+    ----------
+    data : array (n_channels, n_times) or mne.io.Raw
+        Continuous data to epoch
+    events : array (n_events, 3)
+        Event matrix [sample, 0, event_id]
+    sfreq : float
+        Sampling frequency in Hz
+    tmin, tmax : float
+        Start and end time of epochs relative to events (seconds)
+    baseline : tuple or None
+        Baseline period for correction (start, end) in seconds
+        If None, no baseline correction is applied
+    reject : dict or None
+        Amplitude rejection thresholds (e.g., {'grad': 4000e-13})
+        If None, no amplitude-based rejection is performed
+    picks : list or None
+        Channel names to select (e.g., ['EEG FP1-Ref', 'EEG FP2-Ref', ...])
+        If None, all channels are used
+    preload : bool
+        If True, returns an mne.EpochsArray object
+        If False, returns a dictionary with epoch data and metadata
+    verbose : bool
+        If True, print progress and validation information
+    ch_types : str or list
+        Channel types. Can be a string for uniform types or
+        a list of specific types per channel
+
+    Returns
+    -------
+    epochs : mne.EpochsArray or dict
+        If preload=True: mne.EpochsArray object with metadata stored in comment field
+        If preload=False: dictionary containing:
+            - 'data': epoch data array (n_epochs, n_channels, n_times)
+            - 'times': time vector for each sample
+            - 'events': valid events array
+            - 'valid_indices': indices of valid events
+            - 'sfreq': sampling frequency
+            - Additional metadata
+
+    Raises
+    ------
+    ValueError
+        If no valid epochs can be created with given parameters
+        If picks contains channel names not found in data
+    """
+
+    # ===== 1. PREPARE DATA WITH PICKS HANDLING =====
+    # Handle both numpy arrays and MNE Raw objects
+    if isinstance(data, mne.io.BaseRaw):
+        # Get channel names from Raw object
+        all_ch_names = data.ch_names
+
+        # If picks are specified, validate and select channels
+        if picks is not None:
+            # Validate that all requested channels exist
+            missing_channels = [ch for ch in picks if ch not in all_ch_names]
+            if missing_channels:
+                raise ValueError(
+                    f"Channel(s) not found in data: {missing_channels}. "
+                    f"Available channels: {all_ch_names}"
+                )
+
+            # Get indices of requested channels
+            picks_indices = [all_ch_names.index(ch) for ch in picks]
+
+            # Extract data for selected channels
+            data_array = data.get_data(picks=picks_indices)
+
+            # Use the requested channel names
+            ch_names = picks
+
+            if verbose:
+                print(f"Selected {len(picks)} channels: {', '.join(picks[:5])}"
+                      f"{'...' if len(picks) > 5 else ''}")
+        else:
+            # No picks specified, use all channels
+            data_array = data.get_data()
+            ch_names = all_ch_names
+            picks_indices = list(range(len(all_ch_names)))
+
+        # Verify sampling frequency matches
+        data_sfreq = data.info['sfreq']
+        if abs(data_sfreq - sfreq) > 0.1:
+            warnings.warn(f"Sampling frequency mismatch: "
+                          f"data={data_sfreq}Hz, parameter={sfreq}Hz")
+
+    else:
+        # Data is a numpy array - handle picks differently
+        data_array = data
+        n_channels_total = data_array.shape[0]
+
+        # Create default channel names if not provided
+        all_ch_names = [f'CH{i}' for i in range(n_channels_total)]
+
+        if picks is not None:
+            # For numpy arrays, picks should be indices or we need mapping
+            if all(isinstance(pick, str) for pick in picks):
+                # Picks are channel names - need to map to indices
+                # This assumes the numpy array follows the same order
+                # as the provided channel names
+                ch_names = picks
+                picks_indices = list(range(len(picks)))
+
+                if len(picks) != n_channels_total:
+                    warnings.warn(
+                        f"Number of picks ({len(picks)}) doesn't match "
+                        f"data channels ({n_channels_total}). Using first "
+                        f"{min(len(picks), n_channels_total)} channels."
+                    )
+                    # Use whichever is smaller
+                    n_to_use = min(len(picks), n_channels_total)
+                    data_array = data_array[:n_to_use, :]
+                    ch_names = picks[:n_to_use]
+                    picks_indices = list(range(n_to_use))
+            else:
+                # Picks are indices
+                picks_indices = picks
+                ch_names = [all_ch_names[i] for i in picks_indices]
+                data_array = data_array[picks_indices, :]
+        else:
+            # No picks specified, use all channels
+            ch_names = all_ch_names
+            picks_indices = list(range(n_channels_total))
+
+    # Get data dimensions after picks selection
+    n_channels, n_times_total = data_array.shape
+
+    # ===== 2. CALCULATE SAMPLES FOR EPOCH =====
+    # Convert time values to sample counts
+    n_pre_samples = int(-tmin * sfreq) if tmin < 0 else 0
+    n_post_samples = int(tmax * sfreq)
+    n_samples_per_epoch = n_pre_samples + n_post_samples
+
+    # Create time vector for the epoch
+    times = np.linspace(tmin, tmax, n_samples_per_epoch, endpoint=False)
+
+    # ===== 3. VALIDATE EVENTS =====
+    # Extract event sample positions (first column of events matrix)
+    event_samples = events[:, 0].astype(int)
+
+    # Track which events are valid (have enough data before and after)
+    valid_indices = []  # Indices of valid events in the original events array
+    valid_start_samples = []  # Starting sample position for each valid epoch
+
+    if verbose:
+        print(f"Total events to process: {len(events)}")
+        print(f"Epoch duration: {tmax - tmin:.3f}s = {n_samples_per_epoch} samples")
+        print(f"Data available: {n_times_total} samples ({n_times_total / sfreq:.2f}s)")
+        print(f"Channels selected: {n_channels}")
+
+    # Check each event for data availability
+    for event_idx, event_sample in enumerate(event_samples):
+        # Calculate data range needed for this epoch
+        epoch_start_sample = event_sample - n_pre_samples
+        epoch_end_sample = event_sample + n_post_samples
+
+        # Check if the entire epoch fits within available data
+        if epoch_start_sample >= 0 and epoch_end_sample <= n_times_total:
+            valid_indices.append(event_idx)
+            valid_start_samples.append(epoch_start_sample)
+        elif verbose:
+            # Only print warning for invalid events if verbose mode is on
+            print(f"  Event {event_idx} (sample {event_sample}) skipped: "
+                  f"requires samples [{epoch_start_sample}, {epoch_end_sample}), "
+                  f"but data has [0, {n_times_total})")
+
+    n_valid_epochs = len(valid_indices)
+
+    # Check if any valid epochs were found
+    if n_valid_epochs == 0:
+        raise ValueError(
+            f"No valid epochs could be created. "
+            f"Check that events have enough data before/after. "
+            f"tmin={tmin}s, tmax={tmax}s, sfreq={sfreq}Hz"
+        )
+
+    if verbose:
+        print(f"Valid epochs found: {n_valid_epochs}/{len(events)}")
+        if n_valid_epochs < len(events):
+            print(f"Removed {len(events) - n_valid_epochs} events without sufficient data")
+
+    # ===== 4. EXTRACT EPOCH DATA =====
+    # Pre-allocate array for epoch data
+    epochs_data = np.zeros((n_valid_epochs, n_channels, n_samples_per_epoch))
+
+    # Extract data for each valid epoch
+    for epoch_idx, (event_idx, start_sample) in enumerate(zip(valid_indices, valid_start_samples)):
+        epochs_data[epoch_idx] = data_array[:, start_sample:start_sample + n_samples_per_epoch]
+
+    # ===== 5. APPLY BASELINE CORRECTION =====
+    if baseline is not None:
+        baseline_start = int((baseline[0] - tmin) * sfreq)
+        baseline_end = int((baseline[1] - tmin) * sfreq)
+
+        # Validate baseline range
+        if baseline_start < 0 or baseline_end > n_samples_per_epoch:
+            warnings.warn(
+                f"Baseline period [{baseline[0]}, {baseline[1]}]s "
+                f"is outside epoch range [{tmin}, {tmax}]s. "
+                f"No baseline correction applied."
+            )
+        else:
+            # Calculate mean for each channel in baseline period
+            baseline_mean = np.mean(
+                epochs_data[:, :, baseline_start:baseline_end],
+                axis=2, keepdims=True  # Keep dimensions for broadcasting
+            )
+            # Subtract baseline from entire epoch
+            epochs_data -= baseline_mean
+
+            if verbose:
+                print(f"Applied baseline correction: [{baseline[0]}, {baseline[1]}]s")
+
+    # ===== 6. APPLY AMPLITUDE REJECTION =====
+    if reject is not None:
+        # Track which epochs to keep after rejection
+        keep_indices = []
+
+        for epoch_idx in range(n_valid_epochs):
+            epoch = epochs_data[epoch_idx]
+            keep_epoch = True
+
+            # Check each channel against rejection thresholds
+            for ch_idx in range(n_channels):
+                # Calculate maximum absolute amplitude in this channel
+                ch_max_amplitude = np.max(np.abs(epoch[ch_idx]))
+
+                # Simple rejection logic - can be customized
+                # Example for MEG gradiometers
+                if 'grad' in reject and ch_max_amplitude > reject['grad']:
+                    keep_epoch = False
+                    if verbose:
+                        print(f"  Reject epoch {epoch_idx}, channel {ch_names[ch_idx]}: "
+                              f"amplitude {ch_max_amplitude:.2e} > {reject['grad']:.2e}")
+                    break
+                # Example for EEG
+                elif 'eeg' in reject and ch_max_amplitude > reject['eeg']:
+                    keep_epoch = False
+                    if verbose:
+                        print(f"  Reject epoch {epoch_idx}, channel {ch_names[ch_idx]}: "
+                              f"amplitude {ch_max_amplitude:.2e} > {reject['eeg']:.2e}")
+                    break
+                # Example for generic threshold
+                elif 'amplitude' in reject and ch_max_amplitude > reject['amplitude']:
+                    keep_epoch = False
+                    if verbose:
+                        print(f"  Reject epoch {epoch_idx}, channel {ch_names[ch_idx]}: "
+                              f"amplitude {ch_max_amplitude:.2e} > {reject['amplitude']:.2e}")
+                    break
+
+            if keep_epoch:
+                keep_indices.append(epoch_idx)
+
+        # Apply rejection by keeping only selected epochs
+        if len(keep_indices) < n_valid_epochs:
+            epochs_data = epochs_data[keep_indices]
+            # Update valid indices to match original events array
+            original_valid_indices = [valid_indices[i] for i in keep_indices]
+            valid_indices = original_valid_indices
+            n_valid_epochs = len(epochs_data)
+
+            if verbose:
+                print(f"After amplitude rejection: {n_valid_epochs} epochs remaining")
+
+    # ===== 7. CREATE MNE EPOCHS OBJECT =====
+    if preload:
+        # Prepare channel types
+        if isinstance(ch_types, str):
+            # All channels same type
+            ch_types_list = [ch_types] * n_channels
+        elif isinstance(ch_types, list) and len(ch_types) == n_channels:
+            # Specific type for each channel
+            ch_types_list = ch_types
+        else:
+            # Default to EEG
+            ch_types_list = ['eeg'] * n_channels
+            if verbose and ch_types != 'eeg':
+                warnings.warn(f"ch_types parameter format not recognized. Defaulting to 'eeg' for all channels")
+
+        # Create MNE Info object
+        info = mne.create_info(
+            ch_names=ch_names,
+            sfreq=sfreq,
+            ch_types=ch_types_list
+        )
+
+        # Extract valid events
+        valid_events = events[valid_indices]
+
+        # Create MNE EpochsArray object
+        epochs = mne.EpochsArray(
+            data=epochs_data,
+            info=info,
+            events=valid_events,
+            tmin=tmin,
+            event_id=None,  # Can be customized with a dictionary
+            reject=None,  # Rejection already handled above
+            flat=None,
+            verbose=False  # Control verbosity at function level
+        )
+
+        # Store metadata in a way that's compatible with MNE
+        # Option 1: Add to the description field (safe for MNE)
+        if baseline is not None:
+            baseline_str = f"baseline={baseline}"
+        else:
+            baseline_str = "no baseline"
+
+        if picks is not None:
+            picks_str = f"picks={len(picks)} channels"
+        else:
+            picks_str = "all channels"
+
+        description = (f"Created with robust_epoching | "
+                       f"{n_valid_epochs} epochs | {picks_str} | {baseline_str}")
+        epochs.info['description'] = description
+
+        # Option 2: Create a custom attribute on the epochs object itself
+        # (not in info, but directly on the object)
+        epochs.robust_epoching_metadata = {
+            'valid_events_indices': valid_indices,
+            'original_n_events': len(events),
+            'picks_applied': picks,
+            'tmin': tmin,
+            'tmax': tmax,
+            'sfreq': sfreq,
+            'baseline_applied': baseline,
+            'rejection_applied': reject is not None
+        }
+
+        if verbose:
+            print(f"\nCreated MNE EpochsArray with {len(epochs)} epochs")
+            print(f"Data shape: {epochs.get_data().shape}")
+            print(f"Time range: [{epochs.times[0]:.3f}, {epochs.times[-1]:.3f}]s")
+            print(f"Channels: {len(epochs.ch_names)} channels")
+            print(f"Metadata stored in: epochs.robust_epoching_metadata")
+
+        return epochs
+
+    # ===== 8. RETURN AS DICTIONARY (if preload=False) =====
+    else:
+        metadata = {
+            'data': epochs_data,
+            'times': times,
+            'events': events[valid_indices],
+            'valid_indices': valid_indices,
+            'sfreq': sfreq,
+            'tmin': tmin,
+            'tmax': tmax,
+            'n_epochs': n_valid_epochs,
+            'n_channels': n_channels,
+            'n_samples_per_epoch': n_samples_per_epoch,
+            'ch_names': ch_names,
+            'picks_applied': picks,
+            'description': 'Epoch data extracted with robust_epoching()'
+        }
+
+        if verbose:
+            print(f"\nReturning epoch data as dictionary")
+            print(f"Epochs: {metadata['n_epochs']}")
+            print(f"Shape: {metadata['data'].shape}")
+            print(f"Channels: {metadata['ch_names']}")
+
+        return metadata
+
+
+# ===== EXAMPLE USAGE WITH ACCESSING METADATA =====
+# def example_with_metadata():
+#     """Show how to access the stored metadata"""
+#
+#     # Create example data
+#     sfreq = 250
+#     n_channels = 10
+#     n_times = 3000
+#
+#     # Create channel names
+#     ch_names = [f'EEG{i}-Ref' for i in range(1, n_channels + 1)]
+#
+#     # Create data
+#     data_array = np.random.randn(n_channels, n_times)
+#     info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types='eeg')
+#     raw = mne.io.RawArray(data_array, info)
+#
+#     # Create events
+#     events = np.array([
+#         [500, 0, 1],
+#         [1000, 0, 1],
+#         [1500, 0, 1],
+#         [2800, 0, 1],  # This will be skipped (not enough data for tmax=1)
+#     ])
+#
+#     # Select specific channels
+#     selected_channels = ['EEG1-Ref', 'EEG2-Ref', 'EEG3-Ref', 'EEG4-Ref', 'EEG5-Ref']
+#
+#     print("=== Creating epochs with metadata storage ===")
+#
+#     try:
+#         # Create epochs
+#         epochs = robust_epoching(
+#             data=raw,
+#             events=events,
+#             sfreq=sfreq,
+#             tmin=0,
+#             tmax=1,
+#             baseline=None,
+#             reject=None,
+#             picks=selected_channels,
+#             preload=True,
+#             verbose=True
+#         )
+#
+#         print(f"\n=== Accessing metadata ===")
+#
+#         # Access the custom metadata
+#         if hasattr(epochs, 'robust_epoching_metadata'):
+#             meta = epochs.robust_epoching_metadata
+#             print(f"Valid event indices: {meta['valid_events_indices']}")
+#             print(f"Original events: {meta['original_n_events']}")
+#             print(f"Valid epochs: {len(epochs)}")
+#             print(f"Picks applied: {meta['picks_applied']}")
+#             print(f"Time window: [{meta['tmin']}, {meta['tmax']}]s")
+#             print(f"Sampling freq: {meta['sfreq']}Hz")
+#             print(f"Baseline applied: {meta['baseline_applied']}")
+#             print(f"Rejection applied: {meta['rejection_applied']}")
+#
+#         # Also check info description
+#         print(f"\nInfo description: {epochs.info.get('description', 'No description')}")
+#
+#         # Verify we can use the epochs normally
+#         print(f"\n=== Using epochs normally ===")
+#         print(f"Number of epochs: {len(epochs)}")
+#         print(f"Data shape: {epochs.get_data().shape}")
+#         print(f"Channel names: {epochs.ch_names}")
+#
+#         # Example: Calculate mean across epochs
+#         mean_data = epochs.get_data().mean(axis=0)
+#         print(f"Mean data shape: {mean_data.shape}")
+#
+#         # Example: Get event information
+#         print(f"\nEvent information:")
+#         print(f"Event samples: {epochs.events[:, 0]}")
+#         print(f"Event IDs: {np.unique(epochs.events[:, 2])}")
+#
+#         # Verify which events were used
+#         print(f"\nVerification of valid events:")
+#         print(f"Total events provided: {len(events)}")
+#         print(f"Events used (samples): {epochs.events[:, 0]}")
+#
+#         # Check which event was skipped
+#         all_event_samples = events[:, 0]
+#         used_event_samples = epochs.events[:, 0]
+#         skipped = [s for s in all_event_samples if s not in used_event_samples]
+#         print(f"Event(s) skipped (not enough data): {skipped}")
+#
+#     except ValueError as e:
+#         print(f"Error: {e}")
+#
+#
+# # ===== HOW TO USE WITH YOUR SPECIFIC DATA =====
+# def use_with_your_data():
+#     """
+#     Template for your specific use case with your channel list
+#     """
+#
+#     # Your specific channel list
+#     your_channels = [
+#         'EEG FP1-Ref', 'EEG FP2-Ref', 'EEG F3-Ref', 'EEG F4-Ref',
+#         'EEG C3-Ref', 'EEG C4-Ref', 'EEG P3-Ref', 'EEG P4-Ref',
+#         'EEG O1-Ref', 'EEG O2-Ref', 'EEG F7-Ref', 'EEG F8-Ref',
+#         'EEG T3-Ref', 'EEG T4-Ref', 'EEG T5-Ref', 'EEG T6-Ref',
+#         'EEG FZ-Ref', 'EEG CZ-Ref', 'EEG PZ-Ref', 'EEG FT9-Ref',
+#         'EEG FT10-Ref'
+#     ]
+#
+#     # Your data loading code here
+#     # raw = your_function_to_load_data()
+#     # events = your_events_array
+#
+#     epochs = robust_epoching(
+#         data=raw,  # Your MNE Raw object
+#         events=events,
+#         sfreq=250,  # Your sampling frequency
+#         tmin=0,
+#         tmax=1,
+#         baseline=None,
+#         reject=None,
+#         picks=your_channels,  # Your specific channels
+#         preload=True,
+#         verbose=True
+#     )
+#
+#     # Access metadata about which events were valid
+#     print(f"\nMetadata:")
+#     print(f"Valid event indices: {epochs.robust_epoching_metadata['valid_events_indices']}")
+#     print(f"Channels selected: {len(epochs.robust_epoching_metadata['picks_applied'])}")
+#
+#     return epochs
+#
+#
+# if __name__ == "__main__":
+#     example_with_metadata()
+#
 def Epoch_meg(epoching_params, data: mne.io.Raw):
     """
     Epoch MEG data based on the parameters provided in the config file.
@@ -367,28 +880,65 @@ def Epoch_meg(epoching_params, data: mne.io.Raw):
     picks_magn = data.copy().pick('mag').ch_names if 'mag' in data else None
     picks_grad = data.copy().pick('grad').ch_names if 'grad' in data else None
 
+    if picks_magn is None:
+        picks_magn = data.copy().pick('eeg').ch_names if 'eeg' in data else None
+
     if not stim_channel:
         print('___MEGqc___: ',
               'No stimulus channel detected. Setting stimulus channel to None to allow mne to detect events autamtically.')
         stim_channel = None
-        # here for info on how None is handled by mne: https://mne.tools/stable/generated/mne.find_events.html
+        # here for info on how None is handled by mne:
         # even if stim is None, mne will check once more when creating events.
 
     epochs_grad, epochs_mag = None, None
 
     try:
-        events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
-
-        if len(events) < 1:
-            print('___MEGqc___: ',
-                  'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
-        else:
-            print('___MEGqc___: ', 'Events found:', len(events))
+        if stim_channel:
+            # Try to find events if stimulus channels exist
+            events = mne.find_events(data, stim_channel=stim_channel, min_duration=event_dur)
+            print('___MEGqc___: ', 'Stimulus Events found:', len(events))
+            # Use real events
             epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax, preload=True,
                                     baseline=None, event_repeated=epoching_params['event_repeated'])
             epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True,
                                      baseline=None, event_repeated=epoching_params['event_repeated'])
+        else:
+            print('___MEGqc___: ',
+                  'No events with set minimum duration were found using all stimulus channels. No epoching can be done. Try different event duration in config file.')
+            events = np.array([], dtype=int)
+            # Create artificial events for 1-second adjacent epochs
+            sfreq = data.info['sfreq']
+            duration_samples = int(1.0 * sfreq)  # 1-second epochs
+            n_epochs = data.n_times // duration_samples
 
+            # Create events at 1-second intervals
+            events = []
+            for i in range(n_epochs):
+                events.append([i * duration_samples, 0, 1])  # event_id = 1
+            events = np.array(events, dtype=int)
+
+            # Create epochs with these artificial events
+            epoch_tmax = 1.0 #hardcoding epoch length of 1 secs.
+            epoch_tmin = 0.0
+            # Use this function since mne.Epochs has shown to be unstable when no stimulus is given
+            # epochs_mag = mne.Epochs(data, events, picks=picks_magn, tmin=epoch_tmin, tmax=epoch_tmax,  preload=True,
+            #                         baseline=None, event_repeated=epoching_params['event_repeated'])
+            epochs_mag = robust_epoching(
+                data=data, events=events, sfreq=sfreq, tmin=epoch_tmin, tmax=epoch_tmax, baseline=None,
+                reject=None, picks=picks_magn, preload=True, verbose=True, ch_types='eeg')
+
+            if picks_grad:
+                # epochs_grad = mne.Epochs(data, events, picks=picks_grad, tmin=epoch_tmin, tmax=epoch_tmax, preload=True,
+                #                      baseline=None, event_repeated=epoching_params['event_repeated'])
+                # Use this function since mne.Epochs has shown to be unstable when no stimulus is given
+                epochs_grad = robust_epoching(
+                    data=data, events=events, sfreq=sfreq, tmin=epoch_tmin, tmax=epoch_tmax, baseline=None,
+                    reject=None, preload=True, verbose=True)
+            else:
+                epochs_grad = None
+            print(f"Created {len(epochs_mag)} adjacent 1-second epochs")
+
+        # Now epochs_mag exists regardless of whether there were stimulus channels
     except:  # case when we use stim_channel=None, mne checks once more,  finds no other stim ch and no events and throws error:
         print('___MEGqc___: ', 'No stim channels detected, no events found.')
         pass  # go to returning empty dict
@@ -552,10 +1102,105 @@ def load_data(file_path):
 
     elif os.path.isfile(file_path) and file_path.endswith('.edf'):
         # print("___MEGqc___: ", "Loading EEG data...")
-        raw = load_eeg_meg(file_path)
         meg_system = 'EEG'
+        raw = load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datatype='eeg')
 
     return raw, shielding_str, meg_system
+
+
+##changes to update in calculation
+import re
+
+EEG_BASE_RE = re.compile(
+    r"^(?:Fp|AF|F|FC|C|CP|T|TP|FT|P|PO|O|I)\d{1,2}$"
+    r"|^(?:Cz|Fz|Pz|Oz|POz|AFz|FCz|CPz|Iz)$"
+    r"|^(?:T3|T4|T5|T6)$",
+    re.IGNORECASE
+)
+
+def _strip_suffix_ref(name: str):
+    m = re.search(r"(-\s*[Rr][Ee][Ff])\s*$", name)
+    if m:
+        return name[:m.start()].strip(), True
+    return name.strip(), False
+
+def _base_token(name_no_suffix: str):
+    s = name_no_suffix.strip()
+    # Detect 'EEG ' prefix so we can remove it cleanly later for EXT
+    eeg_prefixed = s.upper().startswith("EEG ")
+    if eeg_prefixed:
+        s = s[4:].strip()
+    base = re.split(r"[-\s]+", s, maxsplit=1)[0].strip()
+    return base, eeg_prefixed
+
+def _map_t1_t2(tok: str):
+    up = tok.upper()
+    if up == "T1":  return "FT9"
+    if up == "T2":  return "FT10"
+    return tok
+
+def normalize_channels(ch_names):
+    out = []
+
+    for ch in ch_names:
+        original = ch.strip()
+
+        # Extract REF suffix
+        base_stripped, had_ref = _strip_suffix_ref(original)
+        base, eeg_prefixed = _base_token(base_stripped)
+        base_up = base.upper()
+        suffix = "-Ref" if had_ref else ""
+
+        # PHOTIC / IBI / SUPPR / BURSTS
+        if base_up == "PHOTIC":
+            out.append(f"PHOTIC {base_up}{suffix}")
+            continue
+        if base_up == "IBI":
+            out.append(f"IBI {base_up}{suffix}")
+            continue
+        if base_up in {"SUPR", "SUPPR"}:
+            out.append(f"SUPPR {base_up}{suffix}")
+            continue
+        if base_up in {"BURST", "BURSTS"}:
+            out.append(f"BURSTS {base_up}{suffix}")
+            continue
+
+        # EMG
+        if base_up.startswith("EMG"):
+            out.append(f"EMG {base_up}{suffix}")
+            continue
+
+        # EOG
+        if base_up in {"ROC", "LOC", "EOG", "HEOG", "VEOG", "REOG", "LEOG"}:
+            out.append(f"EOG {base_up}{suffix}")
+            continue
+
+        # ECG
+        if base_up.startswith("EKG") or base_up.startswith("ECG"):
+            out.append(f"ECG {base_up}{suffix}")
+            continue
+
+        # Reference electrodes
+        if base_up in {"A1", "A2", "M1", "M2", "REF"}:
+            out.append(f"REF {base_up}{suffix}")
+            continue
+
+        # EEG
+        mapped = _map_t1_t2(base)
+        if EEG_BASE_RE.match(mapped):
+            out.append(f"EEG {mapped.upper()}{suffix}")
+            continue
+
+        # EXT (remove EEG prefix if present!)
+        if eeg_prefixed:
+            # Remove 'EEG ' prefix properly
+            cleaned = base_stripped[4:].strip()
+            out.append(f"EXT {cleaned}{suffix}")
+        else:
+            out.append(f"EXT {original}")
+
+    return out
+######
 
 # def load_data(file_path):
 #     """
@@ -604,9 +1249,60 @@ def load_data(file_path):
 #     return raw, shielding_str, meg_system
 
 
-import mne
-# import pyxdf
+##changes to update in calculation
 from mne_bids import BIDSPath, read_raw_bids
+
+from mne.io.constants import FIFF
+def fix_channel_info_directly(raw):
+    """
+    Directly modify raw.info['chs'] based on channel name prefixes
+    """
+
+    for idx, ch in enumerate(raw.info['chs']):
+        ch_name = raw.info['ch_names'][idx].upper()
+
+        # EEG channels
+        if (ch_name.startswith('EEG')):
+                # or
+                # ch_name.startswith('C') or
+                # ch_name.startswith('F') or
+                # ch_name.startswith('P') or
+                # ch_name.startswith('O') or
+                # ch_name.startswith('T') or
+                # ch_name.startswith('A') or
+                # ch_name.startswith('FP')):
+                #
+            ch['kind'] = FIFF.FIFFV_EEG_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_EEG
+
+        # EOG channels
+        elif 'EOG' in ch_name or 'LOC' in ch_name or 'ROC' in ch_name:
+            ch['kind'] = FIFF.FIFFV_EOG_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_NONE
+
+        # ECG channels
+        elif 'ECG' in ch_name or 'EKG' in ch_name:
+            ch['kind'] = FIFF.FIFFV_ECG_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_NONE
+
+        # EMG channels
+        elif 'EMG' in ch_name:
+            ch['kind'] = FIFF.FIFFV_EMG_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_NONE
+
+        # Stimulus channels
+        elif 'STIM' in ch_name or 'TRIG' in ch_name or 'STATUS' in ch_name:
+            ch['kind'] = FIFF.FIFFV_STIM_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_NONE
+
+        # Default to MISC
+        else:
+            ch['kind'] = FIFF.FIFFV_MISC_CH
+            ch['coil_type'] = FIFF.FIFFV_COIL_NONE
+
+    print("Channel info updated directly in raw.info['chs']")
+    return raw
+
 def load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datatype=None):
     """
     Load EEG/MEG data from a file, supporting multiple formats including BIDS and XDF.
@@ -618,6 +1314,11 @@ def load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datat
     Returns:
     - raw (mne.io.Raw or dict): Loaded EEG/MEG data or XDF streams.
     """
+    if "_eeg." in file_path:
+        dtype = 'eeg'
+    else:
+        dtype = None
+
     try:
         # Handle BIDS dataset
         if bids_root:
@@ -637,6 +1338,7 @@ def load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datat
             # Detect file extension
             ext = file_path.split('.')[-1].lower()
 
+            dtype = 'eeg'
             # Load based on extension
             if ext in ['edf']:  # EDF
                 raw = mne.io.read_raw_edf(file_path, preload=True)
@@ -652,6 +1354,7 @@ def load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datat
                 raw = mne.io.read_raw_eeglab(file_path, preload=True)
             elif ext in ['fif']:  # MEG FIF format (Neuromag)
                 raw = mne.io.read_raw_fif(file_path, preload=True)
+                dtype = 'meg'
             elif ext in ['nxe']:  # Nicolet EEG
                 raw = mne.io.read_raw_nicolet(file_path, preload=True)
             elif ext in ['eeg']:  # Nihon Kohden
@@ -660,21 +1363,31 @@ def load_eeg_meg(file_path, bids_root=None, ses=None, task=None, run=None, datat
                 raw = mne.io.read_raw_mef(file_path, preload=True)
             elif ext in ['snirf']:  # fNIRS format
                 raw = mne.io.read_raw_snirf(file_path, preload=True)
+                dtype = 'nirs'
             elif ext in ['xdf']:  # LabRecorder / mBrainTrain .xdf files
                 streams, header = pyxdf.load_xdf(file_path)
                 raw = {"streams": streams, "header": header}  # Return raw XDF data
             elif file_path.endswith('.ds'):  # CTF MEG directory
                 raw = mne.io.read_raw_ctf(file_path, preload=True)
+                dtype = 'meg'
             else:
                 raise ValueError(f"Unsupported file format: {ext}")
 
+            ##changes to update in calculation
+            if datatype == 'eeg' or dtype == 'eeg':
+                # Normalize all names
+                normalized = normalize_channels(raw.ch_names)
+                mapping = dict(zip(raw.ch_names, normalized))
+                raw.rename_channels(mapping)
+                raw = fix_channel_info_directly(raw)
+                ###
             print(f"Successfully loaded {file_path}")
             return raw
 
     except Exception as e:
         print(f"Error loading {file_path}: {e}")
         return None
-
+######
 
 def add_3d_ch_locations(raw, channels_objs):
     """
@@ -1204,6 +1917,58 @@ def delete_temp_folder(dataset_path: str) -> str:
 
     return
 
+##changes to update in calculation
+import re
+def replace_t1_t2_preserve_suffix(channels):
+    """
+    Replace only the T1/T2 base label with T9/T10 while keeping
+    the rest of the channel name (suffixes/prefixes) unchanged.
+    """
+
+    new_channels = []
+
+    for ch in channels:
+        original = ch
+
+        # Normalize spaces
+        s = ch.strip()
+        s = re.sub(r"\s+", " ", s)
+
+        # Split by common separators but KEEP separators (using capturing group)
+        parts = re.split(r"([ \t]*[-–—_/][ \t]*|[ \t]+)", s)
+
+        # Extract only the text pieces (odd positions = separators)
+        tokens = parts[::2]
+        seps   = parts[1::2]
+
+        # Identify main token
+        if not tokens:
+            new_channels.append(original)
+            continue
+
+        # If label starts with "EEG", then target is next token (if exists)
+        if tokens[0].upper() == "EEG" and len(tokens) >= 2:
+            base_idx = 1
+        else:
+            base_idx = 0
+
+        base = tokens[base_idx].strip()
+
+        # Replace only the base token
+        if base.upper() == "T1":
+            tokens[base_idx] = "T9"
+        elif base.upper() == "T2":
+            tokens[base_idx] = "T10"
+
+        # Reconstruct preserving all separators EXACTLY as they were
+        rebuilt = []
+        for t, ssep in zip(tokens, seps + [""]):
+            rebuilt.append(t + ssep)
+
+        new_channels.append("".join(rebuilt).strip())
+
+    return new_channels
+####
 
 def initial_processing(default_settings: dict, filtering_settings: dict, epoching_params: dict, file_path: str,
                        dataset_path: str):
@@ -1267,8 +2032,17 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
 
     raw, shielding_str, meg_system = load_data(file_path)
 
+    ##changes to update in calculation
     # Working with channels:
-    channels = choose_channels(raw)
+    if meg_system == 'EEG':  # Different processing for EEG channels.
+        channels = {
+            "mag": [ch for ch in raw.ch_names if ch.upper().startswith("EEG")],
+            "grad": [],
+            "eeg": []
+        }
+    else:
+        channels = choose_channels(raw)
+    ######
 
     if meg_system == 'CTF':  # ONLY FOR CTF we do this! Return raw with changed channel types.
         channels, raw = change_ch_type_CTF(raw, channels)
@@ -1392,6 +2166,7 @@ def initial_processing(default_settings: dict, filtering_settings: dict, epochin
     # Since sampling freq is 1kHz and resampling is 500Hz, it s not that much of a win...
 
     dict_epochs_mg = Epoch_meg(epoching_params, data=raw_cropped_filtered)
+
     epoching_str = ''
     if dict_epochs_mg['mag'] is None and dict_epochs_mg['grad'] is None:
         epoching_str = ''' <p>No epoching could be done in this data set: no events found. Quality measurement were only performed on the entire time series. If this was not expected, try: 1) checking the presence of stimulus channel in the data set, 2) setting stimulus channel explicitly in config file, 3) setting different event duration in config file.</p><br></br>'''

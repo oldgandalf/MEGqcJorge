@@ -38,7 +38,6 @@ def get_tit_and_unit(m_or_g: str, psd: bool = False):
         'T' or 'T/m' or 'T/Hz' or 'T/m / Hz'
 
     """
-    
     if m_or_g=='mag':
         m_or_g_tit='Magnetometers'
         if psd is False:
@@ -939,7 +938,7 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
     df = pd.read_csv(std_csv_path, sep='\t')
 
     if "_eeg." in std_csv_path:
-        ch_type = ['eeg']
+        ch_type = 'eeg'
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -959,7 +958,7 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     for index, row in df.iterrows():
 
-        if row['Type'] == ch_type: #plot only mag/grad
+        if (row['Type'] == ch_type) or (ch_type == 'eeg' and row['Type'] == 'mag'): #plot only mag/grad
 
             if what_data == 'stds':
                 data += [row['STD all']]
@@ -979,6 +978,9 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     #convert data to array:
     data = np.array(data)
+    if ch_type == 'eeg':
+        names, pos, data, idx = select_eeg_channels_with_ft9_ft10_coords(names, pos, data, True, True)
+
     mask = np.array([True for i in range(len(names))])
 
     mask_params=dict(marker='o', markerfacecolor='k', markeredgecolor='k',
@@ -990,10 +992,11 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
 
     mne.viz.plot_topomap(
     data, pos, ch_type=ch_type, names=names, size=6, mask=mask,
-    mask_params=mask_params, show=False, axes=ax, sphere=(0., 0., 0., 0.1)  
+    mask_params=mask_params, show=False, axes=ax, sphere=(0., 0., 0., 0.1), outlines="head"
     )
+#mne.viz.plot_topomap(data, pos, outlines="head")
 
-    # It will give warning; 'invalid value encountered in divide'
+# It will give warning; 'invalid value encountered in divide'
     # This is most likely because for grads positions are the same, 
     # so the division by 0 occurs. But this is normal. 
     # Can add some jitter to posoitions if this bothers a lot.
@@ -1005,6 +1008,233 @@ def plot_topomap_std_ptp_csv(std_csv_path: str, ch_type: str, what_data: str):
                  
     return qc_derivative
 
+import re
+import numpy as np
+
+# ----------------------------
+# Name parsing and selection
+# ----------------------------
+
+_EEG_INCLUDE = re.compile(r"""
+^
+(?:EEG\s*)?                          # Optional 'EEG ' prefix
+(?:
+    (?:
+        Fp|AF|F|FC|C|CP|T|TP|FT|P|PO|O|I
+    )
+    (?:\d{1,2}|z)?                   # Number or 'z'
+    |
+    Cz|Fz|Pz|Oz|POz|AFz|FCz|CPz|Iz
+    |
+    T3|T4|T5|T6                      # Legacy temporal labels
+)
+$
+|                                     # or
+^EEG\d{1,3}$                          # 'EEG001' style
+""", re.IGNORECASE | re.VERBOSE)
+
+_NON_EEG_EXCLUDE = re.compile(
+    r"(?:\b|_)(EOG|HEOG|VEOG|ECG|EMG|STI|STIM|TRIG|AUX|MISC|GSR|RESP|REF|A1|A2|M1|M2)(?:\b|_)",
+    re.IGNORECASE
+)
+
+_REF_SUFFIXES = {"REF", "AVG", "AVERAGE", "M1", "M2", "A1", "A2", "LE", "CZ", "FCZ"}
+_SEP_SPLIT = re.compile(r"[ \t]*[-–—_/]|[ \t]+")
+
+def _primary_label(name: str) -> str:
+    """Return the primary channel label, stripping common reference suffixes and prefixes."""
+    s = str(name).strip()
+    if s.startswith("(") and s.endswith(")"):
+        s = s[1:-1].strip()
+    s = re.sub(r"\s+", " ", s)
+    parts = [p for p in _SEP_SPLIT.split(s) if p]
+    if not parts:
+        return ""
+    cand = parts[1] if parts[0].upper() == "EEG" and len(parts) >= 2 else parts[0]
+    up = cand.upper()
+    if up in _REF_SUFFIXES and len(parts) >= 2:
+        cand = parts[1]
+    return cand.strip()
+
+def _remap_t1_t2(name: str) -> str:
+    """Map legacy channel names T1/T2 to FT9/FT10."""
+    up = name.strip().upper()
+    if up == "T1":
+        return "FT9"
+    if up == "T2":
+        return "FT10"
+    return name
+
+# ----------------------------
+# Standard 10–20 3D positions
+# ----------------------------
+# Minimal subset needed to align; values are unit-sphere Cartesian approx.
+# Source: approximate standard montage on unit sphere (not exact device-specific).
+_STD_1020_3D = {
+    # A small but useful set for alignment:
+    "Fp1": (-0.3,  0.87,  0.4), "Fp2": ( 0.3,  0.87,  0.4),
+    "F7" : (-0.87, 0.2,   0.45), "F8" : ( 0.87, 0.2,   0.45),
+    "F3" : (-0.55, 0.6,   0.58), "F4" : ( 0.55, 0.6,   0.58),
+    "Fz" : ( 0.0,  0.75,  0.66),
+    "T7" : (-0.97, 0.0,   0.25), "T8" : ( 0.97, 0.0,   0.25),
+    "C3" : (-0.7,  0.0,   0.71), "C4" : ( 0.7,  0.0,   0.71),
+    "Cz" : ( 0.0,  0.0,   1.0 ),
+    "P7" : (-0.87,-0.2,   0.45), "P8" : ( 0.87,-0.2,   0.45),
+    "P3" : (-0.55,-0.6,   0.58), "P4" : ( 0.55,-0.6,   0.58),
+    "Pz" : ( 0.0, -0.75,  0.66),
+    "O1" : (-0.3, -0.87,  0.4),  "O2" : ( 0.3, -0.87,  0.4),
+    "Oz" : ( 0.0, -0.95,  0.31),
+    # Targets we need:
+    "FT9": (-0.98, 0.05,  0.17), "FT10": ( 0.98, 0.05,  0.17),
+}
+
+def _proj_azimuthal(xyz):
+    """Project 3D unit vectors onto 2D topomap plane (azimuthal, like MNE)."""
+    xyz = np.asarray(xyz, float)
+    # Normalize to unit sphere
+    r = np.linalg.norm(xyz, axis=-1, keepdims=True)
+    r[r == 0] = 1.0
+    xyz = xyz / r
+    x, y, z = xyz[..., 0], xyz[..., 1], xyz[..., 2]
+    az = np.arctan2(y, x)            # azimuth
+    pol = np.arccos(np.clip(z, -1, 1))  # polar angle
+    rho = (np.pi/2) - pol            # radius on plane
+    return np.stack([rho * np.cos(az), rho * np.sin(az)], axis=-1)
+
+def _similarity_transform(src, dst):
+    """Estimate similarity transform (scale, rotation, translation) mapping src->dst."""
+    src = np.asarray(src, float)
+    dst = np.asarray(dst, float)
+    mu_s = src.mean(axis=0)
+    mu_d = dst.mean(axis=0)
+    X = src - mu_s
+    Y = dst - mu_d
+    # Solve Y ~ s*R*X via SVD
+    U, S, Vt = np.linalg.svd(X.T @ Y)
+    R = U @ Vt
+    if np.linalg.det(R) < 0:  # enforce proper rotation
+        U[:, -1] *= -1
+        R = U @ Vt
+    s = (np.trace((X @ R) .T @ Y)) / (np.trace(X.T @ X) + 1e-12)
+    t = mu_d - s * (mu_s @ R)
+    return s, R, t
+
+def _apply_similarity(P, s, R, t):
+    """Apply similarity transform to 2D points."""
+    P = np.asarray(P, float)
+    return s * (P @ R) + t
+
+# ----------------------------
+# Main function
+# ----------------------------
+
+def select_eeg_channels_with_ft9_ft10_coords(names, pos, data, remap_t1_t2=True, fill_ft_coords=True):
+    """
+    Select EEG channels and, if T1/T2 are present, remap them to FT9/FT10 and
+    fill their 2D coordinates compatible with the current topomap space.
+
+    - Names are parsed robustly (handles suffixes like '-REF', '_M1', etc.).
+    - A1/A2/M1/M2 are excluded for plotting.
+    - If `fill_ft_coords=True`, FT9/FT10 coords are inferred via a similarity
+      transform from a standard 10–20 azimuthal projection to your current 2D space.
+
+    Parameters
+    ----------
+    names : list of str
+        Channel name list.
+    pos : array-like, shape (n_channels, 2)
+        2D XY coordinates.
+    data : array-like, shape (n_channels,)
+        One value per channel.
+    remap_t1_t2 : bool, default=True
+        If True, output names use 'FT9'/'FT10' instead of 'T1'/'T2'.
+    fill_ft_coords : bool, default=True
+        If True, fill/overwrite positions for FT9/FT10 using alignment.
+
+    Returns
+    -------
+    names_eeg : list of str
+    pos_eeg : ndarray, shape (n_eeg, 2)
+    data_eeg : ndarray, shape (n_eeg,)
+    idx : ndarray
+        Indices in the original arrays.
+    """
+    pos_and_data = len(pos)>0 and len(data)>0
+    if pos_and_data:
+        if len(names) != len(pos) or len(names) != len(data):
+            raise ValueError("names, pos and data must have the same length.")
+        pos = np.asarray(pos, float)
+        data = np.asarray(data, float)
+        if pos.ndim != 2 or pos.shape[1] != 2:
+            raise ValueError("pos must be of shape (n_channels, 2).")
+
+    keep, primaries = [], []
+    t_indices = {"T1": [], "T2": []}
+
+    for i, nm in enumerate(names):
+        base = _primary_label(nm)
+        primaries.append(base)
+        if _NON_EEG_EXCLUDE.search(base):
+            continue
+        up = base.upper()
+        if up in {"T1", "T2"}:
+            keep.append(i)
+            t_indices[up].append(i)
+            continue
+        if _EEG_INCLUDE.match(base):
+            keep.append(i)
+
+    if not keep:
+        raise ValueError("No valid EEG channels detected.")
+
+    idx = np.array(keep, dtype=int)
+
+    # Build output names (with optional remap)
+    names_eeg = []
+    for i in idx:
+        base = primaries[i]
+        nm_out = _remap_t1_t2(base) if remap_t1_t2 else base
+        names_eeg.append(nm_out)
+
+    if pos_and_data:
+        pos_eeg = pos[idx].copy()
+        data_eeg = data[idx].copy()
+    else:
+        pos_eeg = None
+        data_eeg = None
+
+    if not fill_ft_coords:
+        return names_eeg, pos_eeg, data_eeg, idx
+
+    if pos_and_data:
+        # ---- Prepare standard 2D coordinates for alignment ----
+        # 1) Project our subset of standard 3D points to 2D
+        std2d = {k: _proj_azimuthal(v) for k, v in _STD_1020_3D.items()}
+        # 2) Build correspondences: names present both in output names and standard dict (excluding FT9/FT10 for fitting)
+        out_name_to_row = {n.upper(): j for j, n in enumerate(names_eeg)}
+        common = []
+        for lab in std2d.keys():
+            u = lab.upper()
+            if u in out_name_to_row and u not in {"FT9", "FT10"}:
+                j = out_name_to_row[u]
+                common.append((lab, j))
+
+        # Need at least 3 non-collinear points to fit similarity transform
+        if len(common) >= 3:
+            src = np.vstack([std2d[lab] for lab, _ in common])      # from standard
+            dst = np.vstack([pos_eeg[j] for _, j in common])        # to your coords
+            # Fit similarity transform std2d -> your pos
+            s, R, t = _similarity_transform(src, dst)
+
+            # Places to fill: FT9/FT10 (if present among output names)
+            for target_lab in ("FT9", "FT10"):
+                u = target_lab.upper()
+                if u in out_name_to_row and target_lab in std2d:
+                    j = out_name_to_row[u]
+                    pos_eeg[j] = _apply_similarity(std2d[target_lab][None, :], s, R, t)[0]
+        # else: not enough anchors; we leave positions as-is.
+
+    return names_eeg, pos_eeg, data_eeg, idx
 
 def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: str):
 
@@ -1034,7 +1264,14 @@ def plot_3d_topomap_std_ptp_csv(sensors_csv_path: str, ch_type: str, what_data: 
     df = pd.read_csv(sensors_csv_path, sep='\t')
 
     #take only those channels that are of right type:
-    df = df[df['Type'] == ch_type]
+    if ch_type == 'eeg':
+        names = []
+        for index, row in df.iterrows():
+            names += [row['Name']]
+        names, pos, data, idx = select_eeg_channels_with_ft9_ft10_coords(names, [], [], remap_t1_t2=True, fill_ft_coords=True)
+        df = df.loc[idx]
+    else:
+        df = df[df['Type'] == ch_type]
 
     ch_tit, unit = get_tit_and_unit(ch_type)
 
@@ -1434,7 +1671,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str)
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
     #To keep them in original state outside the function, they are copied here.
     all_mean_abs_values=amplitudes_abs.copy()
-    ch_type_tit, unit = get_tit_and_unit(stype, psd=True)
+    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
     all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
@@ -1688,9 +1925,11 @@ def boxplot_all_time_csv(std_csv_path: str, ch_type: str, what_data: str):
     values_all=[]
     traces = []
 
+    ch_type = str(ch_type[0]) if isinstance(ch_type, list) and ch_type else ch_type #to ensure ths is an str and not a list. Bosch
+
     for index, row in df.iterrows():
 
-        if row['Type'] == ch_type: #plot only mag/grad
+        if row['Type'] == ch_type or (ch_type == 'eeg' and row['Type'] == 'mag'): #plot only mag/grad
 
             if what_data == 'stds':
                 data = row['STD all']

@@ -294,162 +294,209 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
     """
 
-    m_or_g_chosen = plot_settings['m_or_g']
+    # Debug information
+    print(f"Processing: {raw_info_path}")
+    print(f"File exists: {os.path.exists(raw_info_path)}")
 
-    time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
+    if not os.path.exists(csv_file):
+        print(f"ERROR: CSV file not found: {raw_info_path}")
+        return
 
-    stim_derivs = []
+    try:
+        # Try with different approaches
+        file_size = os.path.getsize(raw_info_path)
+        print(f"File size: {raw_info_path} bytes")
 
-    for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
+        if file_size == 0:
+            print("ERROR: CSV file is empty")
+            return
 
-        if "_eeg." in tsv_path:
-            m_or_g_chosen = ['eeg']
-        #get the final file name of tsv path:
-        basename = os.path.basename(tsv_path)
-        if 'desc-stimulus' in basename:
-            stim_derivs = plot_stim_csv(tsv_path)
+        # APPROACH 1: Try with explicit encoding
+        try:
+            df = pd.read_csv(raw_info_path, encoding='utf-8')
+        except UnicodeDecodeError:
+            # APPROACH 2: Try other encodings
+            try:
+                df = pd.read_csv(raw_info_path, encoding='latin1')
+            except:
+                # APPROACH 3: Use error handling
+                df = pd.read_csv(raw_info_path, encoding='utf-8', on_bad_lines='skip')
 
-        if 'STD' in metric.upper():
+        # Check if dataframe was created
+        if df is None or df.empty:
+            print("WARNING: No data read from CSV")
+            return
 
-            fig_std_epoch0 = []
-            fig_std_epoch1 = []
+        m_or_g_chosen = plot_settings['m_or_g']
 
-            std_derivs += plot_sensors_3d_csv(tsv_path)
+        time_series_derivs, sensors_derivs, ptp_manual_derivs, pp_auto_derivs, ecg_derivs, eog_derivs, std_derivs, psd_derivs, muscle_derivs, head_derivs = [], [], [], [], [], [], [], [], [], []
 
-# bosch prueba
-            for m_or_g in m_or_g_chosen:
-                #fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
-                #fig_topomap_3d = plot_3d_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
-                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds')
-                fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds')
-                fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+        stim_derivs = []
 
-                #std_derivs += fig_topomap + fig_topomap_3d + fig_all_time + fig_std_epoch0 + fig_std_epoch1
-                std_derivs += fig_all_time + fig_std_epoch0 + fig_std_epoch1
+        for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
-        if 'PTP' in metric.upper():
+            if "_eeg." in tsv_path:
+                m_or_g_chosen = ['eeg']
+                #m_or_g_chosen = str(m_or_g_chosen[0]) if isinstance(m_or_g_chosen, list) and m_or_g_chosen else m_or_g_chosen
+            #get the final file name of tsv path:
+            basename = os.path.basename(tsv_path)
+            if 'desc-stimulus' in basename:
+                stim_derivs = plot_stim_csv(tsv_path)
 
-            fig_ptp_epoch0 = []
-            fig_ptp_epoch1 = []
+            if 'STD' in metric.upper():
 
-            ptp_manual_derivs += plot_sensors_3d_csv(tsv_path)
+                fig_std_epoch0 = []
+                fig_std_epoch1 = []
 
-# bosch prueba
-            for m_or_g in m_or_g_chosen:
+                std_derivs += plot_sensors_3d_csv(tsv_path)
 
-                #fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
-                #fig_topomap_3d = plot_3d_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
-                fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
-                fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
-                fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+    # bosch prueba
+                for m_or_g in m_or_g_chosen:
+                    fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                    fig_topomap_3d = plot_3d_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                    fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                    fig_std_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='stds')
+                    fig_std_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='stds')
 
-                #ptp_manual_derivs += fig_topomap + fig_topomap_3d + fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
-                ptp_manual_derivs += fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
+                    std_derivs += fig_topomap + fig_topomap_3d + fig_all_time + fig_std_epoch0 + fig_std_epoch1
+                    std_derivs += fig_all_time + fig_std_epoch0 + fig_std_epoch1
 
-        elif 'PSD' in metric.upper():
+            if 'PTP' in metric.upper():
 
-            method = 'welch'
-            #is also preselected in internal_settings.ini Adjust here if change in calculation,
-            # this module doesnt access internal settings
+                fig_ptp_epoch0 = []
+                fig_ptp_epoch1 = []
 
-            psd_derivs += plot_sensors_3d_csv(tsv_path)
+                ptp_manual_derivs += plot_sensors_3d_csv(tsv_path)
 
-            for m_or_g in m_or_g_chosen:
+    # bosch prueba
+                for m_or_g in m_or_g_chosen:
 
-                psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method)
+                    fig_topomap = plot_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                    fig_topomap_3d = plot_3d_topomap_std_ptp_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                    fig_all_time = boxplot_all_time_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                    fig_ptp_epoch0 = boxplot_epoched_xaxis_channels_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
+                    fig_ptp_epoch1 = boxplot_epoched_xaxis_epochs_csv(tsv_path, ch_type=m_or_g, what_data='peaks')
 
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise')
+                    ptp_manual_derivs += fig_topomap + fig_topomap_3d + fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
+                    ptp_manual_derivs += fig_all_time + fig_ptp_epoch0 + fig_ptp_epoch1
 
-                psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves')
+            elif 'PSD' in metric.upper():
 
-        elif 'ECG' in metric.upper():
+                method = 'welch'
+                #is also preselected in internal_settings.ini Adjust here if change in calculation,
+                # this module doesnt access internal settings
 
-            ecg_derivs += plot_sensors_3d_csv(tsv_path)
+                psd_derivs += plot_sensors_3d_csv(tsv_path)
 
-            ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path)
+                for m_or_g in m_or_g_chosen:
 
-            ecg_derivs += plot_mean_rwave_csv(tsv_path, 'ECG')
+                    psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method)
 
-            #TODO: add ch description like here? export it as separate report strings?
-            #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
+                    psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise')
 
-            for m_or_g in m_or_g_chosen:
-                ecg_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'ECG', flip_data=False)
-                #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
+                    psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'waves')
 
-        elif 'EOG' in metric.upper():
+            elif 'ECG' in metric.upper():
 
-            eog_derivs += plot_sensors_3d_csv(tsv_path)
+                ecg_derivs += plot_sensors_3d_csv(tsv_path)
 
-            eog_derivs += plot_ECG_EOG_channel_csv(tsv_path)
+                ecg_derivs += plot_ECG_EOG_channel_csv(tsv_path)
 
-            eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
+                ecg_derivs += plot_mean_rwave_csv(tsv_path, 'ECG')
 
-# bosch prueba
-            #prueba for m_or_g in m_or_g_chosen:
-                #prueba eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
-                #prueba eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
+                #TODO: add ch description like here? export it as separate report strings?
+                #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
+                for m_or_g in m_or_g_chosen:
+                    ecg_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'ECG', flip_data=False)
+                    #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
-        elif 'MUSCLE' in metric.upper():
+            elif 'EOG' in metric.upper():
 
-            muscle_derivs +=  plot_muscle_csv(tsv_path)
+                eog_derivs += plot_sensors_3d_csv(tsv_path)
 
+                eog_derivs += plot_ECG_EOG_channel_csv(tsv_path)
 
-        elif 'HEAD' in metric.upper():
+                eog_derivs += plot_mean_rwave_csv(tsv_path, 'EOG')
 
-            head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
-            # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
-            # head_pos_derivs += head_pos_derivs2
-            head_derivs += head_pos_derivs
-
-    QC_derivs = {
-        'TIME_SERIES': time_series_derivs,
-        'STIMULUS': stim_derivs,
-        'SENSORS': sensors_derivs,
-        'STD': std_derivs,
-        'PSD': psd_derivs,
-        'PTP_MANUAL': ptp_manual_derivs,
-        'PTP_AUTO': pp_auto_derivs,
-        'ECG': ecg_derivs,
-        'EOG': eog_derivs,
-        'HEAD': head_derivs,
-        'MUSCLE': muscle_derivs,
-        'REPORT_MNE': []
-    }
-
-
-    #Sort all based on fig_order of QC_derivative:
-    #(To plot them in correct order in the report)
-    for metric, values in QC_derivs.items():
-        if values:
-            QC_derivs[metric] = sorted(values, key=lambda x: x.fig_order)
+    # bosch prueba
+                #prueba for m_or_g in m_or_g_chosen:
+                    #prueba eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
+                    #prueba eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
 
-    if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
-        report_strings = {
-        'INITIAL_INFO': '',
-        'TIME_SERIES': '',
-        'STD': '',
-        'PSD': '',
-        'PTP_MANUAL': '',
-        'PTP_AUTO': '',
-        'ECG': '',
-        'EOG': '',
-        'HEAD': '',
-        'MUSCLE': '',
-        'SENSORS': '',
-        'STIMULUS': ''
+            elif 'MUSCLE' in metric.upper():
+
+                muscle_derivs +=  plot_muscle_csv(tsv_path)
+
+
+            elif 'HEAD' in metric.upper():
+
+                head_pos_derivs, _ = plot_head_pos_csv(tsv_path)
+                # head_pos_derivs2 = make_head_pos_plot_mne(raw, head_pos, verbose_plots=verbose_plots)
+                # head_pos_derivs += head_pos_derivs2
+                head_derivs += head_pos_derivs
+
+        QC_derivs = {
+            'TIME_SERIES': time_series_derivs,
+            'STIMULUS': stim_derivs,
+            'SENSORS': sensors_derivs,
+            'STD': std_derivs,
+            'PSD': psd_derivs,
+            'PTP_MANUAL': ptp_manual_derivs,
+            'PTP_AUTO': pp_auto_derivs,
+            'ECG': ecg_derivs,
+            'EOG': eog_derivs,
+            'HEAD': head_derivs,
+            'MUSCLE': muscle_derivs,
+            'REPORT_MNE': []
         }
-    else:
-        with open(report_str_path) as json_file:
-            report_strings = json.load(json_file)
 
 
-    report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings)
+        #Sort all based on fig_order of QC_derivative:
+        #(To plot them in correct order in the report)
+        for metric, values in QC_derivs.items():
+            if values:
+                QC_derivs[metric] = sorted(values, key=lambda x: x.fig_order)
 
-    return report_html_string
 
+        if not report_str_path: #if no report strings were saved. happens when mags/grads didnt run to make tsvs.
+            report_strings = {
+            'INITIAL_INFO': '',
+            'TIME_SERIES': '',
+            'STD': '',
+            'PSD': '',
+            'PTP_MANUAL': '',
+            'PTP_AUTO': '',
+            'ECG': '',
+            'EOG': '',
+            'HEAD': '',
+            'MUSCLE': '',
+            'SENSORS': '',
+            'STIMULUS': ''
+            }
+        else:
+            with open(report_str_path) as json_file:
+                report_strings = json.load(json_file)
+
+
+        report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings)
+
+        return report_html_string
+
+    except MemoryError:
+        print("ERROR: Memory error reading CSV file")
+        # Try reading in chunks
+        chunks = []
+        for chunk in pd.read_csv(csv_file, chunksize=10000):
+            chunks.append(chunk)
+        df = pd.concat(chunks, ignore_index=True)
+
+    except Exception as e:
+        print(f"ERROR reading CSV: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return
 
 def extract_raw_entities_from_obj(obj):
 
@@ -784,6 +831,11 @@ def process_subject(
             if m not in ['RawInfo', 'ReportStrings', 'SimpleMetrics']
         ]
 
+        if "_eeg." in raw_info_path:
+            suffix = 'eeg'
+        else:
+            suffix = 'meg'
+
         for metric in metrics_to_plot:
             tsv_paths = [d.path for d in derivs_for_this_raw if d.metric == metric]
             if not tsv_paths:
@@ -803,7 +855,7 @@ def process_subject(
 
             meg_artifact = subject_folder.create_artifact(raw=raw_entities_to_write)
             meg_artifact.add_entity('desc', metric)
-            meg_artifact.suffix = 'meg'
+            meg_artifact.suffix = suffix
             meg_artifact.extension = '.html'
 
             meg_artifact.content = lambda file_path, rep=html_report: rep.save(
@@ -830,7 +882,7 @@ def process_subject(
             summary_html = make_summary_qc_report(report_str_path, simple_metrics_path)
             meg_artifact = subject_folder.create_artifact(raw=raw_entities_base)
             meg_artifact.add_entity('desc', 'summary_qc_report')
-            meg_artifact.suffix = 'meg'
+            meg_artifact.suffix = suffix
             meg_artifact.extension = '.html'
             meg_artifact.content = (
                 lambda file_path, cont=summary_html: open(file_path, "w", encoding="utf-8").write(cont)

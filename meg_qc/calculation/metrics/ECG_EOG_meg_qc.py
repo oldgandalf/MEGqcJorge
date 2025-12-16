@@ -1524,39 +1524,44 @@ def get_ECG_data_choose_method(raw: mne.io.Raw, ecg_params: dict, orig_meg_syste
         ecg_ch_name = ecg_ch_name[0]
 
         bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = detect_noisy_ecg(raw, ecg_ch_name,  ecg_or_eog = 'ECG', n_breaks_bursts_allowed_per_10min = ecg_params['n_breaks_bursts_allowed_per_10min'], allowed_range_of_peaks_stds = ecg_params['allowed_range_of_peaks_stds'], height_multiplier = ecg_params['height_multiplier'])
-
-        if orig_meg_system == 'EEG':
-            bad_ecg_eog[ecg_ch_name] = 'good'
+        ##changes to update in calculation
+        #if orig_meg_system == 'EEG':
+        #    bad_ecg_eog[ecg_ch_name] = 'good'
+        ####
 
         if bad_ecg_eog[ecg_ch_name] == 'bad': #ecg channel present but noisy:
             ecg_str = 'ECG channel data is too noisy, cardio artifacts were reconstructed. ECG channel was dropped from the analysis. Consider checking the quality of ECG channel on your recording device. \n'
             print('___MEGqc___: ', ecg_str)
             raw.drop_channels(ecg_ch_name)
-            use_method = 'correlation_reconstructed'
-            # TODO: here in case the recorded ECG was bad - we try to reconstruct. Think of this logic.
-            # It might be better to not even try, because reconstructed is rarely better than recorded.
-            # However we might have a broken ecg ch - then there is a chance that reconstruction works somewhat better.
-
+            if orig_meg_system != 'EEG':
+                use_method = 'correlation_reconstructed'
+            else:
+                use_method = 'reconstructed-bad' # in case of EEG signals we do not try to reconstruct
 
         elif bad_ecg_eog[ecg_ch_name] == 'good': #ecg channel present and good - use it
             ecg_str = ecg_ch_name + ' is used to identify hearbeats. \n'
             use_method = 'correlation_recorded'
 
     else: #no ecg channel present
-
         ecg_str = 'No ECG channel found. The signal is reconstructed based on magnetometers data. \n'
         use_method = 'correlation_reconstructed'
 
-        # _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
+        _, _, _, ecg_data = mne.preprocessing.find_ecg_events(raw, return_ecg=True)
         # # here the RECONSTRUCTED ecg data will be outputted (based on magnetometers), and only if u set return_ecg=True and no real ec channel present).
-        # ecg_data = ecg_data[0]
+        ecg_data = ecg_data[0]
+
+    ##changes to update in calculation
 
     if use_method == 'correlation_reconstructed':
         ecg_ch_name, bad_ecg_eog, ecg_data, event_indexes, ecg_eval_str = reconstruct_ecg_and_check(raw, ecg_params['n_breaks_bursts_allowed_per_10min'], ecg_params['allowed_range_of_peaks_stds'], ecg_params['height_multiplier'])
         
         if bad_ecg_eog[ecg_ch_name] == 'bad':
-            use_method = 'reconstructed-bad'
+             use_method = 'reconstructed-bad'
             #pass here, cos we dont need to do anything with the data if it is bad
+        elif orig_meg_system != 'EEG':
+            use_method = 'reconstructed-bad'
+            # in case it is EEG we put bad anyway because we do not trust the ECG reconstruction and we dont need to do anything with the data if it is bad
+        #####
             
     print('___MEGqc___: ', ecg_str)
 
@@ -2119,7 +2124,17 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, chann
 
         return ecg_derivs, simple_metric_ECG, ecg_str, []
 
-    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin, tmax, sfreq, ecg_params_internal, thresh_lvl_peakfinder)
+    mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin,
+                                                                              tmax, sfreq, ecg_params_internal,
+
+                                                                              thresh_lvl_peakfinder)
+    # if use_method == 'Discard': #That only happens when signal is EEG and the ECG channel is too noisy
+    #     mean_good = False
+    #     # ecg_str_checked =
+    #     # mean_rwave =
+    #     # mean_rwave_time =
+    #     use_method = None
+    # else:
 
     ecg_str += ecg_str_checked + n_events_str
 
@@ -2153,6 +2168,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, chann
     for m_or_g  in m_or_g_chosen:
 
         ecg_epochs = mne.preprocessing.create_ecg_epochs(raw, picks=channels[m_or_g], tmin=tmin, tmax=tmax)
+
 
         # ecg_derivs += plot_ecg_eog_mne(ecg_epochs, m_or_g, tmin, tmax)
 
