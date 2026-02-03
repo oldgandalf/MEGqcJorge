@@ -1629,7 +1629,10 @@ def get_EOG_data(raw: mne.io.Raw, orig_meg_system):
     # Get the data of the EOG channel as an array. MNE only sees blinks, not saccades.
     eog_data = raw.get_data(picks=eog_channel_names)
 
-    eog_str = ', '.join(eog_channel_names)+' was used to identify eye blinks. '
+    if isinstance(eog_channel_names, str):
+        eog_str = eog_channel_names + ' was used to identify eye blinks. '
+    else:
+        eog_str = ', '.join(eog_channel_names)+' was used to identify eye blinks. '
 
     height = np.mean(eog_data) + 1 * np.std(eog_data)
     fs=raw.info['sfreq']
@@ -2100,8 +2103,7 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, chann
     print('___MEGqc___: ', 'Heart beats per minute: ', events_rate_per_min)
     n_events_str += '<br>Heart beats per minute: ' + str(events_rate_per_min)
 
-    
-    if use_method == 'reconstructed-bad': 
+    if use_method == 'reconstructed-bad':
         # data was reconstricted and is bad - dont continue
         simple_metric_ECG = {'description': ecg_str}
         ecg_str += n_events_str
@@ -2126,7 +2128,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, chann
 
     mean_good, ecg_str_checked, mean_rwave, mean_rwave_time = check_mean_wave(ecg_data, 'ECG', event_indexes, tmin,
                                                                               tmax, sfreq, ecg_params_internal,
-
                                                                               thresh_lvl_peakfinder)
     # if use_method == 'Discard': #That only happens when signal is EEG and the ECG channel is too noisy
     #     mean_good = False
@@ -2183,7 +2184,6 @@ def ECG_meg_qc(ecg_params: dict, ecg_params_internal: dict, data_path:str, chann
         if use_method == 'mean_threshold':
             artif_per_ch, artif_time_vector = flip_channels(artif_per_ch, tmin, tmax, sfreq, ecg_params_internal)
             affected_channels[m_or_g], affected_derivs, bad_avg_str[m_or_g], avg_overall_obj = find_affected_over_mean(artif_per_ch, 'ECG', ecg_params_internal, thresh_lvl_peakfinder, m_or_g=m_or_g, norm_lvl=norm_lvl, flip_data=True, gaussian_sigma=gaussian_sigma, artif_time_vector=artif_time_vector)
-
 
         elif use_method == 'correlation_recorded' or use_method == 'correlation_reconstructed':
 

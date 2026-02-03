@@ -1,4 +1,6 @@
 import json
+from operator import truediv
+
 import mne
 import os
 import sys
@@ -316,12 +318,16 @@ def make_joined_report_mne(raw_info_path: str, sections:dict, report_strings: di
         """
         report.add_html(centered_info_html, 'Info about the Original raw file (not filtered, not resampled)')
 
+    notany = True
     for key, values in sections.items():
         key_upper = key.upper()
         if values and key_upper != 'REPORT' and key_upper != 'Report MNE' and key_upper != 'Simple_metrics':
             #html_section_str = make_metric_section(derivs_section = sections[key_upper], section_name = key, report_strings = report_strings)
             html_section_str = combine_howto_sensors_and_metric(derivs_section = sections[key_upper], metric_name = key_upper, report_strings = report_strings)
             report.add_html(html_section_str, title=key_upper)
+            notany = False
+    if notany:
+        print('All empty')
 
     return report
 
@@ -461,7 +467,7 @@ def _dict_to_plotly_tables(data, level: int = 0) -> str:
     return html
 
 
-def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -> str:
+def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str, med:str) -> str:
     """Create an HTML summary report using :class:`mne.Report`.
 
     The original implementation produced a very small static HTML file.  The new
@@ -497,9 +503,12 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
             return str(channel_dict)
         return ", ".join(channel_dict.keys())
 
-    def generar_html_mag_grad(tipo_coil, datos):
+    def generar_html_mag_grad(tipo_coil, datos, med):
         html = []
-        stname = "MAGNETOMETERS" if tipo_coil == "mag" else "GRADIOMETERS"
+        if med == "eeg":
+            stname = "ELECTRODES"
+        else:
+            stname = "MAGNETOMETERS" if tipo_coil == "mag" else "GRADIOMETERS"
         html.append(
             f"<tr><td colspan='2' style='border:1px solid #ccc; text-align:center; padding:6px;'><strong>{stname}</strong></td></tr>"
         )
@@ -555,10 +564,10 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
             )
         return "\n".join(html)
 
-    def build_generic_table(data, parent_metric=None):
+    def build_generic_table(data, med, parent_metric=None):
         """Recursively render ``data`` into an HTML table."""
 
-        def build_rows(obj):
+        def build_rows(obj, med):
             rows = []
             for key, value in obj.items():
                 if isinstance(value, dict):
@@ -575,9 +584,9 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
                             f"<tr><td style='border:1px solid #ccc; padding:6px;'>flat_ch</td><td style='border:1px solid #ccc; padding:6px;'>{flat}</td></tr>"
                         )
                     elif key in {"mag", "grad"}:
-                        rows.append(generar_html_mag_grad(key, value))
+                        rows.append(generar_html_mag_grad(key, value, med))
                     else:
-                        rows.extend(build_rows(value))
+                        rows.extend(build_rows(value, med))
                 else:
                     rows.append(
                         f"<tr><td style='border:1px solid #ccc; padding:6px;'>{key}</td><td style='border:1px solid #ccc; padding:6px;'>{value}</td></tr>"
@@ -590,7 +599,7 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
             '<th style="border:1px solid #ccc; padding:6px;">Field</th>'
             '<th style="border:1px solid #ccc; padding:6px;">Value</th></tr></thead><tbody>'
         )
-        html.extend(build_rows(data))
+        html.extend(build_rows(data, med))
         html.append('</tbody></table>')
         return "".join(html)
 
@@ -638,7 +647,7 @@ def make_summary_qc_report(report_strings_path: str, simple_metrics_path: str) -
             desc_html = build_text_block(metric, description.replace("\n", "<br>"))
             report.add_html(desc_html, title=f"{metric}", section=f"text_{metric}")
 
-        table_html = build_generic_table(metric_data, parent_metric=metric)
+        table_html = build_generic_table(metric_data, med, parent_metric=metric)
         full_html = (
             f'<h3 style="text-align:center; font-family:sans-serif; font-size:18px;"><strong>{metric}</strong></h3>'
             + table_html

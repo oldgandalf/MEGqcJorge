@@ -268,7 +268,6 @@ def get_ds_entities(dataset, calculated_derivs_folder: str):
 
     return entities
 
-
 def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_str_path: str, plot_settings):
 
     """
@@ -297,10 +296,6 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
     # Debug information
     print(f"Processing: {raw_info_path}")
     print(f"File exists: {os.path.exists(raw_info_path)}")
-
-    if not os.path.exists(csv_file):
-        print(f"ERROR: CSV file not found: {raw_info_path}")
-        return
 
     try:
         # Try with different approaches
@@ -335,12 +330,12 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
         for tsv_path in tsv_paths: #if we got several tsvs for same metric, like for PSD:
 
-            if "_eeg." in tsv_path:
+            if "_eeg." in tsv_path.lower():
                 m_or_g_chosen = ['eeg']
                 #m_or_g_chosen = str(m_or_g_chosen[0]) if isinstance(m_or_g_chosen, list) and m_or_g_chosen else m_or_g_chosen
             #get the final file name of tsv path:
             basename = os.path.basename(tsv_path)
-            if 'desc-stimulus' in basename:
+            if 'desc-stimulus' in basename.lower():
                 stim_derivs = plot_stim_csv(tsv_path)
 
             if 'STD' in metric.upper():
@@ -389,7 +384,9 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
                 psd_derivs += plot_sensors_3d_csv(tsv_path)
 
                 for m_or_g in m_or_g_chosen:
-
+                    med = m_or_g
+                    if m_or_g == 'eeg':
+                        m_or_g = 'mag'
                     psd_derivs += Plot_psd_csv(m_or_g, tsv_path, method)
 
                     psd_derivs += plot_pie_chart_freq_csv(tsv_path, m_or_g=m_or_g, noise_or_waves = 'noise')
@@ -408,6 +405,9 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
                 #noisy_ch_derivs += [QC_derivative(fig, bad_ecg_eog[ecg_ch]+' '+ecg_ch, 'plotly', description_for_user = ecg_ch+' is '+ bad_ecg_eog[ecg_ch]+ ': 1) peaks have similar amplitude: '+str(ecg_eval[0])+', 2) tolerable number of breaks: '+str(ecg_eval[1])+', 3) tolerable number of bursts: '+str(ecg_eval[2]))]
 
                 for m_or_g in m_or_g_chosen:
+                    med = m_or_g
+                    if m_or_g == 'eeg':
+                        m_or_g = 'mag'
                     ecg_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'ECG', flip_data=False)
                     #ecg_derivs += plot_correlation_csv(tsv_path, 'ECG', m_or_g)
 
@@ -421,7 +421,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
 
     # bosch prueba
                 #prueba for m_or_g in m_or_g_chosen:
-                    #prueba eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False)
+                    #prueba eog_derivs += plot_artif_per_ch_3_groups(tsv_path, m_or_g, 'EOG', flip_data=False, med)
                     #prueba eog_derivs += plot_correlation_csv(tsv_path, 'EOG', m_or_g)
 
 
@@ -480,6 +480,7 @@ def csv_to_html_report(raw_info_path: str, metric: str, tsv_paths: List, report_
                 report_strings = json.load(json_file)
 
 
+        print(QC_derivs)
         report_html_string = make_joined_report_mne(raw_info_path, QC_derivs, report_strings)
 
         return report_html_string
@@ -647,6 +648,59 @@ import sys
 from typing import Any, Dict, List
 import pandas as pd
 
+def summarize_epochs(std_epoch_df, medtype):
+    mag = std_epoch_df["mag"]  # dict for mag
+    mag_details = mag[7]
+    n_epochs = len(mag_details)
+
+    # Mag counts using > 0
+    mag_n_noisy = sum(1 for d in mag_details if d["number_of_noisy_ch"] > 0)
+    mag_n_flat = sum(1 for d in mag_details if d["number_of_flat_ch"] > 0)
+    mag_perc_noisy = 100 * mag_n_noisy / n_epochs if n_epochs else 0
+    mag_perc_flat = 100 * mag_n_flat / n_epochs if n_epochs else 0
+
+    if medtype == 'eeg':
+        rows = [
+            {
+                "Items": "Epochs with Noisy channels",
+                "EPOCHS": f"{mag_n_noisy} ({mag_perc_noisy:.1f}%)",
+            },
+            {
+                "Items": "Epochs with Flat Channels",
+                "EPOCHS": f"{mag_n_flat} ({mag_perc_flat:.1f}%)",
+            },
+        ]
+    else:
+        rows = [
+            {
+                "Items": "Epochs with Noisy channels",
+                "MAGNETOMETERS": f"{mag_n_noisy} ({mag_perc_noisy:.1f}%)",
+            },
+            {
+                "Items": "Epochs with Flat Channels",
+                "MAGNETOMETERS": f"{mag_n_flat} ({mag_perc_flat:.1f}%)",
+            },
+        ]
+
+    # Only add Grad if present and not null
+    grad = std_epoch_df.get("grad")
+    if grad is not None:
+        grad_details = grad[7]
+        if grad_details is not None:
+            n_epochs_grad = len(grad_details)
+
+            grad_n_noisy = sum(1 for d in grad_details if d["number_of_noisy_ch"] > 0)
+            grad_n_flat = sum(1 for d in grad_details if d["number_of_flat_ch"] > 0)
+            grad_perc_noisy = 100 * grad_n_noisy / n_epochs_grad if n_epochs_grad else 0
+            grad_perc_flat = 100 * grad_n_flat / n_epochs_grad if n_epochs_grad else 0
+
+            # Fill the Grad column in the rows already created
+            rows[0]["GRADIOMETERS"] = f"{grad_n_noisy} ({grad_perc_noisy:.1f}%)"
+            rows[1]["GRADIOMETERS"] = f"{grad_n_flat} ({grad_perc_flat:.1f}%)"
+
+    summary_df = pd.DataFrame(rows)
+    return summary_df
+
 def _df_from_records(records: Any) -> pd.DataFrame:
     """Return a DataFrame from a list of records (or an empty DF if None/empty)."""
     if isinstance(records, list) and len(records) > 0:
@@ -658,6 +712,11 @@ def create_GQIhtml_from_json(json_path: str, html_output: str) -> None:
     # ---- Load JSON ----
     with open(json_path, "r", encoding="utf-8") as f:
         data: Dict[str, Any] = json.load(f)
+
+    if '_eeg.' in json_path.lower():
+        medtype = 'eeg'
+    else:
+        medtype = 'meg'
 
     # ---- Extract top-level values ----
     html_name = data.get("file_name", os.path.basename(json_path))
@@ -679,6 +738,9 @@ def create_GQIhtml_from_json(json_path: str, html_output: str) -> None:
     ecg_df       = _df_from_records(data.get("ECG_correlation_summary"))
     eog_df       = _df_from_records(data.get("EOG_correlation_summary"))
     psd_df       = _df_from_records(data.get("PSD_noise_summary"))
+
+    std_epoch_df = summarize_epochs(std_epoch_df, medtype)
+    ptp_epoch_df = summarize_epochs(ptp_epoch_df, medtype)
 
     # ---- Muscle events -> DataFrame ----
     # JSON example: "Muscle_events": {"# Muscle Events": muscle_events, "total_number_of_events": total_events}
@@ -712,43 +774,29 @@ def create_GQIhtml_from_json(json_path: str, html_output: str) -> None:
         f.write("<html><head><meta charset='UTF-8'>" + style + "</head><body>")
 
         # Header
+        sujname = html_name.split("GlobalSummaryReport")[0]
+        sujname = sujname.replace("_desc-", "")
         f.write("<div class='header-grid'>")
         f.write("<div><h1>MEGQC Global Quality Report</h1></div>")
-        f.write(f"<div><div class='file-label'>File: {html_name}</div>")
+        f.write(f"<div><div class='file-label'>File: {sujname}</div>")
         f.write(f"<div class='subtitle'>Global Quality Index (GQI): {GQI}</div></div></div>")
-
-        # Penalties (only if present)
-        if penalties:
-            f.write("<h2>GQI Penalties</h2>")
-            penalties_df = pd.DataFrame([
-                {"Metric": "Bad Channels", "Penalty (%)": f"{penalties.get('ch', 0):.2f}"},
-                {"Metric": "Correlation", "Penalty (%)": f"{penalties.get('corr', 0):.2f}"},
-                {"Metric": "Muscle", "Penalty (%)": f"{penalties.get('mus', 0):.2f}"},
-                {"Metric": "PSD Noise", "Penalty (%)": f"{penalties.get('psd', 0):.2f}"},
-            ])
-            f.write(penalties_df.to_html(index=False, escape=False))
 
         # Time series tables
         if not general_df.empty or not ptp_df.empty:
             f.write("<div class='table-flex'>")
-            f.write(f"<div class='table-box'><h2>STD Time-Series (STD level: {std_lvl})</h2>")
+            f.write(f"<div class='table-box'><h2>STD Full Time-Series (STD level: {std_lvl})</h2>")
             if not general_df.empty:
                 f.write(general_df.to_html(index=False))
             else:
                 f.write("<i>No data</i>")
             f.write("</div>")
 
-            f.write(f"<div class='table-box'><h2>PTP Time-Series (STD level: {ptp_lvl})</h2>")
+            f.write(f"<div class='table-box'><h2>PTP Full Time-Series (STD level: {ptp_lvl})</h2>")
             if not ptp_df.empty:
                 f.write(ptp_df.to_html(index=False))
             else:
                 f.write("<i>No data</i>")
             f.write("</div></div>")
-
-        # PSD Noise
-        if not psd_df.empty:
-            f.write("<h2>PSD Noise Summary</h2>")
-            f.write(psd_df.to_html(index=False))
 
         # Epoch summaries
         if not std_epoch_df.empty or not ptp_epoch_df.empty:
@@ -780,12 +828,35 @@ def create_GQIhtml_from_json(json_path: str, html_output: str) -> None:
                 f.write("</div>")
             f.write("</div>")
 
+        f.write("<div class='table-flex'>")
+        # PSD Noise
+        if not psd_df.empty:
+            f.write("<div class='table-box'><h2>PSD Noise Summary</h2>")
+            f.write(psd_df.to_html(index=False))
+        else:
+            f.write("<div class='table-box'><h2>PSD Noise Summary</h2><i>No data</i>")
+        f.write("</div>")
+
         # Muscle events
         if not muscle_df.empty:
-            f.write("<h2>Muscle Events Summary</h2>")
+            f.write("<div class='table-box'><h2>Muscle Events Summary</h2>")
             f.write(muscle_df.to_html(index=False))
+            f.write("</div>")
         else:
             f.write("<h2>Muscle Events Summary</h2><i>No data</i>")
+            f.write("</div>")
+
+        # Penalties (only if present)
+        if penalties:
+            f.write("<div class='table-box'><h2>GQI Penalties</h2>")
+            penalties_df = pd.DataFrame([
+                {"Metric": "Bad Channels", "Penalty (%)": f"{penalties.get('ch', 0):.2f}"},
+                {"Metric": "Correlation", "Penalty (%)": f"{penalties.get('corr', 0):.2f}"},
+                {"Metric": "Muscle", "Penalty (%)": f"{penalties.get('mus', 0):.2f}"},
+                {"Metric": "PSD Noise", "Penalty (%)": f"{penalties.get('psd', 0):.2f}"},
+            ])
+            f.write(penalties_df.to_html(index=False, escape=False))
+            f.write("</div>")
 
         f.write("</body></html>")
 
@@ -831,7 +902,7 @@ def process_subject(
             if m not in ['RawInfo', 'ReportStrings', 'SimpleMetrics']
         ]
 
-        if "_eeg." in raw_info_path:
+        if "_eeg." in raw_info_path.lower():
             suffix = 'eeg'
         else:
             suffix = 'meg'
@@ -858,9 +929,13 @@ def process_subject(
             meg_artifact.suffix = suffix
             meg_artifact.extension = '.html'
 
-            meg_artifact.content = lambda file_path, rep=html_report: rep.save(
-                file_path, overwrite=True, open_browser=False
-            )
+            if html_report is None:
+                print("Error: html_report es None. Revisa creación del reporte.")
+                # Inicializa: html_report = mne.Report()
+                # Agrega contenido: html_report.add_xxx(datos)
+            else:
+                meg_artifact.content = lambda file_path, rep=html_report: rep.save(file_path, overwrite=True,
+                                                                                   open_browser=False)
 
         if report_str_path and simple_metrics_path:
 
@@ -879,7 +954,7 @@ def process_subject(
             html_output = os.path.splitext(html_output)[0] + '.html'
             create_GQIhtml_from_json(json_path, html_output)
 
-            summary_html = make_summary_qc_report(report_str_path, simple_metrics_path)
+            summary_html = make_summary_qc_report(report_str_path, simple_metrics_path, suffix)
             meg_artifact = subject_folder.create_artifact(raw=raw_entities_base)
             meg_artifact.add_entity('desc', 'summary_qc_report')
             meg_artifact.suffix = suffix

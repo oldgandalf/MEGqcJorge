@@ -54,7 +54,7 @@ def _safe_dataframe(obj):
 def create_summary_report(
         json_file: Union[str, os.PathLike],
         html_output: str | None = None,
-        json_output: str = "first_sight_report.json",
+        json_output: str = "glogal_summary_report.json",
         data_type: str = "",
         gqi_settings: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> None:

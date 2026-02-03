@@ -1,11 +1,11 @@
-import sys
 import time
+
 from meg_qc.calculation.meg_qc_pipeline import make_derivative_meg_qc
 
 # Parameters:
 # ------------------------------------------------------------------
 # Path to the root of your BIDS MEG dataset.
-data_directory = "H:/_VIP/Python/MyWork/MEGqc/dataset/ds003483"
+data_directory = "H:/Datos/Germany/Oldenburg/MEGqc/dataset/ds003483"
 # List of subject IDs to run the pipeline on
 # sub_list = 'all'
 sub_list = ['009']

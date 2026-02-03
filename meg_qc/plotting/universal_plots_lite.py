@@ -2,7 +2,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 import pandas as pd
-import mne
 import random
 import copy
 import os
@@ -11,11 +10,12 @@ import matplotlib.pyplot as plt
 from mne.preprocessing import compute_average_dev_head_t
 from meg_qc.calculation.objects import QC_derivative, MEG_channel
 import matplotlib #this is in case we will need to suppress mne matplotlib plots
+import mne
 
 
 # mne.viz.set_browser_backend('matplotlib')
-# matplotlib.use('Agg') 
-#this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
+# matplotlib.use('Agg')
+# this command will suppress showing matplotlib figures produced by mne. They will still be saved for use in report but not shown when running the pipeline
 
 
 def get_tit_and_unit(m_or_g: str, psd: bool = False):
@@ -1819,6 +1819,11 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
 
     """
 
+    if "_eeg." in tsv_pie_path.lower():
+        real_med = 'eeg'
+    else:
+        real_med = m_or_g
+
     #if it s not the right ch kind in the file
     base_name = os.path.basename(tsv_pie_path) #name of the final file
     
@@ -1872,7 +1877,7 @@ def plot_pie_chart_freq_csv(tsv_pie_path: str, m_or_g: str, noise_or_waves: str,
     #the lists change in this function and this change is tranfered outside the fuction even when these lists are not returned explicitly. 
     #To keep them in original state outside the function, they are copied here.
     all_mean_abs_values=amplitudes_abs.copy()
-    ch_type_tit, unit = get_tit_and_unit(m_or_g, psd=True)
+    ch_type_tit, unit = get_tit_and_unit(real_med, psd=True)
 
     #If mean relative percentages dont sum up into 100%, add the 'unknown' part.
     all_mean_relative_values=[v * 100 for v in amplitudes_relative]  #in percentage
@@ -2896,7 +2901,7 @@ def split_affected_into_3_groups_csv(df: pd.DataFrame, metric: str, split_by: st
     return most_affected, middle_affected, least_affected, val_of_last_most_affected, val_of_last_middle_affected, val_of_last_least_affected
 
 
-def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False):
+def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: str, real_type: str, ecg_or_eog: str, title: str, flip_data: bool or str = 'flip', smoothed: bool = False):
 
     """
     Plot the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
@@ -2928,6 +2933,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
     -------
     fig : plotly.graph_objects.Figure
         The plotly figure with the mean artifact amplitude for all affected (not affected) channels in 1 plot together with the artifact_lvl.
+        :param real_type:
 
         
     """
@@ -2962,7 +2968,7 @@ def plot_affected_channels_csv(df, artifact_lvl: float, t: np.ndarray, m_or_g: s
 
     else:
         fig=go.Figure()
-        ch_type_tit, _ = get_tit_and_unit(m_or_g)
+        ch_type_tit, _ = get_tit_and_unit(real_type)
         title=fig_tit+'0 ' +ch_type_tit
         fig.update_layout(
             title={
@@ -3123,6 +3129,9 @@ def plot_artif_per_ch_3_groups(f_path: str, m_or_g: str, ecg_or_eog: str, flip_d
     if 'desc-ecgs' not in base_name.lower() and 'desc-eogs' not in base_name.lower():
         return []
 
+    real_med = m_or_g
+    if '_eeg.' in f_path.lower():
+        real_med = 'eeg'
 
     ecg_or_eog = ecg_or_eog.lower()
 
@@ -3135,9 +3144,9 @@ def plot_artif_per_ch_3_groups(f_path: str, m_or_g: str, ecg_or_eog: str, flip_d
     most_similar, mid_similar, least_similar, _, _, _ = split_affected_into_3_groups_csv(df, ecg_or_eog, split_by='similarity_score')
 
     smoothed = True
-    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
-    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
-    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed)
+    fig_most_affected = plot_affected_channels_csv(most_similar, None, artif_time_vector, m_or_g, real_med, ecg_or_eog, title = ' most affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, real_med)
+    fig_middle_affected = plot_affected_channels_csv(mid_similar, None, artif_time_vector, m_or_g, real_med, ecg_or_eog, title = ' moderately affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, real_med)
+    fig_least_affected = plot_affected_channels_csv(least_similar, None, artif_time_vector, m_or_g, real_med, ecg_or_eog, title = ' least affected channels (smoothed): ', flip_data=flip_data, smoothed = smoothed, real_med)
 
 
     #set the same Y axis limits for all 3 figures for clear comparison:
